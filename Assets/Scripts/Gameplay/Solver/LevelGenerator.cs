@@ -69,9 +69,12 @@ namespace RingFlow.Gameplay
                     if (from == to) continue;
 
                     // Halka rengini tersten taşı (renk uyumu aramaksızın)
-                    var color = board.PopRing(from);
-                    board.AddRing(to, color);
+                    var ring = board.PopRing(from);
+                    board.AddRing(to, ring);
                 }
+
+                // GDD §4 & §5 Kuralları uyarınca özel halka mekaniklerini enjekte et
+                InjectSpecialMechanics(ref board, levelIndex, rand);
 
                 var scrambledState = board;
 
@@ -90,12 +93,17 @@ namespace RingFlow.Gameplay
 
                     for (int p = 0; p < poleCount; p++)
                     {
-                        var poleData = new PoleData(maxCapacity);
+                        var poleData = new PoleData(maxCapacity)
+                        {
+                            IsLocked = scrambledState.IsPoleLocked(p)
+                        };
+
                         int count = scrambledState.GetRingCount(p);
                         for (int r = 0; r < count; r++)
                         {
                             var color = scrambledState.GetRingColor(p, r);
-                            poleData.Rings.Add(new RingData(color));
+                            var type = scrambledState.GetRingType(p, r);
+                            poleData.Rings.Add(new RingData(color, type));
                         }
                         levelData.Poles.Add(poleData);
                     }
@@ -109,6 +117,129 @@ namespace RingFlow.Gameplay
             }
 
             return null; // 50 denemede de başarılı olamazsa (teorik olarak imkansız)
+        }
+
+        private static void InjectSpecialMechanics(ref BoardState board, int levelIndex, Random rand)
+        {
+            int worldIndex = WorldConfigSO.WorldFromAbsoluteLevel(levelIndex);
+            
+            // World 1: Özel mekanik yok
+            if (worldIndex == 0) return;
+
+            int poleCount = board.PoleCount;
+
+            // World 2: Mystery (Gizemli)
+            if (worldIndex == 1)
+            {
+                // En üstte olmayan 1 ya da 2 halkayı Mystery yap
+                int count = 0;
+                for (int attempt = 0; attempt < 10 && count < 2; attempt++)
+                {
+                    int p = rand.Next(poleCount);
+                    int ringCount = board.GetRingCount(p);
+                    if (ringCount >= 2)
+                    {
+                        int r = rand.Next(ringCount - 1); // En üst halka hariç
+                        if (board.GetRingType(p, r) == RingType.Standard)
+                        {
+                            board.SetRingType(p, r, RingType.Mystery);
+                            count++;
+                        }
+                    }
+                }
+            }
+            // World 3: Frozen (Buzlu)
+            else if (worldIndex == 2)
+            {
+                // 1 ya da 2 halkayı Frozen yap
+                int count = 0;
+                for (int attempt = 0; attempt < 10 && count < 2; attempt++)
+                {
+                    int p = rand.Next(poleCount);
+                    int ringCount = board.GetRingCount(p);
+                    if (ringCount > 0)
+                    {
+                        int r = rand.Next(ringCount);
+                        if (board.GetRingType(p, r) == RingType.Standard)
+                        {
+                            board.SetRingType(p, r, RingType.Frozen);
+                            if (r == ringCount - 1)
+                            {
+                                board.SetTopRingFrozen(p, true);
+                            }
+                            count++;
+                        }
+                    }
+                }
+            }
+            // World 4: Locked Pole (Kilitli Direk + Anahtar Halka)
+            else if (worldIndex == 3)
+            {
+                // Boş direklerden birini kilitle
+                int lockedPole = -1;
+                for (int attempt = 0; attempt < 10; attempt++)
+                {
+                    int p = rand.Next(poleCount);
+                    if (board.IsEmpty(p))
+                    {
+                        board.SetPoleLocked(p, true);
+                        lockedPole = p;
+                        break;
+                    }
+                }
+
+                // Diğer direklerden birindeki bir halkayı Anahtar (Locked) yap
+                if (lockedPole != -1)
+                {
+                    for (int attempt = 0; attempt < 20; attempt++)
+                    {
+                        int p = rand.Next(poleCount);
+                        if (p == lockedPole) continue;
+                        int ringCount = board.GetRingCount(p);
+                        if (ringCount > 0)
+                        {
+                            int r = rand.Next(ringCount);
+                            if (board.GetRingType(p, r) == RingType.Standard)
+                            {
+                                board.SetRingType(p, r, RingType.Locked);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            // World 5+: İleri mekanikler (Rainbow, Bomb, Chain, Magnet, Paint, Ghost, Stone, Glass)
+            else
+            {
+                var availableTypes = new[] {
+                    RingType.Rainbow,
+                    RingType.Bomb,
+                    RingType.Chain,
+                    RingType.Magnet,
+                    RingType.Paint,
+                    RingType.Ghost,
+                    RingType.Stone,
+                    RingType.Glass
+                };
+
+                var chosenType = availableTypes[rand.Next(availableTypes.Length)];
+
+                int count = 0;
+                for (int attempt = 0; attempt < 20 && count < 2; attempt++)
+                {
+                    int p = rand.Next(poleCount);
+                    int ringCount = board.GetRingCount(p);
+                    if (ringCount > 0)
+                    {
+                        int r = rand.Next(ringCount);
+                        if (board.GetRingType(p, r) == RingType.Standard)
+                        {
+                            board.SetRingType(p, r, chosenType);
+                            count++;
+                        }
+                    }
+                }
+            }
         }
     }
 }

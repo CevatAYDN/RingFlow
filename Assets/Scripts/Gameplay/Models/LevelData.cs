@@ -40,6 +40,7 @@ namespace RingFlow.Gameplay
     {
         public int MaxCapacity = 4;
         public List<RingData> Rings = new(4);
+        public bool IsLocked;
 
         public PoleData() { }
 

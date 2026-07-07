@@ -1,10 +1,12 @@
 using Nexus.Core;
+using Nexus.Core.Services;
 
 namespace RingFlow.Gameplay
 {
     public class GameplayMediator : Mediator<GameplayView>
     {
         [Inject] private GameplayModel _model;
+        [Inject] private IProgressionService _progression;
 
         protected override void OnBind()
         {
@@ -32,12 +34,12 @@ namespace RingFlow.Gameplay
 
         private void HandleUndo()
         {
-            SignalBus.Fire(new UndoSignal());
+            SignalBus.Fire(new UndoRequestedSignal());
         }
 
         private void HandleRestart()
         {
-            SignalBus.Fire(new InitLevelSignal(0));
+            SignalBus.Fire(new InitLevelSignal(_progression.CurrentLevel.Value));
         }
 
         protected override void OnUnbind()

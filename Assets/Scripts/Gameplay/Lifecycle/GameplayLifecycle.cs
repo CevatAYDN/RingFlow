@@ -43,6 +43,7 @@ namespace RingFlow.Gameplay
             builder.BindCommand<SelectPoleSignal, SelectPoleCommand>();
             builder.BindCommand<MoveRingSignal, MoveRingCommand>();
             builder.BindCommand<UndoSignal, UndoCommand>();
+            builder.BindCommand<UndoRequestedSignal, UndoRequestedCommand>();
             builder.BindCommand<CheckWinSignal, CheckWinCommand>();
             builder.BindCommand<HintRequestedSignal, HintCommand>();
             builder.BindCommand<DailyRewardClaimSignal, DailyRewardClaimCommand>();

@@ -37,7 +37,8 @@ namespace RingFlow.Gameplay
                     var poleState = new PoleState 
                     { 
                         Id = i, 
-                        MaxCapacity = pData.MaxCapacity 
+                        MaxCapacity = pData.MaxCapacity,
+                        IsLocked = pData.IsLocked
                     };
 
                     for (int r = 0; r < pData.Rings.Count; r++)
@@ -417,6 +418,53 @@ namespace RingFlow.Gameplay
                 int coinReward = isBoss ? 500 : 50 + (currentLevel % 11) * 10; // 50..150 deterministic per level
 
                 _economyService.Earn("Coins", coinReward, isBoss ? "Boss Win Reward" : "Level Win Reward");
+            }
+        }
+    }
+
+    public class UndoRequestedCommand : ICommand<UndoRequestedSignal>
+    {
+        [Inject] private PlayerProgressModel _progress;
+        [Inject] private IEconomyService _economy;
+        [Inject] private IAdService _ads;
+        [Inject] private ISignalBus _signalBus;
+
+        public void Execute(UndoRequestedSignal signal)
+        {
+            var context = NexusRuntime.CurrentContext;
+            var model = context.Resolve<GameplayModel>();
+            if (model.MoveHistory.Count == 0) return;
+
+            // İlk 5 geri alma bu oturum için ücretsizdir
+            if (_progress.FreeUndosUsedThisSession.Value < 5)
+            {
+                _progress.FreeUndosUsedThisSession.Value++;
+                _signalBus.Fire(new UndoSignal());
+            }
+            else
+            {
+                // Sonrası 5 coin/ad
+                if (_economy.CanAfford("Coins", 5))
+                {
+                    if (_economy.Spend("Coins", 5, "Undo"))
+                    {
+                        _signalBus.Fire(new UndoSignal());
+                    }
+                }
+                else
+                {
+                    // Reklam gösterimi
+                    if (_ads.IsRewardedAvailable("Undo"))
+                    {
+                        _ads.ShowRewarded("Undo", (success) =>
+                        {
+                            if (success)
+                            {
+                                _signalBus.Fire(new UndoSignal());
+                            }
+                        });
+                    }
+                }
             }
         }
     }
