@@ -51,6 +51,7 @@ namespace RingFlow.Editor
             bool triggerGenerate = false;
             bool triggerBuild = false;
             bool triggerClear = false;
+            bool triggerSetupBootstrapper = false;
             bool triggerGoMainMenu = false;
             bool triggerGoLevelSelect = false;
             bool triggerGoPlaying = false;
@@ -149,6 +150,12 @@ namespace RingFlow.Editor
                     if (!Application.isPlaying)
                     {
                         EditorGUILayout.HelpBox("Enter PlayMode to control game states, unlock progress, and inject coins/diamonds in real-time.", MessageType.Warning);
+                        
+                        EditorGUILayout.Space();
+                        if (GUILayout.Button("Setup Nexus Bootstrapper in Scene", GUILayout.Height(30)))
+                        {
+                            triggerSetupBootstrapper = true;
+                        }
                     }
                     else
                     {
@@ -177,13 +184,14 @@ namespace RingFlow.Editor
             if (triggerGenerate) GenerateLevel();
             if (triggerBuild) BuildBoardInScene();
             if (triggerClear) ClearSceneBoard();
+            if (triggerSetupBootstrapper) SetupNexusBootstrapper();
 
             if (Application.isPlaying)
             {
                 var context = NexusRuntime.CurrentContext;
                 if (context != null)
                 {
-                    var fsm = context.Resolve<IGameStateMachine>();
+                    var fsm = context.TryResolve<IGameStateMachine>();
                     var progress = context.TryResolve<PlayerProgressModel>();
                     var economy = context.TryResolve<IEconomyService>();
 
@@ -464,7 +472,7 @@ namespace RingFlow.Editor
             var context = NexusRuntime.CurrentContext;
             if (context == null) return;
 
-            var fsm = context.Resolve<IGameStateMachine>();
+            var fsm = context.TryResolve<IGameStateMachine>();
             var model = context.TryResolve<GameplayModel>();
             var progress = context.TryResolve<PlayerProgressModel>();
             var economy = context.TryResolve<IEconomyService>();
@@ -554,6 +562,52 @@ namespace RingFlow.Editor
             if (s == null) s = Shader.Find("Universal Render Pipeline/Simple Lit");
             if (s == null) s = Shader.Find("Standard");
             return s;
+        }
+
+        private void SetupNexusBootstrapper()
+        {
+            var root = FindAnyObjectByType<Root>();
+            if (root != null)
+            {
+                EditorUtility.DisplayDialog("Setup", "Nexus Bootstrapper already exists in the scene!", "OK");
+                return;
+            }
+
+            // Create ContextData asset if missing
+            string assetPath = "Assets/Settings/GameplayContextData.asset";
+            var contextData = AssetDatabase.LoadAssetAtPath<ContextData>(assetPath);
+            if (contextData == null)
+            {
+                // Ensure Settings directory exists
+                if (!AssetDatabase.IsValidFolder("Assets/Settings"))
+                {
+                    AssetDatabase.CreateFolder("Assets", "Settings");
+                }
+
+                contextData = ScriptableObject.CreateInstance<ContextData>();
+                contextData.AssemblyScopes = new[] { "RingFlow" };
+                contextData.EnableAutoDiscovery = true;
+                AssetDatabase.CreateAsset(contextData, assetPath);
+                AssetDatabase.SaveAssets();
+            }
+
+            // Spawn NexusRoot GameObject
+            var rootObj = new GameObject("NexusRoot");
+            var newRoot = rootObj.AddComponent<Root>();
+
+            // Assign ContextData using SerializedProperty
+            var serializedObject = new SerializedObject(newRoot);
+            var prop = serializedObject.FindProperty("contextData");
+            if (prop != null)
+            {
+                prop.objectReferenceValue = contextData;
+                serializedObject.ApplyModifiedProperties();
+            }
+
+            // Mark Scene dirty so Unity prompts to save
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
+
+            EditorUtility.DisplayDialog("Setup", "Nexus Bootstrapper successfully added to the active scene! Press Play to run.", "OK");
         }
     }
 }
