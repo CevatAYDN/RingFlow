@@ -92,6 +92,7 @@ poetry.lock
 *.keras
 *.pickle
 *.pkl
+*.omo
 
 # AI/LLM-specific names/directories (case-insensitive blocks)
 *[Oo]pen[Aa]i*

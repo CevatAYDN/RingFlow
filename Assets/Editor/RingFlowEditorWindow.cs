@@ -604,6 +604,35 @@ namespace RingFlow.Editor
                 serializedObject.ApplyModifiedProperties();
             }
 
+            // Add BoardView component so it initializes and manages scene board dynamically at runtime
+            var boardView = rootObj.AddComponent<BoardView>();
+            // Pre-assign torus model if it exists in Assets
+            var torusModel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Models/Torus.obj");
+            if (torusModel != null)
+            {
+                var torusField = typeof(BoardView).GetField("_torusPrefab", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (torusField != null)
+                {
+                    torusField.SetValue(boardView, torusModel);
+                }
+            }
+
+            // Ensure EventSystem exists in the scene for click events
+            var eventSystem = FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>();
+            if (eventSystem == null)
+            {
+                var esObj = new GameObject("EventSystem");
+                esObj.AddComponent<UnityEngine.EventSystems.EventSystem>();
+                esObj.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+            }
+
+            // Ensure PhysicsRaycaster exists on Main Camera so we can click 3D Cylinder poles
+            var mainCamera = Camera.main;
+            if (mainCamera != null && mainCamera.GetComponent<UnityEngine.EventSystems.PhysicsRaycaster>() == null)
+            {
+                mainCamera.gameObject.AddComponent<UnityEngine.EventSystems.PhysicsRaycaster>();
+            }
+
             // Mark Scene dirty so Unity prompts to save
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
 
