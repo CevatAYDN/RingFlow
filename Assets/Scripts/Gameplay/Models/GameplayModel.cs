@@ -33,13 +33,22 @@ namespace RingFlow.Gameplay
     {
         public int FromPoleId;
         public int ToPoleId;
-        public RingColor Color;
+        public RingData Ring;
+        public bool WasMysteryRevealedOnFrom;
+        public bool WasIceBrokenOnTarget;
+        public bool WasTargetPoleUnlocked;
 
-        public MoveRecord(int fromPoleId, int toPoleId, RingColor color)
+        public MoveRecord(int fromPoleId, int toPoleId, RingData ring, 
+            bool wasMysteryRevealedOnFrom = false, 
+            bool wasIceBrokenOnTarget = false, 
+            bool wasTargetPoleUnlocked = false)
         {
             FromPoleId = fromPoleId;
             ToPoleId = toPoleId;
-            Color = color;
+            Ring = ring;
+            WasMysteryRevealedOnFrom = wasMysteryRevealedOnFrom;
+            WasIceBrokenOnTarget = wasIceBrokenOnTarget;
+            WasTargetPoleUnlocked = wasTargetPoleUnlocked;
         }
     }
 

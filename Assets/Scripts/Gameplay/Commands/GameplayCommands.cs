@@ -14,17 +14,17 @@ namespace RingFlow.Gameplay
 
             // Create Pole 0 with Red/Blue/Red/Blue
             var p0 = new PoleState { Id = 0 };
-            p0.AddRing(RingColor.Red);
-            p0.AddRing(RingColor.Blue);
-            p0.AddRing(RingColor.Red);
-            p0.AddRing(RingColor.Blue);
+            p0.AddRing(new RingData(RingColor.Red));
+            p0.AddRing(new RingData(RingColor.Blue));
+            p0.AddRing(new RingData(RingColor.Red));
+            p0.AddRing(new RingData(RingColor.Blue));
 
             // Create Pole 1 with Blue/Red/Blue/Red
             var p1 = new PoleState { Id = 1 };
-            p1.AddRing(RingColor.Blue);
-            p1.AddRing(RingColor.Red);
-            p1.AddRing(RingColor.Blue);
-            p1.AddRing(RingColor.Red);
+            p1.AddRing(new RingData(RingColor.Blue));
+            p1.AddRing(new RingData(RingColor.Red));
+            p1.AddRing(new RingData(RingColor.Blue));
+            p1.AddRing(new RingData(RingColor.Red));
 
             // Create Pole 2 (Empty)
             var p2 = new PoleState { Id = 2 };
@@ -48,9 +48,9 @@ namespace RingFlow.Gameplay
 
             if (currentSelected == -1)
             {
-                // No pole selected, select this one if it has rings
+                // Seçilen direkten halka alınabiliyorsa seçimi aktifleştir
                 var pole = _model.Poles.Find(p => p.Id == signal.PoleId);
-                if (pole != null && !pole.IsEmpty)
+                if (pole != null && pole.CanPopRing())
                 {
                     _model.SelectedPoleId.Value = signal.PoleId;
                 }
@@ -59,19 +59,15 @@ namespace RingFlow.Gameplay
             {
                 if (currentSelected == signal.PoleId)
                 {
-                    // Clicked the same pole, deselect
+                    // Aynı direğe tekrar basıldıysa seçimi iptal et
                     _model.SelectedPoleId.Value = -1;
                 }
                 else
                 {
-                    // Clicked a different pole, try to move
                     int fromId = currentSelected;
                     int toId = signal.PoleId;
                     
-                    // Reset selection first
                     _model.SelectedPoleId.Value = -1;
-
-                    // Fire move signal
                     _signalBus.Fire(new MoveRingSignal(fromId, toId));
                 }
             }
@@ -88,22 +84,55 @@ namespace RingFlow.Gameplay
             var fromPole = _model.Poles.Find(p => p.Id == signal.FromPoleId);
             var toPole = _model.Poles.Find(p => p.Id == signal.ToPoleId);
 
-            if (fromPole == null || toPole == null || fromPole.IsEmpty) return;
+            if (fromPole == null || toPole == null || !fromPole.CanPopRing()) return;
 
-            var color = fromPole.TopRing;
-            if (toPole.CanAddRing(color))
+            var ring = fromPole.TopRing;
+            if (toPole.CanAddRing(ring))
             {
-                // Execute move
+                bool wasMysteryRevealed = false;
+                bool wasIceBroken = false;
+                bool wasTargetPoleUnlocked = false;
+
+                // Halkayı eski direkten al
                 fromPole.PopRing();
-                toPole.AddRing(color);
 
-                // Record move for Undo
-                _model.MoveHistory.Push(new MoveRecord(signal.FromPoleId, signal.ToPoleId, color));
+                // 1. Kilit Açılma Kontrolü: Hedef kilitliyse ve taşınan Altın Anahtar ise
+                if (toPole.IsLocked && ring.Type == RingType.Locked)
+                {
+                    toPole.IsLocked = false;
+                    wasTargetPoleUnlocked = true;
+                    _signalBus.Fire(new UnlockPoleSignal(signal.ToPoleId));
+                }
 
-                // Update moves count
+                // Halkayı hedef direğe yerleştir
+                toPole.AddRing(ring);
+
+                // 2. Buz Kırılma Kontrolü: Hedefte yerleşen halkanın hemen altında donmuş bir halka varsa ve renkleri aynıysa
+                if (toPole.Rings.Count >= 2)
+                {
+                    var belowRing = toPole.Rings[^2];
+                    if (belowRing.Type == RingType.Frozen && belowRing.Color == ring.Color)
+                    {
+                        toPole.Rings[^2] = new RingData(belowRing.Color, RingType.Standard);
+                        wasIceBroken = true;
+                        _signalBus.Fire(new BreakIceSignal(signal.ToPoleId));
+                    }
+                }
+
+                // 3. Gizem Açılma Kontrolü: Eski direğin en üstünde gizemli halka kaldıysa, onu standart halkaya çevir
+                if (!fromPole.IsEmpty && fromPole.TopRing.Type == RingType.Mystery)
+                {
+                    var topM = fromPole.TopRing;
+                    fromPole.Rings[^1] = new RingData(topM.Color, RingType.Standard);
+                    wasMysteryRevealed = true;
+                    _signalBus.Fire(new RevealMysterySignal(signal.FromPoleId, fromPole.TopRing));
+                }
+
+                // Hamle geçmişine tüm özel durum bayraklarıyla kaydet
+                _model.MoveHistory.Push(new MoveRecord(signal.FromPoleId, signal.ToPoleId, ring, 
+                    wasMysteryRevealed, wasIceBroken, wasTargetPoleUnlocked));
+
                 _model.MovesCount.Value++;
-
-                // Check win condition
                 _signalBus.Fire(new CheckWinSignal());
             }
         }
@@ -123,22 +152,38 @@ namespace RingFlow.Gameplay
                 var fromPole = _model.Poles.Find(p => p.Id == lastMove.FromPoleId);
                 var toPole = _model.Poles.Find(p => p.Id == lastMove.ToPoleId);
 
-                if (fromPole != null && toPole != null && toPole.TopRing == lastMove.Color)
+                if (fromPole != null && toPole != null && toPole.TopRing.Color == lastMove.Ring.Color)
                 {
-                    // Revert move
-                    toPole.PopRing();
-                    fromPole.AddRing(lastMove.Color);
+                    // 1. Kilit durumunu geri al
+                    if (lastMove.WasTargetPoleUnlocked)
+                    {
+                        toPole.IsLocked = true;
+                    }
 
-                    // Reduce moves count
+                    // 2. Kırılan buzu geri dondur
+                    if (lastMove.WasIceBrokenOnTarget && toPole.Rings.Count >= 2)
+                    {
+                        var belowRing = toPole.Rings[^2];
+                        toPole.Rings[^2] = new RingData(belowRing.Color, RingType.Frozen);
+                    }
+
+                    // 3. Açılan gizemli halkayı geri gizle
+                    if (lastMove.WasMysteryRevealedOnFrom && !fromPole.IsEmpty)
+                    {
+                        var topM = fromPole.TopRing;
+                        fromPole.Rings[^1] = new RingData(topM.Color, RingType.Mystery);
+                    }
+
+                    // Taşınan halkayı eski yerine koy
+                    toPole.PopRing();
+                    fromPole.AddRing(lastMove.Ring);
+
                     if (_model.MovesCount.Value > 0)
                     {
                         _model.MovesCount.Value--;
                     }
 
-                    // Reset selection
                     _model.SelectedPoleId.Value = -1;
-
-                    // Re-check win condition
                     _signalBus.Fire(new CheckWinSignal());
                 }
             }
@@ -168,10 +213,10 @@ namespace RingFlow.Gameplay
                 }
 
                 // All rings in the pole must be of the same color
-                var firstColor = pole.Rings[0];
+                var firstRing = pole.Rings[0];
                 for (int i = 1; i < pole.Rings.Count; i++)
                 {
-                    if (pole.Rings[i] != firstColor)
+                    if (pole.Rings[i].Color != firstRing.Color)
                     {
                         won = false;
                         break;

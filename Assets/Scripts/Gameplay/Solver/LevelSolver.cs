@@ -49,7 +49,7 @@ namespace RingFlow.Gameplay
                     for (int i = 0; i < path.Count; i++)
                     {
                         var m = path[i];
-                        movesList.Add(new MoveRecord(m.From, m.To, RingColor.None));
+                        movesList.Add(new MoveRecord(m.From, m.To, new RingData(RingColor.None)));
                     }
                     return new SolverResult
                     {
@@ -167,21 +167,15 @@ namespace RingFlow.Gameplay
             int numPoles = state.PoleCount;
             for (int i = 0; i < numPoles; i++)
             {
-                if (state.IsEmpty(i)) continue;
-                if (state.IsPoleLocked(i)) continue;
+                if (!state.CanPopRing(i)) continue;
 
                 RingColor topColor = state.GetTopRingColor(i);
 
                 for (int j = 0; j < numPoles; j++)
                 {
                     if (i == j) continue;
-                    if (state.IsPoleLocked(j)) continue;
 
-                    int targetCount = state.GetRingCount(j);
-                    if (targetCount >= maxCapacity) continue;
-
-                    // GDD Kuralı: Hedef direk boş olmalı veya üstteki halkanın rengi aynı olmalı
-                    if (targetCount == 0 || state.GetTopRingColor(j) == topColor)
+                    if (state.CanAddRing(j, topColor, maxCapacity))
                     {
                         destination[count++] = new Move(i, j);
                     }

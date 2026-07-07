@@ -5,32 +5,55 @@ namespace RingFlow.Gameplay
     public class PoleState
     {
         public int Id { get; set; }
-        public List<RingColor> Rings { get; } = new(4);
+        public List<RingData> Rings { get; } = new(4);
         public int MaxCapacity { get; set; } = 4;
-        
+        public bool IsLocked { get; set; }
+
         public bool IsFull => Rings.Count >= MaxCapacity;
         public bool IsEmpty => Rings.Count == 0;
-        
-        public RingColor TopRing => IsEmpty ? RingColor.None : Rings[^1];
-        
-        public bool CanAddRing(RingColor color)
+
+        public RingData TopRing => IsEmpty ? new RingData(RingColor.None) : Rings[^1];
+
+        public bool CanAddRing(RingData ring)
         {
+            if (IsLocked)
+            {
+                // Kilitli direğe sadece kilit açıcı Altın Anahtar Halka (Locked) yerleştirilebilir
+                return ring.Type == RingType.Locked;
+            }
             if (IsFull) return false;
             if (IsEmpty) return true;
-            return TopRing == color;
+
+            // Taş (Stone) halkanın üzerine başka halka yerleştirilemez
+            if (TopRing.Type == RingType.Stone) return false;
+
+            // Renk eşleşme kuralı
+            return TopRing.Color == ring.Color;
         }
-        
-        public void AddRing(RingColor color)
+
+        public bool CanPopRing()
+        {
+            if (IsEmpty) return false;
+            if (IsLocked) return false;
+
+            // Donmuş (Frozen) ve Taş (Stone) halkalar yerinden hareket ettirilemez
+            if (TopRing.Type == RingType.Frozen) return false;
+            if (TopRing.Type == RingType.Stone) return false;
+
+            return true;
+        }
+
+        public void AddRing(RingData ring)
         {
             if (Rings.Count < MaxCapacity)
             {
-                Rings.Add(color);
+                Rings.Add(ring);
             }
         }
-        
-        public RingColor PopRing()
+
+        public RingData PopRing()
         {
-            if (IsEmpty) return RingColor.None;
+            if (IsEmpty) return new RingData(RingColor.None);
             var ring = Rings[^1];
             Rings.RemoveAt(Rings.Count - 1);
             return ring;

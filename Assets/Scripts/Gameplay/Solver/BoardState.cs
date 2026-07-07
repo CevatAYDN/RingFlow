@@ -107,6 +107,20 @@ namespace RingFlow.Gameplay
             SetPoleRaw(poleIndex, val);
         }
 
+        public bool IsTopRingFrozen(int poleIndex)
+        {
+            uint val = GetPoleRaw(poleIndex);
+            return ((val >> 29) & 0x1) == 1;
+        }
+
+        public void SetTopRingFrozen(int poleIndex, bool frozen)
+        {
+            uint val = GetPoleRaw(poleIndex);
+            val &= ~(0x1u << 29);
+            if (frozen) val |= 1u << 29;
+            SetPoleRaw(poleIndex, val);
+        }
+
         public bool IsEmpty(int poleIndex) => GetRingCount(poleIndex) == 0;
 
         public RingColor GetTopRingColor(int poleIndex)
@@ -116,8 +130,44 @@ namespace RingFlow.Gameplay
             return GetRingColor(poleIndex, count - 1);
         }
 
+        public bool CanPopRing(int poleIndex)
+        {
+            if (IsEmpty(poleIndex)) return false;
+            if (IsPoleLocked(poleIndex)) return false;
+            if (IsTopRingFrozen(poleIndex)) return false;
+            if (GetTopRingColor(poleIndex) == RingColor.Stone) return false;
+            return true;
+        }
+
+        public bool CanAddRing(int poleIndex, RingColor color, int maxCapacity)
+        {
+            if (IsPoleLocked(poleIndex))
+            {
+                return color == RingColor.Key;
+            }
+            if (GetRingCount(poleIndex) >= maxCapacity) return false;
+            if (IsEmpty(poleIndex)) return true;
+
+            RingColor topColor = GetTopRingColor(poleIndex);
+            if (topColor == RingColor.Stone) return false;
+
+            return topColor == color;
+        }
+
         public void AddRing(int poleIndex, RingColor color)
         {
+            // Eğer direk kilitliyse ve Key yerleşiyorsa kilidi aç
+            if (IsPoleLocked(poleIndex) && color == RingColor.Key)
+            {
+                SetPoleLocked(poleIndex, false);
+            }
+
+            // Eğer üstteki halka donmuşsa ve üzerine aynı renk geliyorsa buzu erit
+            if (IsTopRingFrozen(poleIndex) && GetTopRingColor(poleIndex) == color)
+            {
+                SetTopRingFrozen(poleIndex, false);
+            }
+
             int count = GetRingCount(poleIndex);
             SetRingColor(poleIndex, count, color);
             SetRingCount(poleIndex, count + 1);
@@ -131,6 +181,11 @@ namespace RingFlow.Gameplay
             RingColor color = GetRingColor(poleIndex, lastIndex);
             SetRingColor(poleIndex, lastIndex, RingColor.None);
             SetRingCount(poleIndex, lastIndex);
+
+            if (count == 1)
+            {
+                SetTopRingFrozen(poleIndex, false);
+            }
             return color;
         }
 
