@@ -13,12 +13,14 @@ namespace RingFlow.Tests
     {
         private MockPlayerPrefsService _prefs;
         private SettingsModel _settings;
+        private PlayerProgressModel _progress;
 
         [SetUp]
         public void Setup()
         {
             _prefs = new MockPlayerPrefsService();
             _settings = new SettingsModel();
+            _progress = new PlayerProgressModel();
         }
 
         [Test]
@@ -41,6 +43,52 @@ namespace RingFlow.Tests
             Assert.IsFalse(_settings.MusicEnabled.Value);
             Assert.AreEqual(2, _settings.ColorBlindMode.Value);
             Assert.AreEqual("tr", _settings.LanguageCode.Value);
+        }
+
+        [Test]
+        public void PlayerProgressSaveSystem_SavesAndLoadsCorrectly()
+        {
+            _progress.Coins.Value = 2500;
+            _progress.Diamonds.Value = 150;
+            _progress.CurrentLevel.Value = 42;
+            _progress.MaxUnlockedLevel.Value = 42;
+            _progress.DailyDayIndex.Value = 3;
+            _progress.DailyLastClaimUtcTicks.Value = 1234567890L;
+
+            _progress.UnlockedWorlds.Clear();
+            for (int i = 0; i < 40; i++)
+            {
+                _progress.UnlockedWorlds.Add(i < 3); // Unlock first 3 worlds
+            }
+            _progress.OwnedThemes.Add("classic");
+            _progress.OwnedThemes.Add("neon");
+            _progress.Achievements.Add("win_first_level");
+
+            PlayerProgressSaveSystem.Save(_prefs, _progress);
+
+            // Reset progress model
+            _progress = new PlayerProgressModel();
+            Assert.AreEqual(0, _progress.Coins.Value);
+            Assert.AreEqual(1, _progress.CurrentLevel.Value);
+
+            PlayerProgressSaveSystem.Load(_prefs, _progress);
+
+            Assert.AreEqual(2500, _progress.Coins.Value);
+            Assert.AreEqual(150, _progress.Diamonds.Value);
+            Assert.AreEqual(42, _progress.CurrentLevel.Value);
+            Assert.AreEqual(42, _progress.MaxUnlockedLevel.Value);
+            Assert.AreEqual(3, _progress.DailyDayIndex.Value);
+            Assert.AreEqual(1234567890L, _progress.DailyLastClaimUtcTicks.Value);
+
+            // Check lists
+            Assert.IsTrue(_progress.UnlockedWorlds[0]);
+            Assert.IsTrue(_progress.UnlockedWorlds[1]);
+            Assert.IsTrue(_progress.UnlockedWorlds[2]);
+            Assert.IsFalse(_progress.UnlockedWorlds[3]);
+
+            Assert.Contains("classic", _progress.OwnedThemes);
+            Assert.Contains("neon", _progress.OwnedThemes);
+            Assert.Contains("win_first_level", _progress.Achievements);
         }
 
         [Test]
