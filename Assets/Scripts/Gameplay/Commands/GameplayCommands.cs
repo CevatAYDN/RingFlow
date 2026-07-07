@@ -368,6 +368,7 @@ namespace RingFlow.Gameplay
         [Inject] private GameplayModel _model;
         [Inject] private IProgressionService _progressionService;
         [Inject] private IEconomyService _economyService;
+        [Inject] private PlayerProgressModel _progress;
 
         public void Execute(CheckWinSignal signal)
         {
@@ -409,13 +410,23 @@ namespace RingFlow.Gameplay
             {
                 _model.IsGameWon.Value = true;
 
+                int prevLevel = _progressionService.CurrentLevel.Value;
+
                 // İlerlemeyi kaydet (Seviyeyi bir artır)
                 _progressionService.CompleteCurrentLevel();
 
+                int newLevel = _progressionService.CurrentLevel.Value;
+
+                // Yeni dünya kilidini aç (GDD §5)
+                int newWorldIndex = WorldConfigSO.WorldFromAbsoluteLevel(newLevel);
+                if (newWorldIndex >= 0 && newWorldIndex < _progress.UnlockedWorlds.Count)
+                {
+                    _progress.UnlockedWorlds[newWorldIndex] = true;
+                }
+
                 // GDD §9 — Coin: Level(50-150), Boss(500)
-                int currentLevel = _progressionService.CurrentLevel.Value;
-                bool isBoss = WorldConfigSO.IsBossLevel(currentLevel);
-                int coinReward = isBoss ? 500 : 50 + (currentLevel % 11) * 10; // 50..150 deterministic per level
+                bool isBoss = WorldConfigSO.IsBossLevel(prevLevel);
+                int coinReward = isBoss ? 500 : 50 + (prevLevel % 11) * 10; // 50..150 deterministic per level
 
                 _economyService.Earn("Coins", coinReward, isBoss ? "Boss Win Reward" : "Level Win Reward");
             }

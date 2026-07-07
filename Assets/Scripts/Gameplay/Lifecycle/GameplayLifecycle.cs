@@ -2,6 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Nexus.Core;
 using Nexus.Core.Services;
+using Nexus.Core.FSM;
 
 namespace RingFlow.Gameplay
 {
@@ -33,6 +34,15 @@ namespace RingFlow.Gameplay
             builder.BindModel<GameplayModel>();
             builder.BindModel<PlayerProgressModel>();
             builder.BindModel<SettingsModel>();
+
+            // -------------------- State Machine --------------------
+            builder.Bind<IGameStateMachine, GameStateMachine>();
+            builder.Bind<BootState>();
+            builder.Bind<MainMenuState>();
+            builder.Bind<LevelSelectState>();
+            builder.Bind<PlayingState>();
+            builder.Bind<PausedState>();
+            builder.Bind<WinState>();
 
             // -------------------- POCO Services (typed factory injection) --------------------
             // DailyRewardService takes PlayerProgressModel via constructor — bind manually so DI resolves it.
@@ -66,6 +76,18 @@ namespace RingFlow.Gameplay
             {
                 settings.HapticEnabled.OnChanged((_, n) => haptics.IsEnabled = n);
             }
+
+            // Register FSM States
+            var fsm = context.Resolve<IGameStateMachine>();
+            fsm.RegisterState(context.Resolve<BootState>());
+            fsm.RegisterState(context.Resolve<MainMenuState>());
+            fsm.RegisterState(context.Resolve<LevelSelectState>());
+            fsm.RegisterState(context.Resolve<PlayingState>());
+            fsm.RegisterState(context.Resolve<PausedState>());
+            fsm.RegisterState(context.Resolve<WinState>());
+
+            // Transition to BootState on startup
+            _ = fsm.ChangeStateAsync<BootState>();
 
             // Trigger initial load from disk into all reactive models.
             var prefs = context.TryResolve<IPlayerPrefsService>();
