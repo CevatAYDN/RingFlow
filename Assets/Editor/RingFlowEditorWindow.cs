@@ -42,120 +42,174 @@ namespace RingFlow.Editor
         private const float PoleSpacing = 2.5f;
         private const float RingHeight = 0.5f;
 
+        private Vector2 _mainScrollPosition;
+
         private void OnGUI()
         {
             DrawHeader("RING FLOW — GAME CONTROL PANEL");
 
-            using (var scroll = new EditorGUILayout.ScrollViewScope(Vector2.zero))
+            bool triggerGenerate = false;
+            bool triggerBuild = false;
+            bool triggerClear = false;
+            bool triggerGoMainMenu = false;
+            bool triggerGoLevelSelect = false;
+            bool triggerGoPlaying = false;
+            bool triggerGoPaused = false;
+            bool triggerGoWin = false;
+            bool triggerAddCoins = false;
+            bool triggerAddDiamonds = false;
+            bool triggerUnlockAll = false;
+
+            _mainScrollPosition = EditorGUILayout.BeginScrollView(_mainScrollPosition);
+
+            // 1. LEVEL GENERATOR & SOLVER
+            _foldoutGenerator = EditorGUILayout.BeginFoldoutHeaderGroup(_foldoutGenerator, "Level Generator & AI Solver");
+            if (_foldoutGenerator)
             {
-                // 1. LEVEL GENERATOR & SOLVER
-                _foldoutGenerator = EditorGUILayout.BeginFoldoutHeaderGroup(_foldoutGenerator, "Level Generator & AI Solver");
-                if (_foldoutGenerator)
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
-                    using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                    _levelIndex = EditorGUILayout.IntField("Level Index", _levelIndex);
+                    _seed = EditorGUILayout.IntField("Random Seed", _seed);
+                    _poleCount = EditorGUILayout.IntSlider("Poles Count", _poleCount, 3, 10);
+                    _colorCount = EditorGUILayout.IntSlider("Colors Count", _colorCount, 2, 8);
+                    _maxCapacity = EditorGUILayout.IntSlider("Max Ring Capacity", _maxCapacity, 3, 5);
+
+                    EditorGUILayout.Space();
+
+                    using (new EditorGUILayout.HorizontalScope())
                     {
-                        _levelIndex = EditorGUILayout.IntField("Level Index", _levelIndex);
-                        _seed = EditorGUILayout.IntField("Random Seed", _seed);
-                        _poleCount = EditorGUILayout.IntSlider("Poles Count", _poleCount, 3, 10);
-                        _colorCount = EditorGUILayout.IntSlider("Colors Count", _colorCount, 2, 8);
-                        _maxCapacity = EditorGUILayout.IntSlider("Max Ring Capacity", _maxCapacity, 3, 5);
+                        if (GUILayout.Button("Apply GDD Curve", GUILayout.Height(30)))
+                        {
+                            ApplyGddCurveParams();
+                        }
+                        if (GUILayout.Button("Generate Level", GUILayout.Height(30)))
+                        {
+                            triggerGenerate = true;
+                        }
+                    }
+
+                    if (_generatedLevel != null)
+                    {
+                        EditorGUILayout.Space();
+                        EditorGUILayout.LabelField("Generated Level Info:", EditorStyles.boldLabel);
+                        EditorGUILayout.LabelField($"Level Index: {_generatedLevel.LevelIndex} | Poles: {_generatedLevel.Poles.Count}");
+                        EditorGUILayout.LabelField($"Target Moves: {_generatedLevel.TargetMoves} (Solver Verified)");
 
                         EditorGUILayout.Space();
+                        EditorGUILayout.LabelField("AI Solver Path:", EditorStyles.boldLabel);
+                        EditorGUILayout.LabelField($"Status: {_solveStatus}", EditorStyles.wordWrappedLabel);
 
-                        using (new EditorGUILayout.HorizontalScope())
+                        if (_solutionSteps.Count > 0)
                         {
-                            if (GUILayout.Button("Apply GDD Curve", GUILayout.Height(30)))
+                            _solutionScroll = EditorGUILayout.BeginScrollView(_solutionScroll, GUILayout.Height(120));
+                            for (int i = 0; i < _solutionSteps.Count; i++)
                             {
-                                ApplyGddCurveParams();
+                                EditorGUILayout.LabelField($"{i + 1}. {_solutionSteps[i]}");
                             }
-                            if (GUILayout.Button("Generate Level", GUILayout.Height(30)))
-                            {
-                                GenerateLevel();
-                            }
-                        }
-
-                        if (_generatedLevel != null)
-                        {
-                            EditorGUILayout.Space();
-                            EditorGUILayout.LabelField("Generated Level Info:", EditorStyles.boldLabel);
-                            EditorGUILayout.LabelField($"Level Index: {_generatedLevel.LevelIndex} | Poles: {_generatedLevel.Poles.Count}");
-                            EditorGUILayout.LabelField($"Target Moves: {_generatedLevel.TargetMoves} (Solver Verified)");
-
-                            EditorGUILayout.Space();
-                            EditorGUILayout.LabelField("AI Solver Path:", EditorStyles.boldLabel);
-                            EditorGUILayout.LabelField($"Status: {_solveStatus}", EditorStyles.wordWrappedLabel);
-
-                            if (_solutionSteps.Count > 0)
-                            {
-                                _solutionScroll = EditorGUILayout.BeginScrollView(_solutionScroll, GUILayout.Height(120));
-                                for (int i = 0; i < _solutionSteps.Count; i++)
-                                {
-                                    EditorGUILayout.LabelField($"{i + 1}. {_solutionSteps[i]}");
-                                }
-                                EditorGUILayout.EndScrollView();
-                            }
+                            EditorGUILayout.EndScrollView();
                         }
                     }
                 }
-                EditorGUILayout.EndFoldoutHeaderGroup();
+            }
+            EditorGUILayout.EndFoldoutHeaderGroup();
 
-                EditorGUILayout.Space();
+            EditorGUILayout.Space();
 
-                // 2. SCENE VISUAL BUILDER (CYLINDERS & TORUS)
-                _foldoutVisualBuilder = EditorGUILayout.BeginFoldoutHeaderGroup(_foldoutVisualBuilder, "Scene Visual Board Builder");
-                if (_foldoutVisualBuilder)
+            // 2. SCENE VISUAL BUILDER (CYLINDERS & TORUS)
+            _foldoutVisualBuilder = EditorGUILayout.BeginFoldoutHeaderGroup(_foldoutVisualBuilder, "Scene Visual Board Builder");
+            if (_foldoutVisualBuilder)
+            {
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
-                    using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-                    {
-                        EditorGUILayout.HelpBox("Spawns Cylinder primitives as poles, and uses Torus.obj models as rings in the active scene to visualize the generated level layout.", MessageType.Info);
+                    EditorGUILayout.HelpBox("Spawns Cylinder primitives as poles, and uses Torus.obj models as rings in the active scene to visualize the generated level layout.", MessageType.Info);
 
-                        using (new EditorGUILayout.HorizontalScope())
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        if (GUILayout.Button("Build Board in Scene", GUILayout.Height(35)))
                         {
-                            if (GUILayout.Button("Build Board in Scene", GUILayout.Height(35)))
-                            {
-                                BuildBoardInScene();
-                            }
-                            if (GUILayout.Button("Clear Scene Board", GUILayout.Height(35)))
-                            {
-                                ClearSceneBoard();
-                            }
+                            triggerBuild = true;
+                        }
+                        if (GUILayout.Button("Clear Scene Board", GUILayout.Height(35)))
+                        {
+                            triggerClear = true;
                         }
                     }
                 }
-                EditorGUILayout.EndFoldoutHeaderGroup();
+            }
+            EditorGUILayout.EndFoldoutHeaderGroup();
 
-                EditorGUILayout.Space();
+            EditorGUILayout.Space();
 
-                // 3. RUNTIME LIKECYCLE & ECONOMY DEBUGGER
-                _foldoutRuntime = EditorGUILayout.BeginFoldoutHeaderGroup(_foldoutRuntime, "PlayMode Lifecycle & State Controller");
-                if (_foldoutRuntime)
+            // 3. RUNTIME LIKECYCLE & ECONOMY DEBUGGER
+            _foldoutRuntime = EditorGUILayout.BeginFoldoutHeaderGroup(_foldoutRuntime, "PlayMode Lifecycle & State Controller");
+            if (_foldoutRuntime)
+            {
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
-                    using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                    if (!Application.isPlaying)
                     {
-                        if (!Application.isPlaying)
-                        {
-                            EditorGUILayout.HelpBox("Enter PlayMode to control game states, unlock progress, and inject coins/diamonds in real-time.", MessageType.Warning);
-                        }
-                        else
-                        {
-                            DrawRuntimeControls();
-                        }
+                        EditorGUILayout.HelpBox("Enter PlayMode to control game states, unlock progress, and inject coins/diamonds in real-time.", MessageType.Warning);
+                    }
+                    else
+                    {
+                        DrawRuntimeControls(ref triggerGoMainMenu, ref triggerGoLevelSelect, ref triggerGoPlaying, ref triggerGoPaused, ref triggerGoWin, ref triggerAddCoins, ref triggerAddDiamonds, ref triggerUnlockAll);
                     }
                 }
-                EditorGUILayout.EndFoldoutHeaderGroup();
+            }
+            EditorGUILayout.EndFoldoutHeaderGroup();
 
-                EditorGUILayout.Space();
+            EditorGUILayout.Space();
 
-                // 4. ACCESSIBILITY & SETTINGS SENDER
-                _foldoutSettings = EditorGUILayout.BeginFoldoutHeaderGroup(_foldoutSettings, "Accessibility & Localizer Settings");
-                if (_foldoutSettings)
+            // 4. ACCESSIBILITY & SETTINGS SENDER
+            _foldoutSettings = EditorGUILayout.BeginFoldoutHeaderGroup(_foldoutSettings, "Accessibility & Localizer Settings");
+            if (_foldoutSettings)
+            {
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
-                    using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                    DrawSettingsControls();
+                }
+            }
+            EditorGUILayout.EndFoldoutHeaderGroup();
+
+            EditorGUILayout.EndScrollView();
+
+            // --- EXECUTE ACTIONS OUTSIDE LAYOUT GROUPS ---
+            if (triggerGenerate) GenerateLevel();
+            if (triggerBuild) BuildBoardInScene();
+            if (triggerClear) ClearSceneBoard();
+
+            if (Application.isPlaying)
+            {
+                var context = NexusRuntime.CurrentContext;
+                if (context != null)
+                {
+                    var fsm = context.Resolve<IGameStateMachine>();
+                    var progress = context.TryResolve<PlayerProgressModel>();
+                    var economy = context.TryResolve<IEconomyService>();
+
+                    if (fsm != null)
                     {
-                        DrawSettingsControls();
+                        if (triggerGoMainMenu) fsm.ChangeStateAsync<MainMenuState>();
+                        if (triggerGoLevelSelect) fsm.ChangeStateAsync<LevelSelectState>();
+                        if (triggerGoPlaying) fsm.ChangeStateAsync<PlayingState>();
+                        if (triggerGoPaused) fsm.ChangeStateAsync<PausedState>();
+                        if (triggerGoWin) fsm.ChangeStateAsync<WinState>();
+                    }
+
+                    if (progress != null && economy != null)
+                    {
+                        if (triggerAddCoins) economy.Earn("Coins", 100);
+                        if (triggerAddDiamonds) economy.Earn("Diamonds", 10);
+                        if (triggerUnlockAll)
+                        {
+                            progress.MaxUnlockedLevel.Value = WorldConfigSO.TotalLevels;
+                            for (int i = 0; i < progress.UnlockedWorlds.Count; i++)
+                            {
+                                progress.UnlockedWorlds[i] = true;
+                            }
+                        }
                     }
                 }
-                EditorGUILayout.EndFoldoutHeaderGroup();
             }
         }
 
@@ -370,7 +424,10 @@ namespace RingFlow.Editor
             };
         }
 
-        private void DrawRuntimeControls()
+        private void DrawRuntimeControls(
+            ref bool goMainMenu, ref bool goLevelSelect, ref bool goPlaying,
+            ref bool goPaused, ref bool goWin,
+            ref bool addCoins, ref bool addDiamonds, ref bool unlockAll)
         {
             var context = NexusRuntime.CurrentContext;
             if (context == null) return;
@@ -386,14 +443,14 @@ namespace RingFlow.Editor
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    if (GUILayout.Button("Go MainMenu")) fsm.ChangeStateAsync<MainMenuState>();
-                    if (GUILayout.Button("Go LevelSelect")) fsm.ChangeStateAsync<LevelSelectState>();
-                    if (GUILayout.Button("Go Playing")) fsm.ChangeStateAsync<PlayingState>();
+                    if (GUILayout.Button("Go MainMenu")) goMainMenu = true;
+                    if (GUILayout.Button("Go LevelSelect")) goLevelSelect = true;
+                    if (GUILayout.Button("Go Playing")) goPlaying = true;
                 }
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    if (GUILayout.Button("Go Paused")) fsm.ChangeStateAsync<PausedState>();
-                    if (GUILayout.Button("Go Win")) fsm.ChangeStateAsync<WinState>();
+                    if (GUILayout.Button("Go Paused")) goPaused = true;
+                    if (GUILayout.Button("Go Win")) goWin = true;
                 }
             }
 
@@ -414,16 +471,9 @@ namespace RingFlow.Editor
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    if (GUILayout.Button("Add 100 Coins")) economy.Earn("Coins", 100);
-                    if (GUILayout.Button("Add 10 Diamonds")) economy.Earn("Diamonds", 10);
-                    if (GUILayout.Button("Unlock All Levels"))
-                    {
-                        progress.MaxUnlockedLevel.Value = WorldConfigSO.TotalLevels;
-                        for (int i = 0; i < progress.UnlockedWorlds.Count; i++)
-                        {
-                            progress.UnlockedWorlds[i] = true;
-                        }
-                    }
+                    if (GUILayout.Button("Add 100 Coins")) addCoins = true;
+                    if (GUILayout.Button("Add 10 Diamonds")) addDiamonds = true;
+                    if (GUILayout.Button("Unlock All Levels")) unlockAll = true;
                 }
             }
         }
