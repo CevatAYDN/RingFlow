@@ -1,37 +1,73 @@
 using System;
 using System.Collections.Generic;
 using Nexus.Core;
+using Nexus.Core.Services;
 
 namespace RingFlow.Gameplay
 {
     public class InitLevelCommand : ICommand<InitLevelSignal>
     {
         [Inject] private GameplayModel _model;
+        [Inject] private IProgressionService _progressionService;
 
         public void Execute(InitLevelSignal signal)
         {
             _model.Reset();
 
-            // Create Pole 0 with Red/Blue/Red/Blue
-            var p0 = new PoleState { Id = 0 };
-            p0.AddRing(new RingData(RingColor.Red));
-            p0.AddRing(new RingData(RingColor.Blue));
-            p0.AddRing(new RingData(RingColor.Red));
-            p0.AddRing(new RingData(RingColor.Blue));
+            // İlerleme servisinden aktif seviyeyi oku
+            int currentLevel = _progressionService.CurrentLevel.Value;
 
-            // Create Pole 1 with Blue/Red/Blue/Red
-            var p1 = new PoleState { Id = 1 };
-            p1.AddRing(new RingData(RingColor.Blue));
-            p1.AddRing(new RingData(RingColor.Red));
-            p1.AddRing(new RingData(RingColor.Blue));
-            p1.AddRing(new RingData(RingColor.Red));
+            // Seviyeye göre direk ve renk sayılarını belirle (GDD kurallarına uygun dinamik artış)
+            int poleCount = 3 + (currentLevel / 5);
+            int colorCount = 2 + (currentLevel / 8);
+            int maxCapacity = 4;
 
-            // Create Pole 2 (Empty)
-            var p2 = new PoleState { Id = 2 };
+            // Üst sınır limitlerini koru
+            if (poleCount > 10) poleCount = 10;
+            if (colorCount > 8) colorCount = 8;
+            if (poleCount < colorCount + 1) poleCount = colorCount + 1; // En az 1 direk boş kalmalı
 
-            _model.Poles.Add(p0);
-            _model.Poles.Add(p1);
-            _model.Poles.Add(p2);
+            // Seviyeyi otomatik olarak tohumdan (seed) üret ve çözülebilirliğini doğrula
+            var levelData = LevelGenerator.GenerateLevel(currentLevel, seed: currentLevel * 12345, poleCount, colorCount, maxCapacity);
+
+            if (levelData != null)
+            {
+                for (int i = 0; i < levelData.Poles.Count; i++)
+                {
+                    var pData = levelData.Poles[i];
+                    var poleState = new PoleState 
+                    { 
+                        Id = i, 
+                        MaxCapacity = pData.MaxCapacity 
+                    };
+
+                    for (int r = 0; r < pData.Rings.Count; r++)
+                    {
+                        poleState.AddRing(pData.Rings[r]);
+                    }
+
+                    _model.Poles.Add(poleState);
+                }
+
+                // Solver'ın bulduğu optimal hamle sayısını hedef hamle olarak ata
+                _model.TargetMovesCount.Value = levelData.TargetMoves;
+            }
+            else
+            {
+                // Fallback (Hata durumunda yedek basit seviye)
+                var p0 = new PoleState { Id = 0 };
+                p0.AddRing(new RingData(RingColor.Red));
+                p0.AddRing(new RingData(RingColor.Blue));
+                var p1 = new PoleState { Id = 1 };
+                p1.AddRing(new RingData(RingColor.Blue));
+                p1.AddRing(new RingData(RingColor.Red));
+                var p2 = new PoleState { Id = 2 };
+
+                _model.Poles.Add(p0);
+                _model.Poles.Add(p1);
+                _model.Poles.Add(p2);
+                _model.TargetMovesCount.Value = 2;
+            }
         }
     }
 
@@ -329,9 +365,13 @@ namespace RingFlow.Gameplay
     public class CheckWinCommand : ICommand<CheckWinSignal>
     {
         [Inject] private GameplayModel _model;
+        [Inject] private IProgressionService _progressionService;
+        [Inject] private IEconomyService _economyService;
 
         public void Execute(CheckWinSignal signal)
         {
+            if (_model.IsGameWon.Value) return;
+
             bool won = true;
             int totalRingsCount = 0;
 
@@ -341,14 +381,14 @@ namespace RingFlow.Gameplay
 
                 totalRingsCount += pole.Rings.Count;
 
-                // A non-empty pole must be full to be complete (capacity = 4)
+                // Boş olmayan her direk tam kapasite dolu olmalıdır
                 if (!pole.IsFull)
                 {
                     won = false;
                     break;
                 }
 
-                // All rings in the pole must be of the same color
+                // Direkteki tüm halkalar aynı renkte olmalıdır
                 var firstRing = pole.Rings[0];
                 for (int i = 1; i < pole.Rings.Count; i++)
                 {
@@ -364,7 +404,16 @@ namespace RingFlow.Gameplay
 
             if (totalRingsCount == 0) won = false;
 
-            _model.IsGameWon.Value = won;
+            if (won)
+            {
+                _model.IsGameWon.Value = true;
+
+                // İlerlemeyi kaydet (Seviyeyi bir artır)
+                _progressionService.CompleteCurrentLevel();
+
+                // Altın ödülü ver (50 Coin)
+                _economyService.Earn("Coins", 50, "Level Win Reward");
+            }
         }
     }
 }

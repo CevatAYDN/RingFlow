@@ -10,6 +10,7 @@ namespace RingFlow.Gameplay
         public List<PoleState> Poles { get; } = new(10);
         public ObservableProperty<int> SelectedPoleId { get; } = new(-1);
         public ObservableProperty<int> MovesCount { get; } = new(0);
+        public ObservableProperty<int> TargetMovesCount { get; } = new(0);
         public ObservableProperty<bool> IsGameWon { get; } = new(false);
         
         public UndoStack<MoveRecord> MoveHistory { get; } = new(1000);
@@ -24,6 +25,7 @@ namespace RingFlow.Gameplay
             Poles.Clear();
             SelectedPoleId.Value = -1;
             MovesCount.Value = 0;
+            TargetMovesCount.Value = 0;
             IsGameWon.Value = false;
             MoveHistory.Clear();
         }

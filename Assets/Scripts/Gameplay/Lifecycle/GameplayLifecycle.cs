@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Nexus.Core;
+using Nexus.Core.Services;
 
 namespace RingFlow.Gameplay
 {
@@ -8,6 +9,11 @@ namespace RingFlow.Gameplay
     {
         public void OnConfigure(IContextBuilder builder)
         {
+            // Bind Core Services (Şifreli kayıt ve ekonomi/ilerleme yapıları)
+            builder.Bind<IPlayerPrefsService, EncryptedStorageService>();
+            builder.BindService<IEconomyService, EconomyService>();
+            builder.BindService<IProgressionService, ProgressionService>();
+
             // Bind Model
             builder.BindModel<GameplayModel>();
 
