@@ -18,6 +18,7 @@ namespace RingFlow.Gameplay
         {
             // -------------------- Storage --------------------
             builder.Bind<IPlayerPrefsService, EncryptedStorageService>();
+            builder.Bind<ILocalizationTableProvider, CSVLocalizationTableProvider>();
 
             // -------------------- Core Services --------------------
             builder.BindService<IEconomyService, EconomyService>();
@@ -29,6 +30,7 @@ namespace RingFlow.Gameplay
             builder.BindService<IAnalyticsService, AnalyticsService>();
             builder.BindService<IAdService, AdService>();
             builder.BindService<IIapService, IapService>();
+            builder.BindService<IObjectPoolService, ObjectPoolService>();
 
             // -------------------- Models --------------------
             builder.BindModel<GameplayModel>();

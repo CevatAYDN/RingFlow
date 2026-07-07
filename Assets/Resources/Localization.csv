@@ -1,0 +1,8 @@
+Key,en,tr,id,es,fr,de,pt,it,ar,hi,ru,ja,zh,ko,vi
+menu_play,Play,Oyna,Main,Jugar,Jouer,Spielen,Jogar,Gioca,لعب,खेलें,Играть,プレイ,玩,놀이,Chơi
+menu_settings,Settings,Ayarlar,Pengaturan,Ajustes,Paramètres,Einstellungen,Configurações,Impostazioni,إعدادات,सेटिंग्स,Настройки,設定,设置,설정,Cài đặt
+menu_level,Level,Seviye,Level,Nivel,Niveau,Ebene,Nível,Livello,مستوى,स्तर,Уровень,レベル,级别,수준,Cấp độ
+game_win,You Win!,Kazandın!,Kamu Menang!,¡Ganaste!,Gagné!,Gewonnen!,Ganhou!,Hai Vinto!,لقد فزت!,तुम जीते!,Вы выиграли!,勝ちました!,你赢了!,당신이 이겼습니다!,Bạn thắng!
+game_moves,Moves,Hamle,Langkah,Movimientos,Mouvements,Züge,Movimentos,Mosse,تحركات,चालیں,Ходы,手,移动,움직임,Di chuyển
+game_hint,Hint,İpucu,Petunjuk,Pista,Indice,Hinweis,Dica,Suggerimento,تلميح,संकेत,Подсказка,ヒント,提示,힌트,Gợi ý
+game_undo,Undo,Geri Al,Batal,Deshacer,Annuler,Rückgängig,Desfazer,Annulla,تراجع,पूर्ववत,Отменить,元に戻す,撤销,취소,Hoàn tác
