@@ -429,6 +429,19 @@ namespace RingFlow.Gameplay
                 int coinReward = isBoss ? 500 : 50 + (prevLevel % 11) * 10; // 50..150 deterministic per level
 
                 _economyService.Earn("Coins", coinReward, isBoss ? "Boss Win Reward" : "Level Win Reward");
+
+                // GDD §9 — XP: Seviye tamamlandığında XP ver, Level Up kontrolü yap
+                int xpEarned = isBoss ? 50 : 10;
+                _progress.Xp.Value += xpEarned;
+
+                int xpRequired = _progress.PlayerLevel.Value * 100;
+                if (_progress.Xp.Value >= xpRequired)
+                {
+                    _progress.Xp.Value -= xpRequired;
+                    _progress.PlayerLevel.Value++;
+                    // Seviye atlama ödülü: 100 Coin
+                    _economyService.Earn("Coins", 100, "Player Level Up Reward");
+                }
             }
         }
     }
