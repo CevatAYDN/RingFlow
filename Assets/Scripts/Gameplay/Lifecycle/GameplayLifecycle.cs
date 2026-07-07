@@ -68,6 +68,8 @@ namespace RingFlow.Gameplay
             var settings = context.TryResolve<SettingsModel>();
             var audio = context.TryResolve<IAudioService>();
             var haptics = context.TryResolve<IHapticService>();
+            var localization = context.TryResolve<ILocalizationService>();
+
             if (settings != null && audio != null)
             {
                 settings.MusicEnabled.OnChanged((_, n) => audio.IsMuted = !n);
@@ -77,6 +79,11 @@ namespace RingFlow.Gameplay
             if (settings != null && haptics != null)
             {
                 settings.HapticEnabled.OnChanged((_, n) => haptics.IsEnabled = n);
+            }
+            if (settings != null && localization != null)
+            {
+                settings.LanguageCode.OnChanged((_, n) => localization.SetLanguage(n));
+                localization.SetLanguage(settings.LanguageCode.Value);
             }
 
             // Register FSM States

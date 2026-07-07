@@ -29,13 +29,25 @@ namespace RingFlow.Gameplay
             coinsObs.Value = _progress.Coins.Value;
             diamondsObs.Value = _progress.Diamonds.Value;
 
-            // Hook changes: PlayerProgressModel -> EconomyService
-            _progress.Coins.OnChanged((_, newVal) => coinsObs.Value = newVal);
-            _progress.Diamonds.OnChanged((_, newVal) => diamondsObs.Value = newVal);
+            // Hook changes: PlayerProgressModel -> EconomyService (with recursion guard)
+            _progress.Coins.OnChanged((_, newVal) => 
+            {
+                if (coinsObs.Value != newVal) coinsObs.Value = newVal;
+            });
+            _progress.Diamonds.OnChanged((_, newVal) => 
+            {
+                if (diamondsObs.Value != newVal) diamondsObs.Value = newVal;
+            });
 
-            // Hook changes: EconomyService -> PlayerProgressModel
-            coinsObs.OnChanged((_, newVal) => _progress.Coins.Value = (int)newVal);
-            diamondsObs.OnChanged((_, newVal) => _progress.Diamonds.Value = (int)newVal);
+            // Hook changes: EconomyService -> PlayerProgressModel (with recursion guard)
+            coinsObs.OnChanged((_, newVal) => 
+            {
+                if (_progress.Coins.Value != newVal) _progress.Coins.Value = (int)newVal;
+            });
+            diamondsObs.OnChanged((_, newVal) => 
+            {
+                if (_progress.Diamonds.Value != newVal) _progress.Diamonds.Value = (int)newVal;
+            });
 
             return default;
         }
