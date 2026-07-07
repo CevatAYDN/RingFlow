@@ -89,8 +89,8 @@ namespace RingFlow.Gameplay
             {
                 var move = moves[i];
                 var nextState = state;
-                var color = nextState.PopRing(move.From);
-                nextState.AddRing(move.To, color);
+                var ring = nextState.PopRing(move.From);
+                nextState.AddRing(move.To, ring);
 
                 if (_visited.Contains(nextState)) continue;
 
@@ -169,13 +169,13 @@ namespace RingFlow.Gameplay
             {
                 if (!state.CanPopRing(i)) continue;
 
-                RingColor topColor = state.GetTopRingColor(i);
+                var topRing = state.GetTopRing(i);
 
                 for (int j = 0; j < numPoles; j++)
                 {
                     if (i == j) continue;
 
-                    if (state.CanAddRing(j, topColor, maxCapacity))
+                    if (state.CanAddRing(j, topRing.Color, topRing.Type, maxCapacity))
                     {
                         destination[count++] = new Move(i, j);
                     }

@@ -49,4 +49,32 @@ namespace RingFlow.Gameplay
         public readonly int PoleId;
         public UnlockPoleSignal(int poleId) => PoleId = poleId;
     }
+
+    public readonly struct BombTickSignal
+    {
+        public readonly int PoleId;
+        public readonly int Counter;
+        public BombTickSignal(int poleId, int counter)
+        {
+            PoleId = poleId;
+            Counter = counter;
+        }
+    }
+
+    public readonly struct BombExplodedSignal
+    {
+        public readonly int PoleId;
+        public BombExplodedSignal(int poleId) => PoleId = poleId;
+    }
+
+    public readonly struct PaintRingSignal
+    {
+        public readonly int PoleId;
+        public readonly RingColor NewColor;
+        public PaintRingSignal(int poleId, RingColor newColor)
+        {
+            PoleId = poleId;
+            NewColor = newColor;
+        }
+    }
 }

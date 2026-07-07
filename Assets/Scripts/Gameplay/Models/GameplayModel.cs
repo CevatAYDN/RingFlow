@@ -37,11 +37,16 @@ namespace RingFlow.Gameplay
         public bool WasMysteryRevealedOnFrom;
         public bool WasIceBrokenOnTarget;
         public bool WasTargetPoleUnlocked;
+        public bool WasPainted;
+        public RingColor OriginalColor;
+        public List<MoveRecord> SubMoves;
 
         public MoveRecord(int fromPoleId, int toPoleId, RingData ring, 
             bool wasMysteryRevealedOnFrom = false, 
             bool wasIceBrokenOnTarget = false, 
-            bool wasTargetPoleUnlocked = false)
+            bool wasTargetPoleUnlocked = false,
+            bool wasPainted = false,
+            RingColor originalColor = RingColor.None)
         {
             FromPoleId = fromPoleId;
             ToPoleId = toPoleId;
@@ -49,6 +54,9 @@ namespace RingFlow.Gameplay
             WasMysteryRevealedOnFrom = wasMysteryRevealedOnFrom;
             WasIceBrokenOnTarget = wasIceBrokenOnTarget;
             WasTargetPoleUnlocked = wasTargetPoleUnlocked;
+            WasPainted = wasPainted;
+            OriginalColor = originalColor;
+            SubMoves = null;
         }
     }
 

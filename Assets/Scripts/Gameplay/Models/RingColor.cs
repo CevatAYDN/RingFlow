@@ -12,6 +12,7 @@ namespace RingFlow.Gameplay
         Cyan,
         Magenta,
         Key,
-        Stone
+        Stone,
+        Rainbow
     }
 }

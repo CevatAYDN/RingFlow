@@ -87,16 +87,54 @@ namespace RingFlow.Gameplay
             if (fromPole == null || toPole == null || !fromPole.CanPopRing()) return;
 
             var ring = fromPole.TopRing;
+
+            // Chain (Zincir) halka ise hedef direkte en az 2 boş yer olmalı (eğer bağlı halka başka direkteyse)
+            bool isChain = ring.Type == RingType.Chain;
+            PoleState chainSourcePole = null;
+            RingData chainLinkedRing = default;
+
+            if (isChain)
+            {
+                // Bağlı diğer halkayı ara
+                foreach (var pole in _model.Poles)
+                {
+                    if (pole.Id == signal.FromPoleId) continue;
+                    var topR = pole.TopRing;
+                    if (topR.Type == RingType.Chain && topR.AdditionalData == ring.AdditionalData)
+                    {
+                        chainSourcePole = pole;
+                        chainLinkedRing = topR;
+                        break;
+                    }
+                }
+
+                if (chainSourcePole != null)
+                {
+                    // Eğer bağlı halka başka direkteyse ve hedef direkte 2 halkalık yer yoksa taşıma yapılamaz
+                    if (toPole.Rings.Count + 2 > toPole.MaxCapacity) return;
+                }
+            }
+
             if (toPole.CanAddRing(ring))
             {
                 bool wasMysteryRevealed = false;
                 bool wasIceBroken = false;
                 bool wasTargetPoleUnlocked = false;
+                bool wasPainted = false;
+                RingColor originalColor = ring.Color;
+
+                // 1. Boyama (Paint) Kontrolü
+                if (!toPole.IsEmpty && toPole.TopRing.Type == RingType.Paint)
+                {
+                    wasPainted = true;
+                    ring.Color = toPole.TopRing.Color;
+                    _signalBus.Fire(new PaintRingSignal(signal.ToPoleId, ring.Color));
+                }
 
                 // Halkayı eski direkten al
                 fromPole.PopRing();
 
-                // 1. Kilit Açılma Kontrolü: Hedef kilitliyse ve taşınan Altın Anahtar ise
+                // Kilit açma kontrolü
                 if (toPole.IsLocked && ring.Type == RingType.Locked)
                 {
                     toPole.IsLocked = false;
@@ -104,10 +142,10 @@ namespace RingFlow.Gameplay
                     _signalBus.Fire(new UnlockPoleSignal(signal.ToPoleId));
                 }
 
-                // Halkayı hedef direğe yerleştir
+                // Halkayı hedef direğe koy
                 toPole.AddRing(ring);
 
-                // 2. Buz Kırılma Kontrolü: Hedefte yerleşen halkanın hemen altında donmuş bir halka varsa ve renkleri aynıysa
+                // Buz kırılma kontrolü
                 if (toPole.Rings.Count >= 2)
                 {
                     var belowRing = toPole.Rings[^2];
@@ -119,7 +157,7 @@ namespace RingFlow.Gameplay
                     }
                 }
 
-                // 3. Gizem Açılma Kontrolü: Eski direğin en üstünde gizemli halka kaldıysa, onu standart halkaya çevir
+                // Gizemli halka açılma kontrolü
                 if (!fromPole.IsEmpty && fromPole.TopRing.Type == RingType.Mystery)
                 {
                     var topM = fromPole.TopRing;
@@ -128,12 +166,73 @@ namespace RingFlow.Gameplay
                     _signalBus.Fire(new RevealMysterySignal(signal.FromPoleId, fromPole.TopRing));
                 }
 
-                // Hamle geçmişine tüm özel durum bayraklarıyla kaydet
-                _model.MoveHistory.Push(new MoveRecord(signal.FromPoleId, signal.ToPoleId, ring, 
-                    wasMysteryRevealed, wasIceBroken, wasTargetPoleUnlocked));
+                var mainRecord = new MoveRecord(signal.FromPoleId, signal.ToPoleId, ring,
+                    wasMysteryRevealed, wasIceBroken, wasTargetPoleUnlocked, wasPainted, originalColor);
 
+                // 2. Zincirli Halka Otomatik Taşıması
+                if (isChain && chainSourcePole != null)
+                {
+                    chainSourcePole.PopRing();
+                    toPole.AddRing(chainLinkedRing);
+
+                    mainRecord.SubMoves ??= new List<MoveRecord>();
+                    mainRecord.SubMoves.Add(new MoveRecord(chainSourcePole.Id, toPole.Id, chainLinkedRing));
+                }
+
+                // 3. Mıknatıs (Magnet) Çekim Kontrolü
+                if (ring.Type == RingType.Magnet)
+                {
+                    // Diğer direklerin üstündeki aynı renkli halkaları çek
+                    foreach (var p in _model.Poles)
+                    {
+                        if (p.Id == toPole.Id) continue;
+                        if (toPole.IsFull) break;
+
+                        if (p.CanPopRing() && p.TopRing.Color == ring.Color)
+                        {
+                            var pulledRing = p.PopRing();
+                            toPole.AddRing(pulledRing);
+
+                            mainRecord.SubMoves ??= new List<MoveRecord>();
+                            mainRecord.SubMoves.Add(new MoveRecord(p.Id, toPole.Id, pulledRing));
+                        }
+                    }
+                }
+
+                // Hamleyi kaydet
+                _model.MoveHistory.Push(mainRecord);
                 _model.MovesCount.Value++;
-                _signalBus.Fire(new CheckWinSignal());
+
+                // 4. Bomba (Bomb) Sayaçlarını Azaltma
+                bool bombExploded = false;
+                foreach (var pole in _model.Poles)
+                {
+                    for (int i = 0; i < pole.Rings.Count; i++)
+                    {
+                        var r = pole.Rings[i];
+                        if (r.Type == RingType.Bomb)
+                        {
+                            int newCounter = r.AdditionalData - 1;
+                            pole.Rings[i] = new RingData(r.Color, RingType.Bomb, newCounter);
+                            _signalBus.Fire(new BombTickSignal(pole.Id, newCounter));
+
+                            if (newCounter <= 0)
+                            {
+                                bombExploded = true;
+                                _signalBus.Fire(new BombExplodedSignal(pole.Id));
+                            }
+                        }
+                    }
+                }
+
+                if (bombExploded)
+                {
+                    _model.IsGameWon.Value = false; // Oyunu kaybet
+                }
+                else
+                {
+                    _signalBus.Fire(new CheckWinSignal());
+                }
             }
         }
     }
@@ -152,31 +251,68 @@ namespace RingFlow.Gameplay
                 var fromPole = _model.Poles.Find(p => p.Id == lastMove.FromPoleId);
                 var toPole = _model.Poles.Find(p => p.Id == lastMove.ToPoleId);
 
-                if (fromPole != null && toPole != null && toPole.TopRing.Color == lastMove.Ring.Color)
+                if (fromPole != null && toPole != null)
                 {
-                    // 1. Kilit durumunu geri al
+                    // 1. Bomba (Bomb) Sayaçlarını Geri Yükle (Artır)
+                    foreach (var pole in _model.Poles)
+                    {
+                        for (int i = 0; i < pole.Rings.Count; i++)
+                        {
+                            var r = pole.Rings[i];
+                            if (r.Type == RingType.Bomb)
+                            {
+                                int newCounter = r.AdditionalData + 1;
+                                pole.Rings[i] = new RingData(r.Color, RingType.Bomb, newCounter);
+                                _signalBus.Fire(new BombTickSignal(pole.Id, newCounter));
+                            }
+                        }
+                    }
+
+                    // 2. Alt hamleleri (SubMoves - Mıknatıs ve Zincir) tersten geri al
+                    if (lastMove.SubMoves != null)
+                    {
+                        for (int i = lastMove.SubMoves.Count - 1; i >= 0; i--)
+                        {
+                            var sub = lastMove.SubMoves[i];
+                            var subFrom = _model.Poles.Find(p => p.Id == sub.FromPoleId);
+                            var subTo = _model.Poles.Find(p => p.Id == sub.ToPoleId);
+
+                            if (subFrom != null && subTo != null)
+                            {
+                                subTo.PopRing();
+                                subFrom.AddRing(sub.Ring);
+                            }
+                        }
+                    }
+
+                    // 3. Özel durumları geri al
                     if (lastMove.WasTargetPoleUnlocked)
                     {
                         toPole.IsLocked = true;
                     }
 
-                    // 2. Kırılan buzu geri dondur
                     if (lastMove.WasIceBrokenOnTarget && toPole.Rings.Count >= 2)
                     {
                         var belowRing = toPole.Rings[^2];
                         toPole.Rings[^2] = new RingData(belowRing.Color, RingType.Frozen);
                     }
 
-                    // 3. Açılan gizemli halkayı geri gizle
                     if (lastMove.WasMysteryRevealedOnFrom && !fromPole.IsEmpty)
                     {
                         var topM = fromPole.TopRing;
                         fromPole.Rings[^1] = new RingData(topM.Color, RingType.Mystery);
                     }
 
-                    // Taşınan halkayı eski yerine koy
-                    toPole.PopRing();
-                    fromPole.AddRing(lastMove.Ring);
+                    // Ana halkayı geri taşı
+                    var movedRing = toPole.PopRing();
+
+                    // Boyama geri yüklemesi
+                    if (lastMove.WasPainted)
+                    {
+                        movedRing.Color = lastMove.OriginalColor;
+                    }
+
+                    fromPole.AddRing(movedRing);
 
                     if (_model.MovesCount.Value > 0)
                     {

@@ -27,6 +27,12 @@ namespace RingFlow.Gameplay
             // Taş (Stone) halkanın üzerine başka halka yerleştirilemez
             if (TopRing.Type == RingType.Stone) return false;
 
+            // Gökkuşağı (Rainbow) halka her rengin üzerine yerleşebilir
+            if (ring.Type == RingType.Rainbow) return true;
+
+            // Gökkuşağı veya Boya (Paint) halkaların üzerine her renk yerleşebilir
+            if (TopRing.Type == RingType.Rainbow || TopRing.Type == RingType.Paint) return true;
+
             // Renk eşleşme kuralı
             return TopRing.Color == ring.Color;
         }

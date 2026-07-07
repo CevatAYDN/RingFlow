@@ -38,7 +38,7 @@ namespace RingFlow.Gameplay
                     var color = selectedColors[i];
                     for (int r = 0; r < maxCapacity; r++)
                     {
-                        board.AddRing(i, color);
+                        board.AddRing(i, new RingData(color));
                     }
                 }
 

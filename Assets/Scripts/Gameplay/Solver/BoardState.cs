@@ -5,11 +5,11 @@ namespace RingFlow.Gameplay
     /// <summary>
     /// Tahta durumunu temsil eden, 0-GC uyumlu, kopyalaması son derece hızlı,
     /// bit-maskeleme destekli değer tipi (struct).
-    /// Her direğin durumu tek bir uint (32-bit) ile sıkıştırılmıştır.
+    /// Her direğin renk ve tip verileri sıkıştırılmış uint alanlarında tutulur.
     /// </summary>
     public struct BoardState : IEquatable<BoardState>
     {
-        // 10 direğe kadar veri tutar (GDD limiti)
+        // Renkler, Halka Sayısı ve Kilit/Buz bayrakları için 10 uint (Direkler)
         public uint Pole0;
         public uint Pole1;
         public uint Pole2;
@@ -21,12 +21,19 @@ namespace RingFlow.Gameplay
         public uint Pole8;
         public uint Pole9;
 
-        public int PoleCount;
+        // Halka tipleri (Mystery, Paint, Chain vb.) için 10 uint
+        public uint Types0;
+        public uint Types1;
+        public uint Types2;
+        public uint Types3;
+        public uint Types4;
+        public uint Types5;
+        public uint Types6;
+        public uint Types7;
+        public uint Types8;
+        public uint Types9;
 
-        // Her direk için bit-maskeleme düzeni:
-        // - 0-23. bitler: 6 halkaya kadar renk bilgisi (her halka için 4 bit, maks 16 renk)
-        // - 24-27. bitler: Direkteki halka sayısı (0-6)
-        // - 28-31. bitler: Ekstra özellikler (örneğin kilitli direk durumları)
+        public int PoleCount;
 
         public uint GetPoleRaw(int index)
         {
@@ -63,6 +70,41 @@ namespace RingFlow.Gameplay
             }
         }
 
+        public uint GetTypesRaw(int index)
+        {
+            return index switch
+            {
+                0 => Types0,
+                1 => Types1,
+                2 => Types2,
+                3 => Types3,
+                4 => Types4,
+                5 => Types5,
+                6 => Types6,
+                7 => Types7,
+                8 => Types8,
+                9 => Types9,
+                _ => 0
+            };
+        }
+
+        public void SetTypesRaw(int index, uint value)
+        {
+            switch (index)
+            {
+                case 0: Types0 = value; break;
+                case 1: Types1 = value; break;
+                case 2: Types2 = value; break;
+                case 3: Types3 = value; break;
+                case 4: Types4 = value; break;
+                case 5: Types5 = value; break;
+                case 6: Types6 = value; break;
+                case 7: Types7 = value; break;
+                case 8: Types8 = value; break;
+                case 9: Types9 = value; break;
+            }
+        }
+
         public int GetRingCount(int poleIndex)
         {
             uint val = GetPoleRaw(poleIndex);
@@ -72,7 +114,7 @@ namespace RingFlow.Gameplay
         public void SetRingCount(int poleIndex, int count)
         {
             uint val = GetPoleRaw(poleIndex);
-            val &= ~(0xFu << 24); // Count bitlerini sıfırla
+            val &= ~(0xFu << 24);
             val |= ((uint)count & 0xF) << 24;
             SetPoleRaw(poleIndex, val);
         }
@@ -88,9 +130,25 @@ namespace RingFlow.Gameplay
         {
             uint val = GetPoleRaw(poleIndex);
             int shift = ringIndex * 4;
-            val &= ~(0xFu << shift); // Renk bitlerini sıfırla
+            val &= ~(0xFu << shift);
             val |= ((uint)color & 0xF) << shift;
             SetPoleRaw(poleIndex, val);
+        }
+
+        public RingType GetRingType(int poleIndex, int ringIndex)
+        {
+            uint val = GetTypesRaw(poleIndex);
+            int shift = ringIndex * 4;
+            return (RingType)((val >> shift) & 0xF);
+        }
+
+        public void SetRingType(int poleIndex, int ringIndex, RingType type)
+        {
+            uint val = GetTypesRaw(poleIndex);
+            int shift = ringIndex * 4;
+            val &= ~(0xFu << shift);
+            val |= ((uint)type & 0xF) << shift;
+            SetTypesRaw(poleIndex, val);
         }
 
         public bool IsPoleLocked(int poleIndex)
@@ -130,63 +188,124 @@ namespace RingFlow.Gameplay
             return GetRingColor(poleIndex, count - 1);
         }
 
+        public RingType GetTopRingType(int poleIndex)
+        {
+            int count = GetRingCount(poleIndex);
+            if (count == 0) return RingType.Standard;
+            return GetRingType(poleIndex, count - 1);
+        }
+
+        public RingData GetTopRing(int poleIndex)
+        {
+            int count = GetRingCount(poleIndex);
+            if (count == 0) return new RingData(RingColor.None);
+            return new RingData(GetRingColor(poleIndex, count - 1), GetRingType(poleIndex, count - 1));
+        }
+
         public bool CanPopRing(int poleIndex)
         {
             if (IsEmpty(poleIndex)) return false;
             if (IsPoleLocked(poleIndex)) return false;
             if (IsTopRingFrozen(poleIndex)) return false;
             if (GetTopRingColor(poleIndex) == RingColor.Stone) return false;
+            if (GetTopRingType(poleIndex) == RingType.Stone) return false;
             return true;
         }
 
-        public bool CanAddRing(int poleIndex, RingColor color, int maxCapacity)
+        public bool CanAddRing(int poleIndex, RingColor color, RingType type, int maxCapacity)
         {
             if (IsPoleLocked(poleIndex))
             {
-                return color == RingColor.Key;
+                return type == RingType.Locked;
             }
             if (GetRingCount(poleIndex) >= maxCapacity) return false;
             if (IsEmpty(poleIndex)) return true;
 
-            RingColor topColor = GetTopRingColor(poleIndex);
-            if (topColor == RingColor.Stone) return false;
+            var top = GetTopRing(poleIndex);
+            if (top.Type == RingType.Stone) return false;
 
-            return topColor == color;
+            // Gökkuşağı (Rainbow) joker kuralları
+            if (type == RingType.Rainbow || top.Type == RingType.Rainbow) return true;
+
+            // Boya (Paint) kuralı: Her rengi kabul eder
+            if (top.Type == RingType.Paint) return true;
+
+            return top.Color == color;
         }
 
-        public void AddRing(int poleIndex, RingColor color)
+        public void AddRing(int poleIndex, RingData ring)
         {
-            // Eğer direk kilitliyse ve Key yerleşiyorsa kilidi aç
-            if (IsPoleLocked(poleIndex) && color == RingColor.Key)
+            // Eğer direk kilitliyse ve Key geliyorsa kilidi aç
+            if (IsPoleLocked(poleIndex) && ring.Type == RingType.Locked)
             {
                 SetPoleLocked(poleIndex, false);
             }
 
-            // Eğer üstteki halka donmuşsa ve üzerine aynı renk geliyorsa buzu erit
-            if (IsTopRingFrozen(poleIndex) && GetTopRingColor(poleIndex) == color)
+            // Buz kırılma kontrolü
+            if (IsTopRingFrozen(poleIndex) && GetTopRingColor(poleIndex) == ring.Color)
             {
                 SetTopRingFrozen(poleIndex, false);
             }
 
             int count = GetRingCount(poleIndex);
-            SetRingColor(poleIndex, count, color);
+
+            // Boyama kuralı
+            if (count > 0 && GetTopRingType(poleIndex) == RingType.Paint)
+            {
+                ring.Color = GetTopRingColor(poleIndex);
+            }
+
+            SetRingColor(poleIndex, count, ring.Color);
+            SetRingType(poleIndex, count, ring.Type);
+            SetRingCount(poleIndex, count + 1);
+
+            // Mıknatıs (Magnet) kuralı: Aynı renkteki diğer halkaları çek
+            if (ring.Type == RingType.Magnet)
+            {
+                for (int p = 0; p < PoleCount; p++)
+                {
+                    if (p == poleIndex) continue;
+                    if (GetRingCount(poleIndex) >= 4) break;
+
+                    if (CanPopRing(p) && GetTopRingColor(p) == ring.Color)
+                    {
+                        var pulled = PopRing(p);
+                        AddRingSimple(poleIndex, pulled);
+                    }
+                }
+            }
+        }
+
+        public void AddRingSimple(int poleIndex, RingData ring)
+        {
+            int count = GetRingCount(poleIndex);
+            if (count > 0 && GetTopRingType(poleIndex) == RingType.Paint)
+            {
+                ring.Color = GetTopRingColor(poleIndex);
+            }
+
+            SetRingColor(poleIndex, count, ring.Color);
+            SetRingType(poleIndex, count, ring.Type);
             SetRingCount(poleIndex, count + 1);
         }
 
-        public RingColor PopRing(int poleIndex)
+        public RingData PopRing(int poleIndex)
         {
             int count = GetRingCount(poleIndex);
-            if (count == 0) return RingColor.None;
+            if (count == 0) return new RingData(RingColor.None);
             int lastIndex = count - 1;
-            RingColor color = GetRingColor(poleIndex, lastIndex);
+            
+            var ring = new RingData(GetRingColor(poleIndex, lastIndex), GetRingType(poleIndex, lastIndex));
+            
             SetRingColor(poleIndex, lastIndex, RingColor.None);
+            SetRingType(poleIndex, lastIndex, RingType.Standard);
             SetRingCount(poleIndex, lastIndex);
 
             if (count == 1)
             {
                 SetTopRingFrozen(poleIndex, false);
             }
-            return color;
+            return ring;
         }
 
         public bool Equals(BoardState other)
@@ -201,6 +320,16 @@ namespace RingFlow.Gameplay
                    Pole7 == other.Pole7 &&
                    Pole8 == other.Pole8 &&
                    Pole9 == other.Pole9 &&
+                   Types0 == other.Types0 &&
+                   Types1 == other.Types1 &&
+                   Types2 == other.Types2 &&
+                   Types3 == other.Types3 &&
+                   Types4 == other.Types4 &&
+                   Types5 == other.Types5 &&
+                   Types6 == other.Types6 &&
+                   Types7 == other.Types7 &&
+                   Types8 == other.Types8 &&
+                   Types9 == other.Types9 &&
                    PoleCount == other.PoleCount;
         }
 
@@ -224,6 +353,16 @@ namespace RingFlow.Gameplay
                 hash = hash * 23 + (int)Pole7;
                 hash = hash * 23 + (int)Pole8;
                 hash = hash * 23 + (int)Pole9;
+                hash = hash * 23 + (int)Types0;
+                hash = hash * 23 + (int)Types1;
+                hash = hash * 23 + (int)Types2;
+                hash = hash * 23 + (int)Types3;
+                hash = hash * 23 + (int)Types4;
+                hash = hash * 23 + (int)Types5;
+                hash = hash * 23 + (int)Types6;
+                hash = hash * 23 + (int)Types7;
+                hash = hash * 23 + (int)Types8;
+                hash = hash * 23 + (int)Types9;
                 hash = hash * 23 + PoleCount;
                 return hash;
             }
