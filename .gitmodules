@@ -1,0 +1,4 @@
+[submodule "Assets/GameContainer"]
+	path = Assets/GameContainer
+	url = https://github.com/CevatAYDN/GameContainer
+	ignore = dirty
