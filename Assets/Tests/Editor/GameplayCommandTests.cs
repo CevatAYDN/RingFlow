@@ -234,7 +234,7 @@ namespace RingFlow.Tests
 
             pole0.AddRing(new RingData(RingColor.Red, RingType.Magnet));
             pole1.AddRing(new RingData(RingColor.Red, RingType.Standard));
-            pole2.AddRing(new RingData(RingColor.Blue, RingType.Standard));
+            // Magnet pulls Red to pole2 (which must start empty)
 
             _gameplayModel.Poles.Add(pole0);
             _gameplayModel.Poles.Add(pole1);
@@ -260,8 +260,8 @@ namespace RingFlow.Tests
             var pole1 = new PoleState { Id = 1, MaxCapacity = 4 };
 
             pole0.AddRing(new RingData(RingColor.Red, RingType.Standard));
-            // Bomb with counter = 1
-            pole1.AddRing(new RingData(RingColor.Blue, RingType.Bomb, 1));
+            // Bomb with counter = 1 (must be Red color so stack is valid)
+            pole1.AddRing(new RingData(RingColor.Red, RingType.Bomb, 1));
 
             _gameplayModel.Poles.Add(pole0);
             _gameplayModel.Poles.Add(pole1);

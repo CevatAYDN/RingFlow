@@ -123,6 +123,10 @@ namespace RingFlow.Tests
             service.InitializeAsync(System.Threading.CancellationToken.None);
 
             // Switch to Arabic
+            if (provider.TryGetTable("ar", out var arTable))
+            {
+                service.RegisterLanguageTable("ar", arTable);
+            }
             service.SetLanguage("ar");
             Assert.IsTrue(service.IsRTL);
 

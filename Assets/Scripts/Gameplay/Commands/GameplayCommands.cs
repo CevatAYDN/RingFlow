@@ -185,6 +185,11 @@ namespace RingFlow.Gameplay
                 {
                     wasPainted = true;
                     ring.Color = toPole.TopRing.Color;
+
+                    var paintTarget = toPole.Rings[^1];
+                    paintTarget.Type = RingType.Standard;
+                    toPole.Rings[^1] = paintTarget;
+
                     _signalBus.Fire(new PaintRingSignal(signal.ToPoleId, ring.Color));
                 }
 
@@ -486,6 +491,7 @@ namespace RingFlow.Gameplay
 
     public class UndoRequestedCommand : ICommand<UndoRequestedSignal>
     {
+        [Inject] private GameplayModel _model;
         [Inject] private PlayerProgressModel _progress;
         [Inject] private IEconomyService _economy;
         [Inject] private IAdService _ads;
@@ -493,9 +499,7 @@ namespace RingFlow.Gameplay
 
         public void Execute(UndoRequestedSignal signal)
         {
-            var context = NexusRuntime.CurrentContext;
-            var model = context.Resolve<GameplayModel>();
-            if (model.MoveHistory.Count == 0) return;
+            if (_model.MoveHistory.Count == 0) return;
 
             // İlk 5 geri alma bu oturum için ücretsizdir
             if (_progress.FreeUndosUsedThisSession.Value < 5)

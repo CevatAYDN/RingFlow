@@ -177,7 +177,7 @@ namespace RingFlow.Gameplay
             {
                 // Boş direklerden birini kilitle
                 int lockedPole = -1;
-                for (int attempt = 0; attempt < 10; attempt++)
+                for (int attempt = 0; attempt < 20; attempt++)
                 {
                     int p = rand.Next(poleCount);
                     if (board.IsEmpty(p))
@@ -186,6 +186,42 @@ namespace RingFlow.Gameplay
                         lockedPole = p;
                         break;
                     }
+                }
+
+                // Eğer tamamen boş direk bulunamadıysa, en az halkası olan direği bulup boşaltalım ve kilitleyelim
+                if (lockedPole == -1)
+                {
+                    int bestPole = 0;
+                    int minRings = 999;
+                    for (int p = 0; p < poleCount; p++)
+                    {
+                        int rc = board.GetRingCount(p);
+                        if (rc < minRings)
+                        {
+                            minRings = rc;
+                            bestPole = p;
+                        }
+                    }
+
+                    // Bu direği boşaltalım (halkalarını diğer boş yerleri olan direklere dağıtalım)
+                    while (board.GetRingCount(bestPole) > 0)
+                    {
+                        var ringToMove = board.GetTopRing(bestPole);
+                        board.PopRing(bestPole);
+                        
+                        // Başka bir direğe ekleyelim
+                        for (int target = 0; target < poleCount; target++)
+                        {
+                            if (target == bestPole) continue;
+                            if (board.GetRingCount(target) < 4)
+                            {
+                                board.AddRing(target, ringToMove);
+                                break;
+                            }
+                        }
+                    }
+                    board.SetPoleLocked(bestPole, true);
+                    lockedPole = bestPole;
                 }
 
                 // Diğer direklerden birindeki bir halkayı Anahtar (Locked) yap

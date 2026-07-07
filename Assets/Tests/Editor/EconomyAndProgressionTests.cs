@@ -85,6 +85,7 @@ namespace RingFlow.Tests
 
             // Complete level increases level by 1
             _progressionService.SetLevel(5);
+            _progress.MaxUnlockedLevel.Value = 5; // Reset to 5 so we test completion increase
             _progressionService.CompleteCurrentLevel();
             Assert.AreEqual(6, _progress.CurrentLevel.Value);
             Assert.AreEqual(6, _progress.MaxUnlockedLevel.Value);
@@ -123,7 +124,8 @@ namespace RingFlow.Tests
             Assert.AreEqual(25, reward6.Amount);
 
             // Test claimable timer resets (at least 24 hours required)
-            DateTime baseTime = DateTime.UtcNow;
+            // Use fixed noon DateTime to prevent calendar timezone midnight wrap errors
+            DateTime baseTime = new DateTime(2026, 7, 7, 12, 0, 0, DateTimeKind.Utc);
             _progress.DailyLastClaimUtcTicks.Value = baseTime.Ticks;
 
             // Same day claim should fail

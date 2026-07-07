@@ -70,6 +70,8 @@ namespace RingFlow.Gameplay
             var haptics = context.TryResolve<IHapticService>();
             var localization = context.TryResolve<ILocalizationService>();
 
+            var provider = context.TryResolve<ILocalizationTableProvider>();
+
             if (settings != null && audio != null)
             {
                 settings.MusicEnabled.OnChanged((_, n) => audio.IsMuted = !n);
@@ -82,6 +84,18 @@ namespace RingFlow.Gameplay
             }
             if (settings != null && localization != null)
             {
+                if (provider != null)
+                {
+                    var languages = new[] { "en", "tr", "id", "es", "fr", "de", "pt", "it", "ar", "hi", "ru", "ja", "zh", "ko", "vi" };
+                    foreach (var lang in languages)
+                    {
+                        if (provider.TryGetTable(lang, out var table) && table != null)
+                        {
+                            localization.RegisterLanguageTable(lang, table);
+                        }
+                    }
+                }
+
                 settings.LanguageCode.OnChanged((_, n) => localization.SetLanguage(n));
                 localization.SetLanguage(settings.LanguageCode.Value);
             }
