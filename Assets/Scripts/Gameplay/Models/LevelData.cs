@@ -57,10 +57,5 @@ namespace RingFlow.Gameplay
         public int TargetMoves;
         public List<PoleData> Poles = new();
     }
-
-    [CreateAssetMenu(fileName = "NewLevelData", menuName = "RingFlow/Level Data")]
-    public class LevelDataSO : ScriptableObject
-    {
-        public LevelData Data;
-    }
 }
+

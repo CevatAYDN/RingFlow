@@ -18,14 +18,13 @@ namespace RingFlow.Gameplay
             int currentLevel = _progressionService.CurrentLevel.Value;
 
             // Seviyeye göre direk ve renk sayılarını belirle (GDD kurallarına uygun dinamik artış)
-            int poleCount = 3 + (currentLevel / 5);
-            int colorCount = 2 + (currentLevel / 8);
-            int maxCapacity = 4;
+            int poleCount = DifficultyCurve.PoleCountForLevel(currentLevel);
+            int colorCount = DifficultyCurve.ColorCountForLevel(currentLevel);
+            int maxCapacity = DifficultyCurve.MaxCapacityForLevel(currentLevel);
 
             // Üst sınır limitlerini koru
-            if (poleCount > 10) poleCount = 10;
-            if (colorCount > 8) colorCount = 8;
             if (poleCount < colorCount + 1) poleCount = colorCount + 1; // En az 1 direk boş kalmalı
+            if (poleCount > 10) poleCount = 10;
 
             // Seviyeyi otomatik olarak tohumdan (seed) üret ve çözülebilirliğini doğrula
             var levelData = LevelGenerator.GenerateLevel(currentLevel, seed: currentLevel * 12345, poleCount, colorCount, maxCapacity);
@@ -159,12 +158,22 @@ namespace RingFlow.Gameplay
                 bool wasPainted = false;
                 RingColor originalColor = ring.Color;
 
-                // 1. Boyama (Paint) Kontrolü
+                // 1. Boyama (Paint) Kontrolü — Paint halka üzerine gelen halkanın rengini boyar
                 if (!toPole.IsEmpty && toPole.TopRing.Type == RingType.Paint)
                 {
                     wasPainted = true;
                     ring.Color = toPole.TopRing.Color;
                     _signalBus.Fire(new PaintRingSignal(signal.ToPoleId, ring.Color));
+                }
+
+                // 2. Halka Mysterty mi? (popping a Mystery reveals its color)
+                if (ring.Type == RingType.Mystery)
+                {
+                    wasMysteryRevealed = true;
+                    // Renk zaten üzerinde (RingColor.None ise rastgele kalır — view için UI fallback'e düşer)
+                    var revealed = new RingData(ring.Color == RingColor.None ? RingColor.Red : ring.Color, RingType.Standard);
+                    _signalBus.Fire(new RevealMysterySignal(signal.FromPoleId, revealed));
+                    ring = revealed;
                 }
 
                 // Halkayı eski direkten al
@@ -181,7 +190,7 @@ namespace RingFlow.Gameplay
                 // Halkayı hedef direğe koy
                 toPole.AddRing(ring);
 
-                // Buz kırılma kontrolü
+                // Buz kırılma kontrolü — hedef direğe aynı renkten bir halka eklendi ise alttaki Frozen kırılır
                 if (toPole.Rings.Count >= 2)
                 {
                     var belowRing = toPole.Rings[^2];
@@ -191,15 +200,6 @@ namespace RingFlow.Gameplay
                         wasIceBroken = true;
                         _signalBus.Fire(new BreakIceSignal(signal.ToPoleId));
                     }
-                }
-
-                // Gizemli halka açılma kontrolü
-                if (!fromPole.IsEmpty && fromPole.TopRing.Type == RingType.Mystery)
-                {
-                    var topM = fromPole.TopRing;
-                    fromPole.Rings[^1] = new RingData(topM.Color, RingType.Standard);
-                    wasMysteryRevealed = true;
-                    _signalBus.Fire(new RevealMysterySignal(signal.FromPoleId, fromPole.TopRing));
                 }
 
                 var mainRecord = new MoveRecord(signal.FromPoleId, signal.ToPoleId, ring,
@@ -411,9 +411,16 @@ namespace RingFlow.Gameplay
                 // İlerlemeyi kaydet (Seviyeyi bir artır)
                 _progressionService.CompleteCurrentLevel();
 
-                // Altın ödülü ver (50 Coin)
-                _economyService.Earn("Coins", 50, "Level Win Reward");
+                // GDD §9 — Coin: Level(50-150), Boss(500)
+                int currentLevel = _progressionService.CurrentLevel.Value;
+                bool isBoss = WorldConfigSO.IsBossLevel(currentLevel);
+                int coinReward = isBoss ? 500 : 50 + (currentLevel % 11) * 10; // 50..150 deterministic per level
+
+                _economyService.Earn("Coins", coinReward, isBoss ? "Boss Win Reward" : "Level Win Reward");
             }
         }
     }
 }
+
+
+

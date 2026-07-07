@@ -77,4 +77,63 @@ namespace RingFlow.Gameplay
             NewColor = newColor;
         }
     }
+
+    /// <summary>
+    /// GDD §9 — Hint: aynı seviyeyi solver ile çözüp SONUÇ listesinin ilk hamlesini döndürür (çözümü vermez).
+    /// Maliyet: 50 coin VEYA rewarded ad (AdService tarafından yönetilir).
+    /// </summary>
+    public readonly struct HintRequestedSignal {}
+
+    /// <summary>
+    /// Solver'ın bulduğu ilk doğru hamle — view yalnızca bu halkaya görsel ipucu gösterir.
+    /// Çözümü vermez — UI sadece bu ipucunu highlight eder (örn. halkayı parlatır).
+    /// </summary>
+    public readonly struct HintResolvedSignal
+    {
+        public readonly int FromPoleId;
+        public readonly int ToPoleId;
+        public readonly bool HasHint;
+
+        public HintResolvedSignal(int fromPoleId, int toPoleId, bool hasHint)
+        {
+            FromPoleId = fromPoleId;
+            ToPoleId = toPoleId;
+            HasHint = hasHint;
+        }
+
+        public static HintResolvedSignal Empty => new HintResolvedSignal(-1, -1, false);
+    }
+
+    /// <summary>
+    /// GDD §9 — Undo butonuna basıldı. Maliyet: ilk 5 ücretsiz, sonrası 5 coin/ad.
+    /// </summary>
+    public readonly struct UndoRequestedSignal {}
+
+    /// <summary>
+    /// GDD §9 — Günlük ödül talep edildi. İlk girişimde sadece FreeUndosUsedThisSession dikkate alınır,
+    /// sonraki adımlarda AdvertiserGate üzerinden geçer.
+    /// </summary>
+    public readonly struct DailyRewardClaimSignal {}
+
+    public readonly struct DailyRewardGrantedSignal
+    {
+        public readonly int DayIndex;
+        public readonly CurrencyAmount Reward;
+        public DailyRewardGrantedSignal(int dayIndex, CurrencyAmount reward)
+        {
+            DayIndex = dayIndex;
+            Reward = reward;
+        }
+    }
+
+    public readonly struct CurrencyAmount
+    {
+        public readonly string CurrencyId;
+        public readonly long Amount;
+        public CurrencyAmount(string currencyId, long amount)
+        {
+            CurrencyId = currencyId;
+            Amount = amount;
+        }
+    }
 }
