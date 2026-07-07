@@ -89,6 +89,14 @@ namespace RingFlow.Gameplay
                 if (pole != null && pole.CanPopRing())
                 {
                     _model.SelectedPoleId.Value = signal.PoleId;
+
+                    // GDD §4 — Ghost: Seçildiği an görünür hale gelir (sabitlenir)
+                    if (pole.TopRing.Type == RingType.Ghost)
+                    {
+                        var ghostCopy = pole.Rings[^1];
+                        ghostCopy.Type = RingType.Standard;
+                        pole.Rings[^1] = ghostCopy;
+                    }
                 }
             }
             else
@@ -159,26 +167,56 @@ namespace RingFlow.Gameplay
                 bool wasPainted = false;
                 RingColor originalColor = ring.Color;
 
-                // 1. Boyama (Paint) Kontrolü — Paint halka üzerine gelen halkanın rengini boyar
-                if (!toPole.IsEmpty && toPole.TopRing.Type == RingType.Paint)
+                // GDD §4 — Paint: Yerleştirildiğinde altındaki ilk halkayı boyar ve standart halkaya dönüşür
+                if (ring.Type == RingType.Paint)
+                {
+                    if (!toPole.IsEmpty)
+                    {
+                        wasPainted = true;
+                        var paintTarget = toPole.Rings[^1];
+                        paintTarget.Color = ring.Color;
+                        toPole.Rings[^1] = paintTarget;
+                        _signalBus.Fire(new PaintRingSignal(signal.ToPoleId, ring.Color));
+                    }
+                    ring.Type = RingType.Standard;
+                }
+                // Paint Kontrolü 2 — Paint halka üzerine gelen halkayı boyar (fallback/çift taraflı)
+                else if (!toPole.IsEmpty && toPole.TopRing.Type == RingType.Paint)
                 {
                     wasPainted = true;
                     ring.Color = toPole.TopRing.Color;
                     _signalBus.Fire(new PaintRingSignal(signal.ToPoleId, ring.Color));
                 }
 
-                // 2. Halka Mysterty mi? (popping a Mystery reveals its color)
-                if (ring.Type == RingType.Mystery)
+                // GDD §4 — Rainbow: Altına yerleştiği halkanın rengini alır ve sabitlenir
+                if (ring.Type == RingType.Rainbow)
                 {
-                    wasMysteryRevealed = true;
-                    // Renk zaten üzerinde (RingColor.None ise rastgele kalır — view için UI fallback'e düşer)
-                    var revealed = new RingData(ring.Color == RingColor.None ? RingColor.Red : ring.Color, RingType.Standard);
-                    _signalBus.Fire(new RevealMysterySignal(signal.FromPoleId, revealed));
-                    ring = revealed;
+                    if (!toPole.IsEmpty)
+                    {
+                        ring.Color = toPole.TopRing.Color;
+                        ring.Type = RingType.Standard;
+                    }
+                }
+                else if (!toPole.IsEmpty && toPole.TopRing.Type == RingType.Rainbow)
+                {
+                    var rainbowTarget = toPole.Rings[^1];
+                    rainbowTarget.Color = ring.Color;
+                    rainbowTarget.Type = RingType.Standard;
+                    toPole.Rings[^1] = rainbowTarget;
                 }
 
                 // Halkayı eski direkten al
                 fromPole.PopRing();
+
+                // GDD §4 — Mystery: Üzerindeki tüm halkalar kalkınca (yani yeni üst halka Mystery olunca) açığa çıkar
+                if (!fromPole.IsEmpty && fromPole.TopRing.Type == RingType.Mystery)
+                {
+                    wasMysteryRevealed = true;
+                    var mysteryRing = fromPole.Rings[^1];
+                    mysteryRing.Type = RingType.Standard;
+                    fromPole.Rings[^1] = mysteryRing;
+                    _signalBus.Fire(new RevealMysterySignal(signal.FromPoleId, mysteryRing));
+                }
 
                 // Kilit açma kontrolü
                 if (toPole.IsLocked && ring.Type == RingType.Locked)
