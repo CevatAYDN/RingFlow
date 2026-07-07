@@ -280,10 +280,26 @@ namespace RingFlow.Editor
 
         private void BuildBoardInScene()
         {
-            if (_generatedLevel == null)
+            // Try to load board from Nexus's GameplayModel if playing
+            List<PoleState> polesToBuild = null;
+            if (Application.isPlaying)
             {
-                EditorUtility.DisplayDialog("Error", "Please generate a level first!", "OK");
-                return;
+                var context = NexusRuntime.CurrentContext;
+                var model = context?.TryResolve<GameplayModel>();
+                if (model != null && model.Poles.Count > 0)
+                {
+                    polesToBuild = model.Poles;
+                }
+            }
+
+            if (polesToBuild == null)
+            {
+                // Fallback to editor generated level in edit mode
+                if (_generatedLevel == null)
+                {
+                    EditorUtility.DisplayDialog("Error", "Please generate a level first VEYA enter PlayMode to load from active game!", "OK");
+                    return;
+                }
             }
 
             ClearSceneBoard();
@@ -299,30 +315,46 @@ namespace RingFlow.Editor
                 Debug.LogWarning("[RingFlowEditor] Torus.obj not found in Assets/Models. Creating simple disk primitives instead.");
             }
 
+            int poleCount = polesToBuild != null ? polesToBuild.Count : _generatedLevel.Poles.Count;
+
             // Build Poles & Rings
-            for (int p = 0; p < _generatedLevel.Poles.Count; p++)
+            for (int p = 0; p < poleCount; p++)
             {
-                var poleData = _generatedLevel.Poles[p];
+                bool isLocked = false;
+                List<RingData> rings = new List<RingData>();
+
+                if (polesToBuild != null)
+                {
+                    var poleState = polesToBuild[p];
+                    isLocked = poleState.IsLocked;
+                    rings = poleState.Rings;
+                }
+                else
+                {
+                    var poleData = _generatedLevel.Poles[p];
+                    isLocked = poleData.IsLocked;
+                    rings = poleData.Rings;
+                }
 
                 // 1. Spawn Pole Cylinder
                 var poleObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                poleObj.name = $"Pole_{p}" + (poleData.IsLocked ? " [LOCKED]" : "");
+                poleObj.name = $"Pole_{p}" + (isLocked ? " [LOCKED]" : "");
                 poleObj.transform.SetParent(boardRoot.transform);
                 poleObj.transform.position = new Vector3(p * PoleSpacing, 2.0f, 0f);
                 poleObj.transform.localScale = new Vector3(0.2f, 2.0f, 0.2f);
 
                 // Add locked pole color decoration
-                if (poleData.IsLocked)
+                if (isLocked)
                 {
                     var renderer = poleObj.GetComponent<Renderer>();
-                    renderer.sharedMaterial = new Material(Shader.Find("Standard"));
+                    renderer.sharedMaterial = new Material(GetDefaultShader());
                     renderer.sharedMaterial.color = Color.black; // locked poles are dark
                 }
 
                 // 2. Spawn Rings
-                for (int r = 0; r < poleData.Rings.Count; r++)
+                for (int r = 0; r < rings.Count; r++)
                 {
-                    var ringData = poleData.Rings[r];
+                    var ringData = rings[r];
                     GameObject ringObj;
 
                     if (torusModel != null)
@@ -349,7 +381,7 @@ namespace RingFlow.Editor
                     var ringRenderer = ringObj.GetComponentInChildren<Renderer>();
                     if (ringRenderer != null)
                     {
-                        var mat = new Material(Shader.Find("Standard"));
+                        var mat = new Material(GetDefaultShader());
                         
                         // Set basic color
                         mat.color = GetUnityColor(ringData.Color);
@@ -515,6 +547,13 @@ namespace RingFlow.Editor
             {
                 EditorGUILayout.HelpBox("Settings parameters can be controlled reactively in PlayMode.", MessageType.Info);
             }
+        }
+        private Shader GetDefaultShader()
+        {
+            var s = Shader.Find("Universal Render Pipeline/Lit");
+            if (s == null) s = Shader.Find("Universal Render Pipeline/Simple Lit");
+            if (s == null) s = Shader.Find("Standard");
+            return s;
         }
     }
 }
