@@ -25,15 +25,18 @@ namespace RingFlow.Editor
         private SettingsSection _settings;
         private AdTesterSection _adTester;
         private DiagnosticsSection _diagnostics;
+        private DatabaseSection _databaseSection;
         private List<EditorSection> _sections;
 
         private Vector2 _scroll;
+        private string[] _tabs = { "Level Design", "Runtime & Player", "System & Config", "Project Setup", "Database Editor" };
+        private int _selectedTab = 0;
 
-        [MenuItem("Game Editor Tools/Game Control Panel &G", false, 0)]
+        [MenuItem("Ring Flow/Dashboard &G", false, 0)]
         public static void ShowWindow()
         {
-            var window = GetWindow<RingFlowEditorWindow>("Control Panel");
-            window.minSize = new Vector2(420, 680);
+            var window = GetWindow<RingFlowEditorWindow>("RingFlow Dashboard");
+            window.minSize = new Vector2(500, 700);
             window.Show();
         }
 
@@ -89,6 +92,15 @@ namespace RingFlow.Editor
             _settings     = new SettingsSection();
             _adTester     = new AdTesterSection();
             _diagnostics  = new DiagnosticsSection();
+            _databaseSection = new DatabaseSection();
+
+            _generator.HideHeader = true;
+            _visualBuilder.HideHeader = true;
+            _runtime.HideHeader = true;
+            _settings.HideHeader = true;
+            _adTester.HideHeader = true;
+            _diagnostics.HideHeader = true;
+            _databaseSection.HideHeader = true;
 
             _generator.OnEnable();
 
@@ -100,6 +112,7 @@ namespace RingFlow.Editor
                 _settings,
                 _adTester,
                 _diagnostics,
+                _databaseSection,
             };
         }
 
@@ -110,18 +123,78 @@ namespace RingFlow.Editor
 
         private void OnGUI()
         {
-            DrawHeader("RING FLOW — GAME CONTROL PANEL");
+            DrawHeader("RING FLOW — DASHBOARD");
+
+            _selectedTab = GUILayout.Toolbar(_selectedTab, _tabs, GUILayout.Height(30));
+            EditorGUILayout.Space();
 
             _scroll = EditorGUILayout.BeginScrollView(_scroll);
             if (_sections == null) { EditorGUILayout.EndScrollView(); return; }
 
-            for (int i = 0; i < _sections.Count; i++)
+            switch (_selectedTab)
             {
-                _sections[i]?.OnGUI();
-                EditorGUILayout.Space();
+                case 0: // Level Design
+                    EditorGUILayout.LabelField("Level Generator & Solver", EditorStyles.boldLabel);
+                    _generator.OnGUI();
+                    EditorGUILayout.Space(15f);
+                    EditorGUILayout.LabelField("Scene Board Builder", EditorStyles.boldLabel);
+                    _visualBuilder.OnGUI();
+                    break;
+
+                case 1: // Runtime & Player
+                    EditorGUILayout.LabelField("PlayMode Lifecycle & States", EditorStyles.boldLabel);
+                    _runtime.OnGUI();
+                    EditorGUILayout.Space(15f);
+                    EditorGUILayout.LabelField("Ad & Reward Tester", EditorStyles.boldLabel);
+                    _adTester.OnGUI();
+                    break;
+
+                case 2: // System & Config
+                    EditorGUILayout.LabelField("Settings & Configurations", EditorStyles.boldLabel);
+                    _settings.OnGUI();
+                    EditorGUILayout.Space(15f);
+                    EditorGUILayout.LabelField("Diagnostics & Signals", EditorStyles.boldLabel);
+                    _diagnostics.OnGUI();
+                    break;
+
+                case 3: // Project Setup
+                    DrawSetupTab();
+                    break;
+
+                case 4: // Database Editor
+                    EditorGUILayout.LabelField("Game Balance & Configurations", EditorStyles.boldLabel);
+                    _databaseSection.OnGUI();
+                    break;
             }
 
             EditorGUILayout.EndScrollView();
+        }
+
+        private void DrawSetupTab()
+        {
+            EditorGUILayout.LabelField("Project Setup Utilities", EditorStyles.boldLabel);
+            
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                EditorGUILayout.HelpBox(
+                    "Use these tools to initialize a test scene with the required Nexus components, " +
+                    "or create a fresh working scene prepopulated with game lifecycle systems.",
+                    MessageType.Info);
+
+                EditorGUILayout.Space(10f);
+
+                if (GUILayout.Button("Create Working Scene", GUILayout.Height(36)))
+                {
+                    CreateWorkingScene();
+                }
+
+                EditorGUILayout.Space(5f);
+
+                if (GUILayout.Button("Setup Bootstrapper in Active Scene", GUILayout.Height(36)))
+                {
+                    BootstrapScene();
+                }
+            }
         }
 
         private static void DrawHeader(string title)

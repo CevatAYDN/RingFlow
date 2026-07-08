@@ -52,9 +52,7 @@ namespace RingFlow.Gameplay
 
         public static int WorldFromAbsoluteLevel(int absoluteLevel)
         {
-            if (absoluteLevel < 1) absoluteLevel = 1;
-            int world = (absoluteLevel - 1) / LevelsPerWorld;
-            return Mathf.Clamp(world, 0, TotalWorlds - 1);
+            return GameConfigDatabaseSO.Instance.GetWorldForLevel(absoluteLevel);
         }
 
         public static int LevelInWorldFromAbsoluteLevel(int absoluteLevel)
@@ -73,55 +71,33 @@ namespace RingFlow.Gameplay
     }
 
     /// <summary>
-    /// Difficulty curve mapping per GDD §5.
-    /// Tutorial(1-20) → Easy(21-100) → Medium(101-350) → Hard(351-600) → Expert(601-1000) → Master(1001-1500) → Legend(1501-2000).
+    /// Difficulty curve mapping per GDD §5, now driven dynamically by GameConfigDatabaseSO.
     /// </summary>
     public static class DifficultyCurve
     {
         public static DifficultyBand BandForLevel(int absoluteLevel)
         {
-            if (absoluteLevel <= 20)  return DifficultyBand.Tutorial;
-            if (absoluteLevel <= 100) return DifficultyBand.Easy;
-            if (absoluteLevel <= 350) return DifficultyBand.Medium;
-            if (absoluteLevel <= 600) return DifficultyBand.Hard;
-            if (absoluteLevel <= 1000) return DifficultyBand.Expert;
-            if (absoluteLevel <= 1500) return DifficultyBand.Master;
-            return DifficultyBand.Legend;
+            return GameConfigDatabaseSO.Instance.GetBandForLevel(absoluteLevel);
         }
 
-        /// <summary>GDD §5 color progression: 3(1) → 4(20) → 5(80) → 6(150) → 7(300) → 8(500) → 9(800) → 10(1200+).</summary>
         public static int ColorCountForLevel(int absoluteLevel)
         {
-            if (absoluteLevel <= 1)   return 3;
-            if (absoluteLevel <= 20)  return 4;
-            if (absoluteLevel <= 80)  return 5;
-            if (absoluteLevel <= 150) return 6;
-            if (absoluteLevel <= 300) return 7;
-            if (absoluteLevel <= 500) return 8;
-            if (absoluteLevel <= 800) return 9;
-            return 10;
+            return GameConfigDatabaseSO.Instance.GetColorCountForLevel(absoluteLevel);
         }
 
-        /// <summary>GDD §5 pole count: 4(tutorial) → 10(legend) — caps at 10 due to solver struct limit.</summary>
         public static int PoleCountForLevel(int absoluteLevel)
         {
-            // Maps Tutorial(1-20)=4, Easy(21-100)=5, Medium(101-350)=6, Hard(351-600)=7,
-            // Expert(601-1000)=8, Master(1001-1500)=9, Legend(1501-2000)=10.
-            return 4 + (int)BandForLevel(absoluteLevel);
+            return GameConfigDatabaseSO.Instance.GetPoleCountForLevel(absoluteLevel);
         }
 
-        /// <summary>Empty-pole rule: asla 0 değil (never 0). Easy 2, Medium 1, Hard 1+ arranged.</summary>
         public static int MinEmptyPolesForLevel(int absoluteLevel)
         {
-            var band = BandForLevel(absoluteLevel);
-            if (band == DifficultyBand.Tutorial || band == DifficultyBand.Easy) return 2;
-            return 1;
+            return GameConfigDatabaseSO.Instance.GetMinEmptyPolesForLevel(absoluteLevel);
         }
 
-        /// <summary>World-spec: 6 event (5–6 cap) only on Event/Challenge modes. Default 4.</summary>
         public static int MaxCapacityForLevel(int absoluteLevel)
         {
-            return WorldConfigSO.IsBossLevel(absoluteLevel) ? 4 : 4;
+            return GameConfigDatabaseSO.Instance.GetMaxCapacityForLevel(absoluteLevel);
         }
     }
 }

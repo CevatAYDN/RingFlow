@@ -157,14 +157,14 @@ namespace RingFlow.Gameplay
         private static void InjectSpecialMechanics(ref BoardState board, int levelIndex, Random rand)
         {
             int worldIndex = WorldConfigSO.WorldFromAbsoluteLevel(levelIndex);
+            var mechanic = GameConfigDatabaseSO.Instance.GetMechanicForWorld(worldIndex);
             
-            // World 1: Özel mekanik yok
-            if (worldIndex == 0) return;
+            if (mechanic == WorldMechanicType.None) return;
 
             int poleCount = board.PoleCount;
 
-            // World 2: Mystery (Gizemli)
-            if (worldIndex == 1)
+            // Mystery Mechanic
+            if (mechanic == WorldMechanicType.Mystery)
             {
                 // En üstte olmayan 1 ya da 2 halkayı Mystery yap
                 int count = 0;
@@ -183,8 +183,8 @@ namespace RingFlow.Gameplay
                     }
                 }
             }
-            // World 3: Frozen (Buzlu)
-            else if (worldIndex == 2)
+            // Frozen Mechanic
+            else if (mechanic == WorldMechanicType.Frozen)
             {
                 // 1 ya da 2 halkayı Frozen yap
                 int count = 0;
@@ -207,8 +207,8 @@ namespace RingFlow.Gameplay
                     }
                 }
             }
-            // World 4: Locked Pole (Kilitli Direk + Anahtar Halka)
-            else if (worldIndex == 3)
+            // Locked Pole Mechanic
+            else if (mechanic == WorldMechanicType.LockedPole)
             {
                 // Boş direklerden birini kilitle
                 int lockedPole = -1;
@@ -291,7 +291,7 @@ namespace RingFlow.Gameplay
                     }
                 }
             }
-            // World 5+: İleri mekanikler (Rainbow, Bomb, Chain, Magnet, Paint, Ghost, Stone, Glass)
+            // Advanced mechanics pool (Rainbow, Bomb, Chain, Magnet, Paint, Ghost, Stone, Glass)
             else
             {
                 var availableTypes = new[] {
@@ -306,8 +306,8 @@ namespace RingFlow.Gameplay
                 };
 
                 int numMechanicTypes = 1;
-                if (worldIndex >= 14) numMechanicTypes = 3;
-                else if (worldIndex >= 9) numMechanicTypes = 2;
+                if (mechanic == WorldMechanicType.RandomPool3) numMechanicTypes = 3;
+                else if (mechanic == WorldMechanicType.RandomPool2) numMechanicTypes = 2;
 
                 var chosenTypes = new List<RingType>();
                 for (int i = 0; i < numMechanicTypes; i++)

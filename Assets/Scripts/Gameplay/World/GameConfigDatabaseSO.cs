@@ -1,0 +1,188 @@
+using UnityEngine;
+using System.Collections.Generic;
+
+namespace RingFlow.Gameplay
+{
+    public enum WorldMechanicType
+    {
+        None = 0,
+        Mystery = 1,
+        Frozen = 2,
+        LockedPole = 3,
+        RandomPool1 = 4, // 1 random type from advanced pool
+        RandomPool2 = 5, // 2 random types from advanced pool
+        RandomPool3 = 6  // 3 random types from advanced pool
+    }
+
+    [System.Serializable]
+    public struct WorldConfigData
+    {
+        public int WorldIndex;
+        public string Theme;
+        public int UnlockedByWorldIndex;
+        public bool IsEventWorld;
+        public WorldMechanicType MechanicType;
+    }
+
+    [System.Serializable]
+    public struct DifficultyBandData
+    {
+        public DifficultyBand Band;
+        public int MaxLevel;
+        public int MinEmptyPoles;
+        public int MaxCapacity;
+    }
+
+    [System.Serializable]
+    public struct ColorCurvePoint
+    {
+        public int LevelThreshold;
+        public int ColorCount;
+    }
+
+    [CreateAssetMenu(fileName = "GameConfigDatabase", menuName = "RingFlow/Game Config Database")]
+    public class GameConfigDatabaseSO : ScriptableObject
+    {
+        public int TotalLevels = 2000;
+        public List<DifficultyBandData> DifficultyBands = new();
+        public List<ColorCurvePoint> ColorCurve = new();
+        public List<WorldConfigData> Worlds = new();
+
+        private static GameConfigDatabaseSO _instance;
+        public static GameConfigDatabaseSO Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    _instance = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+                    if (_instance == null)
+                    {
+                        _instance = CreateInstance<GameConfigDatabaseSO>();
+                        _instance.InitializeDefaults();
+                    }
+                }
+                return _instance;
+            }
+        }
+
+        public void InitializeDefaults()
+        {
+            TotalLevels = 2000;
+
+            // Default Difficulty Bands (GDD §5)
+            DifficultyBands = new List<DifficultyBandData>
+            {
+                new() { Band = DifficultyBand.Tutorial, MaxLevel = 20, MinEmptyPoles = 2, MaxCapacity = 4 },
+                new() { Band = DifficultyBand.Easy, MaxLevel = 100, MinEmptyPoles = 2, MaxCapacity = 4 },
+                new() { Band = DifficultyBand.Medium, MaxLevel = 350, MinEmptyPoles = 1, MaxCapacity = 4 },
+                new() { Band = DifficultyBand.Hard, MaxLevel = 600, MinEmptyPoles = 1, MaxCapacity = 4 },
+                new() { Band = DifficultyBand.Expert, MaxLevel = 1000, MinEmptyPoles = 1, MaxCapacity = 4 },
+                new() { Band = DifficultyBand.Master, MaxLevel = 1500, MinEmptyPoles = 1, MaxCapacity = 4 },
+                new() { Band = DifficultyBand.Legend, MaxLevel = 2000, MinEmptyPoles = 1, MaxCapacity = 4 }
+            };
+
+            // Default Color Curve Points (GDD §5)
+            ColorCurve = new List<ColorCurvePoint>
+            {
+                new() { LevelThreshold = 1, ColorCount = 3 },
+                new() { LevelThreshold = 20, ColorCount = 4 },
+                new() { LevelThreshold = 80, ColorCount = 5 },
+                new() { LevelThreshold = 150, ColorCount = 6 },
+                new() { LevelThreshold = 300, ColorCount = 7 },
+                new() { LevelThreshold = 500, ColorCount = 8 },
+                new() { LevelThreshold = 800, ColorCount = 9 },
+                new() { LevelThreshold = 2000, ColorCount = 10 }
+            };
+
+            // Default 40 Worlds configuration
+            Worlds = new List<WorldConfigData>();
+            for (int i = 0; i < 40; i++)
+            {
+                var w = new WorldConfigData
+                {
+                    WorldIndex = i,
+                    Theme = i == 0 ? "Grass Valley" : $"World {i + 1}",
+                    UnlockedByWorldIndex = i == 0 ? 0 : i - 1,
+                    IsEventWorld = (i + 1) % 5 == 0 // Boss world every 5 worlds
+                };
+
+                // Mechanics mapping based on world index
+                if (i == 0) w.MechanicType = WorldMechanicType.None;
+                else if (i == 1) w.MechanicType = WorldMechanicType.Mystery;
+                else if (i == 2) w.MechanicType = WorldMechanicType.Frozen;
+                else if (i == 3) w.MechanicType = WorldMechanicType.LockedPole;
+                else
+                {
+                    if (i >= 14) w.MechanicType = WorldMechanicType.RandomPool3;
+                    else if (i >= 9) w.MechanicType = WorldMechanicType.RandomPool2;
+                    else w.MechanicType = WorldMechanicType.RandomPool1;
+                }
+
+                Worlds.Add(w);
+            }
+        }
+
+        // Helper search methods
+        public DifficultyBand GetBandForLevel(int level)
+        {
+            if (DifficultyBands == null || DifficultyBands.Count == 0) return DifficultyBand.Tutorial;
+            foreach (var b in DifficultyBands)
+            {
+                if (level <= b.MaxLevel) return b.Band;
+            }
+            return DifficultyBands[^1].Band;
+        }
+
+        public int GetColorCountForLevel(int level)
+        {
+            if (ColorCurve == null || ColorCurve.Count == 0) return 3;
+            foreach (var pt in ColorCurve)
+            {
+                if (level <= pt.LevelThreshold) return pt.ColorCount;
+            }
+            return ColorCurve[^1].ColorCount;
+        }
+
+        public int GetPoleCountForLevel(int level)
+        {
+            // Maps Tutorial(4), Easy(5), Medium(6), Hard(7), Expert(8), Master(9), Legend(10)
+            return 4 + (int)GetBandForLevel(level);
+        }
+
+        public int GetMinEmptyPolesForLevel(int level)
+        {
+            if (DifficultyBands == null || DifficultyBands.Count == 0) return 1;
+            var band = GetBandForLevel(level);
+            foreach (var b in DifficultyBands)
+            {
+                if (b.Band == band) return b.MinEmptyPoles;
+            }
+            return 1;
+        }
+
+        public int GetMaxCapacityForLevel(int level)
+        {
+            if (DifficultyBands == null || DifficultyBands.Count == 0) return 4;
+            var band = GetBandForLevel(level);
+            foreach (var b in DifficultyBands)
+            {
+                if (b.Band == band) return b.MaxCapacity;
+            }
+            return 4;
+        }
+
+        public int GetWorldForLevel(int level)
+        {
+            const int levelsPerWorld = 50;
+            int world = (level - 1) / levelsPerWorld;
+            return Mathf.Clamp(world, 0, Worlds.Count - 1);
+        }
+
+        public WorldMechanicType GetMechanicForWorld(int worldIndex)
+        {
+            if (Worlds == null || worldIndex < 0 || worldIndex >= Worlds.Count) return WorldMechanicType.None;
+            return Worlds[worldIndex].MechanicType;
+        }
+    }
+}
