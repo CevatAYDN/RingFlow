@@ -52,16 +52,50 @@ namespace RingFlow.Editor
         private void DrawPlayMode()
         {
             var context = NexusRuntime.CurrentContext;
-            if (context == null) return;
+            if (context == null)
+            {
+                EditorGUILayout.HelpBox(
+                    "Nexus runtime context is not available yet. Please make sure the context is initialized.",
+                    MessageType.Warning);
+                return;
+            }
 
             var fsm = context.TryResolve<IGameStateMachine>();
             var model = context.TryResolve<GameplayModel>();
             var progress = context.TryResolve<PlayerProgressModel>();
             var economy = context.TryResolve<Nexus.Core.Services.IEconomyService>();
 
-            DrawFsmRow(fsm);
-            if (model != null) DrawModelRow(model);
-            if (progress != null && economy != null) DrawEconomyRow(progress, economy);
+            if (fsm == null)
+            {
+                EditorGUILayout.HelpBox("IGameStateMachine is not resolved in the current context.", MessageType.Error);
+            }
+            else
+            {
+                DrawFsmRow(fsm);
+            }
+
+            if (model == null)
+            {
+                EditorGUILayout.HelpBox("GameplayModel is not resolved in the current context.", MessageType.Warning);
+            }
+            else
+            {
+                DrawModelRow(model);
+            }
+
+            if (progress == null)
+            {
+                EditorGUILayout.HelpBox("PlayerProgressModel is not resolved in the current context.", MessageType.Warning);
+            }
+            if (economy == null)
+            {
+                EditorGUILayout.HelpBox("IEconomyService is not resolved in the current context.", MessageType.Warning);
+            }
+
+            if (progress != null && economy != null)
+            {
+                DrawEconomyRow(progress, economy);
+            }
         }
 
         private void DrawFsmRow(IGameStateMachine fsm)

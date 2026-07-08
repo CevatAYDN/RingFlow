@@ -11,7 +11,10 @@ namespace RingFlow.Gameplay.UI
 
         protected override void OnBind()
         {
-            View.Localize(_loc);
+            if (View != null && _loc != null)
+            {
+                View.Localize(_loc);
+            }
             _ = TransitionAfterDelay();
         }
 

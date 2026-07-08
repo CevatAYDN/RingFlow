@@ -14,6 +14,10 @@ namespace RingFlow.Gameplay
 
         private static Shader _cachedShader;
         private static readonly Queue<GameObject> _ringPool = new();
+        private static readonly Queue<GameObject> _polePool = new();
+        private static readonly Dictionary<(RingColor, RingType), Material> _ringMaterialCache = new();
+        private static Material _blackPoleMaterial;
+        private static Material _defaultPoleMaterial;
 
         private readonly List<PoleView> _spawnedPoles = new();
         private readonly List<List<GameObject>> _spawnedRings = new();
@@ -33,31 +37,21 @@ namespace RingFlow.Gameplay
             {
                 var poleData = poles[p];
 
-                var poleObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                var poleObj = AcquirePole();
                 poleObj.name = $"Pole_{p}" + (poleData.IsLocked ? " [LOCKED]" : "");
 
                 poleObj.transform.SetParent(transform);
                 poleObj.transform.position = new Vector3(p * _poleSpacing, 2.0f, 0f);
                 poleObj.transform.localScale = new Vector3(0.2f, 2.0f, 0.2f);
 
-                var poleView = poleObj.AddComponent<PoleView>();
+                var poleView = poleObj.GetComponent<PoleView>();
                 poleView.PoleId = p;
                 _spawnedPoles.Add(poleView);
 
-                var capsule = poleObj.GetComponent<CapsuleCollider>();
-                if (capsule != null)
+                var renderer = poleObj.GetComponent<Renderer>();
+                if (renderer != null)
                 {
-                    capsule.radius = 1.5f;
-                }
-
-                if (poleData.IsLocked)
-                {
-                    var renderer = poleObj.GetComponent<Renderer>();
-                    if (renderer != null)
-                    {
-                        renderer.sharedMaterial = new Material(GetDefaultShader());
-                        renderer.sharedMaterial.color = Color.black;
-                    }
+                    renderer.sharedMaterial = poleData.IsLocked ? GetBlackPoleMaterial() : GetDefaultPoleMaterial(renderer);
                 }
 
                 var ringList = new List<GameObject>();
@@ -82,17 +76,7 @@ namespace RingFlow.Gameplay
                     var ringRenderer = ringObj.GetComponentInChildren<Renderer>();
                     if (ringRenderer != null)
                     {
-                        var mat = new Material(GetDefaultShader());
-                        mat.color = RingPalette.Get(ringData.Color);
-                        ApplySpecialRingMaterial(mat, ringData.Type);
-                        ringRenderer.sharedMaterial = mat;
-                    }
-
-                    // Strip the ring's collider so clicks pass through to the PoleView underneath.
-                    var col = ringObj.GetComponent<Collider>();
-                    if (col != null)
-                    {
-                        Destroy(col);
+                        ringRenderer.sharedMaterial = GetRingMaterial(ringData.Color, ringData.Type);
                     }
 
                     ringList.Add(ringObj);
@@ -105,7 +89,7 @@ namespace RingFlow.Gameplay
         {
             foreach (var pole in _spawnedPoles)
             {
-                if (pole != null) Destroy(pole.gameObject);
+                if (pole != null) RecyclePole(pole.gameObject);
             }
             _spawnedPoles.Clear();
 
@@ -128,16 +112,63 @@ namespace RingFlow.Gameplay
             return _cachedShader;
         }
 
+        private GameObject AcquirePole()
+        {
+            while (_polePool.Count > 0)
+            {
+                var pole = _polePool.Dequeue();
+                if (pole != null)
+                {
+                    pole.SetActive(true);
+                    return pole;
+                }
+            }
+            var poleObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            var capsule = poleObj.GetComponent<CapsuleCollider>();
+            if (capsule != null)
+            {
+                capsule.radius = 1.5f;
+            }
+            poleObj.AddComponent<PoleView>();
+            return poleObj;
+        }
+
+        private static void RecyclePole(GameObject pole)
+        {
+            pole.SetActive(false);
+            pole.transform.SetParent(null);
+            _polePool.Enqueue(pole);
+        }
+
         private GameObject AcquireRing()
         {
-            if (_ringPool.Count > 0)
+            while (_ringPool.Count > 0)
             {
                 var ring = _ringPool.Dequeue();
-                ring.SetActive(true);
-                return ring;
+                if (ring != null)
+                {
+                    ring.SetActive(true);
+                    return ring;
+                }
             }
-            if (_torusPrefab != null) return Instantiate(_torusPrefab);
-            return GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            GameObject ringObj;
+            if (_torusPrefab != null)
+            {
+                ringObj = Instantiate(_torusPrefab);
+            }
+            else
+            {
+                ringObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            }
+
+            // Strip the ring's collider so clicks pass through to the PoleView underneath.
+            var col = ringObj.GetComponent<Collider>();
+            if (col == null) col = ringObj.GetComponentInChildren<Collider>();
+            if (col != null)
+            {
+                Destroy(col);
+            }
+            return ringObj;
         }
 
         private static void RecycleRing(GameObject ring)
@@ -147,7 +178,45 @@ namespace RingFlow.Gameplay
             _ringPool.Enqueue(ring);
         }
 
-        private void ApplySpecialRingMaterial(Material mat, RingType type)
+        private static Material GetBlackPoleMaterial()
+        {
+            if (_blackPoleMaterial == null)
+            {
+                _blackPoleMaterial = new Material(GetDefaultShader());
+                _blackPoleMaterial.color = Color.black;
+            }
+            return _blackPoleMaterial;
+        }
+
+        private static Material GetDefaultPoleMaterial(Renderer renderer)
+        {
+            if (_defaultPoleMaterial == null && renderer != null)
+            {
+                _defaultPoleMaterial = renderer.sharedMaterial;
+            }
+            if (_defaultPoleMaterial == null)
+            {
+                _defaultPoleMaterial = new Material(GetDefaultShader());
+                _defaultPoleMaterial.color = Color.white;
+            }
+            return _defaultPoleMaterial;
+        }
+
+        private static Material GetRingMaterial(RingColor color, RingType type)
+        {
+            var key = (color, type);
+            if (_ringMaterialCache.TryGetValue(key, out var cachedMat) && cachedMat != null)
+            {
+                return cachedMat;
+            }
+            var mat = new Material(GetDefaultShader());
+            mat.color = RingPalette.Get(color);
+            ApplySpecialRingMaterial(mat, type);
+            _ringMaterialCache[key] = mat;
+            return mat;
+        }
+
+        private static void ApplySpecialRingMaterial(Material mat, RingType type)
         {
             switch (type)
             {

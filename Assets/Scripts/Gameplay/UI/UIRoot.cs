@@ -60,18 +60,26 @@ namespace RingFlow.Gameplay.UI
 
         private void Start()
         {
+            StartCoroutine(WaitForContextAndSubscribe());
+        }
+
+        private System.Collections.IEnumerator WaitForContextAndSubscribe()
+        {
+            while (_root == null)
+            {
+                yield return null;
+            }
+            while (_root.Context == null)
+            {
+                yield return null;
+            }
             SubscribeOnce();
         }
 
         private void SubscribeOnce()
         {
             if (_subscribed || _root == null) return;
-            if (_root.Context == null)
-            {
-                Debug.LogError("[UIRoot] Root.Context is null — cannot subscribe. Retrying next frame.");
-                _subscribed = false;
-                return;
-            }
+            if (_root.Context == null) return;
             _subscribed = true;
 
             var sb = _root.Context.Resolve<ISignalBus>();

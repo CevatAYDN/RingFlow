@@ -11,11 +11,13 @@ namespace RingFlow.Gameplay
         [Inject] private IGameStateMachine _fsm;
         [Inject] private ILoggerService _logger;
 
-        public ValueTask OnEnterAsync(object args, CancellationToken ct)
+        public async ValueTask OnEnterAsync(object args, CancellationToken ct)
         {
             _logger?.Log("[BootState] Game starting, initializing models...");
-            _ = _fsm.ChangeStateAsync<SplashState>();
-            return default;
+            if (_fsm != null)
+            {
+                await _fsm.ChangeStateAsync<SplashState>();
+            }
         }
 
         public ValueTask OnExitAsync(CancellationToken ct) => default;

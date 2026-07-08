@@ -165,12 +165,14 @@ namespace RingFlow.Gameplay.UI
         // ── Localization helpers ─────────────────────────────────────────
         public static void LocalizeButtonText(GameObject btn, string key, ILocalizationService loc)
         {
+            if (loc == null || btn == null) return;
             var text = btn.GetComponentInChildren<Text>();
             if (text != null) text.text = loc.GetString(key, text.text);
         }
 
         public static void LocalizeText(GameObject go, string key, ILocalizationService loc)
         {
+            if (loc == null || go == null) return;
             var text = go.GetComponent<Text>();
             if (text != null) text.text = loc.GetString(key, text.text);
         }

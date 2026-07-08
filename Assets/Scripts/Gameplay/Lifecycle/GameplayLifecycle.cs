@@ -113,6 +113,7 @@ namespace RingFlow.Gameplay
             // Register FSM States
             var fsm = context.Resolve<IGameStateMachine>();
             fsm.RegisterState(context.Resolve<BootState>());
+            fsm.RegisterState(context.Resolve<SplashState>());
             fsm.RegisterState(context.Resolve<MainMenuState>());
             fsm.RegisterState(context.Resolve<LevelSelectState>());
             fsm.RegisterState(context.Resolve<PlayingState>());

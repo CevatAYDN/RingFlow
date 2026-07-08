@@ -33,10 +33,15 @@ namespace RingFlow.Editor
                 }
 
                 var context = NexusRuntime.CurrentContext;
-                var ads = context?.TryResolve<IAdService>();
+                if (context == null)
+                {
+                    EditorGUILayout.HelpBox("Nexus runtime context is not available yet.", MessageType.Warning);
+                    return;
+                }
+                var ads = context.TryResolve<IAdService>();
                 if (ads == null)
                 {
-                    EditorGUILayout.LabelField("IAdService not registered in current context.");
+                    EditorGUILayout.HelpBox("IAdService not registered in current context.", MessageType.Warning);
                     return;
                 }
 

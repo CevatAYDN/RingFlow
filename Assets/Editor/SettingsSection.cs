@@ -27,10 +27,24 @@ namespace RingFlow.Editor
                 }
 
                 var context = NexusRuntime.CurrentContext;
-                var settings = context?.TryResolve<SettingsModel>();
-                var localization = context?.TryResolve<ILocalizationService>();
+                if (context == null)
+                {
+                    EditorGUILayout.HelpBox(
+                        "Nexus runtime context is not available yet.",
+                        MessageType.Warning);
+                    return;
+                }
 
-                if (settings == null) return;
+                var settings = context.TryResolve<SettingsModel>();
+                var localization = context.TryResolve<ILocalizationService>();
+
+                if (settings == null)
+                {
+                    EditorGUILayout.HelpBox(
+                        "SettingsModel is not resolved in current context.",
+                        MessageType.Warning);
+                    return;
+                }
 
                 ToggleRow("Music Enabled", settings.MusicEnabled);
                 ToggleRow("SFX Enabled",   settings.SfxEnabled);
