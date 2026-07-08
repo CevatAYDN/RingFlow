@@ -32,11 +32,15 @@ namespace RingFlow.Gameplay
         {
             if (levelIndex < 1)
             {
+                NexusLog.Warn("ProgressionService", nameof(SetLevel), levelIndex.ToString(),
+                    $"Requested level below 1 (got {levelIndex}); clamping to 1.");
                 levelIndex = 1;
             }
 
             if (levelIndex > WorldConfigSO.TotalLevels)
             {
+                NexusLog.Warn("ProgressionService", nameof(SetLevel), levelIndex.ToString(),
+                    $"Requested level above cap {WorldConfigSO.TotalLevels}; clamping to TotalLevels.");
                 levelIndex = WorldConfigSO.TotalLevels;
             }
 

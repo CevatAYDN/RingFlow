@@ -34,12 +34,23 @@ namespace RingFlow.Gameplay
             }
             else
             {
+                if (_progressionService == null && signal.LevelIndex <= 0)
+                {
+                    NexusLog.Warn("InitLevelCommand", "Execute", currentLevel.ToString(),
+                        "Progression service not bound and no level index specified — defaulting to level 1.");
+                }
+
                 int poleCount = DifficultyCurve.PoleCountForLevel(currentLevel);
                 int colorCount = DifficultyCurve.ColorCountForLevel(currentLevel);
                 int maxCapacity = DifficultyCurve.MaxCapacityForLevel(currentLevel);
 
                 if (poleCount < colorCount + 1) poleCount = colorCount + 1;
-                if (poleCount > 12) poleCount = 12;
+                if (poleCount > 12)
+                {
+                    NexusLog.Warn("InitLevelCommand", "Execute", currentLevel.ToString(),
+                        $"Computed pole count exceeded 12; clamping from {poleCount}.");
+                    poleCount = 12;
+                }
 
                 levelData = LevelGenerator.GenerateLevel(
                     currentLevel, currentLevel * 12345, poleCount, colorCount, maxCapacity);
@@ -69,6 +80,9 @@ namespace RingFlow.Gameplay
             }
             else
             {
+                NexusLog.Error("InitLevelCommand", "Execute", currentLevel.ToString(),
+                    "LevelGenerator returned null — fallback to hardcoded 3-pole tutorial. Likely cause: solver hit search limits or seed exhausted.");
+
                 var p0 = new PoleState { Id = 0 };
                 p0.AddRing(new RingData(RingColor.Red));
                 p0.AddRing(new RingData(RingColor.Blue));
@@ -138,6 +152,26 @@ namespace RingFlow.Gameplay
                 {
                     int fromId = currentSelected;
                     int toId = signal.PoleId;
+                    var fromPole = _model.Poles.Find(p => p.Id == fromId);
+                    var toPole = _model.Poles.Find(p => p.Id == toId);
+
+                    if (fromPole == null || toPole == null || !fromPole.CanPopRing())
+                    {
+                        NexusLog.Warn("SelectPoleCommand", "Execute", signal.PoleId.ToString(),
+                            $"Move blocked. fromNull={fromPole == null}, toNull={toPole == null}, canPop={fromPole?.CanPopRing()}");
+                        _model.SelectedPoleId.Value = -1;
+                        return;
+                    }
+
+                    if (!toPole.CanAddRing(fromPole.TopRing))
+                    {
+                        string reason = GameplayHelpers.DescribeBlockReason(fromPole, toPole);
+                        NexusLog.Warn("SelectPoleCommand", "Execute", signal.PoleId.ToString(),
+                            $"Move blocked. target cannot accept ring. from={fromId}, to={toId} reason={reason}");
+                        _signalBus?.Fire(new MoveBlockedSignal(fromId, toId, reason));
+                        return;
+                    }
+
                     NexusLog.Info("SelectPoleCommand", "Execute", signal.PoleId.ToString(), $"Moving from {fromId} to {toId}.");
                     _model.SelectedPoleId.Value = -1;
                     _signalBus.Fire(new MoveRingSignal(fromId, toId));
@@ -150,6 +184,7 @@ namespace RingFlow.Gameplay
     {
         [Inject] private GameplayModel _model;
         [Inject] private ISignalBus _signalBus;
+        [Inject] private IGameStateMachine _fsm;
 
         public void Execute(MoveRingSignal signal)
         {
@@ -205,14 +240,36 @@ namespace RingFlow.Gameplay
             _model.MoveHistory.Push(mainRecord);
             _model.MovesCount.Value++;
 
+            NexusLog.Info("MoveRingCommand", "Execute", $"{signal.FromPoleId}->{signal.ToPoleId}",
+                $"Move {signal.FromPoleId}->{signal.ToPoleId} OK. Total moves={_model.MovesCount.Value}. Subs={mainRecord.SubMoves?.Count ?? 0}.");
+
             bool bombExploded = TickAllBombs();
             if (bombExploded)
             {
                 _model.IsGameWon.Value = false;
+                FireGameOverTransition();
             }
             else
             {
                 _signalBus.Fire(new CheckWinSignal());
+            }
+        }
+
+        private void FireGameOverTransition()
+        {
+            if (_fsm == null)
+            {
+                NexusLog.Warn("MoveRingCommand", nameof(FireGameOverTransition), "",
+                    "IGameStateMachine unbound; cannot transition to GameOverState.");
+                return;
+            }
+            try
+            {
+                _ = _fsm.ChangeStateAsync<GameOverState>();
+            }
+            catch (System.Exception ex)
+            {
+                NexusLog.Error("MoveRingCommand", nameof(FireGameOverTransition), "", ex);
             }
         }
 
@@ -299,11 +356,23 @@ namespace RingFlow.Gameplay
         {
             if (state.ToPole.Rings.Count < 2) return;
 
-            var belowRing = state.ToPole.Rings[^2];
-            if (belowRing.Type == RingType.Frozen && belowRing.Color == state.Ring.Color)
+            int checkIndex = state.ToPole.Rings.Count - 2;
+            bool anyBroken = false;
+            while (checkIndex >= 0)
             {
-                state.ToPole.Rings[^2] = new RingData(belowRing.Color, RingType.Standard);
-                state.WasIceBroken = true;
+                var current = state.ToPole.Rings[checkIndex];
+                if (current.Type != RingType.Frozen || current.Color != state.Ring.Color)
+                    break;
+
+                state.ToPole.Rings[checkIndex] = new RingData(current.Color, RingType.Standard);
+                (state.IceBrokenRingIndices ??= new List<int>()).Add(checkIndex);
+                anyBroken = true;
+                checkIndex--;
+            }
+
+            if (anyBroken)
+            {
+                state.IceBrokenRingIndices?.Sort();
                 _signalBus.Fire(new BreakIceSignal(state.ToPoleId));
             }
         }
@@ -344,6 +413,8 @@ namespace RingFlow.Gameplay
         private bool TickAllBombs()
         {
             bool exploded = false;
+            var explodedIndices = new Dictionary<PoleState, List<int>>();
+
             foreach (var pole in _model.Poles)
             {
                 for (int i = 0; i < pole.Rings.Count; i++)
@@ -359,9 +430,28 @@ namespace RingFlow.Gameplay
                     {
                         exploded = true;
                         _signalBus.Fire(new BombExplodedSignal(pole.Id));
+
+                        if (!explodedIndices.ContainsKey(pole))
+                            explodedIndices[pole] = new List<int>();
+                        explodedIndices[pole].Add(i);
                     }
                 }
             }
+
+            if (exploded)
+            {
+                foreach (var kvp in explodedIndices)
+                {
+                    var pole = kvp.Key;
+                    var indices = kvp.Value;
+                    indices.Sort((a, b) => b.CompareTo(a));
+                    foreach (var idx in indices)
+                    {
+                        pole.Rings.RemoveAt(idx);
+                    }
+                }
+            }
+
             return exploded;
         }
 
@@ -389,7 +479,7 @@ namespace RingFlow.Gameplay
             public int FromPoleId;
             public int ToPoleId;
             public bool WasMysteryRevealed;
-            public bool WasIceBroken;
+            public List<int> IceBrokenRingIndices; // indices of rings whose ice was broken, from top to bottom
             public bool WasTargetPoleUnlocked;
             public bool WasPainted;
             public int PaintedRingIndex;
@@ -397,8 +487,12 @@ namespace RingFlow.Gameplay
 
             public MoveRecord ToRecord() => new MoveRecord(
                 FromPoleId, ToPoleId, Ring,
-                WasMysteryRevealed, WasIceBroken, WasTargetPoleUnlocked, WasPainted,
-                PaintedRingIndex, PaintedRingOriginalColor, OriginalColor);
+                false, false, WasTargetPoleUnlocked, WasPainted,
+                PaintedRingIndex, PaintedRingOriginalColor, OriginalColor)
+            {
+                WasMysteryRevealedOnFrom = WasMysteryRevealed,
+                IceBrokenRingIndices = IceBrokenRingIndices
+            };
         }
     }
 
@@ -412,16 +506,17 @@ namespace RingFlow.Gameplay
             if (_model.MoveHistory.Count > 0)
             {
                 var lastMove = _model.MoveHistory.Pop();
-                
+                int depthAfterPop = _model.MoveHistory.Count;
+                NexusLog.Info("UndoCommand", "Execute", $"{lastMove.FromPoleId}->{lastMove.ToPoleId}",
+                    $"Undoing move. History depth: {depthAfterPop} remaining.");
+
                 var fromPole = _model.Poles.Find(p => p.Id == lastMove.FromPoleId);
                 var toPole = _model.Poles.Find(p => p.Id == lastMove.ToPoleId);
 
                 if (fromPole != null && toPole != null)
                 {
-                    // 1. Bomba (Bomb) Sayaçlarını Snapshot'tan Geri Yükle
-                    RestoreBombCounters(lastMove.BombCountersBeforeTick);
-
-                    // 2. Alt hamleleri (SubMoves - Mıknatıs ve Zincir) tersten geri al
+                    // SubMoves (magnet, chain) reversed before main ring because
+                    // they were applied after the main ring in the original move
                     if (lastMove.SubMoves != null)
                     {
                         for (int i = lastMove.SubMoves.Count - 1; i >= 0; i--)
@@ -438,16 +533,9 @@ namespace RingFlow.Gameplay
                         }
                     }
 
-                    // 3. Özel durumları geri al
                     if (lastMove.WasTargetPoleUnlocked)
                     {
                         toPole.IsLocked = true;
-                    }
-
-                    if (lastMove.WasIceBrokenOnTarget && toPole.Rings.Count >= 2)
-                    {
-                        var belowRing = toPole.Rings[^2];
-                        toPole.Rings[^2] = new RingData(belowRing.Color, RingType.Frozen);
                     }
 
                     if (lastMove.WasMysteryRevealedOnFrom && !fromPole.IsEmpty)
@@ -456,10 +544,12 @@ namespace RingFlow.Gameplay
                         fromPole.Rings[^1] = new RingData(topM.Color, RingType.Mystery);
                     }
 
-                    // Ana halkayı geri taşı
+                    // Restore bomb counters BEFORE popping the main ring so that
+                    // snapshot RingIndex entries still point to the correct position
+                    RestoreBombCounters(lastMove.BombCountersBeforeTick);
+
                     var movedRing = toPole.PopRing();
 
-                    // Boyama geri yüklemesi
                     if (lastMove.WasPainted)
                     {
                         movedRing.Color = lastMove.OriginalColor;
@@ -475,14 +565,37 @@ namespace RingFlow.Gameplay
 
                     fromPole.AddRing(movedRing);
 
+                    if (lastMove.IceBrokenRingIndices != null)
+                    {
+                        foreach (var idx in lastMove.IceBrokenRingIndices)
+                        {
+                            if (idx >= 0 && idx < toPole.Rings.Count)
+                            {
+                                var ringAtIdx = toPole.Rings[idx];
+                                toPole.Rings[idx] = new RingData(ringAtIdx.Color, RingType.Frozen);
+                            }
+                        }
+                    }
+
                     if (_model.MovesCount.Value > 0)
                     {
                         _model.MovesCount.Value--;
                     }
 
                     _model.SelectedPoleId.Value = -1;
+                    NexusLog.Info("UndoCommand", "Execute", $"{lastMove.FromPoleId}->{lastMove.ToPoleId}",
+                        $"Undo complete. Moves now: {_model.MovesCount.Value}");
                     _signalBus.Fire(new CheckWinSignal());
                 }
+                else
+                {
+                    NexusLog.Warn("UndoCommand", "Execute", $"{lastMove.FromPoleId}->{lastMove.ToPoleId}",
+                        $"Undo failed: pole lookup returned null. fromNull={fromPole == null}, toNull={toPole == null}");
+                }
+            }
+            else
+            {
+                NexusLog.Warn("UndoCommand", "Execute", "", "Undo requested but MoveHistory is empty.");
             }
         }
 
@@ -512,6 +625,12 @@ namespace RingFlow.Gameplay
         public void Execute(CheckWinSignal signal)
         {
             if (_model.IsGameWon.Value) return;
+            if (_model == null || _model.Poles.Count == 0)
+            {
+                NexusLog.Warn("CheckWinCommand", "Execute", "",
+                    "Model or poles empty — cannot evaluate win.");
+                return;
+            }
 
             bool won = true;
             int nonEmptyPoleCount = 0;
@@ -522,19 +641,21 @@ namespace RingFlow.Gameplay
 
                 nonEmptyPoleCount++;
 
-                // Non-empty poles must be full — a partial stack means rings are still scattered
                 if (!pole.IsFull)
                 {
+                    NexusLog.Info("CheckWinCommand", "Execute", pole.Id.ToString(),
+                        $"Pole not full ({pole.Rings.Count}/{pole.MaxCapacity}); cannot win.");
                     won = false;
                     break;
                 }
 
-                // All rings on a non-empty pole must share the same color (Tower-of-Hanoi-style sort).
                 var firstRing = pole.Rings[0];
                 for (int i = 1; i < pole.Rings.Count; i++)
                 {
                     if (pole.Rings[i].Color != firstRing.Color)
                     {
+                        NexusLog.Info("CheckWinCommand", "Execute", pole.Id.ToString(),
+                            $"Mixed colors on pole {pole.Id} (pos 0={firstRing.Color} vs pos {i}={pole.Rings[i].Color}).");
                         won = false;
                         break;
                     }
@@ -543,15 +664,35 @@ namespace RingFlow.Gameplay
                 if (!won) break;
             }
 
+            if (nonEmptyPoleCount == 0)
+            {
+                won = false;
+            }
+
             if (won)
             {
                 _model.IsGameWon.Value = true;
 
-                int prevLevel = _progressionService.CurrentLevel.Value;
+                if (_progressionService == null)
+                {
+                    NexusLog.Error("CheckWinCommand", "Execute", "",
+                        "IProgressionService unbound; cannot advance level even though board was solved.");
+                }
+                if (_economyService == null)
+                {
+                    NexusLog.Error("CheckWinCommand", "Execute", "",
+                        "IEconomyService unbound; coin/xp reward dropped.");
+                }
+                if (_progress == null)
+                {
+                    NexusLog.Error("CheckWinCommand", "Execute", "",
+                        "PlayerProgressModel unbound; xp/world unlock dropped.");
+                }
+
+                int prevLevel = _progressionService != null ? _progressionService.CurrentLevel.Value : 0;
                 int prevMoves = _model.MovesCount.Value;
                 int prevTarget = _model.TargetMovesCount.Value;
 
-                // 3-star rating (GDD §8): 3★ = optimal, 2★ = +30%, 1★ = completed
                 int stars = 1;
                 if (prevTarget > 0)
                 {
@@ -559,34 +700,44 @@ namespace RingFlow.Gameplay
                     else if (prevMoves <= prevTarget * 1.3) stars = 2;
                 }
 
-                // Persist progression (advance to next level)
-                _progressionService.CompleteCurrentLevel();
+                if (_progressionService != null)
+                {
+                    _progressionService.CompleteCurrentLevel();
+                }
 
-                int newLevel = _progressionService.CurrentLevel.Value;
+                int newLevel = _progressionService != null ? _progressionService.CurrentLevel.Value : prevLevel;
 
                 int newWorldIndex = WorldConfigSO.WorldFromAbsoluteLevel(newLevel);
-                if (newWorldIndex >= 0 && newWorldIndex < _progress.UnlockedWorlds.Count)
+                if (_progress != null &&
+                    newWorldIndex >= 0 &&
+                    newWorldIndex < _progress.UnlockedWorlds.Count)
                 {
                     _progress.UnlockedWorlds[newWorldIndex] = true;
                 }
 
                 bool isBoss = WorldConfigSO.IsBossLevel(prevLevel);
                 int coinReward = isBoss ? 500 : 50 + (prevLevel % 11) * 10;
-                _economyService.Earn("Coins", coinReward, isBoss ? "Boss Win Reward" : "Level Win Reward");
+                _economyService?.Earn("Coins", coinReward, isBoss ? "Boss Win Reward" : "Level Win Reward");
 
                 int xpEarned = isBoss ? 50 : 10;
-                _progress.Xp.Value += xpEarned;
-
-                int xpRequired = _progress.XpToNextLevel(_progress.PlayerLevel.Value);
-                while (_progress.Xp.Value >= xpRequired)
+                if (_progress != null)
                 {
-                    _progress.Xp.Value -= xpRequired;
-                    _progress.PlayerLevel.Value++;
-                    _economyService.Earn("Coins", 100, "Player Level Up Reward");
-                    xpRequired = _progress.XpToNextLevel(_progress.PlayerLevel.Value);
+                    _progress.Xp.Value += xpEarned;
+
+                    int xpRequired = _progress.XpToNextLevel(_progress.PlayerLevel.Value);
+                    while (_progress.Xp.Value >= xpRequired)
+                    {
+                        _progress.Xp.Value -= xpRequired;
+                        _progress.PlayerLevel.Value++;
+                        _economyService?.Earn("Coins", 100, "Player Level Up Reward");
+                        xpRequired = _progress.XpToNextLevel(_progress.PlayerLevel.Value);
+                    }
                 }
 
                 _model.LastReward.Value = WinReward.From(prevMoves, prevTarget, coinReward, xpEarned, stars);
+
+                NexusLog.Info("CheckWinCommand", "Execute", "",
+                    $"Level {prevLevel} WON! Moves={prevMoves}, Target={prevTarget}, Stars={stars}, Coins+={coinReward}, XP+={xpEarned}");
 
                 AnalyticsEvents.LevelComplete(prevLevel, prevMoves, stars);
 
@@ -606,13 +757,19 @@ namespace RingFlow.Gameplay
 
         public void Execute(UndoRequestedSignal signal)
         {
-            if (_model.MoveHistory.Count == 0) return;
+            if (_model.MoveHistory.Count == 0)
+            {
+                NexusLog.Warn("UndoRequestedCommand", "Execute", "", "No moves to undo.");
+                return;
+            }
 
             int level = _progressionService?.CurrentLevel.Value ?? 0;
 
             if (_progress.FreeUndosUsedThisSession.Value < 5)
             {
                 _progress.FreeUndosUsedThisSession.Value++;
+                NexusLog.Info("UndoRequestedCommand", "Execute", "",
+                    $"Free undo used ({_progress.FreeUndosUsedThisSession.Value}/5 this session).");
                 AnalyticsEvents.UndoUse(level, wasFree: true);
                 _signalBus.Fire(new UndoSignal());
             }
@@ -620,22 +777,50 @@ namespace RingFlow.Gameplay
             {
                 if (_economy.Spend("Coins", 5, "Undo"))
                 {
+                    NexusLog.Info("UndoRequestedCommand", "Execute", "",
+                        "Paid undo with 5 coins.");
                     AnalyticsEvents.UndoUse(level, wasFree: false);
                     _signalBus.Fire(new UndoSignal());
                 }
             }
             else if (_ads != null && _ads.IsRewardedAvailable("Undo"))
             {
+                NexusLog.Info("UndoRequestedCommand", "Execute", "",
+                    "No coins for undo; showing rewarded ad.");
                 _ads.ShowRewarded("Undo", success =>
                 {
                     if (success)
                     {
+                        NexusLog.Info("UndoRequestedCommand", "Execute", "",
+                            "Rewarded ad completed; applying undo.");
                         AnalyticsEvents.UndoUse(level, wasFree: false);
                         AnalyticsEvents.RewardedAd("Undo", true);
                         _signalBus.Fire(new UndoSignal());
                     }
+                    else
+                    {
+                        NexusLog.Warn("UndoRequestedCommand", "Execute", "",
+                            "Rewarded ad not completed; undo skipped.");
+                    }
                 });
             }
+            else
+            {
+                NexusLog.Warn("UndoRequestedCommand", "Execute", "",
+                    "Cannot afford undo (no coins, no ad).");
+            }
+        }
+    }
+
+    public static class GameplayHelpers
+    {
+        public static string DescribeBlockReason(PoleState fromPole, PoleState toPole)
+        {
+            if (toPole.IsLocked) return "Locked";
+            if (toPole.IsFull) return "Pole full";
+            if (toPole.IsEmpty) return "Color mismatch";
+            if (toPole.TopRing.Type == RingType.Stone) return "Stone blocks";
+            return "Color mismatch";
         }
     }
 }

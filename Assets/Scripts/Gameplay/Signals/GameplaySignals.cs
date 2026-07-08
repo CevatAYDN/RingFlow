@@ -12,7 +12,8 @@ namespace RingFlow.Gameplay
         Win,
         Settings,
         DailyReward,
-        Onboarding
+        Onboarding,
+        GameOver
     }
 
     public readonly struct ShowScreenSignal
@@ -149,6 +150,19 @@ namespace RingFlow.Gameplay
     /// Solver'ın bulduğu ilk doğru hamle — view yalnızca bu halkaya görsel ipucu gösterir.
     /// Çözümü vermez — UI sadece bu ipucunu highlight eder (örn. halkayı parlatır).
     /// </summary>
+    public readonly struct MoveBlockedSignal
+    {
+        public readonly int FromPoleId;
+        public readonly int ToPoleId;
+        public readonly string Reason;
+        public MoveBlockedSignal(int fromPoleId, int toPoleId, string reason)
+        {
+            FromPoleId = fromPoleId;
+            ToPoleId = toPoleId;
+            Reason = reason ?? "";
+        }
+    }
+
     public readonly struct HintResolvedSignal
     {
         public readonly int FromPoleId;
@@ -169,6 +183,15 @@ namespace RingFlow.Gameplay
     /// GDD §9 — Undo butonuna basıldı. Maliyet: ilk 5 ücretsiz, sonrası 5 coin/ad.
     /// </summary>
     public readonly struct UndoRequestedSignal {}
+
+    // ── Game Over / Restart Signals ───────────────────────
+    public readonly struct GameOverSignal {}
+
+    public readonly struct RestartLevelSignal
+    {
+        public readonly int LevelIndex;
+        public RestartLevelSignal(int levelIndex) => LevelIndex = levelIndex;
+    }
 
     /// <summary>
     /// GDD §9 — Günlük ödül talep edildi. İlk girişimde sadece FreeUndosUsedThisSession dikkate alınır,

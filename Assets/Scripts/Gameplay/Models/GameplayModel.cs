@@ -51,7 +51,8 @@ namespace RingFlow.Gameplay
         public int ToPoleId;
         public RingData Ring;
         public bool WasMysteryRevealedOnFrom;
-        public bool WasIceBrokenOnTarget;
+        public List<int> IceBrokenRingIndices; // Indices of rings whose ice was broken (from bottom upward). Null if none.
+        public bool WasIceBrokenOnTarget => IceBrokenRingIndices != null && IceBrokenRingIndices.Count > 0;
         public bool WasTargetPoleUnlocked;
         public bool WasPainted;
         public int PaintedRingIndex;
@@ -78,7 +79,7 @@ namespace RingFlow.Gameplay
             ToPoleId = toPoleId;
             Ring = ring;
             WasMysteryRevealedOnFrom = wasMysteryRevealedOnFrom;
-            WasIceBrokenOnTarget = wasIceBrokenOnTarget;
+            IceBrokenRingIndices = wasIceBrokenOnTarget ? new List<int>() : null;
             WasTargetPoleUnlocked = wasTargetPoleUnlocked;
             WasPainted = wasPainted;
             PaintedRingIndex = paintedRingIndex;

@@ -1,4 +1,5 @@
 using System;
+using Nexus.Core.Services;
 
 namespace RingFlow.Gameplay
 {
@@ -37,7 +38,12 @@ namespace RingFlow.Gameplay
                 var last = new DateTime(lastClaimUtcTicks, DateTimeKind.Utc);
                 return (nowUtc.Date - last.Date).TotalDays >= 1.0;
             }
-            catch { return true; }
+            catch (ArgumentOutOfRangeException ex)
+            {
+                NexusLog.Warn("DailyRewardTable", nameof(IsDailyRewardClaimable), lastClaimUtcTicks.ToString(),
+                    $"Stored tick value out of range ({ex.Message}); allowing claim to recover corrupt save.");
+                return true;
+            }
         }
     }
 
@@ -63,12 +69,22 @@ namespace RingFlow.Gameplay
         /// <summary>Returns the next day's reward after this claim. Updates stamp + index.</summary>
         public CurrencyAmount Claim()
         {
-            if (!CanClaimNow()) return new CurrencyAmount("Coins", 0);
+            if (!CanClaimNow())
+            {
+                NexusLog.Warn("DailyRewardService", nameof(Claim), _progress.DailyLastClaimUtcTicks.Value.ToString(),
+                    "Cannot claim yet (24h reset not elapsed). Returning zero Coins.");
+                return new CurrencyAmount("Coins", 0);
+            }
 
             int nextIndex = _progress.DailyDayIndex.Value + 1;
             var reward = DailyRewardTable.RewardForDayIndex(nextIndex);
 
-            // Advance to (the reward day's index, modulo 7)
+            if (reward.Amount <= 0)
+            {
+                NexusLog.Warn("DailyRewardService", nameof(Claim), nextIndex.ToString(),
+                    $"Reward table returned zero for day index {nextIndex}.");
+            }
+
             _progress.DailyDayIndex.Value = nextIndex % DailyRewardTable.CycleLength;
             _progress.DailyLastClaimUtcTicks.Value = DateTime.UtcNow.Ticks;
 

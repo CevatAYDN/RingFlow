@@ -25,7 +25,8 @@ namespace RingFlow.Gameplay
             }
             else
             {
-                Debug.LogError("[BootState] _fsm is null! Cannot transition to SplashState.");
+                NexusLog.Error("BootState", nameof(OnEnterAsync), "",
+                    "IGameStateMachine unbound; cannot transition to SplashState.");
             }
             return default;
         }

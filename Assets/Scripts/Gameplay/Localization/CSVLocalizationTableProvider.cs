@@ -21,7 +21,8 @@ namespace RingFlow.Gameplay
             var csvAsset = Resources.Load<TextAsset>("Localization");
             if (csvAsset == null)
             {
-                Debug.LogError("[CSVLocalizationTableProvider] Localization.csv not found in Resources!");
+                NexusLog.Error("CSVLocalizationTableProvider", nameof(LoadCSVIfNeeded), "",
+                    "Localization.csv not found in Resources! Localized strings will fall back to defaults.");
                 _loaded = true;
                 return;
             }
@@ -29,6 +30,8 @@ namespace RingFlow.Gameplay
             string[] lines = csvAsset.text.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
             if (lines.Length <= 1)
             {
+                NexusLog.Warn("CSVLocalizationTableProvider", nameof(LoadCSVIfNeeded), "",
+                    $"Localization asset has only {lines.Length} lines — no usable content.");
                 _loaded = true;
                 return;
             }

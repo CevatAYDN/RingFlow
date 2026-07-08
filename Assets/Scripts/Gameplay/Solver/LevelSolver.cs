@@ -27,9 +27,9 @@ namespace RingFlow.Gameplay
     /// </summary>
     public static class LevelSolver
     {
-        private static readonly Dictionary<BoardState, int> _transpositionTable = new(20000);
+        private static readonly Dictionary<BoardState, int> _transpositionTable = new(80000);
         private static int _statesSearched = 0;
-        private const int MaxStatesLimit = 25000; // Limit to prevent freezes/hangs
+        private const int MaxStatesLimit = 100000;
 
         private struct MoveWithHeuristic : IComparable<MoveWithHeuristic>
         {
@@ -44,10 +44,10 @@ namespace RingFlow.Gameplay
 
         public static SolverResult Solve(BoardState initialState, int maxCapacity)
         {
+            initialState.MaxCapacity = maxCapacity;
             int threshold = CalculateHeuristic(initialState, maxCapacity);
             
-            // Çözülemeyen seviyelerde sonsuz döngüyü engellemek için maksimum hamle derinliği sınırı (GDD limitlerine uygun)
-            int maxMovesLimit = 50;
+            int maxMovesLimit = 200;
             
             var path = new List<Move>(maxMovesLimit);
 

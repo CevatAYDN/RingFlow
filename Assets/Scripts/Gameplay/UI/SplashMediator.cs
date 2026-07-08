@@ -13,7 +13,17 @@ namespace RingFlow.Gameplay.UI
 
         protected override void OnBind()
         {
-            if (View != null && _loc != null)
+            if (View == null)
+            {
+                NexusLog.Error("SplashMediator", nameof(OnBind), "", "View not bound.");
+                return;
+            }
+            if (_loc == null)
+            {
+                NexusLog.Warn("SplashMediator", nameof(OnBind), "",
+                    "Localization service unbound; strings will fall back to defaults.");
+            }
+            else
             {
                 View.Localize(_loc);
             }
@@ -22,22 +32,30 @@ namespace RingFlow.Gameplay.UI
 
         private async void TransitionAfterDelay()
         {
-            await Task.Delay(800);
-
-            if (_fsm != null)
+            try
             {
-                try
-                {
-                    await _fsm.ChangeStateAsync<MainMenuState>();
-                }
-                catch (System.Exception ex)
-                {
-                    Debug.LogError($"[SplashMediator] FSM transition to MainMenuState failed: {ex.Message}");
-                }
+                await Task.Delay(800);
             }
-            else
+            catch (System.Exception ex)
             {
-                Debug.LogError("[SplashMediator] _fsm is null! Cannot transition to MainMenuState.");
+                NexusLog.Error("SplashMediator", nameof(TransitionAfterDelay), "", ex);
+                return;
+            }
+
+            if (_fsm == null)
+            {
+                NexusLog.Error("SplashMediator", nameof(TransitionAfterDelay), "",
+                    "IGameStateMachine is null — cannot transition to MainMenuState.");
+                return;
+            }
+
+            try
+            {
+                await _fsm.ChangeStateAsync<MainMenuState>();
+            }
+            catch (System.Exception ex)
+            {
+                NexusLog.Error("SplashMediator", nameof(TransitionAfterDelay), "", ex);
             }
         }
 

@@ -38,6 +38,7 @@ namespace RingFlow.Gameplay
         public uint Types11;
 
         public int PoleCount;
+        public int MaxCapacity;
 
         public uint GetPoleRaw(int index)
         {
@@ -246,16 +247,9 @@ namespace RingFlow.Gameplay
 
         public void AddRing(int poleIndex, RingData ring)
         {
-            // Eğer direk kilitliyse ve Key geliyorsa kilidi aç
             if (IsPoleLocked(poleIndex) && ring.Type == RingType.Locked)
             {
                 SetPoleLocked(poleIndex, false);
-            }
-
-            // Buz kırılma kontrolü
-            if (IsTopRingFrozen(poleIndex) && GetTopRingColor(poleIndex) == ring.Color)
-            {
-                SetTopRingFrozen(poleIndex, false);
             }
 
             int count = GetRingCount(poleIndex);
@@ -296,13 +290,28 @@ namespace RingFlow.Gameplay
             SetRingType(poleIndex, count, ring.Type);
             SetRingCount(poleIndex, count + 1);
 
+            // Buz kırma — gerçek oyun TryBreakIceOnTarget mantığı: yeni eklenen halkanın
+            // hemen altındaki halka (^2) Frozen ise ve renk eşleşiyorsa Standard yap
+            int newCount = GetRingCount(poleIndex);
+            if (newCount >= 2)
+            {
+                int belowIndex = newCount - 2;
+                if (GetRingType(poleIndex, belowIndex) == RingType.Frozen
+                    && GetRingColor(poleIndex, belowIndex) == ring.Color)
+                {
+                    SetRingType(poleIndex, belowIndex, RingType.Standard);
+                    SetTopRingFrozen(poleIndex, false);
+                }
+            }
+
             // Mıknatıs (Magnet) kuralı: Aynı renkteki diğer halkaları çek
             if (ring.Type == RingType.Magnet)
             {
+                int capacityLimit = MaxCapacity > 0 ? MaxCapacity : 4;
                 for (int p = 0; p < PoleCount; p++)
                 {
                     if (p == poleIndex) continue;
-                    if (GetRingCount(poleIndex) >= 4) break;
+                    if (GetRingCount(poleIndex) >= capacityLimit) break;
 
                     if (CanPopRing(p) && GetTopRingColor(p) == ring.Color)
                     {
@@ -407,7 +416,8 @@ namespace RingFlow.Gameplay
                    Types9 == other.Types9 &&
                    Types10 == other.Types10 &&
                    Types11 == other.Types11 &&
-                   PoleCount == other.PoleCount;
+                   PoleCount == other.PoleCount &&
+                   MaxCapacity == other.MaxCapacity;
         }
 
         public override bool Equals(object obj)
@@ -445,6 +455,7 @@ namespace RingFlow.Gameplay
                 hash = hash * 23 + (int)Types10;
                 hash = hash * 23 + (int)Types11;
                 hash = hash * 23 + PoleCount;
+                hash = hash * 23 + MaxCapacity;
                 return hash;
             }
         }

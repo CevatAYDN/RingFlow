@@ -1,3 +1,4 @@
+using System;
 using Nexus.Core;
 using Nexus.Core.Services;
 
@@ -11,9 +12,17 @@ namespace RingFlow.Gameplay
         [Inject] private Diagnostics.IGameDiagnostics _diag;
         [Inject] private Diagnostics.IViewMediatorTracker _tracker;
 
+        private Action<int, int> _selectedPoleHandler;
+        private Action<int, int> _movesCountHandler;
+
         protected override void OnBind()
         {
-            if (_model == null || View == null) return;
+            if (_model == null || View == null)
+            {
+                NexusLog.Error("BoardMediator", nameof(OnBind), "",
+                    "GameplayModel or View not bound; BoardMediator disabled.");
+                return;
+            }
 
             _tracker?.TrackViewBound(typeof(BoardView), typeof(BoardMediator));
             _diag?.Log("Mediator", $"BoardMediator bound. View: {View.GetType().Name}");
@@ -22,12 +31,20 @@ namespace RingFlow.Gameplay
             _logger?.Log("[BoardMediator] Binding BoardView to signals...");
 
             Subscribe<LevelLoadedSignal>(OnLevelLoaded);
-            Subscribe<MoveRingSignal>(_ => RebuildBoard());
+            Subscribe<MoveRingSignal>(OnMoveRing);
             Subscribe<UndoSignal>(_ => RebuildBoard());
             Subscribe<RevealMysterySignal>(_ => RebuildBoard());
             Subscribe<BreakIceSignal>(_ => RebuildBoard());
             Subscribe<UnlockPoleSignal>(_ => RebuildBoard());
             Subscribe<PaintRingSignal>(_ => RebuildBoard());
+            Subscribe<BombExplodedSignal>(OnBombExploded);
+            Subscribe<HintResolvedSignal>(OnHintResolved);
+            Subscribe<MoveBlockedSignal>(OnMoveBlocked);
+
+            _selectedPoleHandler = (_, id) => ApplySelection(id);
+            _movesCountHandler = (_, _) => _logger?.Log($"[BoardMediator] Moves now {_model.MovesCount.Value}");
+            _model.SelectedPoleId.OnChanged(_selectedPoleHandler);
+            _model.MovesCount.OnChanged(_movesCountHandler);
 
             if (_model.Poles.Count > 0)
             {
@@ -35,8 +52,56 @@ namespace RingFlow.Gameplay
             }
         }
 
+        private void OnMoveRing(MoveRingSignal signal)
+        {
+            _logger?.Log($"[BoardMediator] Move {signal.FromPoleId} -> {signal.ToPoleId} received. Animating.");
+            if (View != null && _model != null)
+                View.AnimateRingMove(signal.FromPoleId, signal.ToPoleId, _model.Poles);
+            View?.SetSelectedPole(_model?.SelectedPoleId.Value ?? -1);
+        }
+
+        private void OnMoveBlocked(MoveBlockedSignal signal)
+        {
+            _logger?.Log($"[BoardMediator] Move blocked: {signal.FromPoleId}->{signal.ToPoleId} ({signal.Reason}).");
+            View?.FlashPoleError(signal.ToPoleId);
+        }
+
+        private void ApplySelection(int poleId)
+        {
+            View?.SetSelectedPole(poleId);
+            if (poleId >= 0)
+            {
+                _logger?.Log($"[BoardMediator] Pole {poleId} selected.");
+            }
+        }
+
+        private void OnHintResolved(HintResolvedSignal signal)
+        {
+            if (!signal.HasHint)
+            {
+                _logger?.Log("[BoardMediator] Hint resolver returned empty (solver found nothing).");
+            }
+            else
+            {
+                _logger?.Log($"[BoardMediator] Hint: {signal.FromPoleId} -> {signal.ToPoleId}.");
+            }
+        }
+
+        private void OnBombExploded(BombExplodedSignal signal)
+        {
+            _logger?.Log($"[BoardMediator] Bomb exploded on pole {signal.PoleId}.");
+            RebuildBoard();
+        }
+
         protected override void OnUnbind()
         {
+            if (_model != null)
+            {
+                if (_selectedPoleHandler != null) _model.SelectedPoleId.RemoveOnChanged(_selectedPoleHandler);
+                if (_movesCountHandler != null) _model.MovesCount.RemoveOnChanged(_movesCountHandler);
+            }
+            _selectedPoleHandler = null;
+            _movesCountHandler = null;
             _tracker?.TrackViewUnbound(typeof(BoardView));
         }
 
@@ -52,6 +117,7 @@ namespace RingFlow.Gameplay
             {
                 _diag?.Checkpoint("BoardRebuild");
                 View.BuildBoard(_model.Poles);
+                View.SetSelectedPole(_model.SelectedPoleId.Value);
                 var elapsed = _diag != null ? _diag.GetElapsedSinceCheckpoint("BoardRebuild") : System.TimeSpan.Zero;
                 _diag?.Log("Performance", $"Board rebuilt. Time: {elapsed.TotalMilliseconds}ms");
             }

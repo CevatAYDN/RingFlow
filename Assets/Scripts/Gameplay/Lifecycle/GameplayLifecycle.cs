@@ -60,6 +60,7 @@ namespace RingFlow.Gameplay
             builder.Bind<PlayingState>();
             builder.Bind<PausedState>();
             builder.Bind<WinState>();
+            builder.Bind<GameOverState>();
 
             // -------------------- POCO Services (typed factory injection) --------------------
             // DailyRewardService takes PlayerProgressModel via constructor — bind manually so DI resolves it.
@@ -137,6 +138,7 @@ namespace RingFlow.Gameplay
             fsm.RegisterState(context.Resolve<PlayingState>());
             fsm.RegisterState(context.Resolve<PausedState>());
             fsm.RegisterState(context.Resolve<WinState>());
+            fsm.RegisterState(context.Resolve<GameOverState>());
 
             // Transition to BootState on startup
             diag?.Log("Lifecycle", "Transitioning to BootState on startup");

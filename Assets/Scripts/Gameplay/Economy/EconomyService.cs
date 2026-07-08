@@ -74,39 +74,75 @@ namespace RingFlow.Gameplay
             });
 
             // Hook changes: EconomyService -> PlayerProgressModel (with recursion guard)
-            coinsObs.OnChanged((_, newVal) => 
+            coinsObs.OnChanged((_, newVal) =>
             {
                 if (_isUpdating) return;
                 _isUpdating = true;
                 try
                 {
-                    if (_progress.Coins.Value != newVal) _progress.Coins.Value = (int)newVal;
+                    if (_progress.Coins.Value != (int)newVal)
+                    {
+                        if (newVal < int.MinValue || newVal > int.MaxValue)
+                        {
+                            NexusLog.Warn("EconomyService", nameof(InitializeAsync), newVal.ToString(),
+                                "Coin value over int range; clamping on next sync.");
+                            _progress.Coins.Value = newVal > 0 ? int.MaxValue : int.MinValue;
+                        }
+                        else
+                        {
+                            _progress.Coins.Value = (int)newVal;
+                        }
+                    }
                 }
                 finally
                 {
                     _isUpdating = false;
                 }
             });
-            diamondsObs.OnChanged((_, newVal) => 
+            diamondsObs.OnChanged((_, newVal) =>
             {
                 if (_isUpdating) return;
                 _isUpdating = true;
                 try
                 {
-                    if (_progress.Diamonds.Value != newVal) _progress.Diamonds.Value = (int)newVal;
+                    if (_progress.Diamonds.Value != (int)newVal)
+                    {
+                        if (newVal < int.MinValue || newVal > int.MaxValue)
+                        {
+                            NexusLog.Warn("EconomyService", nameof(InitializeAsync), newVal.ToString(),
+                                "Diamond value over int range; clamping on next sync.");
+                            _progress.Diamonds.Value = newVal > 0 ? int.MaxValue : int.MinValue;
+                        }
+                        else
+                        {
+                            _progress.Diamonds.Value = (int)newVal;
+                        }
+                    }
                 }
                 finally
                 {
                     _isUpdating = false;
                 }
             });
-            hintsObs.OnChanged((_, newVal) => 
+            hintsObs.OnChanged((_, newVal) =>
             {
                 if (_isUpdating) return;
                 _isUpdating = true;
                 try
                 {
-                    if (_progress.HintCount.Value != newVal) _progress.HintCount.Value = (int)newVal;
+                    if (_progress.HintCount.Value != (int)newVal)
+                    {
+                        if (newVal < int.MinValue || newVal > int.MaxValue)
+                        {
+                            NexusLog.Warn("EconomyService", nameof(InitializeAsync), newVal.ToString(),
+                                "Hint count value over int range; clamping on next sync.");
+                            _progress.HintCount.Value = newVal > 0 ? int.MaxValue : int.MinValue;
+                        }
+                        else
+                        {
+                            _progress.HintCount.Value = (int)newVal;
+                        }
+                    }
                 }
                 finally
                 {
@@ -121,7 +157,12 @@ namespace RingFlow.Gameplay
 
         public ObservableProperty<long> GetObservableBalance(string currencyId)
         {
-            if (string.IsNullOrEmpty(currencyId)) return null;
+            if (string.IsNullOrEmpty(currencyId))
+            {
+                NexusLog.Warn("EconomyService", nameof(GetObservableBalance), "",
+                    "Empty currencyId passed — returning null. Use the named ID constant.");
+                return null;
+            }
 
             lock (_balances)
             {
@@ -152,9 +193,16 @@ namespace RingFlow.Gameplay
             lock (_balances)
             {
                 var prop = GetObservableBalance(currencyId);
-                if (prop.Value < amount) return false;
+                if (prop.Value < amount)
+                {
+                    NexusLog.Warn("EconomyService", nameof(Spend), currencyId,
+                        $"Insufficient balance. Have {prop.Value}, need {amount}. Reason: {reason}");
+                    return false;
+                }
 
                 prop.Value -= amount;
+                NexusLog.Info("EconomyService", nameof(Spend), currencyId,
+                    $"Spent {amount}. New balance: {prop.Value}. Reason: {reason}");
                 return true;
             }
         }
@@ -167,6 +215,8 @@ namespace RingFlow.Gameplay
             {
                 var prop = GetObservableBalance(currencyId);
                 prop.Value += amount;
+                NexusLog.Info("EconomyService", nameof(Earn), currencyId,
+                    $"Earned {amount}. New balance: {prop.Value}. Reason: {reason}");
             }
         }
 
@@ -175,7 +225,10 @@ namespace RingFlow.Gameplay
             lock (_balances)
             {
                 var prop = GetObservableBalance(currencyId);
+                long old = prop.Value;
                 prop.Value = amount;
+                NexusLog.Info("EconomyService", nameof(SetBalance), currencyId,
+                    $"Balance changed: {old} -> {amount}");
             }
         }
 

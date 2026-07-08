@@ -55,7 +55,11 @@ namespace RingFlow.Gameplay.UI
             CreateScreen<DailyRewardPopupView>(ScreenType.DailyReward, canvasGo.transform);
 
             _root = GetComponentInParent<Root>();
-            if (_root == null) { Debug.LogError("[UIRoot] No Root found in parent hierarchy."); }
+            if (_root == null)
+            {
+                NexusLog.Error("UIRoot", nameof(Awake), "",
+                    "No Root found in parent hierarchy; SubscribeOnce will be unreachable.");
+            }
         }
 
         private void Start()

@@ -16,7 +16,6 @@ namespace RingFlow.Editor
     public static class EditorBootstrapper
     {
         private const string ContextDataPath = "Assets/Settings/GameplayContextData.asset";
-        private const string TorusModelPath = "Assets/Models/Torus.obj";
 
         public static BootstrapResult Bootstrap()
         {
@@ -89,12 +88,9 @@ namespace RingFlow.Editor
         private static void AttachComponents(GameObject rootObj)
         {
             var boardView = rootObj.AddComponent<BoardView>();
-            var torusModel = AssetDatabase.LoadAssetAtPath<GameObject>(TorusModelPath);
-            if (torusModel != null)
-            {
-                boardView.SetTorusPrefab(torusModel);
-            }
-
+            var torusPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Torus.obj");
+            if (torusPrefab != null)
+                boardView.SetTorusPrefab(torusPrefab);
             rootObj.AddComponent<GameplayLifecycle>();
             rootObj.AddComponent<UIRoot>();
         }

@@ -36,6 +36,12 @@ namespace RingFlow.Gameplay.UI
         protected override void OnUnbind()
         {
             View.CloseButton.onClick.RemoveAllListeners();
+            View.MusicToggle.onValueChanged.RemoveAllListeners();
+            View.SfxToggle.onValueChanged.RemoveAllListeners();
+            View.HapticToggle.onValueChanged.RemoveAllListeners();
+            View.ReduceMotionToggle.onValueChanged.RemoveAllListeners();
+            View.BigButtonsToggle.onValueChanged.RemoveAllListeners();
+            View.ColorBlindSlider.onValueChanged.RemoveAllListeners();
         }
     }
 }

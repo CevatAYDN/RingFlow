@@ -2,6 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Nexus.Core;
 using Nexus.Core.FSM;
+using Nexus.Core.Services;
 using UnityEngine;
 
 namespace RingFlow.Gameplay
@@ -28,7 +29,8 @@ namespace RingFlow.Gameplay
             }
             else
             {
-                Debug.LogError("[SplashState] _signalBus is null! ShowScreenSignal cannot be fired.");
+                NexusLog.Error("SplashState", nameof(OnEnterAsync), "",
+                    "ISignalBus unbound; ShowScreenSignal cannot be fired.");
             }
         }
 

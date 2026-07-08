@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Nexus.Core;
+using Nexus.Core.Services;
 
 namespace RingFlow.Gameplay
 {
@@ -20,7 +22,7 @@ namespace RingFlow.Gameplay
             while (attempts < 50) // GDD: En fazla 50 tohum deneme limiti (softlock koruması)
             {
                 var rand = new Random(currentSeed);
-                var board = new BoardState { PoleCount = poleCount };
+                var board = new BoardState { PoleCount = poleCount, MaxCapacity = maxCapacity };
 
                 // 1. Bitmiş hali oluştur (Her direğe tek renk dolacak şekilde)
                 var colors = (RingColor[])Enum.GetValues(typeof(RingColor));
@@ -42,35 +44,48 @@ namespace RingFlow.Gameplay
                     }
                 }
 
-                // 2. Karıştır (Scramble - Tersten geçerli rastgele hamleler yap)
-                int scrambleMoves = 30 + rand.Next(20);
-                for (int s = 0; s < scrambleMoves; s++)
+                int validScrambleMoves = 0;
+                int scrambleTarget = 150 + rand.Next(80);
+                const int maxScrambleAttempts = 1500;
+                int lastFrom = -1;
+                for (int attempt = 0; attempt < maxScrambleAttempts && validScrambleMoves < scrambleTarget; attempt++)
                 {
                     int sourceCount = 0;
-                    int targetCount = 0;
-
+                    Span<int> validSources = stackalloc int[poleCount];
                     for (int p = 0; p < poleCount; p++)
                     {
-                        if (!board.IsEmpty(p))
+                        if (board.IsEmpty(p)) continue;
+                        if (p == lastFrom) continue;
+                        validSources[sourceCount++] = p;
+                    }
+                    if (sourceCount == 0)
+                    {
+                        for (int p = 0; p < poleCount; p++)
                         {
-                            _sourcePoles[sourceCount++] = p;
+                            if (!board.IsEmpty(p)) validSources[sourceCount++] = p;
                         }
-                        if (board.GetRingCount(p) < maxCapacity)
-                        {
-                            _targetPoles[targetCount++] = p;
-                        }
+                        if (sourceCount == 0) break;
                     }
 
-                    if (sourceCount == 0 || targetCount == 0) break;
+                    int from = validSources[rand.Next(sourceCount)];
+                    var fromRing = board.GetTopRing(from);
 
-                    int from = _sourcePoles[rand.Next(sourceCount)];
-                    int to = _targetPoles[rand.Next(targetCount)];
+                    Span<int> validTargets = stackalloc int[poleCount];
+                    int validTargetCount = 0;
+                    for (int p = 0; p < poleCount; p++)
+                    {
+                        if (p == from) continue;
+                        if (board.GetRingCount(p) >= maxCapacity) continue;
+                        if (!board.CanAddRing(p, fromRing.Color, fromRing.Type, maxCapacity)) continue;
+                        validTargets[validTargetCount++] = p;
+                    }
 
-                    if (from == to) continue;
-
-                    // Halka rengini tersten taşı (renk uyumu aramaksızın)
+                    if (validTargetCount == 0) continue;
+                    int to = validTargets[rand.Next(validTargetCount)];
                     var ring = board.PopRing(from);
-                    board.AddRingSimple(to, ring);
+                    board.AddRing(to, ring);
+                    validScrambleMoves++;
+                    lastFrom = to;
                 }
 
                 // GDD §4 & §5 Kuralları uyarınca özel halka mekaniklerini enjekte et
@@ -83,7 +98,13 @@ namespace RingFlow.Gameplay
 
                 if (solveResult.IsSolvable && solveResult.MoveCount > 0)
                 {
-                    // Çözülebilir bir seviye oluşturuldu, veri modeline çevir
+                    if (solveResult.MoveCount < 2)
+                    {
+                        currentSeed++;
+                        attempts++;
+                        continue;
+                    }
+
                     var levelData = new LevelData
                     {
                         LevelIndex = levelIndex,
@@ -113,6 +134,12 @@ namespace RingFlow.Gameplay
                         levelData.Poles.Add(poleData);
                     }
 
+                    if (attempts > 0)
+                    {
+                        NexusLog.Info("LevelGenerator", nameof(GenerateLevel), levelIndex.ToString(),
+                            $"Solvable level found on seed retry {attempts} (target moves={solveResult.MoveCount}).");
+                    }
+
                     return levelData;
                 }
 
@@ -121,7 +148,10 @@ namespace RingFlow.Gameplay
                 attempts++;
             }
 
-            return null; // 50 denemede de başarılı olamazsa (teorik olarak imkansız)
+            NexusLog.Warn("LevelGenerator", nameof(GenerateLevel), levelIndex.ToString(),
+                $"Exhausted 50 seeds without solver-detected solvable level. Increase MaxStatesLimit or check seed distribution.");
+
+            return null;
         }
 
         private static void InjectSpecialMechanics(ref BoardState board, int levelIndex, Random rand)

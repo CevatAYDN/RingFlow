@@ -1,4 +1,3 @@
-using System;
 using Nexus.Core;
 using Nexus.Core.Services;
 
@@ -16,10 +15,30 @@ namespace RingFlow.Gameplay
 
         public void Execute(HintRequestedSignal signal)
         {
-            if (_model == null || _model.IsGameWon.Value || _model.Poles.Count == 0)
+            if (_model == null)
             {
+                NexusLog.Warn("HintCommand", nameof(Execute), "", "Model not bound; hint request ignored.");
                 _signalBus?.Fire(HintResolvedSignal.Empty);
                 return;
+            }
+
+            if (_model.IsGameWon.Value)
+            {
+                return;
+            }
+
+            if (_model.Poles.Count == 0)
+            {
+                NexusLog.Warn("HintCommand", nameof(Execute), _model.MovesCount.Value.ToString(),
+                    "Pole list empty; level not loaded yet.");
+                _signalBus?.Fire(HintResolvedSignal.Empty);
+                return;
+            }
+
+            if (_economy == null)
+            {
+                NexusLog.Warn("HintCommand", nameof(Execute), "",
+                    "EconomyService not bound. Hint flow will fall back to ad path only.");
             }
 
             if (_economy != null && _economy.CanAfford("Hint", 1))
@@ -44,28 +63,44 @@ namespace RingFlow.Gameplay
                 return;
             }
 
+            NexusLog.Info("HintCommand", nameof(Execute), "",
+                "No usable payment channel (Hint, Coins, Ad) — dropping to Empty.");
             _signalBus?.Fire(HintResolvedSignal.Empty);
         }
 
         private void ResolveAndFire(bool useHintCurrency)
         {
             if (_model == null) return;
-            var current = BuildBoardStateFromModel(_model);
-            var firstMove = TryFindFirstMove(current, _model.MovesCount.Value, 50);
+            var (current, maxCapacity) = BuildBoardStateFromModel(_model);
+            var firstMove = TryFindFirstMove(current, maxCapacity);
 
             if (firstMove.From == -1 || firstMove.To == -1)
             {
+                NexusLog.Warn("HintCommand", nameof(ResolveAndFire), _model.MovesCount.Value.ToString(),
+                    "Solver could not find a first move — level may be unsolvable from current state.");
                 _signalBus?.Fire(HintResolvedSignal.Empty);
                 return;
             }
 
             if (useHintCurrency)
             {
-                _economy?.Spend("Hint", 1, "Hint");
+                if (_economy == null || !_economy.Spend("Hint", 1, "Hint"))
+                {
+                    NexusLog.Warn("HintCommand", nameof(ResolveAndFire), "",
+                        "Hint currency spend failed (race with another consumer?).");
+                    _signalBus?.Fire(HintResolvedSignal.Empty);
+                    return;
+                }
             }
             else
             {
-                _economy?.Spend("Coins", HintCostCoins, "Hint");
+                if (_economy == null || !_economy.Spend("Coins", HintCostCoins, "Hint"))
+                {
+                    NexusLog.Warn("HintCommand", nameof(ResolveAndFire), "",
+                        "Coins spend failed (insufficient balance or economy unbound).");
+                    _signalBus?.Fire(HintResolvedSignal.Empty);
+                    return;
+                }
             }
 
             int level = _progressionService?.CurrentLevel.Value ?? 0;
@@ -74,29 +109,54 @@ namespace RingFlow.Gameplay
             _signalBus?.Fire(new HintResolvedSignal(firstMove.From, firstMove.To, true));
         }
 
-        private static BoardState BuildBoardStateFromModel(GameplayModel m)
+        private static (BoardState Board, int MaxCapacity) BuildBoardStateFromModel(GameplayModel m)
         {
             var board = new BoardState { PoleCount = m.Poles.Count };
+            int maxCapacity = 4;
+            int totalRings = 0;
+
             for (int p = 0; p < m.Poles.Count && p < 12; p++)
             {
                 var pole = m.Poles[p];
-                board.SetPoleLocked(p, pole.IsLocked);
-                for (int r = 0; r < pole.Rings.Count; r++)
+                if (pole == null)
                 {
-                    board.AddRingSimple(p, pole.Rings[r]);
+                    NexusLog.Warn("HintCommand", nameof(BuildBoardStateFromModel), p.ToString(),
+                        "Null pole in GameplayModel.Poles at index. Skipping.");
+                    continue;
                 }
-                if (pole.Rings.Count > 0)
+                if (pole.MaxCapacity > maxCapacity)
+                    maxCapacity = pole.MaxCapacity;
+
+                board.SetPoleLocked(p, pole.IsLocked);
+
+                int count = pole.Rings.Count;
+                board.SetRingCount(p, count);
+                for (int r = 0; r < count; r++)
+                {
+                    var ringData = pole.Rings[r];
+                    board.SetRingColor(p, r, ringData.Color);
+                    board.SetRingType(p, r, ringData.Type);
+                    totalRings++;
+                }
+                if (count > 0)
                 {
                     var top = pole.TopRing;
                     board.SetTopRingFrozen(p, top.Type == RingType.Frozen);
                 }
             }
-            return board;
+
+            if (totalRings == 0)
+            {
+                NexusLog.Warn("HintCommand", nameof(BuildBoardStateFromModel), "",
+                    "Board built from model has zero rings — solver will return unsolvable.");
+            }
+
+            return (board, maxCapacity);
         }
 
-        private static Move TryFindFirstMove(BoardState initial, int movesSoFar, int computeBudget)
+        private static Move TryFindFirstMove(BoardState initial, int maxCapacity)
         {
-            var result = LevelSolver.Solve(initial, Math.Max(4, computeBudget));
+            var result = LevelSolver.Solve(initial, maxCapacity);
             if (!result.IsSolvable || result.MoveCount <= 0 || result.Moves == null)
             {
                 return new Move(-1, -1);
