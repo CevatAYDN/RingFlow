@@ -7,9 +7,11 @@ namespace RingFlow.Gameplay.UI
     public class LevelSelectMediator : Mediator<LevelSelectView>
     {
         [Inject] private IProgressionService _progression;
+        [Inject] private ILocalizationService _loc;
 
         protected override void OnBind()
         {
+            View.Localize(_loc);
             // Lock buttons beyond MaxUnlockedLevel so the player can't select them
             int maxUnlocked = _progression?.MaxUnlockedLevel.Value ?? 1;
             for (int i = 0; i < View.LevelButtons.Count; i++)

@@ -1,4 +1,5 @@
 using Nexus.Core;
+using Nexus.Core.Services;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,6 +13,8 @@ namespace RingFlow.Gameplay.UI
         public Text MovesText { get; private set; }
         public Text RewardText { get; private set; }
         public Text[] StarIcons { get; private set; } = new Text[3];
+        public Text TitleText { get; private set; }
+        private GameObject _nextBtn, _quitBtn;
 
         protected virtual void Awake()
         {
@@ -23,9 +26,9 @@ namespace RingFlow.Gameplay.UI
             card.GetComponent<Image>().color = GameUIResources.PanelColor;
 
             var titleGo = GameUIResources.CreateText("YOU WIN!", transform, 52, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
-            var titleRect = titleGo.GetComponent<RectTransform>();
-            titleRect.GetComponent<Text>().fontStyle = FontStyle.Bold;
-            GameUIResources.SetAnchors(titleRect, 0.2f, 0.66f, 0.8f, 0.76f);
+            TitleText = titleGo.GetComponent<Text>();
+            TitleText.fontStyle = FontStyle.Bold;
+            GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.2f, 0.66f, 0.8f, 0.76f);
 
             var starRow = new GameObject("Stars", typeof(RectTransform), typeof(HorizontalLayoutGroup));
             starRow.transform.SetParent(transform, false);
@@ -45,7 +48,6 @@ namespace RingFlow.Gameplay.UI
                 starGo.GetComponent<RectTransform>().sizeDelta = new Vector2(48, 48);
                 starGo.transform.localScale = Vector3.one;
                 StarIcons[i] = starGo.GetComponent<Text>();
-                starGo.GetComponent<Text>().fontSize = 44;
             }
 
             var movesGo = GameUIResources.CreateText("", transform, 22, TextAnchor.MiddleCenter, GameUIResources.TextColor);
@@ -56,14 +58,14 @@ namespace RingFlow.Gameplay.UI
             GameUIResources.SetAnchors(rewardGo.GetComponent<RectTransform>(), 0.2f, 0.42f, 0.8f, 0.49f);
             RewardText = rewardGo.GetComponent<Text>();
 
-            var nextBtn = GameUIResources.CreateButton("NEXT LEVEL", transform, 300, 68);
-            GameUIResources.SetAnchors(nextBtn.GetComponent<RectTransform>(), 0.28f, 0.30f, 0.72f, 0.40f);
-            NextLevelButton = nextBtn.GetComponent<Button>();
+            _nextBtn = GameUIResources.CreateButton("NEXT LEVEL", transform, 300, 68);
+            GameUIResources.SetAnchors(_nextBtn.GetComponent<RectTransform>(), 0.28f, 0.30f, 0.72f, 0.40f);
+            NextLevelButton = _nextBtn.GetComponent<Button>();
 
-            var quitBtn = GameUIResources.CreateButton("MAIN MENU", transform, 300, 56);
-            GameUIResources.SetAnchors(quitBtn.GetComponent<RectTransform>(), 0.28f, 0.22f, 0.72f, 0.28f);
-            ApplyOutlineStyle(quitBtn);
-            QuitButton = quitBtn.GetComponent<Button>();
+            _quitBtn = GameUIResources.CreateButton("MAIN MENU", transform, 300, 56);
+            GameUIResources.SetAnchors(_quitBtn.GetComponent<RectTransform>(), 0.28f, 0.22f, 0.72f, 0.28f);
+            GameUIResources.ApplyOutlineStyle(_quitBtn);
+            QuitButton = _quitBtn.GetComponent<Button>();
         }
 
         public void ShowResults(int moves, int targetMoves, int coins, int xp, int stars)
@@ -83,22 +85,18 @@ namespace RingFlow.Gameplay.UI
             }
         }
 
+        public void Localize(ILocalizationService loc)
+        {
+            GameUIResources.LocalizeText(TitleText.gameObject, "game_you_win", loc);
+            GameUIResources.LocalizeButtonText(_nextBtn, "game_next_level", loc);
+            GameUIResources.LocalizeButtonText(_quitBtn, "menu_main_menu", loc);
+        }
+
         public void ShowResults(int moves, int targetMoves, int coins, int xp)
         {
             ShowResults(moves, targetMoves, coins, xp, 1);
         }
 
-        private static void ApplyOutlineStyle(GameObject btn)
-        {
-            var image = btn.GetComponent<Image>();
-            image.color = GameUIResources.SurfaceColor;
 
-            var button = btn.GetComponent<Button>();
-            var colors = button.colors;
-            colors.normalColor = GameUIResources.SurfaceColor;
-            colors.highlightedColor = new Color(0.18f, 0.20f, 0.26f);
-            colors.pressedColor = new Color(0.10f, 0.11f, 0.14f);
-            button.colors = colors;
-        }
     }
 }

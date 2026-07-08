@@ -1,4 +1,5 @@
 using Nexus.Core;
+using Nexus.Core.Services;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,6 +16,10 @@ namespace RingFlow.Gameplay.UI
         public Toggle BigButtonsToggle { get; private set; }
         public Slider ColorBlindSlider { get; private set; }
         public Dropdown LanguageDropdown { get; private set; }
+        public Text TitleText { get; private set; }
+        public Text[] SettingLabels { get; private set; }
+        private GameObject _closeBtn;
+        private Text _musicLabel, _sfxLabel, _hapticLabel, _motionLabel, _bigLabel, _cbLabel, _langLabel;
 
         protected virtual void Awake()
         {
@@ -26,30 +31,37 @@ namespace RingFlow.Gameplay.UI
             card.GetComponent<Image>().color = GameUIResources.PanelColor;
 
             var title = GameUIResources.CreateText("SETTINGS", transform, 40, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
-            title.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            TitleText = title.GetComponent<Text>();
+            TitleText.fontStyle = FontStyle.Bold;
             GameUIResources.SetAnchors(title.GetComponent<RectTransform>(), 0.2f, 0.84f, 0.8f, 0.92f);
 
             var musicLabel = GameUIResources.CreateText("Music", transform, 22, TextAnchor.MiddleLeft, GameUIResources.TextColor);
+            _musicLabel = musicLabel.GetComponent<Text>();
             GameUIResources.SetAnchors(musicLabel.GetComponent<RectTransform>(), 0.10f, 0.74f, 0.55f, 0.80f);
             MusicToggle = CreateToggle(card.transform, 0.55f, 0.76f, true);
 
             var sfxLabel = GameUIResources.CreateText("Sound Effects", transform, 22, TextAnchor.MiddleLeft, GameUIResources.TextColor);
+            _sfxLabel = sfxLabel.GetComponent<Text>();
             GameUIResources.SetAnchors(sfxLabel.GetComponent<RectTransform>(), 0.10f, 0.66f, 0.55f, 0.72f);
             SfxToggle = CreateToggle(card.transform, 0.55f, 0.68f, true);
 
             var hapticLabel = GameUIResources.CreateText("Haptic Feedback", transform, 22, TextAnchor.MiddleLeft, GameUIResources.TextColor);
+            _hapticLabel = hapticLabel.GetComponent<Text>();
             GameUIResources.SetAnchors(hapticLabel.GetComponent<RectTransform>(), 0.10f, 0.58f, 0.55f, 0.64f);
             HapticToggle = CreateToggle(card.transform, 0.55f, 0.60f, true);
 
             var motionLabel = GameUIResources.CreateText("Reduce Motion", transform, 22, TextAnchor.MiddleLeft, GameUIResources.TextColor);
+            _motionLabel = motionLabel.GetComponent<Text>();
             GameUIResources.SetAnchors(motionLabel.GetComponent<RectTransform>(), 0.10f, 0.50f, 0.55f, 0.56f);
             ReduceMotionToggle = CreateToggle(card.transform, 0.55f, 0.52f, false);
 
             var bigLabel = GameUIResources.CreateText("Big Buttons", transform, 22, TextAnchor.MiddleLeft, GameUIResources.TextColor);
+            _bigLabel = bigLabel.GetComponent<Text>();
             GameUIResources.SetAnchors(bigLabel.GetComponent<RectTransform>(), 0.10f, 0.42f, 0.55f, 0.48f);
             BigButtonsToggle = CreateToggle(card.transform, 0.55f, 0.44f, false);
 
             var cbLabel = GameUIResources.CreateText("Color Blind Mode", transform, 20, TextAnchor.MiddleLeft, GameUIResources.TextColor);
+            _cbLabel = cbLabel.GetComponent<Text>();
             GameUIResources.SetAnchors(cbLabel.GetComponent<RectTransform>(), 0.10f, 0.32f, 0.50f, 0.38f);
 
             var cbBg = GameUIResources.CreatePanel("SliderBg", card.transform);
@@ -64,6 +76,7 @@ namespace RingFlow.Gameplay.UI
             ColorBlindSlider = cbSlider;
 
             var langLabel = GameUIResources.CreateText("Language", transform, 20, TextAnchor.MiddleLeft, GameUIResources.TextColor);
+            _langLabel = langLabel.GetComponent<Text>();
             GameUIResources.SetAnchors(langLabel.GetComponent<RectTransform>(), 0.10f, 0.22f, 0.50f, 0.28f);
 
             var langDdGo = new GameObject("LangDD", typeof(RectTransform), typeof(Image), typeof(Dropdown));
@@ -72,17 +85,29 @@ namespace RingFlow.Gameplay.UI
             GameUIResources.SetAnchors(langRect, 0.50f, 0.22f, 0.90f, 0.30f);
             langDdGo.GetComponent<Image>().color = GameUIResources.SurfaceColor;
             LanguageDropdown = langDdGo.GetComponent<Dropdown>();
-            LanguageDropdown.options.Add(new Dropdown.OptionData("en"));
-            LanguageDropdown.options.Add(new Dropdown.OptionData("tr"));
-            LanguageDropdown.options.Add(new Dropdown.OptionData("id"));
-            LanguageDropdown.options.Add(new Dropdown.OptionData("es"));
-            LanguageDropdown.options.Add(new Dropdown.OptionData("fr"));
-            LanguageDropdown.options.Add(new Dropdown.OptionData("de"));
+            string[] langCodes = { "en", "tr", "id", "es", "fr", "de", "pt", "it", "ar", "hi", "ru", "ja", "zh", "ko", "vi" };
+            foreach (var code in langCodes)
+            {
+                LanguageDropdown.options.Add(new Dropdown.OptionData(code));
+            }
 
-            var closeBtn = GameUIResources.CreateButton("CLOSE", transform, 200, 56);
-            GameUIResources.SetAnchors(closeBtn.GetComponent<RectTransform>(), 0.35f, 0.04f, 0.65f, 0.14f);
-            ApplyPrimaryStyle(closeBtn);
-            CloseButton = closeBtn.GetComponent<Button>();
+            _closeBtn = GameUIResources.CreateButton("CLOSE", transform, 200, 56);
+            GameUIResources.SetAnchors(_closeBtn.GetComponent<RectTransform>(), 0.35f, 0.04f, 0.65f, 0.14f);
+            GameUIResources.ApplyPrimaryStyle(_closeBtn);
+            CloseButton = _closeBtn.GetComponent<Button>();
+        }
+
+        public void Localize(ILocalizationService loc)
+        {
+            GameUIResources.LocalizeText(TitleText.gameObject, "settings_title", loc);
+            GameUIResources.LocalizeText(_musicLabel.gameObject, "settings_music", loc);
+            GameUIResources.LocalizeText(_sfxLabel.gameObject, "settings_sfx", loc);
+            GameUIResources.LocalizeText(_hapticLabel.gameObject, "settings_haptic", loc);
+            GameUIResources.LocalizeText(_motionLabel.gameObject, "settings_reduce_motion", loc);
+            GameUIResources.LocalizeText(_bigLabel.gameObject, "settings_big_buttons", loc);
+            GameUIResources.LocalizeText(_cbLabel.gameObject, "settings_color_blind", loc);
+            GameUIResources.LocalizeText(_langLabel.gameObject, "settings_language", loc);
+            GameUIResources.LocalizeButtonText(_closeBtn, "settings_close", loc);
         }
 
         private Toggle CreateToggle(Transform parent, float anchorX, float anchorY, bool initialValue)
@@ -107,14 +132,6 @@ namespace RingFlow.Gameplay.UI
             return toggle;
         }
 
-        private static void ApplyPrimaryStyle(GameObject btn)
-        {
-            var button = btn.GetComponent<Button>();
-            var colors = button.colors;
-            colors.normalColor = GameUIResources.PrimaryColor;
-            colors.highlightedColor = new Color(0.30f, 0.62f, 1.00f);
-            colors.pressedColor = GameUIResources.PrimaryPressed;
-            button.colors = colors;
-        }
+
     }
 }

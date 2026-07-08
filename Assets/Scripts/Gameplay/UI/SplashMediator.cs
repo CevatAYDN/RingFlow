@@ -1,15 +1,17 @@
 using Nexus.Core;
 using Nexus.Core.FSM;
+using Nexus.Core.Services;
 
 namespace RingFlow.Gameplay.UI
 {
     public class SplashMediator : Mediator<SplashView>
     {
         [Inject] private IGameStateMachine _fsm;
+        [Inject] private ILocalizationService _loc;
 
         protected override void OnBind()
         {
-            if (View != null) View.TaglineText.text = "Loading...";
+            View.Localize(_loc);
             _ = TransitionAfterDelay();
         }
 

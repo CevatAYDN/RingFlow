@@ -1,13 +1,16 @@
 using Nexus.Core;
+using Nexus.Core.Services;
 
 namespace RingFlow.Gameplay.UI
 {
     public class WinMediator : Mediator<WinView>
     {
         [Inject] private GameplayModel _model;
+        [Inject] private ILocalizationService _loc;
 
         protected override void OnBind()
         {
+            View.Localize(_loc);
             View.NextLevelButton.onClick.AddListener(() => SignalBus.Fire(new NextLevelRequestedSignal()));
             View.QuitButton.onClick.AddListener(() => SignalBus.Fire(new QuitToMenuRequestedSignal()));
 

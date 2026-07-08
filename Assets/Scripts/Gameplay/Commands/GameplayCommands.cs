@@ -77,6 +77,9 @@ namespace RingFlow.Gameplay
             NexusLog.Info("InitLevelCommand", "Execute", currentLevel.ToString(),
                 $"Initialized level {currentLevel} with {_model.Poles.Count} poles. Target moves: {_model.TargetMovesCount.Value}.");
 
+            int worldIndex = WorldConfigSO.WorldFromAbsoluteLevel(currentLevel);
+            AnalyticsEvents.LevelStart(currentLevel, worldIndex);
+
             // Fire AFTER the model is populated so subscribers (e.g. BoardMediator)
             // see a consistent state. This avoids the subscriber-before-command
             // ordering problem in Nexus's SignalBus.
@@ -166,11 +169,11 @@ namespace RingFlow.Gameplay
                 FromPoleId = signal.FromPoleId
             };
 
-            ApplyPaintPreMove(state);
-            ApplyRainbowPreMove(state);
+            ApplyPaintPreMove(ref state);
+            ApplyRainbowPreMove(ref state);
 
             fromPole.PopRing();
-            RevealMysteryOnFrom(state);
+            RevealMysteryOnFrom(ref state);
 
             if (state.ToPole.IsLocked && state.Ring.Type == RingType.Locked)
             {
@@ -180,13 +183,13 @@ namespace RingFlow.Gameplay
             }
 
             state.ToPole.AddRing(state.Ring);
-            TryBreakIceOnTarget(state);
+            TryBreakIceOnTarget(ref state);
 
             var mainRecord = state.ToRecord();
             mainRecord.SubMoves ??= new List<MoveRecord>();
 
-            ApplyChainSubMove(state, mainRecord);
-            ApplyMagnetPull(state, mainRecord);
+            ApplyChainSubMove(ref state, mainRecord);
+            ApplyMagnetPull(ref state, mainRecord);
 
             _model.MoveHistory.Push(mainRecord);
             _model.MovesCount.Value++;
@@ -219,7 +222,7 @@ namespace RingFlow.Gameplay
             return true;
         }
 
-        private void ApplyPaintPreMove(MoveContext state)
+        private void ApplyPaintPreMove(ref MoveContext state)
         {
             if (state.Ring.Type == RingType.Paint)
             {
@@ -250,7 +253,7 @@ namespace RingFlow.Gameplay
             }
         }
 
-        private void ApplyRainbowPreMove(MoveContext state)
+        private void ApplyRainbowPreMove(ref MoveContext state)
         {
             if (state.Ring.Type == RingType.Rainbow)
             {
@@ -269,7 +272,7 @@ namespace RingFlow.Gameplay
             }
         }
 
-        private void RevealMysteryOnFrom(MoveContext state)
+        private void RevealMysteryOnFrom(ref MoveContext state)
         {
             if (!state.FromPole.IsEmpty && state.FromPole.TopRing.Type == RingType.Mystery)
             {
@@ -281,7 +284,7 @@ namespace RingFlow.Gameplay
             }
         }
 
-        private void TryBreakIceOnTarget(MoveContext state)
+        private void TryBreakIceOnTarget(ref MoveContext state)
         {
             if (state.ToPole.Rings.Count < 2) return;
 
@@ -294,7 +297,7 @@ namespace RingFlow.Gameplay
             }
         }
 
-        private void ApplyChainSubMove(MoveContext state, MoveRecord mainRecord)
+        private void ApplyChainSubMove(ref MoveContext state, MoveRecord mainRecord)
         {
             if (state.Ring.Type != RingType.Chain) return;
 
@@ -311,7 +314,7 @@ namespace RingFlow.Gameplay
             }
         }
 
-        private void ApplyMagnetPull(MoveContext state, MoveRecord mainRecord)
+        private void ApplyMagnetPull(ref MoveContext state, MoveRecord mainRecord)
         {
             if (state.Ring.Type != RingType.Magnet) return;
 
@@ -512,9 +515,6 @@ namespace RingFlow.Gameplay
                 if (!won) break;
             }
 
-            // An empty board, or fewer than 2 non-empty poles, doesn't constitute a solved puzzle.
-            if (nonEmptyPoleCount < 2) won = false;
-
             if (won)
             {
                 _model.IsGameWon.Value = true;
@@ -559,6 +559,8 @@ namespace RingFlow.Gameplay
 
                 _model.LastReward.Value = WinReward.From(prevMoves, prevTarget, coinReward, xpEarned, stars);
 
+                AnalyticsEvents.LevelComplete(prevLevel, prevMoves, stars);
+
                 _ = _fsm?.ChangeStateAsync<WinState>();
             }
         }
@@ -571,41 +573,39 @@ namespace RingFlow.Gameplay
         [Inject] private IEconomyService _economy;
         [Inject] private IAdService _ads;
         [Inject] private ISignalBus _signalBus;
+        [Inject] private IProgressionService _progressionService;
 
         public void Execute(UndoRequestedSignal signal)
         {
             if (_model.MoveHistory.Count == 0) return;
 
-            // İlk 5 geri alma bu oturum için ücretsizdir
+            int level = _progressionService?.CurrentLevel.Value ?? 0;
+
             if (_progress.FreeUndosUsedThisSession.Value < 5)
             {
                 _progress.FreeUndosUsedThisSession.Value++;
+                AnalyticsEvents.UndoUse(level, wasFree: true);
                 _signalBus.Fire(new UndoSignal());
             }
-            else
+            else if (_economy.CanAfford("Coins", 5))
             {
-                // Sonrası 5 coin/ad
-                if (_economy.CanAfford("Coins", 5))
+                if (_economy.Spend("Coins", 5, "Undo"))
                 {
-                    if (_economy.Spend("Coins", 5, "Undo"))
+                    AnalyticsEvents.UndoUse(level, wasFree: false);
+                    _signalBus.Fire(new UndoSignal());
+                }
+            }
+            else if (_ads != null && _ads.IsRewardedAvailable("Undo"))
+            {
+                _ads.ShowRewarded("Undo", success =>
+                {
+                    if (success)
                     {
+                        AnalyticsEvents.UndoUse(level, wasFree: false);
+                        AnalyticsEvents.RewardedAd("Undo", true);
                         _signalBus.Fire(new UndoSignal());
                     }
-                }
-                else
-                {
-                    // Reklam gösterimi
-                    if (_ads.IsRewardedAvailable("Undo"))
-                    {
-                        _ads.ShowRewarded("Undo", (success) =>
-                        {
-                            if (success)
-                            {
-                                _signalBus.Fire(new UndoSignal());
-                            }
-                        });
-                    }
-                }
+                });
             }
         }
     }

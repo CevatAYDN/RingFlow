@@ -1,4 +1,5 @@
 using Nexus.Core;
+using Nexus.Core.Services;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,41 +16,45 @@ namespace RingFlow.Gameplay.UI
         public Text VersionLabel { get; private set; }
         public Text CoinsText { get; private set; }
         public Text DiamondsText { get; private set; }
+        public Text TitleText { get; private set; }
+        public Text TaglineText { get; private set; }
+        private GameObject _continueBtn, _playBtn, _lvlBtn, _dailyBtn;
 
         protected virtual void Awake()
         {
             var titleGo = GameUIResources.CreateText("RING FLOW", transform, 64, TextAnchor.UpperCenter, GameUIResources.AccentColor);
             var titleRect = titleGo.GetComponent<RectTransform>();
-            titleRect.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            TitleText = titleGo.GetComponent<Text>();
+            TitleText.fontStyle = FontStyle.Bold;
             GameUIResources.SetAnchors(titleRect, 0.1f, 0.78f, 0.9f, 0.92f);
 
             var subGo = GameUIResources.CreateText("A Puzzle Game", transform, 22, TextAnchor.UpperCenter, GameUIResources.MutedText);
+            TaglineText = subGo.GetComponent<Text>();
             GameUIResources.SetAnchors(subGo.GetComponent<RectTransform>(), 0.2f, 0.74f, 0.8f, 0.78f);
 
             var divider = GameUIResources.CreatePanel("Divider", transform);
             GameUIResources.SetAnchors(divider.GetComponent<RectTransform>(), 0.42f, 0.71f, 0.58f, 0.72f);
             divider.GetComponent<Image>().color = GameUIResources.AccentColor;
 
-            var continueBtn = GameUIResources.CreateButton("CONTINUE", transform, 360, 80);
-            GameUIResources.SetAnchors(continueBtn.GetComponent<RectTransform>(), 0.25f, 0.58f, 0.75f, 0.69f);
-            continueBtn.GetComponentInChildren<Text>().fontSize = 26;
-            ContinueButton = continueBtn.GetComponent<Button>();
+            _continueBtn = GameUIResources.CreateButton("CONTINUE", transform, 360, 80);
+            GameUIResources.SetAnchors(_continueBtn.GetComponent<RectTransform>(), 0.25f, 0.58f, 0.75f, 0.69f);
+            _continueBtn.GetComponentInChildren<Text>().fontSize = 26;
+            ContinueButton = _continueBtn.GetComponent<Button>();
 
-            var playBtn = GameUIResources.CreateButton("QUICK PLAY", transform, 320, 60);
-            GameUIResources.SetAnchors(playBtn.GetComponent<RectTransform>(), 0.30f, 0.45f, 0.70f, 0.55f);
-            ApplyOutlineStyle(playBtn);
-            PlayButton = playBtn.GetComponent<Button>();
+            _playBtn = GameUIResources.CreateButton("QUICK PLAY", transform, 320, 60);
+            GameUIResources.SetAnchors(_playBtn.GetComponent<RectTransform>(), 0.30f, 0.45f, 0.70f, 0.55f);
+            GameUIResources.ApplyOutlineStyle(_playBtn);
+            PlayButton = _playBtn.GetComponent<Button>();
 
-            var lvlBtn = GameUIResources.CreateButton("LEVELS", transform, 320, 60);
-            GameUIResources.SetAnchors(lvlBtn.GetComponent<RectTransform>(), 0.30f, 0.33f, 0.70f, 0.43f);
-            ApplyOutlineStyle(lvlBtn);
-            LevelSelectButton = lvlBtn.GetComponent<Button>();
+            _lvlBtn = GameUIResources.CreateButton("LEVELS", transform, 320, 60);
+            GameUIResources.SetAnchors(_lvlBtn.GetComponent<RectTransform>(), 0.30f, 0.33f, 0.70f, 0.43f);
+            GameUIResources.ApplyOutlineStyle(_lvlBtn);
+            LevelSelectButton = _lvlBtn.GetComponent<Button>();
 
-            var dailyBtn = GameUIResources.CreateButton("DAILY REWARD", transform, 320, 60);
-            GameUIResources.SetAnchors(dailyBtn.GetComponent<RectTransform>(), 0.30f, 0.21f, 0.70f, 0.31f);
-            ApplyOutlineStyle(dailyBtn);
-            DailyRewardButton = dailyBtn.GetComponent<Button>();
-            DailyRewardButton.gameObject.SetActive(true);
+            _dailyBtn = GameUIResources.CreateButton("DAILY REWARD", transform, 320, 60);
+            GameUIResources.SetAnchors(_dailyBtn.GetComponent<RectTransform>(), 0.30f, 0.21f, 0.70f, 0.31f);
+            GameUIResources.ApplyOutlineStyle(_dailyBtn);
+            DailyRewardButton = _dailyBtn.GetComponent<Button>();
 
             var settingsBtn = GameUIResources.CreateButton("⚙", transform, 60, 60);
             GameUIResources.SetAnchors(settingsBtn.GetComponent<RectTransform>(), 0.85f, 0.04f, 0.95f, 0.13f);
@@ -73,6 +78,16 @@ namespace RingFlow.Gameplay.UI
         public void UpdateCoins(int coins) { if (CoinsText != null) CoinsText.text = $"Coins: {coins}"; }
         public void UpdateDiamonds(int diamonds) { if (DiamondsText != null) DiamondsText.text = $"◆ {diamonds}"; }
 
+        public void Localize(ILocalizationService loc)
+        {
+            GameUIResources.LocalizeButtonText(_continueBtn, "menu_continue", loc);
+            GameUIResources.LocalizeButtonText(_playBtn, "menu_quick_play", loc);
+            GameUIResources.LocalizeButtonText(_lvlBtn, "menu_levels", loc);
+            GameUIResources.LocalizeButtonText(_dailyBtn, "menu_daily_reward", loc);
+            GameUIResources.LocalizeText(TitleText.gameObject, "game_title", loc);
+            GameUIResources.LocalizeText(TaglineText.gameObject, "game_tagline", loc);
+        }
+
         public void SetDailyRewardAvailable(bool available)
         {
             if (DailyRewardButton == null) return;
@@ -85,17 +100,6 @@ namespace RingFlow.Gameplay.UI
             }
         }
 
-        private static void ApplyOutlineStyle(GameObject btn)
-        {
-            var image = btn.GetComponent<Image>();
-            image.color = GameUIResources.PanelColor;
-            var button = btn.GetComponent<Button>();
-            var colors = button.colors;
-            colors.normalColor = GameUIResources.PanelColor;
-            colors.highlightedColor = new Color(0.22f, 0.22f, 0.30f);
-            colors.pressedColor = new Color(0.10f, 0.10f, 0.14f);
-            colors.disabledColor = new Color(0.18f, 0.18f, 0.22f);
-            button.colors = colors;
-        }
+
     }
 }

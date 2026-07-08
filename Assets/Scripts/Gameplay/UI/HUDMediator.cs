@@ -8,13 +8,16 @@ namespace RingFlow.Gameplay.UI
         [Inject] private GameplayModel _model;
         [Inject] private IProgressionService _progression;
         [Inject] private PlayerProgressModel _progress;
+        [Inject] private ILocalizationService _loc;
 
         protected override void OnBind()
         {
+            View.Localize(_loc);
             View.UndoButton.onClick.AddListener(() => SignalBus.Fire(new UndoRequestedSignal()));
             View.RestartButton.onClick.AddListener(() =>
             {
                 int level = _progression?.CurrentLevel.Value ?? 1;
+                AnalyticsEvents.RestartUse(level);
                 SignalBus.Fire(new InitLevelSignal(level));
             });
             View.PauseButton.onClick.AddListener(() => SignalBus.Fire(new PauseRequestedSignal()));

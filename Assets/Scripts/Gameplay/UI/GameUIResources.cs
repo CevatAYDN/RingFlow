@@ -1,3 +1,4 @@
+using Nexus.Core.Services;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -100,6 +101,78 @@ namespace RingFlow.Gameplay.UI
             text.color = color;
             text.text = content;
             return go;
+        }
+
+        // ── Button style presets ─────────────────────────────────────────
+        public static void ApplyOutlineStyle(GameObject btn)
+        {
+            var image = btn.GetComponent<Image>();
+            image.color = SurfaceColor;
+            var button = btn.GetComponent<Button>();
+            var colors = button.colors;
+            colors.normalColor = SurfaceColor;
+            colors.highlightedColor = new Color(0.20f, 0.22f, 0.28f);
+            colors.pressedColor = new Color(0.10f, 0.11f, 0.14f);
+            colors.disabledColor = new Color(0.18f, 0.18f, 0.22f);
+            button.colors = colors;
+        }
+
+        public static void ApplyIconStyle(Button button)
+        {
+            var colors = button.colors;
+            colors.normalColor = PanelColor;
+            colors.highlightedColor = new Color(0.20f, 0.22f, 0.28f);
+            colors.pressedColor = new Color(0.10f, 0.11f, 0.14f);
+            button.colors = colors;
+        }
+
+        public static void ApplyPrimaryStyle(GameObject btn)
+        {
+            var image = btn.GetComponent<Image>();
+            image.color = PrimaryColor;
+            var button = btn.GetComponent<Button>();
+            var colors = button.colors;
+            colors.normalColor = PrimaryColor;
+            colors.highlightedColor = new Color(0.30f, 0.62f, 1.00f);
+            colors.pressedColor = PrimaryPressed;
+            button.colors = colors;
+        }
+
+        public static void ApplyDangerStyle(GameObject btn)
+        {
+            var image = btn.GetComponent<Image>();
+            image.color = DangerColor;
+            var button = btn.GetComponent<Button>();
+            var colors = button.colors;
+            colors.normalColor = DangerColor;
+            colors.highlightedColor = new Color(0.88f, 0.32f, 0.32f);
+            colors.pressedColor = new Color(0.60f, 0.15f, 0.15f);
+            button.colors = colors;
+        }
+
+        public static void ApplySecondaryStyle(GameObject btn)
+        {
+            var image = btn.GetComponent<Image>();
+            image.color = SurfaceColor;
+            var button = btn.GetComponent<Button>();
+            var colors = button.colors;
+            colors.normalColor = SurfaceColor;
+            colors.highlightedColor = new Color(0.20f, 0.22f, 0.28f);
+            colors.pressedColor = new Color(0.10f, 0.11f, 0.14f);
+            button.colors = colors;
+        }
+
+        // ── Localization helpers ─────────────────────────────────────────
+        public static void LocalizeButtonText(GameObject btn, string key, ILocalizationService loc)
+        {
+            var text = btn.GetComponentInChildren<Text>();
+            if (text != null) text.text = loc.GetString(key, text.text);
+        }
+
+        public static void LocalizeText(GameObject go, string key, ILocalizationService loc)
+        {
+            var text = go.GetComponent<Text>();
+            if (text != null) text.text = loc.GetString(key, text.text);
         }
 
         // ── Anchors helper ───────────────────────────────────────────────

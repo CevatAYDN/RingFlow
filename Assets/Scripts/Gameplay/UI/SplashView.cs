@@ -1,4 +1,5 @@
 using Nexus.Core;
+using Nexus.Core.Services;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -28,6 +29,12 @@ namespace RingFlow.Gameplay.UI
             var prog = GameUIResources.CreateText("", transform, 14, TextAnchor.MiddleCenter, GameUIResources.MutedText);
             GameUIResources.SetAnchors(prog.GetComponent<RectTransform>(), 0.1f, 0.30f, 0.9f, 0.36f);
             ProgressText = prog.GetComponent<Text>();
+        }
+
+        public void Localize(ILocalizationService loc)
+        {
+            GameUIResources.LocalizeText(LogoText.gameObject, "game_title", loc);
+            GameUIResources.LocalizeText(TaglineText.gameObject, "game_loading", loc);
         }
     }
 }

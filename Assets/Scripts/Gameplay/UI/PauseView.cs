@@ -1,4 +1,5 @@
 using Nexus.Core;
+using Nexus.Core.Services;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,6 +10,9 @@ namespace RingFlow.Gameplay.UI
     {
         public Button ResumeButton { get; private set; }
         public Button QuitButton { get; private set; }
+        public Text TitleText { get; private set; }
+        public Text ProgressLabel { get; private set; }
+        private GameObject _resumeBtn, _quitBtn;
 
         protected virtual void Awake()
         {
@@ -23,33 +27,27 @@ namespace RingFlow.Gameplay.UI
 
             // ── Title ──
             var titleGo = GameUIResources.CreateText("PAUSED", transform, 48, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
-            var titleRect = titleGo.GetComponent<RectTransform>();
-            titleRect.GetComponent<Text>().fontStyle = FontStyle.Bold;
-            GameUIResources.SetAnchors(titleRect, 0.2f, 0.58f, 0.8f, 0.70f);
+            TitleText = titleGo.GetComponent<Text>();
+            TitleText.fontStyle = FontStyle.Bold;
+            GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.2f, 0.58f, 0.8f, 0.70f);
 
             // ── Resume button (primary) ──
-            var resumeBtn = GameUIResources.CreateButton("RESUME", transform, 280, 64);
-            GameUIResources.SetAnchors(resumeBtn.GetComponent<RectTransform>(), 0.30f, 0.40f, 0.70f, 0.50f);
-            ResumeButton = resumeBtn.GetComponent<Button>();
+            _resumeBtn = GameUIResources.CreateButton("RESUME", transform, 280, 64);
+            GameUIResources.SetAnchors(_resumeBtn.GetComponent<RectTransform>(), 0.30f, 0.40f, 0.70f, 0.50f);
+            ResumeButton = _resumeBtn.GetComponent<Button>();
 
             // ── Quit button (danger) ──
-            var quitBtn = GameUIResources.CreateButton("QUIT TO MENU", transform, 280, 56);
-            GameUIResources.SetAnchors(quitBtn.GetComponent<RectTransform>(), 0.30f, 0.30f, 0.70f, 0.38f);
-            ApplyDangerStyle(quitBtn);
-            QuitButton = quitBtn.GetComponent<Button>();
+            _quitBtn = GameUIResources.CreateButton("QUIT TO MENU", transform, 280, 56);
+            GameUIResources.SetAnchors(_quitBtn.GetComponent<RectTransform>(), 0.30f, 0.30f, 0.70f, 0.38f);
+            GameUIResources.ApplyDangerStyle(_quitBtn);
+            QuitButton = _quitBtn.GetComponent<Button>();
         }
 
-        private static void ApplyDangerStyle(GameObject btn)
+        public void Localize(ILocalizationService loc)
         {
-            var image = btn.GetComponent<Image>();
-            image.color = GameUIResources.DangerColor;
-
-            var button = btn.GetComponent<Button>();
-            var colors = button.colors;
-            colors.normalColor = GameUIResources.DangerColor;
-            colors.highlightedColor = new Color(0.88f, 0.32f, 0.32f);
-            colors.pressedColor = new Color(0.60f, 0.15f, 0.15f);
-            button.colors = colors;
+            GameUIResources.LocalizeText(TitleText.gameObject, "game_paused", loc);
+            GameUIResources.LocalizeButtonText(_resumeBtn, "game_resume", loc);
+            GameUIResources.LocalizeButtonText(_quitBtn, "game_quit_to_menu", loc);
         }
     }
 }

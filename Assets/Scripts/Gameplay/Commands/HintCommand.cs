@@ -12,6 +12,7 @@ namespace RingFlow.Gameplay
         [Inject] private IEconomyService _economy;
         [Inject] private IAdService _ads;
         [Inject] private ISignalBus _signalBus;
+        [Inject] private IProgressionService _progressionService;
 
         public void Execute(HintRequestedSignal signal)
         {
@@ -53,6 +54,10 @@ namespace RingFlow.Gameplay
             }
 
             _economy?.Spend("Coins", HintCostCoins, "Hint");
+
+            int level = _progressionService?.CurrentLevel.Value ?? 0;
+            AnalyticsEvents.HintUse(level);
+
             _signalBus?.Fire(new HintResolvedSignal(firstMove.From, firstMove.To, true));
         }
 

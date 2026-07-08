@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using Nexus.Core;
 using UnityEngine;
-using UnityEngine.EventSystems;
 
 namespace RingFlow.Gameplay
 {
@@ -11,67 +10,16 @@ namespace RingFlow.Gameplay
         [SerializeField] private GameObject _torusPrefab;
         [SerializeField] private float _poleSpacing = 2.5f;
 
+        public void SetTorusPrefab(GameObject prefab) { _torusPrefab = prefab; }
+
+        private static Shader _cachedShader;
+        private static readonly Queue<GameObject> _ringPool = new();
+
         private readonly List<PoleView> _spawnedPoles = new();
         private readonly List<List<GameObject>> _spawnedRings = new();
 
-        // Cached type lookup so the asmdef does not need a hard reference to
-        // Unity.InputSystem.ForUI. Resolved once at first use.
-        private static System.Type s_inputModuleType;
-
-        protected override void OnEnable()
-        {
-            base.OnEnable();
-            EnsureInputSetup();
-        }
-
-        private void EnsureInputSetup()
-        {
-            EnsureInputModuleType();
-            var eventSystem = FindAnyObjectByType<EventSystem>();
-            if (eventSystem == null)
-            {
-                var esObj = new GameObject("EventSystem");
-                eventSystem = esObj.AddComponent<EventSystem>();
-                if (s_inputModuleType != null) esObj.AddComponent(s_inputModuleType);
-            }
-            else
-            {
-                var existing = eventSystem.GetComponent<BaseInputModule>();
-                if (existing != null && s_inputModuleType != null && !s_inputModuleType.IsInstanceOfType(existing))
-                {
-                    Destroy(existing);
-                    eventSystem.gameObject.AddComponent(s_inputModuleType);
-                }
-                else if (existing == null && s_inputModuleType != null)
-                {
-                    eventSystem.gameObject.AddComponent(s_inputModuleType);
-                }
-            }
-
-            foreach (var cam in FindObjectsByType<Camera>())
-            {
-                if (cam != null && cam.GetComponent<PhysicsRaycaster>() == null)
-                {
-                    cam.gameObject.AddComponent<PhysicsRaycaster>();
-                }
-            }
-        }
-
-        private static void EnsureInputModuleType()
-        {
-            if (s_inputModuleType != null) return;
-            s_inputModuleType = System.Type.GetType(
-                "UnityEngine.InputSystem.UI.InputSystemUIInputModule, Unity.InputSystem.ForUI");
-            if (s_inputModuleType == null)
-            {
-                s_inputModuleType = System.Type.GetType(
-                    "UnityEngine.InputSystem.UI.InputSystemUIInputModule, Unity.InputSystem");
-            }
-        }
-
         public void BuildBoard(List<PoleState> poles)
         {
-            EnsureInputSetup();
             ClearBoard();
 
 #if UNITY_EDITOR
@@ -116,23 +64,18 @@ namespace RingFlow.Gameplay
                 for (int r = 0; r < poleData.Rings.Count; r++)
                 {
                     var ringData = poleData.Rings[r];
-                    GameObject ringObj;
+                    GameObject ringObj = AcquireRing();
 
+                    ringObj.name = $"Ring_{r}_{ringData.Color}_{ringData.Type}";
+                    ringObj.transform.SetParent(poleObj.transform);
+                    ringObj.transform.localPosition = new Vector3(0f, -0.9f + (r * 0.4f), 0f);
                     if (_torusPrefab != null)
                     {
-                        ringObj = Instantiate(_torusPrefab);
-                        ringObj.name = $"Ring_{r}_{ringData.Color}_{ringData.Type}";
-                        ringObj.transform.SetParent(poleObj.transform);
-                        ringObj.transform.localPosition = new Vector3(0f, -0.9f + (r * 0.4f), 0f);
                         ringObj.transform.localRotation = Quaternion.identity;
                         ringObj.transform.localScale = new Vector3(3.5f, 0.2f, 3.5f);
                     }
                     else
                     {
-                        ringObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                        ringObj.name = $"Ring_{r}_{ringData.Color}_{ringData.Type}";
-                        ringObj.transform.SetParent(poleObj.transform);
-                        ringObj.transform.localPosition = new Vector3(0f, -0.9f + (r * 0.4f), 0f);
                         ringObj.transform.localScale = new Vector3(4.0f, 0.08f, 4.0f);
                     }
 
@@ -165,15 +108,43 @@ namespace RingFlow.Gameplay
                 if (pole != null) Destroy(pole.gameObject);
             }
             _spawnedPoles.Clear();
+
+            foreach (var list in _spawnedRings)
+            {
+                foreach (var ring in list)
+                {
+                    if (ring != null) RecycleRing(ring);
+                }
+            }
             _spawnedRings.Clear();
         }
 
-        private Shader GetDefaultShader()
+        private static Shader GetDefaultShader()
         {
-            var s = Shader.Find("Universal Render Pipeline/Lit");
-            if (s == null) s = Shader.Find("Universal Render Pipeline/Simple Lit");
-            if (s == null) s = Shader.Find("Standard");
-            return s;
+            if (_cachedShader != null) return _cachedShader;
+            _cachedShader = Shader.Find("Universal Render Pipeline/Lit");
+            if (_cachedShader == null) _cachedShader = Shader.Find("Universal Render Pipeline/Simple Lit");
+            if (_cachedShader == null) _cachedShader = Shader.Find("Standard");
+            return _cachedShader;
+        }
+
+        private GameObject AcquireRing()
+        {
+            if (_ringPool.Count > 0)
+            {
+                var ring = _ringPool.Dequeue();
+                ring.SetActive(true);
+                return ring;
+            }
+            if (_torusPrefab != null) return Instantiate(_torusPrefab);
+            return GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        }
+
+        private static void RecycleRing(GameObject ring)
+        {
+            ring.SetActive(false);
+            ring.transform.SetParent(null);
+            _ringPool.Enqueue(ring);
         }
 
         private void ApplySpecialRingMaterial(Material mat, RingType type)
@@ -183,6 +154,7 @@ namespace RingFlow.Gameplay
                 case RingType.Frozen:
                     mat.color = Color.cyan;
                     break;
+                case RingType.Key:
                 case RingType.Locked:
                     mat.color = new Color(1f, 0.84f, 0f);
                     break;

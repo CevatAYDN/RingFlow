@@ -6,6 +6,7 @@ namespace RingFlow.Gameplay
     public enum RingType
     {
         Standard = 0,
+        Key,
         Mystery,
         Frozen,
         Locked,

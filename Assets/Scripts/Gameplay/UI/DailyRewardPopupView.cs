@@ -1,4 +1,5 @@
 using Nexus.Core;
+using Nexus.Core.Services;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,6 +13,7 @@ namespace RingFlow.Gameplay.UI
         public Text TitleText { get; private set; }
         public Text DayText { get; private set; }
         public Text RewardText { get; private set; }
+        private GameObject _claimBtn, _closeBtn;
 
         protected virtual void Awake()
         {
@@ -26,9 +28,9 @@ namespace RingFlow.Gameplay.UI
 
             // ── Title ────────────────────────────────────────────────
             var title = GameUIResources.CreateText("DAILY REWARD", transform, 36, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
-            title.GetComponent<Text>().fontStyle = FontStyle.Bold;
-            GameUIResources.SetAnchors(title.GetComponent<RectTransform>(), 0.2f, 0.66f, 0.8f, 0.74f);
             TitleText = title.GetComponent<Text>();
+            TitleText.fontStyle = FontStyle.Bold;
+            GameUIResources.SetAnchors(title.GetComponent<RectTransform>(), 0.2f, 0.66f, 0.8f, 0.74f);
 
             // ── Day label ────────────────────────────────────────────
             var day = GameUIResources.CreateText("Day 1", transform, 64, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
@@ -42,17 +44,22 @@ namespace RingFlow.Gameplay.UI
             RewardText = reward.GetComponent<Text>();
 
             // ── Claim button (primary) ───────────────────────────────
-            var claim = GameUIResources.CreateButton("CLAIM", transform, 280, 64);
-            GameUIResources.SetAnchors(claim.GetComponent<RectTransform>(), 0.30f, 0.32f, 0.70f, 0.40f);
-            ClaimButton = claim.GetComponent<Button>();
+            _claimBtn = GameUIResources.CreateButton("CLAIM", transform, 280, 64);
+            GameUIResources.SetAnchors(_claimBtn.GetComponent<RectTransform>(), 0.30f, 0.32f, 0.70f, 0.40f);
+            ClaimButton = _claimBtn.GetComponent<Button>();
 
             // ── Close button (secondary) ─────────────────────────────
-            var close = GameUIResources.CreateButton("CLOSE", transform, 200, 48);
-            GameUIResources.SetAnchors(close.GetComponent<RectTransform>(), 0.36f, 0.26f, 0.64f, 0.30f);
-            var closeColors = close.GetComponent<Button>().colors;
-            closeColors.normalColor = GameUIResources.SurfaceColor;
-            close.GetComponent<Button>().colors = closeColors;
-            CloseButton = close.GetComponent<Button>();
+            _closeBtn = GameUIResources.CreateButton("CLOSE", transform, 200, 48);
+            GameUIResources.SetAnchors(_closeBtn.GetComponent<RectTransform>(), 0.36f, 0.26f, 0.64f, 0.30f);
+            GameUIResources.ApplySecondaryStyle(_closeBtn);
+            CloseButton = _closeBtn.GetComponent<Button>();
+        }
+
+        public void Localize(ILocalizationService loc)
+        {
+            GameUIResources.LocalizeText(TitleText.gameObject, "daily_reward_title", loc);
+            GameUIResources.LocalizeButtonText(_claimBtn, "daily_reward_claim", loc);
+            GameUIResources.LocalizeButtonText(_closeBtn, "settings_close", loc);
         }
 
         public void ShowReward(int dayIndex, string rewardText)

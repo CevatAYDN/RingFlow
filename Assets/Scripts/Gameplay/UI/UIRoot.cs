@@ -27,6 +27,7 @@ namespace RingFlow.Gameplay.UI
         private bool _subscribed;
         private ScreenType _activeExclusiveScreen = ScreenType.Splash;
         private ScreenType? _pausedExclusiveScreen;
+        private readonly List<ISignalSubscription> _subscriptions = new();
 
         private void Awake()
         {
@@ -65,21 +66,27 @@ namespace RingFlow.Gameplay.UI
         private void SubscribeOnce()
         {
             if (_subscribed || _root == null) return;
+            if (_root.Context == null)
+            {
+                Debug.LogError("[UIRoot] Root.Context is null — cannot subscribe. Retrying next frame.");
+                _subscribed = false;
+                return;
+            }
             _subscribed = true;
 
             var sb = _root.Context.Resolve<ISignalBus>();
-            sb.Subscribe<ShowScreenSignal>(OnShowScreen);
-            sb.Subscribe<HideScreenSignal>(OnHideScreen);
+            _subscriptions.Add(sb.Subscribe<ShowScreenSignal>(OnShowScreen));
+            _subscriptions.Add(sb.Subscribe<HideScreenSignal>(OnHideScreen));
 
             var fsm = _root.Context.TryResolve<IGameStateMachine>();
             if (fsm != null)
             {
-                sb.Subscribe<PlayRequestedSignal>(_ => fsm.ChangeStateAsync<LevelSelectState>());
-                sb.Subscribe<LevelSelectedSignal>(s => fsm.ChangeStateAsync<PlayingState>(s.LevelIndex));
-                sb.Subscribe<PauseRequestedSignal>(_ => fsm.ChangeStateAsync<PausedState>());
-                sb.Subscribe<ResumeRequestedSignal>(_ => fsm.ChangeStateAsync<PlayingState>());
+                _subscriptions.Add(sb.Subscribe<PlayRequestedSignal>(_ => fsm.ChangeStateAsync<LevelSelectState>()));
+                _subscriptions.Add(sb.Subscribe<LevelSelectedSignal>(s => fsm.ChangeStateAsync<PlayingState>(s.LevelIndex)));
+                _subscriptions.Add(sb.Subscribe<PauseRequestedSignal>(_ => fsm.ChangeStateAsync<PausedState>()));
+                _subscriptions.Add(sb.Subscribe<ResumeRequestedSignal>(_ => fsm.ChangeStateAsync<PlayingState>()));
 
-                sb.Subscribe<NextLevelRequestedSignal>(_ =>
+                _subscriptions.Add(sb.Subscribe<NextLevelRequestedSignal>(_ =>
                 {
                     var prog = _root.Context.TryResolve<IProgressionService>();
                     if (prog != null)
@@ -88,19 +95,28 @@ namespace RingFlow.Gameplay.UI
                         prog.SetLevel(nextLevel);
                         fsm.ChangeStateAsync<PlayingState>(nextLevel);
                     }
-                });
+                }));
 
-                sb.Subscribe<OpenDailyRewardSignal>(_ => OpenPopup(ScreenType.DailyReward));
-                sb.Subscribe<OpenSettingsSignal>(_ => OpenPopup(ScreenType.Settings));
-                sb.Subscribe<CloseDailyRewardSignal>(_ => ClosePopup(ScreenType.DailyReward));
-                sb.Subscribe<CloseSettingsSignal>(_ => ClosePopup(ScreenType.Settings));
+                _subscriptions.Add(sb.Subscribe<OpenDailyRewardSignal>(_ => OpenPopup(ScreenType.DailyReward)));
+                _subscriptions.Add(sb.Subscribe<OpenSettingsSignal>(_ => OpenPopup(ScreenType.Settings)));
+                _subscriptions.Add(sb.Subscribe<CloseDailyRewardSignal>(_ => ClosePopup(ScreenType.DailyReward)));
+                _subscriptions.Add(sb.Subscribe<CloseSettingsSignal>(_ => ClosePopup(ScreenType.Settings)));
 
-                sb.Subscribe<QuitToMenuRequestedSignal>(_ =>
+                _subscriptions.Add(sb.Subscribe<QuitToMenuRequestedSignal>(_ =>
                 {
                     CloseAllPopups();
                     fsm.ChangeStateAsync<MainMenuState>();
-                });
+                }));
             }
+        }
+
+        private void OnDestroy()
+        {
+            foreach (var sub in _subscriptions)
+            {
+                sub?.Dispose();
+            }
+            _subscriptions.Clear();
         }
 
         private void CreateScreen<T>(ScreenType type, Transform parent) where T : View

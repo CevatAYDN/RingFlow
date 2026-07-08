@@ -1,4 +1,5 @@
 using Nexus.Core;
+using Nexus.Core.Services;
 using UnityEngine.UI;
 
 namespace RingFlow.Gameplay.UI
@@ -7,9 +8,11 @@ namespace RingFlow.Gameplay.UI
     {
         [Inject] private PlayerProgressModel _progress;
         [Inject] private SettingsModel _settings;
+        [Inject] private ILocalizationService _loc;
 
         protected override void OnBind()
         {
+            View.Localize(_loc);
             View.CloseButton.onClick.AddListener(() => SignalBus.Fire(new CloseSettingsSignal()));
 
             if (_settings != null)

@@ -8,9 +8,11 @@ namespace RingFlow.Gameplay.UI
         [Inject] private IProgressionService _progression;
         [Inject] private PlayerProgressModel _progress;
         [Inject] private DailyRewardService _dailyReward;
+        [Inject] private ILocalizationService _loc;
 
         protected override void OnBind()
         {
+            View.Localize(_loc);
             View.ContinueButton.onClick.AddListener(ContinueGame);
             View.PlayButton.onClick.AddListener(QuickPlay);
             View.LevelSelectButton.onClick.AddListener(GoToLevelSelect);

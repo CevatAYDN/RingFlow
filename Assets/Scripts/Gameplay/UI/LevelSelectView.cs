@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Nexus.Core;
+using Nexus.Core.Services;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -17,13 +18,15 @@ namespace RingFlow.Gameplay.UI
 
         public List<Button> LevelButtons { get; } = new();
         public Button BackButton { get; private set; }
+        public Text TitleText { get; private set; }
+        private GameObject _backBtn, _levelBtns;
 
         protected virtual void Awake()
         {
             // Title
             var titleGo = GameUIResources.CreateText("SELECT LEVEL", transform, 36, TextAnchor.UpperCenter, GameUIResources.AccentColor);
-            var titleRect = titleGo.GetComponent<RectTransform>();
-            GameUIResources.SetAnchors(titleRect, 0.1f, 0.82f, 0.9f, 0.92f);
+            TitleText = titleGo.GetComponent<Text>();
+            GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.1f, 0.82f, 0.9f, 0.92f);
 
             // Level grid
             float startY = 0.72f;
@@ -39,10 +42,15 @@ namespace RingFlow.Gameplay.UI
             }
 
             // Back button
-            var backBtn = GameUIResources.CreateButton("BACK", transform, 200, 50);
-            var backRect = backBtn.GetComponent<RectTransform>();
-            GameUIResources.SetAnchors(backRect, 0.38f, 0.06f, 0.62f, 0.12f);
-            BackButton = backBtn.GetComponent<Button>();
+            _backBtn = GameUIResources.CreateButton("BACK", transform, 200, 50);
+            GameUIResources.SetAnchors(_backBtn.GetComponent<RectTransform>(), 0.38f, 0.06f, 0.62f, 0.12f);
+            BackButton = _backBtn.GetComponent<Button>();
+        }
+
+        public void Localize(ILocalizationService loc)
+        {
+            GameUIResources.LocalizeText(TitleText.gameObject, "menu_select_level", loc);
+            GameUIResources.LocalizeButtonText(_backBtn, "menu_back", loc);
         }
     }
 }

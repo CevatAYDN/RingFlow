@@ -1,4 +1,5 @@
 using Nexus.Core;
+using Nexus.Core.Services;
 
 namespace RingFlow.Gameplay.UI
 {
@@ -12,9 +13,11 @@ namespace RingFlow.Gameplay.UI
     {
         [Inject] private PlayerProgressModel _progress;
         [Inject] private DailyRewardService _dailyReward;
+        [Inject] private ILocalizationService _loc;
 
         protected override void OnBind()
         {
+            View.Localize(_loc);
             if (View.ClaimButton != null) View.ClaimButton.onClick.AddListener(OnClaimClicked);
             if (View.CloseButton != null) View.CloseButton.onClick.AddListener(OnCloseClicked);
 

@@ -4,6 +4,7 @@ using Nexus.Core;
 using Nexus.Core.Services;
 using Nexus.Core.FSM;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace RingFlow.Gameplay
 {
@@ -25,6 +26,7 @@ namespace RingFlow.Gameplay
             builder.Bind<ILocalizationTableProvider, CSVLocalizationTableProvider>();
 
             // -------------------- Core Services --------------------
+            builder.BindService<ILoggerService, LoggerService>();
             builder.BindService<IEconomyService, EconomyService>();
             builder.BindService<IProgressionService, ProgressionService>();
             builder.BindService<IAudioService, AudioService>();
@@ -76,6 +78,9 @@ namespace RingFlow.Gameplay
             var localization = context.TryResolve<ILocalizationService>();
 
             var provider = context.TryResolve<ILocalizationTableProvider>();
+
+            var analytics = context.TryResolve<IAnalyticsService>();
+            if (analytics != null) AnalyticsEvents.SetService(analytics);
 
             if (settings != null && audio != null)
             {
@@ -129,7 +134,39 @@ namespace RingFlow.Gameplay
             return default;
         }
 
-        public ValueTask OnStartAsync(CancellationToken ct) => default;
+        public ValueTask OnStartAsync(CancellationToken ct)
+        {
+            EnsureInputSetup();
+            return default;
+        }
+
+        private static void EnsureInputSetup()
+        {
+            if (EventSystem.current == null)
+            {
+                var esObj = new GameObject("EventSystem");
+                esObj.AddComponent<EventSystem>();
+                var inputModuleType = ResolveInputSystemUIInputModuleType();
+                if (inputModuleType != null)
+                {
+                    esObj.AddComponent(inputModuleType);
+                }
+            }
+
+            foreach (var cam in Object.FindObjectsByType<Camera>())
+            {
+                if (cam != null && cam.GetComponent<PhysicsRaycaster>() == null)
+                {
+                    cam.gameObject.AddComponent<PhysicsRaycaster>();
+                }
+            }
+        }
+
+        private static System.Type ResolveInputSystemUIInputModuleType()
+        {
+            return System.Type.GetType("UnityEngine.InputSystem.UI.InputSystemUIInputModule, Unity.InputSystem.ForUI")
+                   ?? System.Type.GetType("UnityEngine.InputSystem.UI.InputSystemUIInputModule, Unity.InputSystem");
+        }
 
         public void OnDispose()
         {

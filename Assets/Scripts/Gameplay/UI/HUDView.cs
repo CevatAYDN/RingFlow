@@ -1,4 +1,5 @@
 using Nexus.Core;
+using Nexus.Core.Services;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,6 +16,7 @@ namespace RingFlow.Gameplay.UI
         public Button RestartButton { get; private set; }
         public Button PauseButton { get; private set; }
         public Button HintButton { get; private set; }
+        private GameObject _undoBtn, _restartBtn, _hintBtn;
 
         protected virtual void Awake()
         {
@@ -34,7 +36,7 @@ namespace RingFlow.Gameplay.UI
             var pauseBtn = GameUIResources.CreateButton("II", transform, 60, 60);
             GameUIResources.SetAnchors(pauseBtn.GetComponent<RectTransform>(), 0.88f, 0.90f, 0.98f, 0.98f);
             pauseBtn.GetComponent<Image>().color = GameUIResources.PanelColor;
-            ApplyIconStyle(pauseBtn.GetComponent<Button>());
+            GameUIResources.ApplyIconStyle(pauseBtn.GetComponent<Button>());
             PauseButton = pauseBtn.GetComponent<Button>();
 
             var bottomBar = GameUIResources.CreatePanel("BottomBar", transform);
@@ -61,20 +63,20 @@ namespace RingFlow.Gameplay.UI
             GameUIResources.SetAnchors(diaText.GetComponent<RectTransform>(), 0.18f, 0f, 1f, 1f);
             DiamondsText = diaText.GetComponent<Text>();
 
-            var undoBtn = GameUIResources.CreateButton("UNDO", transform, 140, 44);
-            GameUIResources.SetAnchors(undoBtn.GetComponent<RectTransform>(), 0.04f, 0.025f, 0.32f, 0.10f);
-            ApplyOutlineStyle(undoBtn);
-            UndoButton = undoBtn.GetComponent<Button>();
+            _undoBtn = GameUIResources.CreateButton("UNDO", transform, 140, 44);
+            GameUIResources.SetAnchors(_undoBtn.GetComponent<RectTransform>(), 0.04f, 0.025f, 0.32f, 0.10f);
+            GameUIResources.ApplyOutlineStyle(_undoBtn);
+            UndoButton = _undoBtn.GetComponent<Button>();
 
-            var restartBtn = GameUIResources.CreateButton("RESTART", transform, 160, 44);
-            GameUIResources.SetAnchors(restartBtn.GetComponent<RectTransform>(), 0.36f, 0.025f, 0.64f, 0.10f);
-            ApplyOutlineStyle(restartBtn);
-            RestartButton = restartBtn.GetComponent<Button>();
+            _restartBtn = GameUIResources.CreateButton("RESTART", transform, 160, 44);
+            GameUIResources.SetAnchors(_restartBtn.GetComponent<RectTransform>(), 0.36f, 0.025f, 0.64f, 0.10f);
+            GameUIResources.ApplyOutlineStyle(_restartBtn);
+            RestartButton = _restartBtn.GetComponent<Button>();
 
-            var hintBtn = GameUIResources.CreateButton("HINT", transform, 140, 44);
-            GameUIResources.SetAnchors(hintBtn.GetComponent<RectTransform>(), 0.68f, 0.025f, 0.96f, 0.10f);
-            ApplyOutlineStyle(hintBtn);
-            HintButton = hintBtn.GetComponent<Button>();
+            _hintBtn = GameUIResources.CreateButton("HINT", transform, 140, 44);
+            GameUIResources.SetAnchors(_hintBtn.GetComponent<RectTransform>(), 0.68f, 0.025f, 0.96f, 0.10f);
+            GameUIResources.ApplyOutlineStyle(_hintBtn);
+            HintButton = _hintBtn.GetComponent<Button>();
         }
 
         public void UpdateMoves(int moves)
@@ -97,25 +99,11 @@ namespace RingFlow.Gameplay.UI
             if (DiamondsText != null) DiamondsText.text = diamonds.ToString();
         }
 
-        private static void ApplyOutlineStyle(GameObject btn)
+        public void Localize(ILocalizationService loc)
         {
-            var image = btn.GetComponent<Image>();
-            image.color = GameUIResources.SurfaceColor;
-            var button = btn.GetComponent<Button>();
-            var colors = button.colors;
-            colors.normalColor = GameUIResources.SurfaceColor;
-            colors.highlightedColor = new Color(0.20f, 0.22f, 0.28f);
-            colors.pressedColor = new Color(0.10f, 0.11f, 0.14f);
-            button.colors = colors;
-        }
-
-        private static void ApplyIconStyle(Button button)
-        {
-            var colors = button.colors;
-            colors.normalColor = GameUIResources.PanelColor;
-            colors.highlightedColor = new Color(0.20f, 0.22f, 0.28f);
-            colors.pressedColor = new Color(0.10f, 0.11f, 0.14f);
-            button.colors = colors;
+            GameUIResources.LocalizeButtonText(_undoBtn, "game_undo", loc);
+            GameUIResources.LocalizeButtonText(_restartBtn, "game_restart", loc);
+            GameUIResources.LocalizeButtonText(_hintBtn, "game_hint", loc);
         }
     }
 }

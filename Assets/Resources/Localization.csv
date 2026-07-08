@@ -1,8 +1,40 @@
 Key,en,tr,id,es,fr,de,pt,it,ar,hi,ru,ja,zh,ko,vi
 menu_play,Play,Oyna,Main,Jugar,Jouer,Spielen,Jogar,Gioca,لعب,खेलें,Играть,プレイ,玩,놀이,Chơi
 menu_settings,Settings,Ayarlar,Pengaturan,Ajustes,Paramètres,Einstellungen,Configurações,Impostazioni,إعدادات,सेटिंग्स,Настройки,設定,设置,설정,Cài đặt
-menu_level,Level,Seviye,Level,Nivel,Niveau,Ebene,Nível,Livello,مستوى,स्तर,Уровень,レベル,级别,수준,Cấp độ
-game_win,You Win!,Kazandın!,Kamu Menang!,¡Ganaste!,Gagné!,Gewonnen!,Ganhou!,Hai Vinto!,لقد فزت!,तुम जीते!,Вы выиграли!,勝ちました!,你赢了!,당신이 이겼습니다!,Bạn thắng!
-game_moves,Moves,Hamle,Langkah,Movimientos,Mouvements,Züge,Movimentos,Mosse,تحركات,चालیں,Ходы,手,移动,움직임,Di chuyển
-game_hint,Hint,İpucu,Petunjuk,Pista,Indice,Hinweis,Dica,Suggerimento,تلميح,संकेत,Подсказка,ヒント,提示,힌트,Gợi ý
-game_undo,Undo,Geri Al,Batal,Deshacer,Annuler,Rückgängig,Desfazer,Annulla,تراجع,पूर्ववत,Отменить,元に戻す,撤销,취소,Hoàn tác
+menu_level,Level,Seviye,Tingkat,Nivel,Niveau,Stufe,Nível,Livello,مستوى,स्तर,Уровень,レベル,级别,수준,Cấp độ
+menu_continue,Continue,Devam Et,Lanjut,Continuar,Continuer,Fortsetzen,Continuar,Continua,استمرار,जारी रखें,Продолжить,続ける,继续,계속,Tiếp tục
+menu_quick_play,Quick Play,Hızlı Oyun,Main Cepat,Juego Rápido,Jeu Rapide,Schnelles Spiel,Jogo Rápido,Gioco Veloce,لعب سريع,त्वरित खेल,Быстрая игра,クイックプレイ,快速游戏,Hızlı Oyun,Chơi Nhanh
+menu_levels,LEVELS,SEVİYELER,LEVEL,TINGKAT,NIVEAUX,LEVELS,NÍVEIS,LIVELLI,مستويات,स्तर,УРОВНИ,レベル,关卡,레벨,CẤP ĐỘ
+menu_daily_reward,Daily Reward,Günlük Ödül,Hadiah Harian,Recompensa Diaria,Récompense Quotidienne,Tägliche Belohnung,Recompensa Diária,Ricompensa Giornaliera,مكافأة يومية,दैनिक पुरस्कार,Ежедневная награда,デイリー報酬,每日奖励,Günlük Ödül,Phần Thưởng Hàng Ngày
+menu_main_menu,Main Menu,Ana Menü,Menu Utama,Menú Principal,Menu Principal,Hauptmenü,Menu Principal,Menu Principale,القائمة الرئيسية,मुख्य मेनू,Главное меню,メインメニュー,主菜单,Ana Menü,Menu Chính
+menu_back,Back,Geri,Kembali,Volver,Retour,Zurück,Voltar,Indietro,رجوع,वापस,Назад,戻る,返回,Geri,Quay lại
+menu_select_level,Select Level,Seviye Seç,Pilih Level,Seleccionar Nivel,Sélectionner Niveau,Level Wählen,Selecionar Nível,Seleziona Livello,اختيار المرحلة,स्तर चुनें,Выбрать уровень,レベル選択,选择关卡,Seviye Seç,Chọn Cấp Độ
+game_title,RING FLOW,RING FLOW,RING FLOW,RING FLOW,RING FLOW,RING FLOW,RING FLOW,RING FLOW,رينغ فلو,RING FLOW,RING FLOW,リングフロー,RING FLOW,RING FLOW,RING FLOW
+game_tagline,A Puzzle Game,Bir Bulmaca Oyunu,Sebuah Game Puzzle,Un Juego de Puzzle,Un Jeu de Puzzle,Ein Puzzlespiel,Um Jogo de Puzzle,Un Gioco Puzzle,لعبة ألغاز,एक पहेली खेल,Головоломка,パズルゲーム,一个解谜游戏,Bir Bulmaca Oyunu,Một Trò Chơi Xếp Hình
+game_loading,Loading...,Yükleniyor...,Memuat...,Cargando...,Chargement...,Lädt...,Carregando...,Caricamento...,جار التحميل...,लोड हो रहा है...,Загрузка...,読み込み中...,加载中...,Yükleniyor...,Đang tải...
+game_paused,PAUSED,DURAKLATILDI,DIJEDA,PAUSADO,EN PAUSE,PASIERTIERT,PAUSADO,IN PAUSA,موقف,रुका हुआ,ПАУЗА,一時停止,暂停,DURAKLATILDI,TẠM DỪNG
+game_resume,RESUME,DEVAM,Lanjutkan,REANUDAR,REPRENDRE,FORTSETZEN,RETOMAR,RIPRENDI,استئناف,जारी रखें,ПРОДОЛЖИТЬ,再開,继续,DEVAM ET,TIẾP TỤC
+game_quit_to_menu,QUIT TO MENU,MENÜYE DÖN,Kembali ke Menu,SALIR AL MENÚ,QUITTER,DURCHS MENÜ BEENDEN,VOLTAR AO MENÚ,TORNA AL MENU,خروج إلى القائمة,मेनू पर वापस जाएं,ВЫЙТИ В МЕНЮ,メニューに戻る,返回菜单,MENÜYE DÖN,THOÁT RA MENU
+game_next_level,Next Level,Sonraki Seviye,Level Berikutnya,Siguiente Nivel,Niveau Suivant,Nächstes Level,Próximo Nível,Livello Successivo,المرحلة التالية,अगला स्तर,Следующий уровень,次のレベル,下一关,Sonraki Seviye,Cấp Độ Kế Tiếp
+game_you_win,YOU WIN!,KAZANDIN!,KAMU MENANG!,¡GANASTE!,GAGNÉ!,GEWONNEN!,GANHOU!,HAI VINTO!,لقد فزت!,तुम जीते!,ВЫ ВЫИГРАЛИ!,勝ちました！,你赢了！,KAZANDIN!,BẠN THẮNG!
+game_moves,Moves,Hamle,Langkah,Movimientos,Mouvements,Züge,Movimentos,Mosse,تحركات,चालें,Ходы,手数,步数,Hamle,Nước đi
+game_hint,Hint,İpucu,Petunjuk,Pista,Indice,Hinweis,Dica,Suggerimento,تلميح,संकेत,Подсказка,ヒント,提示,İpucu,Gợi ý
+game_undo,Undo,Geri Al,Batal,Deshacer,Annuler,Rückgängig,Desfazer,Annulla,تراجع,पूर्ववत,Отменить,元に戻す,撤销,Geri Al,Hoàn tác
+game_restart,RESTART,YENİDEN BAŞLAT,Restart,REINICIAR,RECOMMENCER,NEUSTART,REINICIAR,RIAVVIA,إعادة تشغيل,पुनरारंभ करें,ПЕРЕЗАПУСТИТЬ,再起動,重新开始,YENİDEN BAŞLAT,KHỞI ĐỘNG LẠI
+settings_title,SETTINGS,AYARLAR,PENGATURAN,AJUSTES,PARAMÈTRES,EINSTELLUNGEN,CONFIGURAÇÕES,IMPOSTAZIONI,إعدادات,सेटिंग्स,НАСТРОЙКИ,設定,设置,AYARLAR,CÀI ĐẶT
+settings_music,Music,Müzik,Musik,Música,Musique,Musik,Música,Musica,موسيقى,संगीत,Музыка,音楽,音乐,Müzik,Nhạc
+settings_sfx,Sound Effects,Ses Efektleri,Efek Suara,Efectos de Sonido,Effets Sonores,Soundeffekte,Efeitos Sonoros,Effetti Sonori,مؤثرات صوتية,ध्वनि प्रभाव,Звуковые эффекты,効果音,音效,Ses Efektleri,Hiệu Ứng Âm Thanh
+settings_haptic,Haptic Feedback,Dokunsal Geri Bildirim,Feedback Haptic,Retroalimentación Háptica,Retour Haptique,Haptisches Feedback,Feedback Háptico,Feedback Aptico,ردود فعل لمسية,हैप्टिक फीडबैक,Тактильная обратная связь,触覚フィードバック,触觉反馈,Dokunsal Geri Bildirim,Phản Hồi Xúc Giác
+settings_reduce_motion,Reduce Motion,Hareketi Azalt,Kurangi Gerakan,Reducir Movimiento,Réduire le Mouvement,Bewegung Reduzieren,Reduzir Movimento,Riduci Movimento,تقليل الحركة,गति कम करें,Уменьшить движение,動きを減らす,减少动画,Hareketi Azalt,Giảm Chuyển Động
+settings_big_buttons,Big Buttons,Büyük Düğmeler,Tombol Besar,Botones Grandes,Grands Boutons,Große Tasten,Botões Grandi,Pulsanti Grandi,أزرار كبيرة,बड़े बटन,Большие кнопки,大きなボタン,大按钮,Büyük Düğmeler,Nút Lớn
+settings_color_blind,Color Blind Mode,Renk Körü Modu,Mode Buta Warna,Modo Daltónico,Mode Daltonien,Farbenblindmodus,Modo Daltônico,Modalità Daltonici,وضع عمى الألوان,कलर ब्लाइंड मोड,Режим дальтонизма,カラーブラインドモード,色盲模式,Renk Körü Modu,Chế Độ Mù Màu
+settings_language,Language,Dil,Bahasa,Idioma,Langue,Sprache,Idioma,Lingua,اللغة,भाषा,Язык,言語,语言,Dil,Ngôn Ngữ
+daily_reward_title,DAILY REWARD,GÜNLÜK ÖDÜL,HADIAH HARIAN,RECOMPENSA DIARIA,RÉCOMPENSE QUOTIDIENNE,TÄGLICHE BELOHNUNG,RECOMPENSA DIÁRIA,RICOMPENSA GIORNALIERA,مكافأة يومية,दैनिक पुरस्कार,ЕЖЕДНЕВНАЯ НАГРАДА,デイリー報酬,每日奖励,GÜNLÜK ÖDÜL,PHẦN THƯỞNG HÀNG NGÀY
+daily_reward_claim,CLAIM,AL,KLAIM,RECLAMAR,RÉCLAMER,EINLÖSEN,RESGATAR,RICHIEDI,استلام,दावा करें,ЗАБРАТЬ,受け取る,领取,AL,NHẬN
+daily_reward_day,Day {0},Gün {0},Hari {0},Día {0},Jour {0},Tag {0},Dia {0},Giorno {0},اليوم {0},दिन {0},День {0},{0}日目,第{0}天,Gün {0},Ngày {0}
+btn_close,CLOSE,KAPAT,TUTUP,CERRAR,FERMER,SCHLIEßEN,FECHAR,CHIUDI,إغلاق,बंद करें,ЗАКРЫТЬ,閉じる,关闭,KAPAT,ĐÓNG
+btn_coins,Coins: {0},Para: {0},Koin: {0},Monedas: {0},Pièces: {0},Münzen: {0},Moedas: {0},Monete: {0},عملات: {0},सिक्के: {0},Монеты: {0},コイン: {0},金币: {0},Para: {0},Xu: {0}
+format_level,"Level {0}","Seviye {0}","Level {0}","Nivel {0}","Niveau {0}","Level {0}","Nível {0}","Livello {0}","المرحلة {0}","स्तर {0}","Уровень {0}","レベル {0}","第{0}关","Seviye {0}","Cấp {0}"
+format_moves,"Moves: {0}","Hamle: {0}","Langkah: {0}","Movimientos: {0}","Mouvements: {0}","Züge: {0}","Movimentos: {0}","Mosse: {0}","الحركات: {0}","चालें: {0}","Ходы: {0}","手数: {0}","步数: {0}","Hamle: {0}","Nước đi: {0}"
+format_moves_target,"Moves: {0} / {1}","Hamle: {0} / {1}","Langkah: {0} / {1}","Movimientos: {0} / {1}","Mouvements: {0} / {1}","Züge: {0} / {1}","Movimentos: {0} / {1}","Mosse: {0} / {1}","الحركات: {0} / {1}","चालें: {0} / {1}","Ходы: {0} / {1}","手数: {0} / {1}","步数: {0} / {1}","Hamle: {0} / {1}","Nước đi: {0} / {1}"
+format_reward,"+{0} Coins   +{1} XP","+{0} Para   +{1} XP","+{0} Koin   +{1} XP","+{0} Monedas   +{1} EXP","+{0} Pièces   +{1} XP","+{0} Münzen   +{1} EP","+{0} Moedas   +{1} XP","+{0} Monete   +{1} XP","+{0} عملات   +{1} خبرة","+{0} सिक्के   +{1} अनुभव","+{0} Монет   +{1} Опыта","+{0}コイン  +{1}経験値","+{0}金币  +{1}经验","+{0} Para  +{1} XP","+{0} Xu  +{1} KN"
