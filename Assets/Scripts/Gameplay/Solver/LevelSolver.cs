@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Nexus.Core;
 
 namespace RingFlow.Gameplay
 {
@@ -115,21 +116,25 @@ namespace RingFlow.Gameplay
 
             // Heuristic Move Ordering: Sort valid moves based on next state heuristic
             Span<MoveWithHeuristic> sortedMoves = stackalloc MoveWithHeuristic[movesCount];
+            int sortIdx = 0;
             for (int i = 0; i < movesCount; i++)
             {
                 var move = moves[i];
                 var nextState = state;
                 var ring = nextState.PopRing(move.From);
                 nextState.AddRing(move.To, ring);
+                // Prune moves that cause bomb explosion
+                if (TickBombsAndCheckExplosion(ref nextState)) continue;
                 int nextH = CalculateHeuristic(nextState, maxCapacity);
-                sortedMoves[i] = new MoveWithHeuristic { Move = move, Heuristic = nextH };
+                sortedMoves[sortIdx++] = new MoveWithHeuristic { Move = move, Heuristic = nextH };
             }
+            int validSortedCount = sortIdx;
 
             // Selection sort on stackalloc span
-            for (int i = 0; i < movesCount - 1; i++)
+            for (int i = 0; i < validSortedCount - 1; i++)
             {
                 int bestIdx = i;
-                for (int j = i + 1; j < movesCount; j++)
+                for (int j = i + 1; j < validSortedCount; j++)
                 {
                     if (sortedMoves[j].Heuristic < sortedMoves[bestIdx].Heuristic)
                     {
@@ -144,12 +149,14 @@ namespace RingFlow.Gameplay
                 }
             }
 
-            for (int i = 0; i < movesCount; i++)
+            for (int i = 0; i < validSortedCount; i++)
             {
                 var move = sortedMoves[i].Move;
                 var nextState = state;
                 var ring = nextState.PopRing(move.From);
                 nextState.AddRing(move.To, ring);
+                // Tick all bombs — if any explodes, prune this branch
+                if (TickBombsAndCheckExplosion(ref nextState)) continue;
 
                 path.Add(move);
 
@@ -230,13 +237,68 @@ namespace RingFlow.Gameplay
                 {
                     if (i == j) continue;
 
-                    if (state.CanAddRing(j, topRing.Color, topRing.Type, maxCapacity))
+                    // Chain: check if target has room for main ring + linked partners
+                    if (topRing.Type == RingType.Chain && topRing.AdditionalData > 0)
                     {
-                        destination[count++] = new Move(i, j);
+                        int linked = CountChainLinkedPartners(state, topRing.AdditionalData, i);
+                        int requiredSlots = 1 + linked;
+                        if (!CanAddRingWithExtraCapacity(state, j, topRing.Color, topRing.Type, maxCapacity, requiredSlots))
+                            continue;
                     }
+                    else if (!state.CanAddRing(j, topRing.Color, topRing.Type, maxCapacity))
+                    {
+                        continue;
+                    }
+
+                    destination[count++] = new Move(i, j);
                 }
             }
             return count;
+        }
+
+        private static int CountChainLinkedPartners(BoardState state, int groupId, int excludePole)
+        {
+            int partners = 0;
+            for (int p = 0; p < state.PoleCount; p++)
+            {
+                if (p == excludePole) continue;
+                if (state.IsEmpty(p)) continue;
+                var top = state.GetTopRing(p);
+                if (top.Type == RingType.Chain && top.AdditionalData == groupId)
+                    partners++;
+            }
+            return partners;
+        }
+
+        private static bool CanAddRingWithExtraCapacity(BoardState state, int poleIndex,
+            RingColor color, RingType type, int maxCapacity, int requiredSlots)
+        {
+            if (state.IsPoleLocked(poleIndex)) return type == RingType.Locked;
+            int freeSlots = maxCapacity - state.GetRingCount(poleIndex);
+            if (freeSlots < requiredSlots) return false;
+            if (state.IsEmpty(poleIndex)) return true;
+            var top = state.GetTopRing(poleIndex);
+            if (top.Type == RingType.Stone) return false;
+            if (type == RingType.Rainbow || type == RingType.Paint
+                || top.Type == RingType.Rainbow || top.Type == RingType.Paint) return true;
+            return top.Color == color;
+        }
+
+        private static bool TickBombsAndCheckExplosion(ref BoardState state)
+        {
+            bool exploded = false;
+            for (int p = 0; p < state.PoleCount; p++)
+            {
+                int count = state.GetRingCount(p);
+                for (int r = 0; r < count; r++)
+                {
+                    if (state.GetRingType(p, r) != RingType.Bomb) continue;
+                    int counter = state.GetRingAdditional(p, r) - 1;
+                    state.SetRingAdditional(p, r, counter < 0 ? 0 : counter);
+                    if (counter <= 0) exploded = true;
+                }
+            }
+            return exploded;
         }
     }
 }

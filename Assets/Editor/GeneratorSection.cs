@@ -282,15 +282,22 @@ namespace RingFlow.Editor
                 return;
             }
 
+            // Solver validation board'u raw data ile doldur (Paint/Rainbow dönüşümleri uygulanmaz)
             var board = new BoardState { PoleCount = _generatedLevel.Poles.Count };
             for (int p = 0; p < _generatedLevel.Poles.Count; p++)
             {
                 var pole = _generatedLevel.Poles[p];
                 for (int r = 0; r < pole.Rings.Count; r++)
                 {
-                    board.AddRing(p, pole.Rings[r]);
+                    var ring = pole.Rings[r];
+                    board.SetRingColor(p, r, ring.Color);
+                    board.SetRingType(p, r, ring.Type);
+                    board.SetRingAdditional(p, r, ring.AdditionalData);
                 }
+                board.SetRingCount(p, pole.Rings.Count);
             }
+            NexusLog.Info("RingFlowEditor", nameof(Generate), _levelIndex.ToString(),
+                $"Solver board built from raw data ({_generatedLevel.Poles.Count} poles, using direct state copy).");
 
             var solveResult = LevelSolver.Solve(board, _maxCapacity);
             if (solveResult.IsSolvable)

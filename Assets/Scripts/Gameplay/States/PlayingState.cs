@@ -17,6 +17,18 @@ namespace RingFlow.Gameplay
             // Show Gameplay HUD
             _signalBus?.Fire(new ShowScreenSignal(ScreenType.Gameplay));
 
+            if (args is string s && s == "resume")
+            {
+                // Just resuming from pause — restore BGM volume and do NOT re-initialize the level!
+                if (_audio != null)
+                {
+                    int currentLevel = _progression?.CurrentLevel.Value ?? 1;
+                    bool isBoss = WorldConfigSO.IsBossLevel(currentLevel);
+                    _audio.BgmVolume = isBoss ? 0.80f : 0.40f;
+                }
+                return default;
+            }
+
             int targetLevel = args is int levelIndex ? levelIndex : (_progression?.CurrentLevel.Value ?? 1);
 
             // GDD §12: oyun %40 (Boss seviyesiyse %80)

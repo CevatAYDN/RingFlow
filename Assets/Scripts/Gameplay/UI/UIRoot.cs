@@ -106,16 +106,14 @@ namespace RingFlow.Gameplay.UI
                 _subscriptions.Add(sb.Subscribe<PlayRequestedSignal>(_ => fsm.ChangeStateAsync<LevelSelectState>()));
                 _subscriptions.Add(sb.Subscribe<LevelSelectedSignal>(s => fsm.ChangeStateAsync<PlayingState>(s.LevelIndex)));
                 _subscriptions.Add(sb.Subscribe<PauseRequestedSignal>(_ => fsm.ChangeStateAsync<PausedState>()));
-                _subscriptions.Add(sb.Subscribe<ResumeRequestedSignal>(_ => fsm.ChangeStateAsync<PlayingState>()));
+                _subscriptions.Add(sb.Subscribe<ResumeRequestedSignal>(_ => fsm.ChangeStateAsync<PlayingState>("resume")));
 
                 _subscriptions.Add(sb.Subscribe<NextLevelRequestedSignal>(_ =>
                 {
                     var prog = _root.Context.TryResolve<IProgressionService>();
                     if (prog != null)
                     {
-                        var nextLevel = prog.CurrentLevel.Value + 1;
-                        prog.SetLevel(nextLevel);
-                        
+                        var nextLevel = prog.CurrentLevel.Value; // Already advanced by CompleteCurrentLevel() on win
                         var completedLevel = nextLevel - 1;
                         var ads = _root.Context.TryResolve<IAdService>();
                         var progress = _root.Context.TryResolve<PlayerProgressModel>();
@@ -198,7 +196,7 @@ namespace RingFlow.Gameplay.UI
         {
             if (!_screens.TryGetValue(popup, out var go)) return;
 
-            if (PopupScreens.Contains(_activeExclusiveScreen) && !_pausedExclusiveScreen.HasValue)
+            if (!_pausedExclusiveScreen.HasValue)
             {
                 _pausedExclusiveScreen = _activeExclusiveScreen;
             }

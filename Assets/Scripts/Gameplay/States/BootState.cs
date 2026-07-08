@@ -14,19 +14,29 @@ namespace RingFlow.Gameplay
 
         [Inject] private Diagnostics.IGameDiagnostics _diag;
 
+        private bool _transitionStarted;
+
         public ValueTask OnEnterAsync(object args, CancellationToken ct)
         {
             _diag?.Checkpoint("BootState");
             _diag?.Log("FSM", "BootState.OnEnterAsync started");
             _logger?.Log("[BootState] Game starting, initializing models...");
-            if (_fsm != null)
+            if (_fsm != null && !_transitionStarted)
             {
+                _transitionStarted = true;
+                NexusLog.Info("BootState", nameof(OnEnterAsync), "",
+                    "Deferring transition to SplashState.");
                 _ = DeferTransitionAsync();
             }
-            else
+            else if (_fsm == null)
             {
                 NexusLog.Error("BootState", nameof(OnEnterAsync), "",
                     "IGameStateMachine unbound; cannot transition to SplashState.");
+            }
+            else
+            {
+                NexusLog.Warn("BootState", nameof(OnEnterAsync), "",
+                    "Transition already in progress — guard prevented double-fire.");
             }
             return default;
         }

@@ -37,6 +37,20 @@ namespace RingFlow.Gameplay
         public uint Types10;
         public uint Types11;
 
+        // Ek veriler (Bomb sayacı, Chain grup ID vb.) için 12 uint
+        public uint AddData0;
+        public uint AddData1;
+        public uint AddData2;
+        public uint AddData3;
+        public uint AddData4;
+        public uint AddData5;
+        public uint AddData6;
+        public uint AddData7;
+        public uint AddData8;
+        public uint AddData9;
+        public uint AddData10;
+        public uint AddData11;
+
         public int PoleCount;
         public int MaxCapacity;
 
@@ -164,6 +178,61 @@ namespace RingFlow.Gameplay
             SetTypesRaw(poleIndex, val);
         }
 
+        public int GetRingAdditional(int poleIndex, int ringIndex)
+        {
+            uint val = GetAddDataRaw(poleIndex);
+            int shift = ringIndex * 4;
+            return (int)((val >> shift) & 0xF);
+        }
+
+        public void SetRingAdditional(int poleIndex, int ringIndex, int value)
+        {
+            uint val = GetAddDataRaw(poleIndex);
+            int shift = ringIndex * 4;
+            val &= ~(0xFu << shift);
+            val |= ((uint)(value & 0xF)) << shift;
+            SetAddDataRaw(poleIndex, val);
+        }
+
+        private uint GetAddDataRaw(int index)
+        {
+            return index switch
+            {
+                0 => AddData0,
+                1 => AddData1,
+                2 => AddData2,
+                3 => AddData3,
+                4 => AddData4,
+                5 => AddData5,
+                6 => AddData6,
+                7 => AddData7,
+                8 => AddData8,
+                9 => AddData9,
+                10 => AddData10,
+                11 => AddData11,
+                _ => 0
+            };
+        }
+
+        private void SetAddDataRaw(int index, uint value)
+        {
+            switch (index)
+            {
+                case 0: AddData0 = value; break;
+                case 1: AddData1 = value; break;
+                case 2: AddData2 = value; break;
+                case 3: AddData3 = value; break;
+                case 4: AddData4 = value; break;
+                case 5: AddData5 = value; break;
+                case 6: AddData6 = value; break;
+                case 7: AddData7 = value; break;
+                case 8: AddData8 = value; break;
+                case 9: AddData9 = value; break;
+                case 10: AddData10 = value; break;
+                case 11: AddData11 = value; break;
+            }
+        }
+
         public bool IsPoleLocked(int poleIndex)
         {
             uint val = GetPoleRaw(poleIndex);
@@ -212,7 +281,10 @@ namespace RingFlow.Gameplay
         {
             int count = GetRingCount(poleIndex);
             if (count == 0) return new RingData(RingColor.None);
-            return new RingData(GetRingColor(poleIndex, count - 1), GetRingType(poleIndex, count - 1));
+            return new RingData(
+                GetRingColor(poleIndex, count - 1),
+                GetRingType(poleIndex, count - 1),
+                GetRingAdditional(poleIndex, count - 1));
         }
 
         public bool CanPopRing(int poleIndex)
@@ -285,20 +357,26 @@ namespace RingFlow.Gameplay
 
             SetRingColor(poleIndex, count, ring.Color);
             SetRingType(poleIndex, count, ring.Type);
+            SetRingAdditional(poleIndex, count, ring.AdditionalData);
             SetRingCount(poleIndex, count + 1);
 
-            // Buz kırma — gerçek oyun TryBreakIceOnTarget mantığı: yeni eklenen halkanın
-            // hemen altındaki halka (^2) Frozen ise ve renk eşleşiyorsa Standard yap
+            // Buz kırma — gerçek oyun TryBreakIceOnTarget mantığı:
+            // yeni eklenen halkanın altındaki tüm contiguous Frozen halkaları
+            // renk eşleşiyorsa kır (while döngüsü)
             int newCount = GetRingCount(poleIndex);
-            if (newCount >= 2)
+            int belowIndex = newCount - 2;
+            bool anyIceBroken = false;
+            while (belowIndex >= 0
+                && GetRingType(poleIndex, belowIndex) == RingType.Frozen
+                && GetRingColor(poleIndex, belowIndex) == ring.Color)
             {
-                int belowIndex = newCount - 2;
-                if (GetRingType(poleIndex, belowIndex) == RingType.Frozen
-                    && GetRingColor(poleIndex, belowIndex) == ring.Color)
-                {
-                    SetRingType(poleIndex, belowIndex, RingType.Standard);
-                    SetTopRingFrozen(poleIndex, false);
-                }
+                SetRingType(poleIndex, belowIndex, RingType.Standard);
+                anyIceBroken = true;
+                belowIndex--;
+            }
+            if (anyIceBroken)
+            {
+                SetTopRingFrozen(poleIndex, false);
             }
 
             // Mıknatıs (Magnet) kuralı: Aynı renkteki diğer halkaları çek
@@ -314,6 +392,22 @@ namespace RingFlow.Gameplay
                     {
                         var pulled = PopRing(p);
                         AddRingSimple(poleIndex, pulled);
+                    }
+                }
+            }
+
+            // Chain Kontrolü — Zincir halkası hareket ettiğinde eşini de yanına çeker
+            if (ring.Type == RingType.Chain)
+            {
+                for (int p = 0; p < PoleCount; p++)
+                {
+                    if (p == poleIndex) continue;
+                    var topR = GetTopRing(p);
+                    if (topR.Type == RingType.Chain && topR.AdditionalData == ring.AdditionalData)
+                    {
+                        var partner = PopRing(p);
+                        AddRingSimple(poleIndex, partner);
+                        break;
                     }
                 }
             }
@@ -366,13 +460,23 @@ namespace RingFlow.Gameplay
             if (count == 0) return new RingData(RingColor.None);
             int lastIndex = count - 1;
             
-            var ring = new RingData(GetRingColor(poleIndex, lastIndex), GetRingType(poleIndex, lastIndex));
+            var ring = new RingData(
+                GetRingColor(poleIndex, lastIndex),
+                GetRingType(poleIndex, lastIndex),
+                GetRingAdditional(poleIndex, lastIndex));
             
             SetRingColor(poleIndex, lastIndex, RingColor.None);
             SetRingType(poleIndex, lastIndex, RingType.Standard);
+            SetRingAdditional(poleIndex, lastIndex, 0);
             SetRingCount(poleIndex, lastIndex);
 
-            if (count == 1)
+            // Frozen flag maintenance: update based on new top ring
+            int newCount = count - 1;
+            if (newCount > 0 && GetRingType(poleIndex, newCount - 1) == RingType.Frozen)
+            {
+                SetTopRingFrozen(poleIndex, true);
+            }
+            else
             {
                 SetTopRingFrozen(poleIndex, false);
             }
@@ -384,7 +488,6 @@ namespace RingFlow.Gameplay
             }
 
             // Mystery Kontrolü: Yeni en üstte kalan halka Mystery ise açığa çıkar (Standartlaşır)
-            int newCount = count - 1;
             if (newCount > 0 && GetRingType(poleIndex, newCount - 1) == RingType.Mystery)
             {
                 SetRingType(poleIndex, newCount - 1, RingType.Standard);
@@ -419,6 +522,18 @@ namespace RingFlow.Gameplay
                    Types9 == other.Types9 &&
                    Types10 == other.Types10 &&
                    Types11 == other.Types11 &&
+                   AddData0 == other.AddData0 &&
+                   AddData1 == other.AddData1 &&
+                   AddData2 == other.AddData2 &&
+                   AddData3 == other.AddData3 &&
+                   AddData4 == other.AddData4 &&
+                   AddData5 == other.AddData5 &&
+                   AddData6 == other.AddData6 &&
+                   AddData7 == other.AddData7 &&
+                   AddData8 == other.AddData8 &&
+                   AddData9 == other.AddData9 &&
+                   AddData10 == other.AddData10 &&
+                   AddData11 == other.AddData11 &&
                    PoleCount == other.PoleCount &&
                    MaxCapacity == other.MaxCapacity;
         }
@@ -457,6 +572,18 @@ namespace RingFlow.Gameplay
                 hash = hash * 23 + (int)Types9;
                 hash = hash * 23 + (int)Types10;
                 hash = hash * 23 + (int)Types11;
+                hash = hash * 23 + (int)AddData0;
+                hash = hash * 23 + (int)AddData1;
+                hash = hash * 23 + (int)AddData2;
+                hash = hash * 23 + (int)AddData3;
+                hash = hash * 23 + (int)AddData4;
+                hash = hash * 23 + (int)AddData5;
+                hash = hash * 23 + (int)AddData6;
+                hash = hash * 23 + (int)AddData7;
+                hash = hash * 23 + (int)AddData8;
+                hash = hash * 23 + (int)AddData9;
+                hash = hash * 23 + (int)AddData10;
+                hash = hash * 23 + (int)AddData11;
                 hash = hash * 23 + PoleCount;
                 hash = hash * 23 + MaxCapacity;
                 return hash;

@@ -101,6 +101,16 @@ namespace RingFlow.Gameplay
                 $"Initialized level {currentLevel} with {_model.Poles.Count} poles. Target moves: {_model.TargetMovesCount.Value}.");
 
             int worldIndex = WorldConfigSO.WorldFromAbsoluteLevel(currentLevel);
+
+            // Glass rings are handled as Standard (visual-only, no special mechanics)
+            int glassCount = 0;
+            foreach (var p in levelData.Poles)
+                foreach (var r in p.Rings)
+                    if (r.Type == RingType.Glass) glassCount++;
+            if (glassCount > 0)
+                NexusLog.Info("InitLevelCommand", "Execute", currentLevel.ToString(),
+                    $"Level has {glassCount} Glass ring(s) — treated as Standard (visual-only).");
+
             AnalyticsEvents.LevelStart(currentLevel, worldIndex);
 
             // Fire AFTER the model is populated so subscribers (e.g. BoardMediator)

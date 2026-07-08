@@ -1,3 +1,4 @@
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 using RingFlow.Gameplay;
@@ -49,6 +50,9 @@ namespace RingFlow.Editor
                     EditorUtility.DisplayDialog("Setup", result.Message, "OK");
                 }
             }
+
+            EditorGUILayout.Space(10f);
+            DrawResetButton();
         }
 
         private void DrawPlayMode()
@@ -105,6 +109,9 @@ namespace RingFlow.Editor
             {
                 RunHealthCheck(context);
             }
+
+            EditorGUILayout.Space(10f);
+            DrawResetButton();
         }
 
         private void RunHealthCheck(IContext context)
@@ -212,6 +219,61 @@ namespace RingFlow.Editor
                     progress.UnlockedWorlds[i] = true;
                 }
             }
+        }
+
+        private void DrawResetButton()
+        {
+            Color originalColor = GUI.backgroundColor;
+            GUI.backgroundColor = new Color(0.9f, 0.35f, 0.35f);
+            if (GUILayout.Button("RESET ALL PLAYER DATA (Progress & Settings)", GUILayout.Height(ButtonHeight + 10)))
+            {
+                if (EditorUtility.DisplayDialog("Reset Player Data?",
+                    "This will delete all saved level progress, coins, diamonds, and game settings on disk. This action cannot be undone.",
+                    "Reset", "Cancel"))
+                {
+                    DeletePlayerDataDisk();
+
+                    if (Application.isPlaying)
+                    {
+                        var context = NexusRuntime.CurrentContext;
+                        if (context != null)
+                        {
+                            var progress = context.TryResolve<PlayerProgressModel>();
+                            progress?.Reset();
+
+                            var settings = context.TryResolve<SettingsModel>();
+                            settings?.Reset();
+                        }
+                    }
+
+                    EditorUtility.DisplayDialog("Reset Complete", "All player progress and settings have been reset.", "OK");
+                }
+            }
+            GUI.backgroundColor = originalColor;
+        }
+
+        private void DeletePlayerDataDisk()
+        {
+            // 1. Delete SecureData folder
+            string secureFolder = Path.Combine(Application.persistentDataPath, "SecureData");
+            if (Directory.Exists(secureFolder))
+            {
+                try
+                {
+                    Directory.Delete(secureFolder, true);
+                    Debug.Log($"[Editor] Deleted secure storage folder: {secureFolder}");
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning($"[Editor] Failed to delete secure folder: {ex.Message}");
+                }
+            }
+
+            // 2. Clear obfuscated seed and PlayerPrefs
+            PlayerPrefs.DeleteKey("NT_StorageSeed");
+            PlayerPrefs.DeleteAll();
+            PlayerPrefs.Save();
+            Debug.Log("[Editor] Cleared PlayerPrefs.");
         }
     }
 }
