@@ -21,6 +21,15 @@ namespace RingFlow.Gameplay.UI
             ScreenType.Pause,
         };
 
+        /// <summary>
+        /// Screens that remain semi-visible behind popups (e.g. HUD during gameplay).
+        /// They are NOT deactivated when a popup opens — only the exclusive screen is suppressed.
+        /// </summary>
+        private static readonly HashSet<ScreenType> OverlayScreens = new()
+        {
+            ScreenType.Gameplay,
+        };
+
         private Canvas _canvas;
         private readonly Dictionary<ScreenType, GameObject> _screens = new();
         private Root _root;
@@ -196,6 +205,7 @@ namespace RingFlow.Gameplay.UI
 
             foreach (var kvp in _screens)
             {
+                if (OverlayScreens.Contains(kvp.Key)) continue;
                 kvp.Value.SetActive(kvp.Key == popup);
             }
             _activeExclusiveScreen = popup;

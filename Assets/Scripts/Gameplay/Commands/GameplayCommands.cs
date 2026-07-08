@@ -125,20 +125,11 @@ namespace RingFlow.Gameplay
 
             if (currentSelected == -1)
             {
-                // Seçilen direkten halka alınabiliyorsa seçimi aktifleştir
                 var pole = _model.Poles.Find(p => p.Id == signal.PoleId);
                 if (pole != null && pole.CanPopRing())
                 {
                     _model.SelectedPoleId.Value = signal.PoleId;
-
-                    // GDD §4 — Ghost: Seçildiği an görünür hale gelir (sabitlenir)
-                    if (pole.TopRing.Type == RingType.Ghost)
-                    {
-                        var ghostCopy = pole.Rings[^1];
-                        ghostCopy.Type = RingType.Standard;
-                        pole.Rings[^1] = ghostCopy;
-                        _signalBus?.Fire(new RevealMysterySignal(signal.PoleId, ghostCopy));
-                    }
+                    TryRevealGhost(pole, signal.PoleId, _signalBus);
                 }
             }
             else
@@ -170,15 +161,7 @@ namespace RingFlow.Gameplay
                         if (toPole.CanPopRing())
                         {
                             _model.SelectedPoleId.Value = toId;
-
-                            // GDD §4 — Ghost: Seçildiği an görünür hale gelir (sabitlenir)
-                            if (toPole.TopRing.Type == RingType.Ghost)
-                            {
-                                var ghostCopy = toPole.Rings[^1];
-                                ghostCopy.Type = RingType.Standard;
-                                toPole.Rings[^1] = ghostCopy;
-                                _signalBus?.Fire(new RevealMysterySignal(toId, ghostCopy));
-                            }
+                            TryRevealGhost(toPole, toId, _signalBus);
                             return;
                         }
 
@@ -194,6 +177,15 @@ namespace RingFlow.Gameplay
                     _signalBus.Fire(new MoveRingSignal(fromId, toId));
                 }
             }
+        }
+
+        private static void TryRevealGhost(PoleState pole, int poleId, ISignalBus signalBus)
+        {
+            if (pole.TopRing.Type != RingType.Ghost) return;
+            var ghostCopy = pole.Rings[^1];
+            ghostCopy.Type = RingType.Standard;
+            pole.Rings[^1] = ghostCopy;
+            signalBus?.Fire(new RevealMysterySignal(poleId, ghostCopy));
         }
     }
 

@@ -71,11 +71,11 @@ namespace RingFlow.Editor
             var boardRoot = new GameObject("RingFlow_VisualBoard");
             Undo.RegisterCreatedObjectUndo(boardRoot, "Build Visual Board");
 
-            var torusModel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Models/Torus.obj");
+            var torusModel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Torus.obj");
             if (torusModel == null)
             {
                 NexusLog.Warn("RingFlowEditor", nameof(BuildInScene), "",
-                    "Torus.obj not found in Assets/Models. Using Cylinder disks as fallback rings.");
+                    "Torus.obj not found in Assets/Resources. Using Cylinder disks as fallback rings.");
             }
 
             for (int p = 0; p < poleCount; p++)
