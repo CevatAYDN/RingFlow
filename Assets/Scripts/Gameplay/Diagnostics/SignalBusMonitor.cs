@@ -27,6 +27,7 @@ namespace RingFlow.Gameplay.Diagnostics
             TrySubscribe<InitLevelSignal>(sig => $"InitLevelSignal: Level={sig.LevelIndex}");
             TrySubscribe<SelectPoleSignal>(sig => $"SelectPoleSignal: PoleId={sig.PoleId}");
             TrySubscribe<MoveRingSignal>(sig => $"MoveRingSignal: From={sig.FromPoleId} To={sig.ToPoleId}");
+            TrySubscribe<RingMovedSignal>(sig => $"RingMovedSignal: From={sig.FromPoleId} To={sig.ToPoleId}");
             TrySubscribe<UndoSignal>(_ => "UndoSignal");
             TrySubscribe<UndoRequestedSignal>(_ => "UndoRequestedSignal");
             TrySubscribe<CheckWinSignal>(_ => "CheckWinSignal");

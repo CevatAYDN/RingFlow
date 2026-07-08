@@ -270,6 +270,8 @@ namespace RingFlow.Gameplay
             {
                 _signalBus.Fire(new CheckWinSignal());
             }
+
+            _signalBus.Fire(new RingMovedSignal(signal.FromPoleId, signal.ToPoleId));
         }
 
         private void FireGameOverTransition()

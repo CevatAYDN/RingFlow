@@ -31,7 +31,7 @@ namespace RingFlow.Gameplay
             _logger?.Log("[BoardMediator] Binding BoardView to signals...");
 
             Subscribe<LevelLoadedSignal>(OnLevelLoaded);
-            Subscribe<MoveRingSignal>(OnMoveRing);
+            Subscribe<RingMovedSignal>(OnRingMoved);
             Subscribe<UndoSignal>(_ => RebuildBoard());
             Subscribe<RevealMysterySignal>(_ => RebuildBoard());
             Subscribe<BreakIceSignal>(_ => RebuildBoard());
@@ -52,9 +52,9 @@ namespace RingFlow.Gameplay
             }
         }
 
-        private void OnMoveRing(MoveRingSignal signal)
+        private void OnRingMoved(RingMovedSignal signal)
         {
-            _logger?.Log($"[BoardMediator] Move {signal.FromPoleId} -> {signal.ToPoleId} received. Animating.");
+            _logger?.Log($"[BoardMediator] Move {signal.FromPoleId} -> {signal.ToPoleId} completed. Animating.");
             if (View != null && _model != null)
                 View.AnimateRingMove(signal.FromPoleId, signal.ToPoleId, _model.Poles);
             View?.SetSelectedPole(_model?.SelectedPoleId.Value ?? -1);

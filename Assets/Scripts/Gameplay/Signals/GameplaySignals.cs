@@ -85,6 +85,17 @@ namespace RingFlow.Gameplay
         }
     }
 
+    public readonly struct RingMovedSignal
+    {
+        public readonly int FromPoleId;
+        public readonly int ToPoleId;
+        public RingMovedSignal(int fromPoleId, int toPoleId)
+        {
+            FromPoleId = fromPoleId;
+            ToPoleId = toPoleId;
+        }
+    }
+
     public readonly struct UndoSignal {}
 
     public readonly struct CheckWinSignal {}
