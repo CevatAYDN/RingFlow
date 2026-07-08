@@ -38,7 +38,7 @@ namespace RingFlow.Gameplay
                     var color = selectedColors[i];
                     for (int r = 0; r < maxCapacity; r++)
                     {
-                        board.AddRing(i, new RingData(color));
+                        board.AddRingSimple(i, new RingData(color));
                     }
                 }
 
@@ -70,7 +70,7 @@ namespace RingFlow.Gameplay
 
                     // Halka rengini tersten taşı (renk uyumu aramaksızın)
                     var ring = board.PopRing(from);
-                    board.AddRing(to, ring);
+                    board.AddRingSimple(to, ring);
                 }
 
                 // GDD §4 & §5 Kuralları uyarınca özel halka mekaniklerini enjekte et
@@ -103,7 +103,12 @@ namespace RingFlow.Gameplay
                         {
                             var color = scrambledState.GetRingColor(p, r);
                             var type = scrambledState.GetRingType(p, r);
-                            poleData.Rings.Add(new RingData(color, type));
+                            int additionalData = 0;
+                            if (type == RingType.Bomb)
+                            {
+                                additionalData = 9;
+                            }
+                            poleData.Rings.Add(new RingData(color, type, additionalData));
                         }
                         levelData.Poles.Add(poleData);
                     }
@@ -270,20 +275,31 @@ namespace RingFlow.Gameplay
                     RingType.Glass
                 };
 
-                var chosenType = availableTypes[rand.Next(availableTypes.Length)];
+                int numMechanicTypes = 1;
+                if (worldIndex >= 14) numMechanicTypes = 3;
+                else if (worldIndex >= 9) numMechanicTypes = 2;
 
-                int count = 0;
-                for (int attempt = 0; attempt < 20 && count < 2; attempt++)
+                var chosenTypes = new List<RingType>();
+                for (int i = 0; i < numMechanicTypes; i++)
                 {
-                    int p = rand.Next(poleCount);
-                    int ringCount = board.GetRingCount(p);
-                    if (ringCount > 0)
+                    chosenTypes.Add(availableTypes[rand.Next(availableTypes.Length)]);
+                }
+
+                foreach (var chosenType in chosenTypes)
+                {
+                    int count = 0;
+                    for (int attempt = 0; attempt < 20 && count < 2; attempt++)
                     {
-                        int r = rand.Next(ringCount);
-                        if (board.GetRingType(p, r) == RingType.Standard)
+                        int p = rand.Next(poleCount);
+                        int ringCount = board.GetRingCount(p);
+                        if (ringCount > 0)
                         {
-                            board.SetRingType(p, r, chosenType);
-                            count++;
+                            int r = rand.Next(ringCount);
+                            if (board.GetRingType(p, r) == RingType.Standard)
+                            {
+                                board.SetRingType(p, r, chosenType);
+                                count++;
+                            }
                         }
                     }
                 }

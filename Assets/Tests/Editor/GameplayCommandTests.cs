@@ -443,6 +443,49 @@ namespace RingFlow.Tests
             // total: 100 + 160 = 260
             Assert.AreEqual(260, _economyService.CoinsBalance);
         }
+
+        [Test]
+        public void CheckWinCommand_HandlesMultipleLevelUpsAndXpOverflow()
+        {
+            var command = new CheckWinCommand();
+            InjectDependencies(command);
+
+            var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };
+            var pole1 = new PoleState { Id = 1, MaxCapacity = 4 };
+
+            // Fill pole0 with same colors to trigger win
+            for (int i = 0; i < 4; i++)
+            {
+                pole0.AddRing(new RingData(RingColor.Red, RingType.Standard));
+            }
+
+            _gameplayModel.Poles.Add(pole0);
+            _gameplayModel.Poles.Add(pole1);
+
+            _progressModel.CurrentLevel.Value = 1;
+            _progressModel.PlayerLevel.Value = 1;
+            
+            // Level 1: 100 XP to next level
+            // Level 2: 250 XP to next level
+            // Level 3: 500 XP to next level
+            // Set initial XP to 340. We earn 10 XP on level complete. Total = 350 XP.
+            // 350 >= 100 -> level up to 2 (remains 250 XP).
+            // 250 >= 250 -> level up to 3 (remains 0 XP).
+            // So we should end at PlayerLevel 3, XP 0, and earn two level-up coin rewards (+200 coins).
+            _progressModel.Xp.Value = 340;
+            _progressModel.Coins.Value = 100;
+            _economyService.CoinsBalance = 100;
+
+            command.Execute(new CheckWinSignal());
+
+            Assert.IsTrue(_gameplayModel.IsGameWon.Value);
+            Assert.AreEqual(3, _progressModel.PlayerLevel.Value);
+            Assert.AreEqual(0, _progressModel.Xp.Value);
+
+            // Coins reward: Level completion (60) + 2 level up rewards (200) = 260
+            // total: 100 + 260 = 360
+            Assert.AreEqual(360, _economyService.CoinsBalance);
+        }
     }
 
     // --- Minimal Mocks for Unit Testing ---
@@ -483,29 +526,65 @@ namespace RingFlow.Tests
 
     public class MockEconomyService : IEconomyService
     {
-        public long CoinsBalance = 100;
+        public long CoinsBalance { get => GetBalance("Coins"); set => SetBalance("Coins", value); }
 
         public float MasterVolume { get; set; }
         public float BgmVolume { get; set; }
         public float SfxVolume { get; set; }
         public bool IsMuted { get; set; }
 
-        public ObservableProperty<long> GetObservableBalance(string currencyId) => new(CoinsBalance);
-        public long GetBalance(string currencyId) => CoinsBalance;
-        public bool CanAfford(string currencyId, long amount) => CoinsBalance >= amount;
+        private readonly System.Collections.Generic.Dictionary<string, ObservableProperty<long>> _mockBalances = new();
+
+        public ObservableProperty<long> GetObservableBalance(string currencyId)
+        {
+            if (string.IsNullOrEmpty(currencyId)) return null;
+            if (!_mockBalances.TryGetValue(currencyId, out var prop))
+            {
+                long initialValue = currencyId == "Coins" ? 100 : 0;
+                prop = new ObservableProperty<long>(initialValue);
+                _mockBalances[currencyId] = prop;
+            }
+            return prop;
+        }
+
+        public long GetBalance(string currencyId)
+        {
+            return GetObservableBalance(currencyId)?.Value ?? 0L;
+        }
+
+        public bool CanAfford(string currencyId, long amount)
+        {
+            return GetBalance(currencyId) >= amount;
+        }
         
         public bool Spend(string currencyId, long amount, string reason = "")
         {
-            if (CanAfford(currencyId, amount))
+            var prop = GetObservableBalance(currencyId);
+            if (prop != null && prop.Value >= amount)
             {
-                CoinsBalance -= amount;
+                prop.Value -= amount;
                 return true;
             }
             return false;
         }
 
-        public void Earn(string currencyId, long amount, string reason = "") => CoinsBalance += amount;
-        public void SetBalance(string currencyId, long amount) => CoinsBalance = amount;
+        public void Earn(string currencyId, long amount, string reason = "")
+        {
+            var prop = GetObservableBalance(currencyId);
+            if (prop != null)
+            {
+                prop.Value += amount;
+            }
+        }
+
+        public void SetBalance(string currencyId, long amount)
+        {
+            var prop = GetObservableBalance(currencyId);
+            if (prop != null)
+            {
+                prop.Value = amount;
+            }
+        }
     }
 
     public class MockAdService : IAdService

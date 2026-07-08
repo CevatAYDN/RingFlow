@@ -13,11 +13,11 @@ namespace RingFlow.Gameplay
         public void SetTorusPrefab(GameObject prefab) { _torusPrefab = prefab; }
 
         private static Shader _cachedShader;
-        private static readonly Queue<GameObject> _ringPool = new();
-        private static readonly Queue<GameObject> _polePool = new();
-        private static readonly Dictionary<(RingColor, RingType), Material> _ringMaterialCache = new();
-        private static Material _blackPoleMaterial;
-        private static Material _defaultPoleMaterial;
+        private readonly Queue<GameObject> _ringPool = new();
+        private readonly Queue<GameObject> _polePool = new();
+        private readonly Dictionary<(RingColor, RingType), Material> _ringMaterialCache = new();
+        private Material _blackPoleMaterial;
+        private Material _defaultPoleMaterial;
 
         private readonly List<PoleView> _spawnedPoles = new();
         private readonly List<List<GameObject>> _spawnedRings = new();
@@ -131,13 +131,15 @@ namespace RingFlow.Gameplay
             var capsule = poleObj.GetComponent<CapsuleCollider>();
             if (capsule != null)
             {
-                capsule.radius = 1.5f;
+                DestroyImmediate(capsule);
             }
+            var box = poleObj.AddComponent<BoxCollider>();
+            box.size = new Vector3(3.0f, 2.0f, 3.0f);
             poleObj.AddComponent<PoleView>();
             return poleObj;
         }
 
-        private static void RecyclePole(GameObject pole)
+        private void RecyclePole(GameObject pole)
         {
             pole.SetActive(false);
             pole.transform.SetParent(null);
@@ -175,14 +177,14 @@ namespace RingFlow.Gameplay
             return ringObj;
         }
 
-        private static void RecycleRing(GameObject ring)
+        private void RecycleRing(GameObject ring)
         {
             ring.SetActive(false);
             ring.transform.SetParent(null);
             _ringPool.Enqueue(ring);
         }
 
-        private static Material GetBlackPoleMaterial()
+        private Material GetBlackPoleMaterial()
         {
             if (_blackPoleMaterial == null)
             {
@@ -192,7 +194,7 @@ namespace RingFlow.Gameplay
             return _blackPoleMaterial;
         }
 
-        private static Material GetDefaultPoleMaterial(Renderer renderer)
+        private Material GetDefaultPoleMaterial(Renderer renderer)
         {
             if (_defaultPoleMaterial == null && renderer != null)
             {
@@ -206,7 +208,7 @@ namespace RingFlow.Gameplay
             return _defaultPoleMaterial;
         }
 
-        private static Material GetRingMaterial(RingColor color, RingType type)
+        private Material GetRingMaterial(RingColor color, RingType type)
         {
             var key = (color, type);
             if (_ringMaterialCache.TryGetValue(key, out var cachedMat) && cachedMat != null)
@@ -220,7 +222,7 @@ namespace RingFlow.Gameplay
             return mat;
         }
 
-        private static void ApplySpecialRingMaterial(Material mat, RingType type)
+        private void ApplySpecialRingMaterial(Material mat, RingType type)
         {
             switch (type)
             {

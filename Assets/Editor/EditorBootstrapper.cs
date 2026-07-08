@@ -108,8 +108,7 @@ namespace RingFlow.Editor
                 eventSystem = esObj.AddComponent<EventSystem>();
             }
 
-            var inputModuleType = ResolveInputSystemUIInputModuleType();
-            if (inputModuleType == null) return;
+            var inputModuleType = ResolveInputSystemUIInputModuleType() ?? typeof(StandaloneInputModule);
 
             var existing = eventSystem.GetComponent<BaseInputModule>();
             if (existing != null && !inputModuleType.IsInstanceOfType(existing))

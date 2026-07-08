@@ -69,7 +69,7 @@ namespace RingFlow.Gameplay.UI
             {
                 yield return null;
             }
-            while (_root.Context == null)
+            while (!_root.IsInitialized)
             {
                 yield return null;
             }
@@ -133,6 +133,16 @@ namespace RingFlow.Gameplay.UI
             go.SetActive(false);
             go.AddComponent<T>();
             _screens[type] = go;
+
+            if (type == ScreenType.Gameplay)
+            {
+                var img = go.GetComponent<Image>();
+                if (img != null)
+                {
+                    img.color = Color.clear;
+                    img.raycastTarget = false;
+                }
+            }
         }
 
         private void OnShowScreen(ShowScreenSignal signal)

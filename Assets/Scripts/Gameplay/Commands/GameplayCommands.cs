@@ -578,11 +578,12 @@ namespace RingFlow.Gameplay
                 _progress.Xp.Value += xpEarned;
 
                 int xpRequired = _progress.XpToNextLevel(_progress.PlayerLevel.Value);
-                if (_progress.Xp.Value >= xpRequired)
+                while (_progress.Xp.Value >= xpRequired)
                 {
                     _progress.Xp.Value -= xpRequired;
                     _progress.PlayerLevel.Value++;
                     _economyService.Earn("Coins", 100, "Player Level Up Reward");
+                    xpRequired = _progress.XpToNextLevel(_progress.PlayerLevel.Value);
                 }
 
                 _model.LastReward.Value = WinReward.From(prevMoves, prevTarget, coinReward, xpEarned, stars);

@@ -22,9 +22,15 @@ namespace RingFlow.Gameplay
                 return;
             }
 
+            if (_economy != null && _economy.CanAfford("Hint", 1))
+            {
+                ResolveAndFire(true);
+                return;
+            }
+
             if (_economy != null && _economy.CanAfford("Coins", HintCostCoins))
             {
-                ResolveAndFire();
+                ResolveAndFire(false);
                 return;
             }
 
@@ -32,7 +38,7 @@ namespace RingFlow.Gameplay
             {
                 _ads.ShowRewarded("Hint", success =>
                 {
-                    if (success) ResolveAndFire();
+                    if (success) ResolveAndFire(false);
                     else _signalBus?.Fire(HintResolvedSignal.Empty);
                 });
                 return;
@@ -41,7 +47,7 @@ namespace RingFlow.Gameplay
             _signalBus?.Fire(HintResolvedSignal.Empty);
         }
 
-        private void ResolveAndFire()
+        private void ResolveAndFire(bool useHintCurrency)
         {
             if (_model == null) return;
             var current = BuildBoardStateFromModel(_model);
@@ -53,7 +59,14 @@ namespace RingFlow.Gameplay
                 return;
             }
 
-            _economy?.Spend("Coins", HintCostCoins, "Hint");
+            if (useHintCurrency)
+            {
+                _economy?.Spend("Hint", 1, "Hint");
+            }
+            else
+            {
+                _economy?.Spend("Coins", HintCostCoins, "Hint");
+            }
 
             int level = _progressionService?.CurrentLevel.Value ?? 0;
             AnalyticsEvents.HintUse(level);

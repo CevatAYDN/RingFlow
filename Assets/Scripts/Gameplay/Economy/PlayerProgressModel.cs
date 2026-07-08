@@ -28,6 +28,7 @@ namespace RingFlow.Gameplay
         public const string KeyUndoUsed      = "RF_UndoUsedFree";
         public const string KeyAchieves      = "RF_Achievements";
         public const string KeyRemoveAds     = "RF_RemoveAds";
+        public const string KeyHintCount     = "RF_HintCount";
 
         public ObservableProperty<int> Coins { get; } = new(0);
         public ObservableProperty<int> Diamonds { get; } = new(0);
@@ -45,6 +46,8 @@ namespace RingFlow.Gameplay
         public ObservableProperty<long> DailyLastClaimUtcTicks { get; } = new(0);
 
         public ObservableProperty<int> FreeUndosUsedThisSession { get; } = new(0);
+
+        public ObservableProperty<int> HintCount { get; } = new(0);
 
         public ObservableProperty<bool> RemoveAds { get; } = new(false);
 
@@ -97,6 +100,7 @@ namespace RingFlow.Gameplay
             DailyDayIndex.Value = -1;
             DailyLastClaimUtcTicks.Value = 0;
             FreeUndosUsedThisSession.Value = 0;
+            HintCount.Value = 0;
             RemoveAds.Value = false;
             UnlockedWorlds.Clear();
             for (int i = 0; i < 40; i++) UnlockedWorlds.Add(i == 0);
@@ -126,6 +130,7 @@ namespace RingFlow.Gameplay
             prefs.SetInt(PlayerProgressModel.KeyDailyDay, m.DailyDayIndex.Value);
             prefs.SetString(PlayerProgressModel.KeyDailyStamp, m.DailyLastClaimUtcTicks.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
             prefs.SetInt(PlayerProgressModel.KeyUndoUsed, m.FreeUndosUsedThisSession.Value);
+            prefs.SetInt(PlayerProgressModel.KeyHintCount, m.HintCount.Value);
             prefs.SetBool(PlayerProgressModel.KeyRemoveAds, m.RemoveAds.Value);
 
             // Worlds / themes / achievements encode as compact strings (csv-equivalent)
@@ -160,6 +165,7 @@ namespace RingFlow.Gameplay
             m.DailyLastClaimUtcTicks.Value = stampTicks;
 
             m.FreeUndosUsedThisSession.Value = prefs.GetInt(PlayerProgressModel.KeyUndoUsed, 0);
+            m.HintCount.Value         = prefs.GetInt(PlayerProgressModel.KeyHintCount, 0);
             m.RemoveAds.Value         = prefs.GetBool(PlayerProgressModel.KeyRemoveAds, false);
 
             m.UnlockedWorlds.Clear();

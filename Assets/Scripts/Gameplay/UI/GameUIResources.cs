@@ -40,6 +40,7 @@ namespace RingFlow.Gameplay.UI
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
             var rect = go.GetComponent<RectTransform>();
+            rect.SetParent(parent, false);
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
             rect.offsetMin = Vector2.zero;

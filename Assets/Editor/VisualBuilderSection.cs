@@ -97,8 +97,11 @@ namespace RingFlow.Editor
                 CreatePole(boardRoot.transform, p, isLocked, rings, torusModel);
             }
 
-            Selection.activeGameObject = boardRoot;
-            SceneView.FrameLastActiveSceneView();
+            EditorApplication.delayCall += () =>
+            {
+                Selection.activeGameObject = boardRoot;
+                SceneView.FrameLastActiveSceneView();
+            };
             NexusLog.Info("RingFlowEditor", nameof(BuildInScene), "", "Visual board built successfully.");
         }
 
@@ -114,7 +117,12 @@ namespace RingFlow.Editor
             poleView.PoleId = index;
 
             var capsule = poleObj.GetComponent<CapsuleCollider>();
-            if (capsule != null) capsule.radius = 1.5f;
+            if (capsule != null)
+            {
+                Object.DestroyImmediate(capsule);
+            }
+            var box = poleObj.AddComponent<BoxCollider>();
+            box.size = new Vector3(3.0f, 2.0f, 3.0f);
 
             if (isLocked)
             {

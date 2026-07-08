@@ -17,6 +17,7 @@ namespace RingFlow.Gameplay
         [Inject] private PlayerProgressModel _progress;
 
         private readonly Dictionary<string, ObservableProperty<long>> _balances = new();
+        private bool _isUpdating;
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
@@ -25,28 +26,92 @@ namespace RingFlow.Gameplay
             // Initialize Observables
             var coinsObs = GetObservableBalance("Coins");
             var diamondsObs = GetObservableBalance("Diamonds");
+            var hintsObs = GetObservableBalance("Hint");
 
             coinsObs.Value = _progress.Coins.Value;
             diamondsObs.Value = _progress.Diamonds.Value;
+            hintsObs.Value = _progress.HintCount.Value;
 
             // Hook changes: PlayerProgressModel -> EconomyService (with recursion guard)
             _progress.Coins.OnChanged((_, newVal) => 
             {
-                if (coinsObs.Value != newVal) coinsObs.Value = newVal;
+                if (_isUpdating) return;
+                _isUpdating = true;
+                try
+                {
+                    if (coinsObs.Value != newVal) coinsObs.Value = newVal;
+                }
+                finally
+                {
+                    _isUpdating = false;
+                }
             });
             _progress.Diamonds.OnChanged((_, newVal) => 
             {
-                if (diamondsObs.Value != newVal) diamondsObs.Value = newVal;
+                if (_isUpdating) return;
+                _isUpdating = true;
+                try
+                {
+                    if (diamondsObs.Value != newVal) diamondsObs.Value = newVal;
+                }
+                finally
+                {
+                    _isUpdating = false;
+                }
+            });
+            _progress.HintCount.OnChanged((_, newVal) => 
+            {
+                if (_isUpdating) return;
+                _isUpdating = true;
+                try
+                {
+                    if (hintsObs.Value != newVal) hintsObs.Value = newVal;
+                }
+                finally
+                {
+                    _isUpdating = false;
+                }
             });
 
             // Hook changes: EconomyService -> PlayerProgressModel (with recursion guard)
             coinsObs.OnChanged((_, newVal) => 
             {
-                if (_progress.Coins.Value != newVal) _progress.Coins.Value = (int)newVal;
+                if (_isUpdating) return;
+                _isUpdating = true;
+                try
+                {
+                    if (_progress.Coins.Value != newVal) _progress.Coins.Value = (int)newVal;
+                }
+                finally
+                {
+                    _isUpdating = false;
+                }
             });
             diamondsObs.OnChanged((_, newVal) => 
             {
-                if (_progress.Diamonds.Value != newVal) _progress.Diamonds.Value = (int)newVal;
+                if (_isUpdating) return;
+                _isUpdating = true;
+                try
+                {
+                    if (_progress.Diamonds.Value != newVal) _progress.Diamonds.Value = (int)newVal;
+                }
+                finally
+                {
+                    _isUpdating = false;
+                }
+            });
+            hintsObs.OnChanged((_, newVal) => 
+            {
+                if (_isUpdating) return;
+                _isUpdating = true;
+                try
+                {
+                    if (_progress.HintCount.Value != newVal) _progress.HintCount.Value = (int)newVal;
+                }
+                finally
+                {
+                    _isUpdating = false;
+                }
             });
 
             return default;

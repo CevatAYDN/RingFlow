@@ -35,10 +35,7 @@ namespace RingFlow.Gameplay
                     _economy?.Earn("Diamonds", reward.Amount, "Daily Reward");
                     break;
                 case "Hint":
-                    if (_progress != null && _progress.FreeUndosUsedThisSession.Value > 0)
-                    {
-                        _progress.FreeUndosUsedThisSession.Value -= (int)reward.Amount;
-                    }
+                    _economy?.Earn("Hint", reward.Amount, "Daily Reward");
                     break;
                 case "Theme":
                     if (_progress != null && _progress.OwnedThemes != null)

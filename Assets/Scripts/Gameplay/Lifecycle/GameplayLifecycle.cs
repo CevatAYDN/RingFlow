@@ -167,11 +167,8 @@ namespace RingFlow.Gameplay
             {
                 var esObj = new GameObject("EventSystem");
                 esObj.AddComponent<EventSystem>();
-                var inputModuleType = ResolveInputSystemUIInputModuleType();
-                if (inputModuleType != null)
-                {
-                    esObj.AddComponent(inputModuleType);
-                }
+                var inputModuleType = ResolveInputSystemUIInputModuleType() ?? typeof(StandaloneInputModule);
+                esObj.AddComponent(inputModuleType);
             }
 
             foreach (var cam in Object.FindObjectsByType<Camera>())
