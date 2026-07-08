@@ -662,27 +662,31 @@ namespace RingFlow.Gameplay
 
                 nonEmptyPoleCount++;
 
-                if (!pole.IsFull)
+                bool poleSolved = LevelSolver.IsSolved(pole, pole.MaxCapacity);
+                if (!poleSolved)
                 {
-                    NexusLog.Info("CheckWinCommand", "Execute", pole.Id.ToString(),
-                        $"Pole not full ({pole.Rings.Count}/{pole.MaxCapacity}); cannot win.");
+                    if (!pole.IsFull)
+                    {
+                        NexusLog.Info("CheckWinCommand", "Execute", pole.Id.ToString(),
+                            $"Pole not full ({pole.Rings.Count}/{pole.MaxCapacity}); cannot win.");
+                    }
+                    else
+                    {
+                        var firstRing = pole.Rings[0];
+                        for (int i = 1; i < pole.Rings.Count; i++)
+                        {
+                            if (pole.Rings[i].Color != firstRing.Color)
+                            {
+                                NexusLog.Info("CheckWinCommand", "Execute", pole.Id.ToString(),
+                                    $"Mixed colors on pole {pole.Id} (pos 0={firstRing.Color} vs pos {i}={pole.Rings[i].Color}).");
+                                break;
+                            }
+                        }
+                    }
+
                     won = false;
                     break;
                 }
-
-                var firstRing = pole.Rings[0];
-                for (int i = 1; i < pole.Rings.Count; i++)
-                {
-                    if (pole.Rings[i].Color != firstRing.Color)
-                    {
-                        NexusLog.Info("CheckWinCommand", "Execute", pole.Id.ToString(),
-                            $"Mixed colors on pole {pole.Id} (pos 0={firstRing.Color} vs pos {i}={pole.Rings[i].Color}).");
-                        won = false;
-                        break;
-                    }
-                }
-
-                if (!won) break;
             }
 
             if (nonEmptyPoleCount == 0)

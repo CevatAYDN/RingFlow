@@ -190,6 +190,19 @@ namespace RingFlow.Gameplay
             return nonEmptyCount > 0;
         }
 
+        public static bool IsSolved(PoleState pole, int maxCapacity)
+        {
+            if (pole == null || pole.IsEmpty) return false;
+            if (!pole.IsFull) return false;
+
+            var firstRing = pole.Rings[0];
+            for (int i = 1; i < pole.Rings.Count; i++)
+            {
+                if (pole.Rings[i].Color != firstRing.Color) return false;
+            }
+            return true;
+        }
+
         public static int CalculateHeuristic(BoardState state, int maxCapacity)
         {
             // Heuristic = Σ(yanlış pozisyondaki ring) + (incomplete pole × 2)
