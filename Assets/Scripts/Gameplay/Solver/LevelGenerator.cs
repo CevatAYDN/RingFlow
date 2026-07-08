@@ -48,10 +48,12 @@ namespace RingFlow.Gameplay
                 int scrambleTarget = 150 + rand.Next(80);
                 const int maxScrambleAttempts = 1500;
                 int lastFrom = -1;
+                int[] validSources = new int[poleCount];
+                int[] validTargets = new int[poleCount];
+
                 for (int attempt = 0; attempt < maxScrambleAttempts && validScrambleMoves < scrambleTarget; attempt++)
                 {
                     int sourceCount = 0;
-                    Span<int> validSources = stackalloc int[poleCount];
                     for (int p = 0; p < poleCount; p++)
                     {
                         if (board.IsEmpty(p)) continue;
@@ -70,13 +72,11 @@ namespace RingFlow.Gameplay
                     int from = validSources[rand.Next(sourceCount)];
                     var fromRing = board.GetTopRing(from);
 
-                    Span<int> validTargets = stackalloc int[poleCount];
                     int validTargetCount = 0;
                     for (int p = 0; p < poleCount; p++)
                     {
                         if (p == from) continue;
                         if (board.GetRingCount(p) >= maxCapacity) continue;
-                        if (!board.CanAddRing(p, fromRing.Color, fromRing.Type, maxCapacity)) continue;
                         validTargets[validTargetCount++] = p;
                     }
 

@@ -236,11 +236,8 @@ namespace RingFlow.Gameplay
             var top = GetTopRing(poleIndex);
             if (top.Type == RingType.Stone) return false;
 
-            // Gökkuşağı (Rainbow) joker kuralları
-            if (type == RingType.Rainbow || top.Type == RingType.Rainbow) return true;
-
-            // Boya (Paint) kuralı: Her rengi kabul eder
-            if (top.Type == RingType.Paint) return true;
+            // Gökkuşağı (Rainbow) veya Boya (Paint) joker kuralları
+            if (type == RingType.Rainbow || type == RingType.Paint || top.Type == RingType.Rainbow || top.Type == RingType.Paint) return true;
 
             return top.Color == color;
         }
@@ -378,6 +375,12 @@ namespace RingFlow.Gameplay
             if (count == 1)
             {
                 SetTopRingFrozen(poleIndex, false);
+            }
+
+            // Ghost Kontrolü: Pop edilen halka Ghost ise standartlaşır (oyun içi seçilince standartlaşmasıyla uyumlu)
+            if (ring.Type == RingType.Ghost)
+            {
+                ring.Type = RingType.Standard;
             }
 
             // Mystery Kontrolü: Yeni en üstte kalan halka Mystery ise açığa çıkar (Standartlaşır)

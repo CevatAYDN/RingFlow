@@ -137,6 +137,7 @@ namespace RingFlow.Gameplay
                         var ghostCopy = pole.Rings[^1];
                         ghostCopy.Type = RingType.Standard;
                         pole.Rings[^1] = ghostCopy;
+                        _signalBus?.Fire(new RevealMysterySignal(signal.PoleId, ghostCopy));
                     }
                 }
             }
@@ -165,6 +166,22 @@ namespace RingFlow.Gameplay
 
                     if (!toPole.CanAddRing(fromPole.TopRing))
                     {
+                        // Hedefe hareket ettiremiyoruz. Ancak hedef direk kendisi halka çıkartılabilecek (seçilebilecek) durumdaysa, seçimi oraya kaydır.
+                        if (toPole.CanPopRing())
+                        {
+                            _model.SelectedPoleId.Value = toId;
+
+                            // GDD §4 — Ghost: Seçildiği an görünür hale gelir (sabitlenir)
+                            if (toPole.TopRing.Type == RingType.Ghost)
+                            {
+                                var ghostCopy = toPole.Rings[^1];
+                                ghostCopy.Type = RingType.Standard;
+                                toPole.Rings[^1] = ghostCopy;
+                                _signalBus?.Fire(new RevealMysterySignal(toId, ghostCopy));
+                            }
+                            return;
+                        }
+
                         string reason = GameplayHelpers.DescribeBlockReason(fromPole, toPole);
                         NexusLog.Warn("SelectPoleCommand", "Execute", signal.PoleId.ToString(),
                             $"Move blocked. target cannot accept ring. from={fromId}, to={toId} reason={reason}");
@@ -515,6 +532,10 @@ namespace RingFlow.Gameplay
 
                 if (fromPole != null && toPole != null)
                 {
+                    // Restore bomb counters BEFORE popping the main ring so that
+                    // snapshot RingIndex entries still point to the correct position
+                    RestoreBombCounters(lastMove.BombCountersBeforeTick);
+
                     // SubMoves (magnet, chain) reversed before main ring because
                     // they were applied after the main ring in the original move
                     if (lastMove.SubMoves != null)
@@ -543,10 +564,6 @@ namespace RingFlow.Gameplay
                         var topM = fromPole.TopRing;
                         fromPole.Rings[^1] = new RingData(topM.Color, RingType.Mystery);
                     }
-
-                    // Restore bomb counters BEFORE popping the main ring so that
-                    // snapshot RingIndex entries still point to the correct position
-                    RestoreBombCounters(lastMove.BombCountersBeforeTick);
 
                     var movedRing = toPole.PopRing();
 

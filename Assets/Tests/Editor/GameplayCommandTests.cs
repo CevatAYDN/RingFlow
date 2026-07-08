@@ -486,6 +486,96 @@ namespace RingFlow.Tests
             // total: 100 + 260 = 360
             Assert.AreEqual(360, _economyService.CoinsBalance);
         }
+
+        [Test]
+        public void SelectPoleCommand_SwitchesSelectionToValidClickedPoleIfMoveInvalid()
+        {
+            var command = new SelectPoleCommand();
+            InjectDependencies(command);
+
+            var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };
+            pole0.AddRing(new RingData(RingColor.Red, RingType.Standard));
+
+            var pole1 = new PoleState { Id = 1, MaxCapacity = 4 };
+            pole1.AddRing(new RingData(RingColor.Blue, RingType.Standard)); // Color mismatch
+
+            _gameplayModel.Poles.Add(pole0);
+            _gameplayModel.Poles.Add(pole1);
+
+            // Select pole 0 first
+            command.Execute(new SelectPoleSignal(0));
+            Assert.AreEqual(0, _gameplayModel.SelectedPoleId.Value);
+
+            // Click pole 1. Move is invalid, but pole 1 can pop a ring, so selection should switch to pole 1
+            command.Execute(new SelectPoleSignal(1));
+            Assert.AreEqual(1, _gameplayModel.SelectedPoleId.Value);
+        }
+
+        [Test]
+        public void SelectPoleCommand_GhostRingSolidificationFiresRevealSignal()
+        {
+            var command = new SelectPoleCommand();
+            InjectDependencies(command);
+
+            var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };
+            pole0.AddRing(new RingData(RingColor.Green, RingType.Ghost));
+            _gameplayModel.Poles.Add(pole0);
+
+            command.Execute(new SelectPoleSignal(0));
+
+            Assert.AreEqual(RingType.Standard, pole0.TopRing.Type);
+            Assert.IsTrue(_signalBus.HasFiredRevealMystery);
+        }
+
+        [Test]
+        public void MoveRingCommand_PaintRingCanBePlacedOnDifferentColor()
+        {
+            var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };
+            pole0.AddRing(new RingData(RingColor.Red, RingType.Paint)); // Paint ring
+
+            var pole1 = new PoleState { Id = 1, MaxCapacity = 4 };
+            pole1.AddRing(new RingData(RingColor.Blue, RingType.Standard)); // Different color
+
+            _gameplayModel.Poles.Add(pole0);
+            _gameplayModel.Poles.Add(pole1);
+
+            // Should be allowed in PoleState
+            Assert.IsTrue(pole1.CanAddRing(pole0.TopRing));
+        }
+
+        [Test]
+        public void UndoCommand_CorrectlyRestoresMovedBombCounter()
+        {
+            var moveCommand = new MoveRingCommand();
+            InjectDependencies(moveCommand);
+
+            var undoCommand = new UndoCommand();
+            InjectDependencies(undoCommand);
+
+            var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };
+            var pole1 = new PoleState { Id = 1, MaxCapacity = 4 };
+
+            // Bomb on pole0
+            pole0.AddRing(new RingData(RingColor.Red, RingType.Bomb, 3));
+
+            _gameplayModel.Poles.Add(pole0);
+            _gameplayModel.Poles.Add(pole1);
+
+            // Move the Bomb to pole1
+            moveCommand.Execute(new MoveRingSignal(0, 1));
+            
+            // Bomb should tick from 3 to 2 on pole1
+            Assert.AreEqual(2, pole1.TopRing.AdditionalData);
+
+            // Undo the move
+            undoCommand.Execute(new UndoSignal());
+
+            // Bomb should be back on pole0, with counter restored to 3
+            Assert.AreEqual(1, pole0.Rings.Count);
+            Assert.AreEqual(0, pole1.Rings.Count);
+            Assert.AreEqual(RingType.Bomb, pole0.TopRing.Type);
+            Assert.AreEqual(3, pole0.TopRing.AdditionalData);
+        }
     }
 
     // --- Minimal Mocks for Unit Testing ---
