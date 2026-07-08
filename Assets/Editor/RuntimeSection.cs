@@ -1,9 +1,11 @@
 using UnityEditor;
 using UnityEngine;
 using RingFlow.Gameplay;
+using RingFlow.Gameplay.Diagnostics;
 using Nexus.Core;
 using Nexus.Core.FSM;
 using Nexus.Core.Services;
+using DiagnosticsSeverity = RingFlow.Gameplay.Diagnostics.DiagnosticSeverity;
 
 namespace RingFlow.Editor
 {
@@ -96,6 +98,74 @@ namespace RingFlow.Editor
             {
                 DrawEconomyRow(progress, economy);
             }
+
+            // Diagnostic Health Check
+            EditorGUILayout.Space();
+            if (GUILayout.Button("Run Diagnostic Health Check", GUILayout.Height(ButtonHeight)))
+            {
+                RunHealthCheck(context);
+            }
+        }
+
+        private void RunHealthCheck(IContext context)
+        {
+            var diag = context.TryResolve<RingFlow.Gameplay.Diagnostics.IGameDiagnostics>();
+            if (diag == null)
+            {
+                Debug.LogError("[Diagnostics] IGameDiagnostics is not registered!");
+                return;
+            }
+
+            diag.Log("HealthCheck", "=== HEALTH CHECK STARTED ===");
+
+            // 1. Check FSM
+            var fsm = context.TryResolve<IGameStateMachine>();
+            diag.Log("HealthCheck", $"FSM status: {(fsm != null ? (fsm.CurrentState != null ? fsm.CurrentState.GetType().Name : "No State Active") : "NULL")}",
+                fsm == null ? DiagnosticsSeverity.Critical : DiagnosticsSeverity.Info);
+
+            // 2. Check Services
+            var economy = context.TryResolve<IEconomyService>();
+            diag.Log("HealthCheck", $"Service 'IEconomyService': {(economy != null ? "OK" : "MISSING")}",
+                economy == null ? DiagnosticsSeverity.Error : DiagnosticsSeverity.Info);
+
+            var progression = context.TryResolve<IProgressionService>();
+            diag.Log("HealthCheck", $"Service 'IProgressionService': {(progression != null ? "OK" : "MISSING")}",
+                progression == null ? DiagnosticsSeverity.Error : DiagnosticsSeverity.Info);
+
+            var audio = context.TryResolve<IAudioService>();
+            diag.Log("HealthCheck", $"Service 'IAudioService': {(audio != null ? "OK" : "MISSING")}",
+                audio == null ? DiagnosticsSeverity.Error : DiagnosticsSeverity.Info);
+
+            var localization = context.TryResolve<ILocalizationService>();
+            diag.Log("HealthCheck", $"Service 'ILocalizationService': {(localization != null ? "OK" : "MISSING")}",
+                localization == null ? DiagnosticsSeverity.Error : DiagnosticsSeverity.Info);
+
+            var ads = context.TryResolve<IAdService>();
+            diag.Log("HealthCheck", $"Service 'IAdService': {(ads != null ? "OK" : "MISSING")}",
+                ads == null ? DiagnosticsSeverity.Error : DiagnosticsSeverity.Info);
+
+            var logger = context.TryResolve<ILoggerService>();
+            diag.Log("HealthCheck", $"Service 'ILoggerService': {(logger != null ? "OK" : "MISSING")}",
+                logger == null ? DiagnosticsSeverity.Error : DiagnosticsSeverity.Info);
+
+            var tracker = context.TryResolve<RingFlow.Gameplay.Diagnostics.IViewMediatorTracker>();
+            diag.Log("HealthCheck", $"Service 'IViewMediatorTracker': {(tracker != null ? "OK" : "MISSING")}",
+                tracker == null ? DiagnosticsSeverity.Error : DiagnosticsSeverity.Info);
+
+            // 3. Find UIRoot
+            var uiRoot = Object.FindAnyObjectByType<RingFlow.Gameplay.UI.UIRoot>();
+            diag.Log("HealthCheck", $"UIRoot: {(uiRoot != null ? "FOUND" : "MISSING")}",
+                uiRoot == null ? DiagnosticsSeverity.Critical : DiagnosticsSeverity.Info);
+
+            // 4. Trace Active Views in Scene
+            var views = Object.FindObjectsByType<View>(FindObjectsInactive.Exclude);
+            diag.Log("HealthCheck", $"Active Views count: {views.Length}");
+            foreach (var v in views)
+            {
+                diag.Log("HealthCheck", $"  - View '{v.GetType().Name}' on GameObject '{v.gameObject.name}' (active: {v.gameObject.activeInHierarchy})");
+            }
+
+            diag.Log("HealthCheck", "=== HEALTH CHECK COMPLETED ===");
         }
 
         private void DrawFsmRow(IGameStateMachine fsm)

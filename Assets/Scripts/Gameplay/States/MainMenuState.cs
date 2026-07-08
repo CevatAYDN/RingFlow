@@ -12,8 +12,17 @@ namespace RingFlow.Gameplay
         [Inject] private ISignalBus _signalBus;
         [Inject] private DailyRewardService _dailyReward;
 
+        [Inject] private Diagnostics.IGameDiagnostics _diag;
+
         public ValueTask OnEnterAsync(object args, CancellationToken ct)
         {
+            _diag?.Checkpoint("MainMenuState");
+            _diag?.Log("FSM", "MainMenuState.OnEnterAsync started");
+            if (_diag != null)
+            {
+                var elapsed = _diag.GetElapsedSinceCheckpoint("BootState");
+                _diag.Log("FSM", $"Time since BootState: {elapsed.TotalMilliseconds}ms");
+            }
             _signalBus?.Fire(new ShowScreenSignal(ScreenType.MainMenu));
 
             if (_audio != null)

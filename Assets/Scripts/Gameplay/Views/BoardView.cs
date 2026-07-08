@@ -26,6 +26,10 @@ namespace RingFlow.Gameplay
         {
             ClearBoard();
 
+            if (_torusPrefab == null)
+            {
+                _torusPrefab = Resources.Load<GameObject>("Torus");
+            }
 #if UNITY_EDITOR
             if (_torusPrefab == null)
             {

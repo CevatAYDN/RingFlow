@@ -234,7 +234,19 @@ namespace RingFlow.Gameplay
                         int ringCount = board.GetRingCount(p);
                         if (ringCount > 0)
                         {
-                            int r = rand.Next(ringCount);
+                            // Eğer serbest boş direk yoksa (yani tüm serbest direkler dolu olmak zorundaysa),
+                            // anahtar halkayı en üstte başlatmalıyız yoksa hamle yapılamaz ve kilitlenir.
+                            bool hasFreeEmptyPole = false;
+                            for (int x = 0; x < poleCount; x++)
+                            {
+                                if (x != lockedPole && board.IsEmpty(x))
+                                {
+                                    hasFreeEmptyPole = true;
+                                    break;
+                                }
+                            }
+
+                            int r = hasFreeEmptyPole ? rand.Next(ringCount) : (ringCount - 1);
                             if (board.GetRingType(p, r) == RingType.Standard)
                             {
                                 board.SetRingType(p, r, RingType.Locked);

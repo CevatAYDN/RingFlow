@@ -26,15 +26,24 @@ namespace RingFlow.Gameplay
                 ? signal.LevelIndex
                 : _progressionService?.CurrentLevel.Value ?? 1;
 
-            int poleCount = DifficultyCurve.PoleCountForLevel(currentLevel);
-            int colorCount = DifficultyCurve.ColorCountForLevel(currentLevel);
-            int maxCapacity = DifficultyCurve.MaxCapacityForLevel(currentLevel);
+            LevelData levelData = null;
+            var savedLevel = UnityEngine.Resources.Load<LevelDataSO>($"Levels/Level_{currentLevel}");
+            if (savedLevel != null && savedLevel.Data != null)
+            {
+                levelData = savedLevel.Data;
+            }
+            else
+            {
+                int poleCount = DifficultyCurve.PoleCountForLevel(currentLevel);
+                int colorCount = DifficultyCurve.ColorCountForLevel(currentLevel);
+                int maxCapacity = DifficultyCurve.MaxCapacityForLevel(currentLevel);
 
-            if (poleCount < colorCount + 1) poleCount = colorCount + 1;
-            if (poleCount > 12) poleCount = 12;
+                if (poleCount < colorCount + 1) poleCount = colorCount + 1;
+                if (poleCount > 12) poleCount = 12;
 
-            var levelData = LevelGenerator.GenerateLevel(
-                currentLevel, currentLevel * 12345, poleCount, colorCount, maxCapacity);
+                levelData = LevelGenerator.GenerateLevel(
+                    currentLevel, currentLevel * 12345, poleCount, colorCount, maxCapacity);
+            }
 
             if (levelData != null)
             {

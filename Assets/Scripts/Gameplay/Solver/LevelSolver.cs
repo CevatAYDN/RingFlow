@@ -27,7 +27,20 @@ namespace RingFlow.Gameplay
     /// </summary>
     public static class LevelSolver
     {
-        private static readonly HashSet<BoardState> _visited = new(10000);
+        private static readonly Dictionary<BoardState, int> _transpositionTable = new(20000);
+        private static int _statesSearched = 0;
+        private const int MaxStatesLimit = 25000; // Limit to prevent freezes/hangs
+
+        private struct MoveWithHeuristic : IComparable<MoveWithHeuristic>
+        {
+            public Move Move;
+            public int Heuristic;
+
+            public int CompareTo(MoveWithHeuristic other)
+            {
+                return Heuristic.CompareTo(other.Heuristic);
+            }
+        }
 
         public static SolverResult Solve(BoardState initialState, int maxCapacity)
         {
@@ -37,11 +50,12 @@ namespace RingFlow.Gameplay
             int maxMovesLimit = 50;
             
             var path = new List<Move>(maxMovesLimit);
-            _visited.Clear();
-            _visited.Add(initialState);
 
             while (threshold <= maxMovesLimit)
             {
+                _transpositionTable.Clear();
+                _statesSearched = 0;
+                
                 int nextThreshold = Search(initialState, 0, threshold, maxCapacity, path);
                 if (nextThreshold == -1) // Çözüm bulundu
                 {
@@ -58,9 +72,10 @@ namespace RingFlow.Gameplay
                         Moves = movesList
                     };
                 }
-                if (nextThreshold == int.MaxValue)
+                
+                if (nextThreshold == int.MaxValue || _statesSearched >= MaxStatesLimit)
                 {
-                    // Çözülemez durum
+                    // Çözülemez durum veya limit aşıldı
                     break;
                 }
                 threshold = nextThreshold;
@@ -76,25 +91,66 @@ namespace RingFlow.Gameplay
 
         private static int Search(BoardState state, int g, int threshold, int maxCapacity, List<Move> path)
         {
+            _statesSearched++;
+            if (_statesSearched >= MaxStatesLimit)
+            {
+                return int.MaxValue; // Prune due to search limit
+            }
+
             int h = CalculateHeuristic(state, maxCapacity);
             int f = g + h;
             if (f > threshold) return f;
             if (IsSolved(state, maxCapacity)) return -1; // Çözüme ulaşıldı
 
+            // Transposition Table check
+            if (_transpositionTable.TryGetValue(state, out int prevG) && prevG <= g)
+            {
+                return int.MaxValue; // Already visited at a shorter or equal path
+            }
+            _transpositionTable[state] = g;
+
             int min = int.MaxValue;
             Span<Move> moves = stackalloc Move[132]; // 12 direk * 11 hedef = maks 132 hamle kombinasyonu
             int movesCount = GetValidMoves(state, maxCapacity, moves);
 
+            // Heuristic Move Ordering: Sort valid moves based on next state heuristic
+            Span<MoveWithHeuristic> sortedMoves = stackalloc MoveWithHeuristic[movesCount];
             for (int i = 0; i < movesCount; i++)
             {
                 var move = moves[i];
                 var nextState = state;
                 var ring = nextState.PopRing(move.From);
                 nextState.AddRing(move.To, ring);
+                int nextH = CalculateHeuristic(nextState, maxCapacity);
+                sortedMoves[i] = new MoveWithHeuristic { Move = move, Heuristic = nextH };
+            }
 
-                if (_visited.Contains(nextState)) continue;
+            // Selection sort on stackalloc span
+            for (int i = 0; i < movesCount - 1; i++)
+            {
+                int bestIdx = i;
+                for (int j = i + 1; j < movesCount; j++)
+                {
+                    if (sortedMoves[j].Heuristic < sortedMoves[bestIdx].Heuristic)
+                    {
+                        bestIdx = j;
+                    }
+                }
+                if (bestIdx != i)
+                {
+                    var temp = sortedMoves[i];
+                    sortedMoves[i] = sortedMoves[bestIdx];
+                    sortedMoves[bestIdx] = temp;
+                }
+            }
 
-                _visited.Add(nextState);
+            for (int i = 0; i < movesCount; i++)
+            {
+                var move = sortedMoves[i].Move;
+                var nextState = state;
+                var ring = nextState.PopRing(move.From);
+                nextState.AddRing(move.To, ring);
+
                 path.Add(move);
 
                 int result = Search(nextState, g + 1, threshold, maxCapacity, path);
@@ -102,7 +158,6 @@ namespace RingFlow.Gameplay
                 if (result < min) min = result;
 
                 path.RemoveAt(path.Count - 1);
-                _visited.Remove(nextState);
             }
 
             return min;

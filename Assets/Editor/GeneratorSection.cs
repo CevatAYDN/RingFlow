@@ -78,6 +78,15 @@ namespace RingFlow.Editor
                     }
                 }
 
+                if (_generatedLevel != null)
+                {
+                    EditorGUILayout.Space(2f);
+                    if (GUILayout.Button("Save Generated Level as Asset", GUILayout.Height(ButtonHeight)))
+                    {
+                        SaveLevelAsset(_generatedLevel);
+                    }
+                }
+
                 DrawGenerationResults();
             }
         }
@@ -91,6 +100,8 @@ namespace RingFlow.Editor
             EditorGUILayout.LabelField($"Level: {_generatedLevel.LevelIndex} | Poles: {_generatedLevel.Poles.Count}");
             EditorGUILayout.LabelField($"Target Moves: {_generatedLevel.TargetMoves} (Solver Verified)");
 
+            DrawLevelVisual(_generatedLevel);
+
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("AI Solver Path:", EditorStyles.boldLabel);
             EditorGUILayout.LabelField($"Status: {_solveStatus}", EditorStyles.wordWrappedLabel);
@@ -102,6 +113,134 @@ namespace RingFlow.Editor
                 EditorGUILayout.LabelField($"{i + 1}. {_solutionSteps[i]}");
             }
             EditorGUILayout.EndScrollView();
+        }
+
+        public static void DrawLevelVisual(LevelData levelData)
+        {
+            if (levelData == null || levelData.Poles == null || levelData.Poles.Count == 0)
+            {
+                EditorGUILayout.HelpBox("No level data to display.", MessageType.Info);
+                return;
+            }
+
+            EditorGUILayout.Space(5f);
+            EditorGUILayout.LabelField("Level Visual Preview:", EditorStyles.boldLabel);
+
+            float poleWidth = 60f;
+            float ringHeight = 18f;
+            float poleGap = 8f;
+            int maxCapacity = 4; // default GDD capacity
+
+            // Determine max capacity dynamically based on level poles if possible
+            if (levelData.Poles.Count > 0)
+            {
+                maxCapacity = levelData.Poles[0].MaxCapacity;
+            }
+
+            // Begin horizontal layout
+            using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
+            {
+                for (int p = 0; p < levelData.Poles.Count; p++)
+                {
+                    var pole = levelData.Poles[p];
+
+                    using (new EditorGUILayout.VerticalScope(GUILayout.Width(poleWidth)))
+                    {
+                        var poleLabelStyle = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleCenter };
+                        EditorGUILayout.LabelField($"Pole {p}", poleLabelStyle, GUILayout.Width(poleWidth));
+
+                        // Draw pole background (vertical column)
+                        float height = maxCapacity * (ringHeight + 2f) + 12f;
+                        Rect rect = GUILayoutUtility.GetRect(poleWidth, height);
+
+                        Color colBg = pole.IsLocked ? new Color(0.18f, 0.12f, 0.12f, 1f) : new Color(0.16f, 0.16f, 0.18f, 1f);
+                        Color borderCol = pole.IsLocked ? new Color(0.8f, 0.2f, 0.2f) : new Color(0.35f, 0.35f, 0.38f);
+                        
+                        EditorGUI.DrawRect(rect, colBg);
+                        DrawRectBorder(rect, borderCol, 1);
+
+                        // Draw rings from bottom to top
+                        for (int r = 0; r < pole.Rings.Count; r++)
+                        {
+                            var ring = pole.Rings[r];
+                            float ringY = rect.yMax - 6f - (r + 1) * (ringHeight + 2f);
+                            Rect ringRect = new Rect(rect.x + 4f, ringY, poleWidth - 8f, ringHeight);
+
+                            Color ringColor = RingPalette.Get(ring.Color);
+                            EditorGUI.DrawRect(ringRect, ringColor);
+                            DrawRectBorder(ringRect, Color.black, 1);
+
+                            string ringLabel = GetRingShortLabel(ring.Type);
+                            if (ring.AdditionalData > 0 && ring.Type == RingType.Bomb)
+                            {
+                                ringLabel += ring.AdditionalData;
+                            }
+
+                            var textStyle = new GUIStyle(EditorStyles.miniLabel)
+                            {
+                                alignment = TextAnchor.MiddleCenter,
+                                fontStyle = FontStyle.Bold,
+                                normal = { textColor = GetContrastColor(ringColor) }
+                            };
+                            GUI.Label(ringRect, ringLabel, textStyle);
+                        }
+
+                        // Locked label at top of pole if locked
+                        if (pole.IsLocked)
+                        {
+                            Rect lockRect = new Rect(rect.x + 3f, rect.y + 4f, poleWidth - 6f, 13f);
+                            EditorGUI.DrawRect(lockRect, new Color(0.8f, 0.1f, 0.1f, 0.9f));
+                            var lockStyle = new GUIStyle(EditorStyles.miniBoldLabel)
+                            {
+                                alignment = TextAnchor.MiddleCenter,
+                                normal = { textColor = Color.white }
+                            };
+                            GUI.Label(lockRect, "LOCKED", lockStyle);
+                        }
+                    }
+
+                    if (p < levelData.Poles.Count - 1)
+                    {
+                        GUILayout.Space(poleGap);
+                    }
+                }
+            }
+            EditorGUILayout.Space(5f);
+        }
+
+        private static string GetRingShortLabel(RingType type)
+        {
+            return type switch
+            {
+                RingType.Standard => "STD",
+                RingType.Key => "KEY",
+                RingType.Mystery => "MYS",
+                RingType.Frozen => "FRZ",
+                RingType.Locked => "LCK",
+                RingType.Stone => "STN",
+                RingType.Glass => "GLS",
+                RingType.Rainbow => "RNB",
+                RingType.Bomb => "BMB",
+                RingType.Chain => "CHN",
+                RingType.Magnet => "MAG",
+                RingType.Paint => "PNT",
+                RingType.Ghost => "GHS",
+                _ => "???"
+            };
+        }
+
+        private static Color GetContrastColor(Color color)
+        {
+            float y = (color.r * 299 + color.g * 587 + color.b * 114) / 1000f;
+            return y >= 0.5f ? Color.black : Color.white;
+        }
+
+        private static void DrawRectBorder(Rect rect, Color color, int width)
+        {
+            EditorGUI.DrawRect(new Rect(rect.x, rect.y, rect.width, width), color);
+            EditorGUI.DrawRect(new Rect(rect.x, rect.yMax - width, rect.width, width), color);
+            EditorGUI.DrawRect(new Rect(rect.x, rect.y, width, rect.height), color);
+            EditorGUI.DrawRect(new Rect(rect.xMax - width, rect.y, width, rect.height), color);
         }
 
         private void ApplyGddCurveParams()
@@ -168,6 +307,76 @@ namespace RingFlow.Editor
                 _solveStatus = "Unsolvable! Seed failed validation.";
                 _solutionSteps.Clear();
             }
+        }
+
+        private void SaveLevelAsset(LevelData levelData)
+        {
+            if (levelData == null) return;
+
+            string folderPath = "Assets/Resources/Levels";
+            if (!AssetDatabase.IsValidFolder("Assets/Resources"))
+            {
+                AssetDatabase.CreateFolder("Assets", "Resources");
+            }
+            if (!AssetDatabase.IsValidFolder(folderPath))
+            {
+                AssetDatabase.CreateFolder("Assets/Resources", "Levels");
+            }
+
+            string assetPath = $"{folderPath}/Level_{levelData.LevelIndex}.asset";
+            
+            // Check if asset already exists
+            LevelDataSO levelSO = AssetDatabase.LoadAssetAtPath<LevelDataSO>(assetPath);
+            bool isNew = false;
+            if (levelSO == null)
+            {
+                levelSO = ScriptableObject.CreateInstance<LevelDataSO>();
+                isNew = true;
+            }
+
+            // Clone data
+            levelSO.Data = CloneLevelData(levelData);
+
+            if (isNew)
+            {
+                AssetDatabase.CreateAsset(levelSO, assetPath);
+            }
+            else
+            {
+                EditorUtility.SetDirty(levelSO);
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            EditorUtility.DisplayDialog("Success", $"Level saved to asset: {assetPath}\nThis level will now load automatically at runtime!", "OK");
+        }
+
+        private LevelData CloneLevelData(LevelData source)
+        {
+            var clone = new LevelData
+            {
+                LevelIndex = source.LevelIndex,
+                Seed = source.Seed,
+                TargetMoves = source.TargetMoves,
+                Poles = new List<PoleData>()
+            };
+
+            foreach (var p in source.Poles)
+            {
+                var poleClone = new PoleData(p.MaxCapacity)
+                {
+                    IsLocked = p.IsLocked,
+                    Rings = new List<RingData>()
+                };
+                foreach (var r in p.Rings)
+                {
+                    poleClone.Rings.Add(new RingData(r.Color, r.Type, r.AdditionalData));
+                }
+                clone.Poles.Add(poleClone);
+            }
+
+            return clone;
         }
     }
 }

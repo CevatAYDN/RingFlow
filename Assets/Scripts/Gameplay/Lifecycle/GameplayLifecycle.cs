@@ -6,6 +6,8 @@ using Nexus.Core.FSM;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
+using RingFlow.Gameplay.Diagnostics;
+
 namespace RingFlow.Gameplay
 {
     /// <summary>
@@ -38,6 +40,12 @@ namespace RingFlow.Gameplay
             builder.BindService<IIapService, IapService>();
             builder.BindService<IObjectPoolService, ObjectPoolService>();
 
+            // -------------------- Diagnostics & Tracing --------------------
+            builder.BindService<IGameDiagnostics, GameDiagnostics>();
+            builder.BindService<IFsmTransitionTracer, FsmTransitionTracer>();
+            builder.BindService<ISignalBusMonitor, SignalBusMonitor>();
+            builder.BindService<IViewMediatorTracker, ViewMediatorTracker>();
+
             // -------------------- Models --------------------
             builder.BindModel<GameplayModel>();
             builder.BindModel<PlayerProgressModel>();
@@ -68,10 +76,14 @@ namespace RingFlow.Gameplay
             builder.BindCommand<DailyRewardClaimSignal, DailyRewardClaimCommand>();
         }
 
-        public ValueTask OnInitializeAsync(CancellationToken ct)
+        public async ValueTask OnInitializeAsync(CancellationToken ct)
         {
-            // Hook the audio service to the settings model's reactive bits.
             var context = NexusRuntime.CurrentContext;
+            var diag = context.TryResolve<IGameDiagnostics>();
+            diag?.Checkpoint("GameplayLifecycle.OnInitializeAsync");
+            diag?.Log("Lifecycle", "GameplayLifecycle.OnInitializeAsync started");
+
+            // Hook the audio service to the settings model's reactive bits.
             var settings = context.TryResolve<SettingsModel>();
             var audio = context.TryResolve<IAudioService>();
             var haptics = context.TryResolve<IHapticService>();
@@ -121,7 +133,8 @@ namespace RingFlow.Gameplay
             fsm.RegisterState(context.Resolve<WinState>());
 
             // Transition to BootState on startup
-            _ = fsm.ChangeStateAsync<BootState>();
+            diag?.Log("Lifecycle", "Transitioning to BootState on startup");
+            await fsm.ChangeStateAsync<BootState>();
 
             // Trigger initial load from disk into all reactive models.
             var prefs = context.TryResolve<IPlayerPrefsService>();
@@ -132,12 +145,19 @@ namespace RingFlow.Gameplay
                 if (progress != null) PlayerProgressSaveSystem.Load(prefs, progress);
                 if (set != null) SettingsSaveSystem.Load(prefs, set);
             }
-            return default;
+            diag?.Log("Lifecycle", "GameplayLifecycle.OnInitializeAsync completed");
         }
 
         public ValueTask OnStartAsync(CancellationToken ct)
         {
+            var context = NexusRuntime.CurrentContext;
+            var diag = context.TryResolve<IGameDiagnostics>();
+            diag?.Checkpoint("GameplayLifecycle.OnStartAsync");
+            diag?.Log("Lifecycle", "GameplayLifecycle.OnStartAsync started");
+
             EnsureInputSetup();
+
+            diag?.Log("Lifecycle", "GameplayLifecycle.OnStartAsync completed");
             return default;
         }
 

@@ -24,11 +24,12 @@ namespace RingFlow.Editor
         private RuntimeSection _runtime;
         private SettingsSection _settings;
         private AdTesterSection _adTester;
+        private DiagnosticsSection _diagnostics;
         private List<EditorSection> _sections;
 
         private Vector2 _scroll;
 
-        [MenuItem("Ring Flow/Game Control Panel &G", false, 1)]
+        [MenuItem("Game Editor Tools/Game Control Panel &G", false, 0)]
         public static void ShowWindow()
         {
             var window = GetWindow<RingFlowEditorWindow>("Control Panel");
@@ -87,6 +88,7 @@ namespace RingFlow.Editor
             _runtime      = new RuntimeSection();
             _settings     = new SettingsSection();
             _adTester     = new AdTesterSection();
+            _diagnostics  = new DiagnosticsSection();
 
             _generator.OnEnable();
 
@@ -97,6 +99,7 @@ namespace RingFlow.Editor
                 _runtime,
                 _settings,
                 _adTester,
+                _diagnostics,
             };
         }
 

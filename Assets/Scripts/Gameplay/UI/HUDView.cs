@@ -79,14 +79,18 @@ namespace RingFlow.Gameplay.UI
             HintButton = _hintBtn.GetComponent<Button>();
         }
 
-        public void UpdateMoves(int moves)
+        public void UpdateMoves(int moves, ILocalizationService loc = null)
         {
-            if (MovesText != null) MovesText.text = $"Moves: {moves}";
+            if (MovesText == null) return;
+            string format = loc != null ? loc.GetString("format_moves", "Moves: {0}") : "Moves: {0}";
+            MovesText.text = string.Format(format, moves);
         }
 
-        public void UpdateLevel(int level)
+        public void UpdateLevel(int level, ILocalizationService loc = null)
         {
-            if (LevelText != null) LevelText.text = $"Level {level}";
+            if (LevelText == null) return;
+            string format = loc != null ? loc.GetString("format_level", "Level {0}") : "Level {0}";
+            LevelText.text = string.Format(format, level);
         }
 
         public void UpdateCoins(int coins)

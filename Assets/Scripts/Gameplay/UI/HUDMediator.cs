@@ -25,14 +25,14 @@ namespace RingFlow.Gameplay.UI
 
             if (_model != null)
             {
-                _model.MovesCount.OnChanged((_, n) => View.UpdateMoves(n));
-                View.UpdateMoves(_model.MovesCount.Value);
+                _model.MovesCount.OnChanged((_, n) => View.UpdateMoves(n, _loc));
+                View.UpdateMoves(_model.MovesCount.Value, _loc);
             }
 
             if (_progression != null)
             {
-                _progression.CurrentLevel.OnChanged((_, n) => View.UpdateLevel(n));
-                View.UpdateLevel(_progression.CurrentLevel.Value);
+                _progression.CurrentLevel.OnChanged((_, n) => View.UpdateLevel(n, _loc));
+                View.UpdateLevel(_progression.CurrentLevel.Value, _loc);
             }
 
             if (_progress != null)

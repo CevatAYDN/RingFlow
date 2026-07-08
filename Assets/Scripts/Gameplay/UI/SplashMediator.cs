@@ -1,6 +1,8 @@
+using System.Threading.Tasks;
 using Nexus.Core;
 using Nexus.Core.FSM;
 using Nexus.Core.Services;
+using UnityEngine;
 
 namespace RingFlow.Gameplay.UI
 {
@@ -15,13 +17,28 @@ namespace RingFlow.Gameplay.UI
             {
                 View.Localize(_loc);
             }
-            _ = TransitionAfterDelay();
+            TransitionAfterDelay();
         }
 
-        private async System.Threading.Tasks.ValueTask TransitionAfterDelay()
+        private async void TransitionAfterDelay()
         {
-            await System.Threading.Tasks.Task.Delay(800);
-            if (_fsm != null) _ = _fsm.ChangeStateAsync<MainMenuState>();
+            await Task.Delay(800);
+
+            if (_fsm != null)
+            {
+                try
+                {
+                    await _fsm.ChangeStateAsync<MainMenuState>();
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"[SplashMediator] FSM transition to MainMenuState failed: {ex.Message}");
+                }
+            }
+            else
+            {
+                Debug.LogError("[SplashMediator] _fsm is null! Cannot transition to MainMenuState.");
+            }
         }
 
         protected override void OnUnbind() { }

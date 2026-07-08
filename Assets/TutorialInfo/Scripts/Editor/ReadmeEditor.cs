@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
@@ -53,6 +53,9 @@ public class ReadmeEditor : Editor
 
     static void SelectReadmeAutomatically()
     {
+        if (Application.isBatchMode) return;
+        if (System.Environment.CommandLine.Contains("-runTests") || System.Environment.CommandLine.Contains("-batchmode")) return;
+
         if (!SessionState.GetBool(s_ShowedReadmeSessionStateName, false))
         {
             var readme = SelectReadme();

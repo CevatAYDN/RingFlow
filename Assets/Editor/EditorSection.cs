@@ -18,14 +18,17 @@ namespace RingFlow.Editor
         public abstract string PrefKey { get; }
         public abstract void OnGUI();
 
+        public bool HideHeader { get; set; } = false;
+
         protected bool IsFoldedOut
         {
-            get => EditorPrefs.GetBool(PrefKey, true);
+            get => HideHeader || EditorPrefs.GetBool(PrefKey, true);
             set => EditorPrefs.SetBool(PrefKey, value);
         }
 
         protected void DrawFoldoutHeader()
         {
+            if (HideHeader) return;
             var bg = GUI.backgroundColor;
             GUI.backgroundColor = new Color(0.4f, 0.7f, 1.0f, 0.3f);
             IsFoldedOut = EditorGUILayout.Foldout(IsFoldedOut, DisplayName, true, EditorStyles.foldoutHeader);

@@ -78,8 +78,11 @@ namespace RingFlow.Gameplay.UI
         public void UpdateCoins(int coins) { if (CoinsText != null) CoinsText.text = $"Coins: {coins}"; }
         public void UpdateDiamonds(int diamonds) { if (DiamondsText != null) DiamondsText.text = $"◆ {diamonds}"; }
 
+        private ILocalizationService _locService;
+
         public void Localize(ILocalizationService loc)
         {
+            _locService = loc;
             GameUIResources.LocalizeButtonText(_continueBtn, "menu_continue", loc);
             GameUIResources.LocalizeButtonText(_playBtn, "menu_quick_play", loc);
             GameUIResources.LocalizeButtonText(_lvlBtn, "menu_levels", loc);
@@ -95,7 +98,8 @@ namespace RingFlow.Gameplay.UI
             var label = DailyRewardButton.GetComponentInChildren<Text>();
             if (label != null)
             {
-                label.text = available ? "DAILY REWARD •" : "DAILY REWARD";
+                string baseText = _locService != null ? _locService.GetString("menu_daily_reward", "DAILY REWARD") : "DAILY REWARD";
+                label.text = available ? $"{baseText} •" : baseText;
                 label.color = available ? GameUIResources.AccentColor : GameUIResources.MutedText;
             }
         }

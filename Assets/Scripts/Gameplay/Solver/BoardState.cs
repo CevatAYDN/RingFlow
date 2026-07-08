@@ -219,7 +219,7 @@ namespace RingFlow.Gameplay
             if (IsEmpty(poleIndex)) return false;
             if (IsPoleLocked(poleIndex)) return false;
             if (IsTopRingFrozen(poleIndex)) return false;
-            if (GetTopRingColor(poleIndex) == RingColor.Stone) return false;
+            if (GetTopRingColor(poleIndex) == (RingColor)RingType.Stone) return false;
             if (GetTopRingType(poleIndex) == RingType.Stone) return false;
             return true;
         }
