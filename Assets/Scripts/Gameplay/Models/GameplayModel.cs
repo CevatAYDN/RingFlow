@@ -59,6 +59,11 @@ namespace RingFlow.Gameplay
         public RingColor OriginalColor;
         public List<MoveRecord> SubMoves;
 
+        /// <summary>Snapshot of every bomb's counter BEFORE this move's TickAllBombs() ran.
+        /// Undo restores these counters instead of blindly incrementing every current bomb.
+        /// Null when no bombs existed at move time.</summary>
+        public List<(int PoleId, int RingIndex, int Counter)> BombCountersBeforeTick;
+
         public MoveRecord(int fromPoleId, int toPoleId, RingData ring,
             bool wasMysteryRevealedOnFrom = false,
             bool wasIceBrokenOnTarget = false,
@@ -66,7 +71,8 @@ namespace RingFlow.Gameplay
             bool wasPainted = false,
             int paintedRingIndex = -1,
             RingColor paintedRingOriginalColor = RingColor.None,
-            RingColor originalColor = RingColor.None)
+            RingColor originalColor = RingColor.None,
+            List<(int PoleId, int RingIndex, int Counter)> bombCountersBeforeTick = null)
         {
             FromPoleId = fromPoleId;
             ToPoleId = toPoleId;
@@ -79,6 +85,7 @@ namespace RingFlow.Gameplay
             PaintedRingOriginalColor = paintedRingOriginalColor;
             OriginalColor = originalColor;
             SubMoves = null;
+            BombCountersBeforeTick = bombCountersBeforeTick;
         }
     }
 

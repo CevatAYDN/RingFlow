@@ -15,12 +15,12 @@ namespace RingFlow.Gameplay
             _logger?.Log("[BoardMediator] Binding BoardView to signals...");
 
             Subscribe<LevelLoadedSignal>(OnLevelLoaded);
-            Subscribe<MoveRingSignal>(OnRingMoved);
-            Subscribe<UndoSignal>(OnUndo);
-            Subscribe<RevealMysterySignal>(OnRevealMystery);
-            Subscribe<BreakIceSignal>(OnBreakIce);
-            Subscribe<UnlockPoleSignal>(OnUnlockPole);
-            Subscribe<PaintRingSignal>(OnPaintRing);
+            Subscribe<MoveRingSignal>(_ => View.BuildBoard(_model.Poles));
+            Subscribe<UndoSignal>(_ => View.BuildBoard(_model.Poles));
+            Subscribe<RevealMysterySignal>(_ => View.BuildBoard(_model.Poles));
+            Subscribe<BreakIceSignal>(_ => View.BuildBoard(_model.Poles));
+            Subscribe<UnlockPoleSignal>(_ => View.BuildBoard(_model.Poles));
+            Subscribe<PaintRingSignal>(_ => View.BuildBoard(_model.Poles));
 
             if (_model.Poles.Count > 0)
             {
@@ -31,36 +31,6 @@ namespace RingFlow.Gameplay
         private void OnLevelLoaded(LevelLoadedSignal signal)
         {
             _logger?.Log($"[BoardMediator] Level {signal.LevelIndex} loaded. Rebuilding visual board for {_model.Poles.Count} poles.");
-            View.BuildBoard(_model.Poles);
-        }
-
-        private void OnRingMoved(MoveRingSignal signal)
-        {
-            View.BuildBoard(_model.Poles);
-        }
-
-        private void OnUndo(UndoSignal signal)
-        {
-            View.BuildBoard(_model.Poles);
-        }
-
-        private void OnRevealMystery(RevealMysterySignal signal)
-        {
-            View.BuildBoard(_model.Poles);
-        }
-
-        private void OnBreakIce(BreakIceSignal signal)
-        {
-            View.BuildBoard(_model.Poles);
-        }
-
-        private void OnUnlockPole(UnlockPoleSignal signal)
-        {
-            View.BuildBoard(_model.Poles);
-        }
-
-        private void OnPaintRing(PaintRingSignal signal)
-        {
             View.BuildBoard(_model.Poles);
         }
     }

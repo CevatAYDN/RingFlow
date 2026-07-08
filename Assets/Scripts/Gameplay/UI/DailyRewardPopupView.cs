@@ -15,7 +15,7 @@ namespace RingFlow.Gameplay.UI
         public Text RewardText { get; private set; }
         private GameObject _claimBtn, _closeBtn;
 
-        protected virtual void Awake()
+        private void Awake()
         {
             // ── Dimmed background overlay ─────────────────────────────
             var overlay = GetComponent<Image>();

@@ -14,7 +14,7 @@ namespace RingFlow.Gameplay.UI
         public Text ProgressLabel { get; private set; }
         private GameObject _resumeBtn, _quitBtn;
 
-        protected virtual void Awake()
+        private void Awake()
         {
             // ── Dimmed background overlay ──
             var overlay = GetComponent<Image>();

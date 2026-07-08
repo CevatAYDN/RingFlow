@@ -191,6 +191,8 @@ namespace RingFlow.Gameplay
             ApplyChainSubMove(ref state, mainRecord);
             ApplyMagnetPull(ref state, mainRecord);
 
+            mainRecord.BombCountersBeforeTick = SnapshotBombCounters();
+
             _model.MoveHistory.Push(mainRecord);
             _model.MovesCount.Value++;
 
@@ -354,6 +356,21 @@ namespace RingFlow.Gameplay
             return exploded;
         }
 
+        private List<(int PoleId, int RingIndex, int Counter)> SnapshotBombCounters()
+        {
+            List<(int, int, int)> snapshot = null;
+            foreach (var pole in _model.Poles)
+            {
+                for (int i = 0; i < pole.Rings.Count; i++)
+                {
+                    if (pole.Rings[i].Type != RingType.Bomb) continue;
+                    snapshot ??= new List<(int, int, int)>();
+                    snapshot.Add((pole.Id, i, pole.Rings[i].AdditionalData));
+                }
+            }
+            return snapshot;
+        }
+
         private struct MoveContext
         {
             public RingData Ring;
@@ -392,20 +409,8 @@ namespace RingFlow.Gameplay
 
                 if (fromPole != null && toPole != null)
                 {
-                    // 1. Bomba (Bomb) Sayaçlarını Geri Yükle (Artır)
-                    foreach (var pole in _model.Poles)
-                    {
-                        for (int i = 0; i < pole.Rings.Count; i++)
-                        {
-                            var r = pole.Rings[i];
-                            if (r.Type == RingType.Bomb)
-                            {
-                                int newCounter = r.AdditionalData + 1;
-                                pole.Rings[i] = new RingData(r.Color, RingType.Bomb, newCounter);
-                                _signalBus.Fire(new BombTickSignal(pole.Id, newCounter));
-                            }
-                        }
-                    }
+                    // 1. Bomba (Bomb) Sayaçlarını Snapshot'tan Geri Yükle
+                    RestoreBombCounters(lastMove.BombCountersBeforeTick);
 
                     // 2. Alt hamleleri (SubMoves - Mıknatıs ve Zincir) tersten geri al
                     if (lastMove.SubMoves != null)
@@ -469,6 +474,20 @@ namespace RingFlow.Gameplay
                     _model.SelectedPoleId.Value = -1;
                     _signalBus.Fire(new CheckWinSignal());
                 }
+            }
+        }
+
+        private void RestoreBombCounters(List<(int PoleId, int RingIndex, int Counter)> snapshot)
+        {
+            if (snapshot == null) return;
+            foreach (var entry in snapshot)
+            {
+                var pole = _model.Poles.Find(p => p.Id == entry.PoleId);
+                if (pole == null || entry.RingIndex >= pole.Rings.Count) continue;
+                var r = pole.Rings[entry.RingIndex];
+                if (r.Type != RingType.Bomb) continue;
+                pole.Rings[entry.RingIndex] = new RingData(r.Color, RingType.Bomb, entry.Counter);
+                _signalBus.Fire(new BombTickSignal(entry.PoleId, entry.Counter));
             }
         }
     }

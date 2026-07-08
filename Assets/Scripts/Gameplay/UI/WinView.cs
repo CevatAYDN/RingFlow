@@ -16,7 +16,7 @@ namespace RingFlow.Gameplay.UI
         public Text TitleText { get; private set; }
         private GameObject _nextBtn, _quitBtn;
 
-        protected virtual void Awake()
+        private void Awake()
         {
             var overlay = GetComponent<Image>();
             overlay.color = new Color(0, 0, 0, 0.70f);

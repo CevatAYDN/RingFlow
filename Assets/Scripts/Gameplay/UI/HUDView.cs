@@ -18,7 +18,7 @@ namespace RingFlow.Gameplay.UI
         public Button HintButton { get; private set; }
         private GameObject _undoBtn, _restartBtn, _hintBtn;
 
-        protected virtual void Awake()
+        private void Awake()
         {
             var topBar = GameUIResources.CreatePanel("TopBar", transform);
             GameUIResources.SetAnchors(topBar.GetComponent<RectTransform>(), 0f, 0.88f, 1f, 1f);

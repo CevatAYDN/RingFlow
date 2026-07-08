@@ -12,7 +12,7 @@ namespace RingFlow.Gameplay.UI
         public Text TaglineText { get; private set; }
         public Text ProgressText { get; private set; }
 
-        protected virtual void Awake()
+        private void Awake()
         {
             var overlay = GetComponent<Image>();
             overlay.color = new Color(0.06f, 0.07f, 0.10f, 1f);

@@ -275,6 +275,64 @@ namespace RingFlow.Tests
         }
 
         [Test]
+        public void UndoCommand_RestoresBombCountersFromSnapshot()
+        {
+            var moveCommand = new MoveRingCommand();
+            InjectDependencies(moveCommand);
+
+            var undoCommand = new UndoCommand();
+            InjectDependencies(undoCommand);
+
+            var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };
+            var pole1 = new PoleState { Id = 1, MaxCapacity = 4 };
+
+            pole0.AddRing(new RingData(RingColor.Red, RingType.Standard));
+            // Bomb with counter = 3
+            pole1.AddRing(new RingData(RingColor.Red, RingType.Bomb, 3));
+
+            _gameplayModel.Poles.Add(pole0);
+            _gameplayModel.Poles.Add(pole1);
+
+            // Execute move - bomb should tick from 3 to 2
+            moveCommand.Execute(new MoveRingSignal(0, 1));
+            Assert.AreEqual(2, pole1.Rings[0].AdditionalData);
+            Assert.AreEqual(1, _gameplayModel.MoveHistory.Count);
+
+            // Undo - bomb counter should restore to 3
+            undoCommand.Execute(new UndoSignal());
+            Assert.AreEqual(3, pole1.Rings[0].AdditionalData);
+            Assert.AreEqual(0, _gameplayModel.MoveHistory.Count);
+        }
+
+        [Test]
+        public void UndoCommand_SnapshotOnlyCapturesExistingBombs()
+        {
+            var moveCommand = new MoveRingCommand();
+            InjectDependencies(moveCommand);
+
+            var undoCommand = new UndoCommand();
+            InjectDependencies(undoCommand);
+
+            var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };
+            var pole1 = new PoleState { Id = 1, MaxCapacity = 4 };
+
+            pole0.AddRing(new RingData(RingColor.Red, RingType.Standard));
+            pole1.AddRing(new RingData(RingColor.Blue, RingType.Standard)); // No bomb
+
+            _gameplayModel.Poles.Add(pole0);
+            _gameplayModel.Poles.Add(pole1);
+
+            // Execute move - no bombs ticked, snapshot should be null/empty
+            moveCommand.Execute(new MoveRingSignal(0, 1));
+            Assert.IsNull(_gameplayModel.MoveHistory.Pop().BombCountersBeforeTick);
+
+            // Undo should work without error
+            _gameplayModel.MoveHistory.Push(new MoveRecord(0, 1, new RingData(RingColor.Red)));
+            undoCommand.Execute(new UndoSignal());
+            Assert.AreEqual(0, _gameplayModel.MoveHistory.Count);
+        }
+
+        [Test]
         public void MoveRingCommand_HandlesFrozenIceBreaking()
         {
             var command = new MoveRingCommand();

@@ -21,7 +21,7 @@ namespace RingFlow.Gameplay.UI
         private GameObject _closeBtn;
         private Text _musicLabel, _sfxLabel, _hapticLabel, _motionLabel, _bigLabel, _cbLabel, _langLabel;
 
-        protected virtual void Awake()
+        private void Awake()
         {
             var overlay = GetComponent<Image>();
             overlay.color = new Color(0, 0, 0, 0.85f);

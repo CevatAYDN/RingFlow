@@ -21,7 +21,7 @@ namespace RingFlow.Gameplay.UI
         public Text TitleText { get; private set; }
         private GameObject _backBtn, _levelBtns;
 
-        protected virtual void Awake()
+        private void Awake()
         {
             // Title
             var titleGo = GameUIResources.CreateText("SELECT LEVEL", transform, 36, TextAnchor.UpperCenter, GameUIResources.AccentColor);

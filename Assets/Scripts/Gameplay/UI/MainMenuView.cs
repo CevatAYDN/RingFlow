@@ -20,7 +20,7 @@ namespace RingFlow.Gameplay.UI
         public Text TaglineText { get; private set; }
         private GameObject _continueBtn, _playBtn, _lvlBtn, _dailyBtn;
 
-        protected virtual void Awake()
+        private void Awake()
         {
             var titleGo = GameUIResources.CreateText("RING FLOW", transform, 64, TextAnchor.UpperCenter, GameUIResources.AccentColor);
             var titleRect = titleGo.GetComponent<RectTransform>();
