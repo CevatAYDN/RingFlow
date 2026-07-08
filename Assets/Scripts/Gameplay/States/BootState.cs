@@ -14,9 +14,7 @@ namespace RingFlow.Gameplay
         public ValueTask OnEnterAsync(object args, CancellationToken ct)
         {
             _logger?.Log("[BootState] Game starting, initializing models...");
-            
-            // Transition directly to Main Menu State once booted
-            _ = _fsm.ChangeStateAsync<MainMenuState>();
+            _ = _fsm.ChangeStateAsync<SplashState>();
             return default;
         }
 

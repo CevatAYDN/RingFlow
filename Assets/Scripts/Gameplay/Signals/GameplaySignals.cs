@@ -1,9 +1,70 @@
 namespace RingFlow.Gameplay
 {
+    // ── UI Screen Management ──────────────────────────────
+    public enum ScreenType
+    {
+        Splash,
+        MainMenu,
+        WorldMap,
+        LevelSelect,
+        Gameplay,
+        Pause,
+        Win,
+        Settings,
+        DailyReward,
+        Onboarding
+    }
+
+    public readonly struct ShowScreenSignal
+    {
+        public readonly ScreenType Screen;
+        public ShowScreenSignal(ScreenType screen) => Screen = screen;
+    }
+
+    public readonly struct HideScreenSignal
+    {
+        public readonly ScreenType Screen;
+        public HideScreenSignal(ScreenType screen) => Screen = screen;
+    }
+
+    // ── UI Button Signals ─────────────────────────────────
+    public readonly struct PlayRequestedSignal {}
+    public readonly struct LevelSelectedSignal
+    {
+        public readonly int LevelIndex;
+        public LevelSelectedSignal(int levelIndex) => LevelIndex = levelIndex;
+    }
+    public readonly struct PauseRequestedSignal {}
+    public readonly struct ResumeRequestedSignal {}
+    public readonly struct NextLevelRequestedSignal {}
+    public readonly struct QuitToMenuRequestedSignal {}
+    public readonly struct OpenSettingsSignal {}
+    public readonly struct CloseSettingsSignal {}
+    public readonly struct OpenDailyRewardSignal {}
+    public readonly struct CloseDailyRewardSignal {}
+    public readonly struct WorldSelectedSignal
+    {
+        public readonly int WorldIndex;
+        public WorldSelectedSignal(int worldIndex) => WorldIndex = worldIndex;
+    }
+
+    // ── Gameplay Signals ──────────────────────────────────
     public readonly struct InitLevelSignal
     {
         public readonly int LevelIndex;
         public InitLevelSignal(int levelIndex) => LevelIndex = levelIndex;
+    }
+
+    /// <summary>
+    /// Fired by <see cref="Commands.InitLevelCommand"/> AFTER the model has been
+    /// populated with the new level's poles and rings. BoardMediator subscribes
+    /// to this signal (not InitLevelSignal) so the visual board rebuilds only
+    /// after the model is in a consistent state.
+    /// </summary>
+    public readonly struct LevelLoadedSignal
+    {
+        public readonly int LevelIndex;
+        public LevelLoadedSignal(int levelIndex) => LevelIndex = levelIndex;
     }
 
     public readonly struct SelectPoleSignal

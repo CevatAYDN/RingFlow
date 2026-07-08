@@ -7,7 +7,14 @@ namespace RingFlow.Gameplay
 {
     public class WinState : IGameState
     {
-        public ValueTask OnEnterAsync(object args, CancellationToken ct) => default;
+        [Inject] private ISignalBus _signalBus;
+
+        public ValueTask OnEnterAsync(object args, CancellationToken ct)
+        {
+            _signalBus?.Fire(new ShowScreenSignal(ScreenType.Win));
+            return default;
+        }
+
         public ValueTask OnExitAsync(CancellationToken ct) => default;
         public void OnTick(float deltaTime) {}
     }

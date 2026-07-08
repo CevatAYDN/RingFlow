@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Nexus.Core;
 using Nexus.Core.Services;
 using Nexus.Core.FSM;
+using UnityEngine;
 
 namespace RingFlow.Gameplay
 {
@@ -11,11 +12,14 @@ namespace RingFlow.Gameplay
     /// Binds: encrypted storage (anti-cheat), economy, progression, player progress,
     /// accessibility settings, daily reward service, hint/daily/undo commands.
     /// Registered services are auto-initialized once the model has been bound.
+    /// MonoBehaviour so it can be attached to the NexusRoot GameObject and discovered
+    /// by Root.InitializeContext() via GetComponents<IContextLifecycle>().
     /// </summary>
-    public class GameplayLifecycle : IContextLifecycle
+    public class GameplayLifecycle : MonoBehaviour, IContextLifecycle
     {
         public void OnConfigure(IContextBuilder builder)
         {
+            NexusLog.Info("GameplayLifecycle", nameof(OnConfigure), "Gameplay", "Configuring gameplay context.");
             // -------------------- Storage --------------------
             builder.Bind<IPlayerPrefsService, EncryptedStorageService>();
             builder.Bind<ILocalizationTableProvider, CSVLocalizationTableProvider>();
@@ -40,6 +44,7 @@ namespace RingFlow.Gameplay
             // -------------------- State Machine --------------------
             builder.Bind<IGameStateMachine, GameStateMachine>();
             builder.Bind<BootState>();
+            builder.Bind<SplashState>();
             builder.Bind<MainMenuState>();
             builder.Bind<LevelSelectState>();
             builder.Bind<PlayingState>();

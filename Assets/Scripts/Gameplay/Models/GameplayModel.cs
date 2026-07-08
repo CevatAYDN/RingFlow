@@ -7,12 +7,13 @@ namespace RingFlow.Gameplay
 {
     public class GameplayModel : IReactiveModel, IResettableModel
     {
-        public List<PoleState> Poles { get; } = new(10);
+        public List<PoleState> Poles { get; } = new(12);
         public ObservableProperty<int> SelectedPoleId { get; } = new(-1);
         public ObservableProperty<int> MovesCount { get; } = new(0);
         public ObservableProperty<int> TargetMovesCount { get; } = new(0);
         public ObservableProperty<bool> IsGameWon { get; } = new(false);
-        
+        public ObservableProperty<WinReward> LastReward { get; } = new(default);
+
         public UndoStack<MoveRecord> MoveHistory { get; } = new(1000);
 
         public ValueTask OnBind(CancellationToken ct)
@@ -27,8 +28,21 @@ namespace RingFlow.Gameplay
             MovesCount.Value = 0;
             TargetMovesCount.Value = 0;
             IsGameWon.Value = false;
+            LastReward.Value = default;
             MoveHistory.Clear();
         }
+    }
+
+    public struct WinReward
+    {
+        public int Moves;
+        public int TargetMoves;
+        public int Coins;
+        public int Xp;
+        public int Stars;
+
+        public static WinReward From(int moves, int targetMoves, int coins, int xp, int stars)
+            => new WinReward { Moves = moves, TargetMoves = targetMoves, Coins = coins, Xp = xp, Stars = stars };
     }
 
     public struct MoveRecord
@@ -40,14 +54,18 @@ namespace RingFlow.Gameplay
         public bool WasIceBrokenOnTarget;
         public bool WasTargetPoleUnlocked;
         public bool WasPainted;
+        public int PaintedRingIndex;
+        public RingColor PaintedRingOriginalColor;
         public RingColor OriginalColor;
         public List<MoveRecord> SubMoves;
 
-        public MoveRecord(int fromPoleId, int toPoleId, RingData ring, 
-            bool wasMysteryRevealedOnFrom = false, 
-            bool wasIceBrokenOnTarget = false, 
+        public MoveRecord(int fromPoleId, int toPoleId, RingData ring,
+            bool wasMysteryRevealedOnFrom = false,
+            bool wasIceBrokenOnTarget = false,
             bool wasTargetPoleUnlocked = false,
             bool wasPainted = false,
+            int paintedRingIndex = -1,
+            RingColor paintedRingOriginalColor = RingColor.None,
             RingColor originalColor = RingColor.None)
         {
             FromPoleId = fromPoleId;
@@ -57,6 +75,8 @@ namespace RingFlow.Gameplay
             WasIceBrokenOnTarget = wasIceBrokenOnTarget;
             WasTargetPoleUnlocked = wasTargetPoleUnlocked;
             WasPainted = wasPainted;
+            PaintedRingIndex = paintedRingIndex;
+            PaintedRingOriginalColor = paintedRingOriginalColor;
             OriginalColor = originalColor;
             SubMoves = null;
         }

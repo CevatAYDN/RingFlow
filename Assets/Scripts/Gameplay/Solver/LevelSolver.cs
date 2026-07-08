@@ -82,7 +82,7 @@ namespace RingFlow.Gameplay
             if (IsSolved(state, maxCapacity)) return -1; // Çözüme ulaşıldı
 
             int min = int.MaxValue;
-            Span<Move> moves = stackalloc Move[90]; // 10 direk * 9 hedef = maks 90 hamle kombinasyonu
+            Span<Move> moves = stackalloc Move[132]; // 12 direk * 11 hedef = maks 132 hamle kombinasyonu
             int movesCount = GetValidMoves(state, maxCapacity, moves);
 
             for (int i = 0; i < movesCount; i++)

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Nexus.Core;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace RingFlow.Gameplay
 {
@@ -13,11 +14,66 @@ namespace RingFlow.Gameplay
         private readonly List<PoleView> _spawnedPoles = new();
         private readonly List<List<GameObject>> _spawnedRings = new();
 
+        // Cached type lookup so the asmdef does not need a hard reference to
+        // Unity.InputSystem.ForUI. Resolved once at first use.
+        private static System.Type s_inputModuleType;
+
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            EnsureInputSetup();
+        }
+
+        private void EnsureInputSetup()
+        {
+            EnsureInputModuleType();
+            var eventSystem = FindAnyObjectByType<EventSystem>();
+            if (eventSystem == null)
+            {
+                var esObj = new GameObject("EventSystem");
+                eventSystem = esObj.AddComponent<EventSystem>();
+                if (s_inputModuleType != null) esObj.AddComponent(s_inputModuleType);
+            }
+            else
+            {
+                var existing = eventSystem.GetComponent<BaseInputModule>();
+                if (existing != null && s_inputModuleType != null && !s_inputModuleType.IsInstanceOfType(existing))
+                {
+                    Destroy(existing);
+                    eventSystem.gameObject.AddComponent(s_inputModuleType);
+                }
+                else if (existing == null && s_inputModuleType != null)
+                {
+                    eventSystem.gameObject.AddComponent(s_inputModuleType);
+                }
+            }
+
+            foreach (var cam in FindObjectsByType<Camera>())
+            {
+                if (cam != null && cam.GetComponent<PhysicsRaycaster>() == null)
+                {
+                    cam.gameObject.AddComponent<PhysicsRaycaster>();
+                }
+            }
+        }
+
+        private static void EnsureInputModuleType()
+        {
+            if (s_inputModuleType != null) return;
+            s_inputModuleType = System.Type.GetType(
+                "UnityEngine.InputSystem.UI.InputSystemUIInputModule, Unity.InputSystem.ForUI");
+            if (s_inputModuleType == null)
+            {
+                s_inputModuleType = System.Type.GetType(
+                    "UnityEngine.InputSystem.UI.InputSystemUIInputModule, Unity.InputSystem");
+            }
+        }
+
         public void BuildBoard(List<PoleState> poles)
         {
+            EnsureInputSetup();
             ClearBoard();
 
-            // Load Torus model from Assets at runtime if not assigned
 #if UNITY_EDITOR
             if (_torusPrefab == null)
             {
@@ -29,21 +85,23 @@ namespace RingFlow.Gameplay
             {
                 var poleData = poles[p];
 
-                // 1. Create Cylinder Pole GameObject
                 var poleObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
                 poleObj.name = $"Pole_{p}" + (poleData.IsLocked ? " [LOCKED]" : "");
-                
-                // Set parent first so GetComponentInParent finds Root in OnEnable
+
                 poleObj.transform.SetParent(transform);
                 poleObj.transform.position = new Vector3(p * _poleSpacing, 2.0f, 0f);
                 poleObj.transform.localScale = new Vector3(0.2f, 2.0f, 0.2f);
 
-                // Add PoleView component
                 var poleView = poleObj.AddComponent<PoleView>();
                 poleView.PoleId = p;
                 _spawnedPoles.Add(poleView);
 
-                // Add locked pole color decoration
+                var capsule = poleObj.GetComponent<CapsuleCollider>();
+                if (capsule != null)
+                {
+                    capsule.radius = 1.5f;
+                }
+
                 if (poleData.IsLocked)
                 {
                     var renderer = poleObj.GetComponent<Renderer>();
@@ -54,7 +112,6 @@ namespace RingFlow.Gameplay
                     }
                 }
 
-                // 2. Create Rings
                 var ringList = new List<GameObject>();
                 for (int r = 0; r < poleData.Rings.Count; r++)
                 {
@@ -79,15 +136,20 @@ namespace RingFlow.Gameplay
                         ringObj.transform.localScale = new Vector3(4.0f, 0.08f, 4.0f);
                     }
 
-                    // Apply Material color matching RingColor
                     var ringRenderer = ringObj.GetComponentInChildren<Renderer>();
                     if (ringRenderer != null)
                     {
                         var mat = new Material(GetDefaultShader());
-                        mat.color = GetUnityColor(ringData.Color);
-
+                        mat.color = RingPalette.Get(ringData.Color);
                         ApplySpecialRingMaterial(mat, ringData.Type);
                         ringRenderer.sharedMaterial = mat;
+                    }
+
+                    // Strip the ring's collider so clicks pass through to the PoleView underneath.
+                    var col = ringObj.GetComponent<Collider>();
+                    if (col != null)
+                    {
+                        Destroy(col);
                     }
 
                     ringList.Add(ringObj);
@@ -112,21 +174,6 @@ namespace RingFlow.Gameplay
             if (s == null) s = Shader.Find("Universal Render Pipeline/Simple Lit");
             if (s == null) s = Shader.Find("Standard");
             return s;
-        }
-
-        private Color GetUnityColor(RingColor color)
-        {
-            return color switch
-            {
-                RingColor.Red => Color.red,
-                RingColor.Blue => Color.blue,
-                RingColor.Green => Color.green,
-                RingColor.Yellow => Color.yellow,
-                RingColor.Purple => new Color(0.5f, 0f, 0.5f),
-                RingColor.Orange => new Color(1f, 0.5f, 0f),
-                RingColor.Cyan => Color.cyan,
-                _ => Color.white
-            };
         }
 
         private void ApplySpecialRingMaterial(Material mat, RingType type)

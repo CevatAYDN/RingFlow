@@ -110,5 +110,81 @@ namespace RingFlow.Tests
             Assert.IsTrue(hasLockedPole, "World 4 levels must contain a Locked Pole.");
             Assert.IsTrue(hasKeyRing, "World 4 levels must contain a Key (Locked type) Ring.");
         }
+
+        [Test]
+        public void LevelGenerator_ProducesSolvableLevelAtHighDifficulty()
+        {
+            // Level 1500: World 30 (Master), which requires colorCount = 10.
+            // Safety limits should correct _poleCount to 11 (colorCount + 1), and cap at 12.
+            int currentLevel = 1500;
+            int colorCount = DifficultyCurve.ColorCountForLevel(currentLevel); // 10
+            int poleCount = DifficultyCurve.PoleCountForLevel(currentLevel); // 9
+            int maxCapacity = DifficultyCurve.MaxCapacityForLevel(currentLevel); // 4
+
+            if (poleCount < colorCount + 1) poleCount = colorCount + 1; // 11
+            if (poleCount > 12) poleCount = 12;
+
+            var levelData = LevelGenerator.GenerateLevel(currentLevel, seed: 1500 * 12345, poleCount, colorCount, maxCapacity);
+
+            Assert.IsNotNull(levelData);
+            Assert.AreEqual(currentLevel, levelData.LevelIndex);
+            Assert.AreEqual(11, levelData.Poles.Count);
+            Assert.Greater(levelData.TargetMoves, 0);
+
+            // Verify with solver
+            var board = new BoardState { PoleCount = levelData.Poles.Count };
+            for (int p = 0; p < levelData.Poles.Count; p++)
+            {
+                var poleData = levelData.Poles[p];
+                for (int r = 0; r < poleData.Rings.Count; r++)
+                {
+                    board.AddRing(p, poleData.Rings[r]);
+                }
+            }
+
+            var solveResult = LevelSolver.Solve(board, maxCapacity);
+            Assert.IsTrue(solveResult.IsSolvable);
+            Assert.AreEqual(levelData.TargetMoves, solveResult.MoveCount);
+        }
+
+        [Test]
+        public void BoardState_SimulatesPaintAndRainbowAndMysteryCorrectly()
+        {
+            // 1. Paint ring simulation
+            var board = new BoardState { PoleCount = 3 };
+            board.AddRing(0, new RingData(RingColor.Red, RingType.Standard));
+            
+            // Adding a Paint ring of Blue color should paint the top ring of the pole (Red) to Blue
+            // and the added ring itself should become Standard (Blue)
+            board.AddRing(0, new RingData(RingColor.Blue, RingType.Paint));
+            
+            Assert.AreEqual(2, board.GetRingCount(0));
+            Assert.AreEqual(RingColor.Blue, board.GetRingColor(0, 0)); // Painted from Red to Blue!
+            Assert.AreEqual(RingType.Standard, board.GetRingType(0, 0));
+            Assert.AreEqual(RingColor.Blue, board.GetRingColor(0, 1));
+            Assert.AreEqual(RingType.Standard, board.GetRingType(0, 1));
+
+            // 2. Rainbow ring simulation
+            var board2 = new BoardState { PoleCount = 3 };
+            board2.AddRing(0, new RingData(RingColor.Green, RingType.Standard));
+            
+            // Adding a Rainbow ring on top of Green should take the color Green and become Standard
+            board2.AddRing(0, new RingData(RingColor.None, RingType.Rainbow));
+            Assert.AreEqual(2, board2.GetRingCount(0));
+            Assert.AreEqual(RingColor.Green, board2.GetRingColor(0, 1));
+            Assert.AreEqual(RingType.Standard, board2.GetRingType(0, 1));
+
+            // 3. Mystery ring reveal simulation
+            var board3 = new BoardState { PoleCount = 3 };
+            board3.AddRing(0, new RingData(RingColor.Red, RingType.Mystery));
+            board3.AddRing(0, new RingData(RingColor.Blue, RingType.Standard));
+            
+            // Popping the top Standard ring (Blue) should reveal the Mystery ring (Red) under it
+            var popped = board3.PopRing(0);
+            Assert.AreEqual(RingColor.Blue, popped.Color);
+            Assert.AreEqual(1, board3.GetRingCount(0));
+            Assert.AreEqual(RingColor.Red, board3.GetRingColor(0, 0));
+            Assert.AreEqual(RingType.Standard, board3.GetRingType(0, 0)); // Converted to Standard!
+        }
     }
 }

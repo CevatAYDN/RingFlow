@@ -9,9 +9,13 @@ namespace RingFlow.Gameplay
     public class PausedState : IGameState
     {
         [Inject] private IAudioService _audio;
+        [Inject] private ISignalBus _signalBus;
 
         public ValueTask OnEnterAsync(object args, CancellationToken ct)
         {
+            // Show Pause UI
+            _signalBus?.Fire(new ShowScreenSignal(ScreenType.Pause));
+
             // GDD §12: pause %20
             if (_audio != null)
             {

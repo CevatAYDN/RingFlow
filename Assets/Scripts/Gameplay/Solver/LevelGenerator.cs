@@ -9,8 +9,8 @@ namespace RingFlow.Gameplay
     /// </summary>
     public static class LevelGenerator
     {
-        private static readonly int[] _sourcePoles = new int[10];
-        private static readonly int[] _targetPoles = new int[10];
+        private static readonly int[] _sourcePoles = new int[12];
+        private static readonly int[] _targetPoles = new int[12];
 
         public static LevelData GenerateLevel(int levelIndex, int seed, int poleCount, int colorCount, int maxCapacity)
         {

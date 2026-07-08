@@ -1,7 +1,6 @@
 using System;
 using System.Threading;
 using NUnit.Framework;
-using Nexus.Core;
 using Nexus.Core.Services;
 using RingFlow.Gameplay;
 

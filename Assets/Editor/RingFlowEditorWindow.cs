@@ -2,28 +2,73 @@ using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using RingFlow.Gameplay;
+using RingFlow.Gameplay.UI;
 using Nexus.Core;
 using Nexus.Core.FSM;
 using Nexus.Core.Services;
 
 namespace RingFlow.Editor
 {
+    /// <summary>
+    /// Editor control panel for RingFlow. Surfaces level generation, visual board
+    /// building, runtime state machine control, and accessibility settings.
+    /// </summary>
     public class RingFlowEditorWindow : EditorWindow
     {
+        // EditorPrefs keys
+        private const string PrefFoldGenerator = "RingFlow.Foldout.Generator";
+        private const string PrefFoldBuilder = "RingFlow.Foldout.Builder";
+        private const string PrefFoldRuntime = "RingFlow.Foldout.Runtime";
+        private const string PrefFoldSettings = "RingFlow.Foldout.Settings";
+        private const string PrefLevelIndex = "RingFlow.LevelIndex";
+        private const string PrefSeed = "RingFlow.Seed";
+        private const string PrefPoles = "RingFlow.Poles";
+        private const string PrefColors = "RingFlow.Colors";
+        private const string PrefMaxCap = "RingFlow.MaxCap";
+
+        // Cached header texture (one per window, not per OnGUI)
+        private static Texture2D s_headerTex;
+
         [MenuItem("Ring Flow/Game Control Panel &G", false, 1)]
         public static void ShowWindow()
         {
             var window = GetWindow<RingFlowEditorWindow>("Control Panel");
-            window.minSize = new Vector2(400, 600);
+            window.minSize = new Vector2(420, 620);
             window.Show();
         }
 
-        // Foldouts
-        private bool _foldoutGenerator = true;
-        private bool _foldoutVisualBuilder = true;
-        private bool _foldoutRuntime = true;
-        private bool _foldoutSettings = true;
+        [MenuItem("Ring Flow/Create Working Scene", false, 10)]
+        public static void CreateWorkingScene()
+        {
+            const string scenePath = "Assets/Scenes/RingFlow.unity";
+            if (System.IO.File.Exists(scenePath))
+            {
+                if (!EditorUtility.DisplayDialog("Scene Exists",
+                    $"A scene already exists at {scenePath}. Open it instead?", "Open", "Cancel"))
+                {
+                    return;
+                }
+                UnityEditor.SceneManagement.EditorSceneManager.OpenScene(scenePath);
+                return;
+            }
+
+            var scene = UnityEditor.SceneManagement.EditorSceneManager.NewScene(
+                UnityEditor.SceneManagement.NewSceneSetup.EmptyScene,
+                UnityEditor.SceneManagement.NewSceneMode.Single);
+
+            SetupNexusBootstrapper();
+
+            UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene, scenePath);
+            EditorUtility.DisplayDialog("Scene Created", $"Working scene saved to {scenePath}.", "OK");
+        }
+
+        // Foldouts (persisted via EditorPrefs)
+        private bool _foldoutGenerator;
+        private bool _foldoutVisualBuilder;
+        private bool _foldoutRuntime;
+        private bool _foldoutSettings;
 
         // Generator parameters
         private int _levelIndex = 1;
@@ -33,9 +78,9 @@ namespace RingFlow.Editor
         private int _maxCapacity = 4;
 
         // Solver / Generation Results
-        private LevelData _generatedLevel;
+        [NonSerialized] private LevelData _generatedLevel;
         private string _solveStatus = "No level loaded / generated.";
-        private List<string> _solutionSteps = new();
+        private readonly List<string> _solutionSteps = new();
         private Vector2 _solutionScroll;
 
         // Visual Builder parameters
@@ -43,6 +88,32 @@ namespace RingFlow.Editor
         private const float RingHeight = 0.5f;
 
         private Vector2 _mainScrollPosition;
+
+        private void OnEnable()
+        {
+            _foldoutGenerator = EditorPrefs.GetBool(PrefFoldGenerator, true);
+            _foldoutVisualBuilder = EditorPrefs.GetBool(PrefFoldBuilder, true);
+            _foldoutRuntime = EditorPrefs.GetBool(PrefFoldRuntime, true);
+            _foldoutSettings = EditorPrefs.GetBool(PrefFoldSettings, true);
+            _levelIndex = EditorPrefs.GetInt(PrefLevelIndex, 1);
+            _seed = EditorPrefs.GetInt(PrefSeed, 100);
+            _poleCount = EditorPrefs.GetInt(PrefPoles, 4);
+            _colorCount = EditorPrefs.GetInt(PrefColors, 3);
+            _maxCapacity = EditorPrefs.GetInt(PrefMaxCap, 4);
+        }
+
+        private void OnDisable()
+        {
+            EditorPrefs.SetBool(PrefFoldGenerator, _foldoutGenerator);
+            EditorPrefs.SetBool(PrefFoldBuilder, _foldoutVisualBuilder);
+            EditorPrefs.SetBool(PrefFoldRuntime, _foldoutRuntime);
+            EditorPrefs.SetBool(PrefFoldSettings, _foldoutSettings);
+            EditorPrefs.SetInt(PrefLevelIndex, _levelIndex);
+            EditorPrefs.SetInt(PrefSeed, _seed);
+            EditorPrefs.SetInt(PrefPoles, _poleCount);
+            EditorPrefs.SetInt(PrefColors, _colorCount);
+            EditorPrefs.SetInt(PrefMaxCap, _maxCapacity);
+        }
 
         private void OnGUI()
         {
@@ -69,11 +140,20 @@ namespace RingFlow.Editor
             {
                 using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
-                    _levelIndex = EditorGUILayout.IntField("Level Index", _levelIndex);
+                    EditorGUI.BeginChangeCheck();
+                    _levelIndex = EditorGUILayout.IntSlider("Level Index", _levelIndex, 1, WorldConfigSO.TotalLevels);
                     _seed = EditorGUILayout.IntField("Random Seed", _seed);
-                    _poleCount = EditorGUILayout.IntSlider("Poles Count", _poleCount, 3, 10);
-                    _colorCount = EditorGUILayout.IntSlider("Colors Count", _colorCount, 2, 8);
+                    _poleCount = EditorGUILayout.IntSlider("Poles Count", _poleCount, 3, 12);
+                    _colorCount = EditorGUILayout.IntSlider("Colors Count", _colorCount, 2, 10);
                     _maxCapacity = EditorGUILayout.IntSlider("Max Ring Capacity", _maxCapacity, 3, 5);
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        EditorPrefs.SetInt(PrefLevelIndex, _levelIndex);
+                        EditorPrefs.SetInt(PrefSeed, _seed);
+                        EditorPrefs.SetInt(PrefPoles, _poleCount);
+                        EditorPrefs.SetInt(PrefColors, _colorCount);
+                        EditorPrefs.SetInt(PrefMaxCap, _maxCapacity);
+                    }
 
                     EditorGUILayout.Space();
 
@@ -116,7 +196,7 @@ namespace RingFlow.Editor
 
             EditorGUILayout.Space();
 
-            // 2. SCENE VISUAL BUILDER (CYLINDERS & TORUS)
+            // 2. SCENE VISUAL BUILDER
             _foldoutVisualBuilder = EditorGUILayout.BeginFoldoutHeaderGroup(_foldoutVisualBuilder, "Scene Visual Board Builder");
             if (_foldoutVisualBuilder)
             {
@@ -141,7 +221,7 @@ namespace RingFlow.Editor
 
             EditorGUILayout.Space();
 
-            // 3. RUNTIME LIKECYCLE & ECONOMY DEBUGGER
+            // 3. RUNTIME LIFECYCLE & ECONOMY DEBUGGER
             _foldoutRuntime = EditorGUILayout.BeginFoldoutHeaderGroup(_foldoutRuntime, "PlayMode Lifecycle & State Controller");
             if (_foldoutRuntime)
             {
@@ -150,7 +230,7 @@ namespace RingFlow.Editor
                     if (!Application.isPlaying)
                     {
                         EditorGUILayout.HelpBox("Enter PlayMode to control game states, unlock progress, and inject coins/diamonds in real-time.", MessageType.Warning);
-                        
+
                         EditorGUILayout.Space();
                         if (GUILayout.Button("Setup Nexus Bootstrapper in Scene", GUILayout.Height(30)))
                         {
@@ -167,7 +247,7 @@ namespace RingFlow.Editor
 
             EditorGUILayout.Space();
 
-            // 4. ACCESSIBILITY & SETTINGS SENDER
+            // 4. ACCESSIBILITY & SETTINGS
             _foldoutSettings = EditorGUILayout.BeginFoldoutHeaderGroup(_foldoutSettings, "Accessibility & Localizer Settings");
             if (_foldoutSettings)
             {
@@ -180,7 +260,7 @@ namespace RingFlow.Editor
 
             EditorGUILayout.EndScrollView();
 
-            // --- EXECUTE ACTIONS OUTSIDE LAYOUT GROUPS ---
+            // Actions outside Layout groups
             if (triggerGenerate) GenerateLevel();
             if (triggerBuild) BuildBoardInScene();
             if (triggerClear) ClearSceneBoard();
@@ -197,19 +277,48 @@ namespace RingFlow.Editor
 
                     if (fsm != null)
                     {
-                        if (triggerGoMainMenu) fsm.ChangeStateAsync<MainMenuState>();
-                        if (triggerGoLevelSelect) fsm.ChangeStateAsync<LevelSelectState>();
-                        if (triggerGoPlaying) fsm.ChangeStateAsync<PlayingState>();
-                        if (triggerGoPaused) fsm.ChangeStateAsync<PausedState>();
-                        if (triggerGoWin) fsm.ChangeStateAsync<WinState>();
+                        if (triggerGoMainMenu)
+                        {
+                            NexusLog.Info("RingFlowEditorWindow", "FSMTransition", "", $"Requesting state change to MainMenuState. Current={fsm.CurrentState?.GetType().Name ?? "null"}");
+                            _ = fsm.ChangeStateAsync<MainMenuState>();
+                        }
+                        if (triggerGoLevelSelect)
+                        {
+                            NexusLog.Info("RingFlowEditorWindow", "FSMTransition", "", "Requesting state change to LevelSelectState");
+                            _ = fsm.ChangeStateAsync<LevelSelectState>();
+                        }
+                        if (triggerGoPlaying)
+                        {
+                            NexusLog.Info("RingFlowEditorWindow", "FSMTransition", "", "Requesting state change to PlayingState");
+                            _ = fsm.ChangeStateAsync<PlayingState>();
+                        }
+                        if (triggerGoPaused)
+                        {
+                            NexusLog.Info("RingFlowEditorWindow", "FSMTransition", "", "Requesting state change to PausedState");
+                            _ = fsm.ChangeStateAsync<PausedState>();
+                        }
+                        if (triggerGoWin)
+                        {
+                            NexusLog.Info("RingFlowEditorWindow", "FSMTransition", "", "Requesting state change to WinState");
+                            _ = fsm.ChangeStateAsync<WinState>();
+                        }
                     }
 
                     if (progress != null && economy != null)
                     {
-                        if (triggerAddCoins) economy.Earn("Coins", 100);
-                        if (triggerAddDiamonds) economy.Earn("Diamonds", 10);
+                        if (triggerAddCoins)
+                        {
+                            NexusLog.Info("RingFlowEditorWindow", "EconomyCheat", "", "Admin Cheat: Adding 100 Coins");
+                            economy.Earn("Coins", 100);
+                        }
+                        if (triggerAddDiamonds)
+                        {
+                            NexusLog.Info("RingFlowEditorWindow", "EconomyCheat", "", "Admin Cheat: Adding 10 Diamonds");
+                            economy.Earn("Diamonds", 10);
+                        }
                         if (triggerUnlockAll)
                         {
+                            NexusLog.Info("RingFlowEditorWindow", "ProgressionCheat", "", "Admin Cheat: Unlocking all levels & worlds");
                             progress.MaxUnlockedLevel.Value = WorldConfigSO.TotalLevels;
                             for (int i = 0; i < progress.UnlockedWorlds.Count; i++)
                             {
@@ -223,72 +332,117 @@ namespace RingFlow.Editor
 
         private void DrawHeader(string title)
         {
-            var headerStyle = new GUIStyle(GUI.skin.box);
-            headerStyle.normal.background = MakeTex(2, 2, new Color(0.15f, 0.15f, 0.18f));
-            headerStyle.alignment = TextAnchor.MiddleCenter;
-            headerStyle.fontSize = 14;
-            headerStyle.fontStyle = FontStyle.Bold;
+            var headerStyle = new GUIStyle(GUI.skin.box)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = 14,
+                fontStyle = FontStyle.Bold,
+            };
+            if (s_headerTex == null)
+            {
+                s_headerTex = new Texture2D(2, 2);
+                var px = new Color[4] { new Color(0.15f, 0.15f, 0.18f), new Color(0.15f, 0.15f, 0.18f), new Color(0.15f, 0.15f, 0.18f), new Color(0.15f, 0.15f, 0.18f) };
+                s_headerTex.SetPixels(px);
+                s_headerTex.Apply();
+            }
+            headerStyle.normal.background = s_headerTex;
             headerStyle.normal.textColor = new Color(0.2f, 0.8f, 1.0f);
-            
+
             GUILayout.Box(title, headerStyle, GUILayout.ExpandWidth(true), GUILayout.Height(40));
             EditorGUILayout.Space();
-        }
-
-        private Texture2D MakeTex(int width, int height, Color col)
-        {
-            Color[] pix = new Color[width * height];
-            for (int i = 0; i < pix.Length; ++i) pix[i] = col;
-            Texture2D result = new Texture2D(width, height);
-            result.SetPixels(pix);
-            result.Apply();
-            return result;
         }
 
         private void ApplyGddCurveParams()
         {
             _poleCount = DifficultyCurve.PoleCountForLevel(_levelIndex);
             _colorCount = DifficultyCurve.ColorCountForLevel(_levelIndex);
-            _maxCapacity = 4;
+            _maxCapacity = DifficultyCurve.MaxCapacityForLevel(_levelIndex);
+
+            if (_poleCount < _colorCount + 1) _poleCount = _colorCount + 1;
+            if (_poleCount > 12) _poleCount = 12;
+
+            EditorPrefs.SetInt(PrefPoles, _poleCount);
+            EditorPrefs.SetInt(PrefColors, _colorCount);
+            EditorPrefs.SetInt(PrefMaxCap, _maxCapacity);
+
+            NexusLog.Info("RingFlowEditorWindow", "ApplyGddCurveParams", _levelIndex.ToString(),
+                $"Applied GDD curve difficulty parameters: Poles={_poleCount}, Colors={_colorCount}, MaxCapacity={_maxCapacity}");
         }
 
         private void GenerateLevel()
         {
+            if (_levelIndex < 1 || _levelIndex > WorldConfigSO.TotalLevels)
+            {
+                NexusLog.Warn("RingFlowEditorWindow", "GenerateLevel", _levelIndex.ToString(),
+                    $"Level index {_levelIndex} is out of bounds (1..{WorldConfigSO.TotalLevels}). Adjusting.");
+                _levelIndex = Mathf.Clamp(_levelIndex, 1, WorldConfigSO.TotalLevels);
+                EditorPrefs.SetInt(PrefLevelIndex, _levelIndex);
+            }
+
+            if (_poleCount < _colorCount + 1)
+            {
+                int correctedPoles = _colorCount + 1;
+                NexusLog.Warn("RingFlowEditorWindow", "GenerateLevel", _levelIndex.ToString(),
+                    $"Pole count ({_poleCount}) is less than Color count ({_colorCount}) + 1. Correcting Pole count to {correctedPoles}.");
+                _poleCount = correctedPoles;
+                EditorPrefs.SetInt(PrefPoles, _poleCount);
+            }
+
+            if (_poleCount > 12)
+            {
+                NexusLog.Warn("RingFlowEditorWindow", "GenerateLevel", _levelIndex.ToString(),
+                    $"Pole count ({_poleCount}) exceeds maximum capacity of 12. Capping at 12.");
+                _poleCount = 12;
+                EditorPrefs.SetInt(PrefPoles, _poleCount);
+            }
+
+            NexusLog.Info("RingFlowEditorWindow", "GenerateLevel", _levelIndex.ToString(),
+                $"Attempting to generate level {_levelIndex} with Seed={_seed}, Poles={_poleCount}, Colors={_colorCount}, MaxCapacity={_maxCapacity}");
+
             _generatedLevel = LevelGenerator.GenerateLevel(_levelIndex, _seed, _poleCount, _colorCount, _maxCapacity);
 
-            if (_generatedLevel != null)
+            if (_generatedLevel == null)
             {
-                // Run Solver
-                var board = new BoardState { PoleCount = _generatedLevel.Poles.Count };
-                for (int p = 0; p < _generatedLevel.Poles.Count; p++)
-                {
-                    var pole = _generatedLevel.Poles[p];
-                    for (int r = 0; r < pole.Rings.Count; r++)
-                    {
-                        board.AddRing(p, pole.Rings[r]);
-                    }
-                }
+                _solveStatus = "Generation failed (exhausted 50 seeds).";
+                _solutionSteps.Clear();
+                NexusLog.Error("RingFlowEditorWindow", "GenerateLevel", _levelIndex.ToString(),
+                    $"Failed to generate a solvable level for index {_levelIndex} after 50 attempts.");
+                return;
+            }
 
-                var solveResult = LevelSolver.Solve(board, _maxCapacity);
-                if (solveResult.IsSolvable)
+            var board = new BoardState { PoleCount = _generatedLevel.Poles.Count };
+            for (int p = 0; p < _generatedLevel.Poles.Count; p++)
+            {
+                var pole = _generatedLevel.Poles[p];
+                for (int r = 0; r < pole.Rings.Count; r++)
                 {
-                    _solveStatus = $"Solvable in {solveResult.MoveCount} moves.";
-                    _solutionSteps.Clear();
-                    foreach (var move in solveResult.Moves)
-                    {
-                        _solutionSteps.Add($"Move top ring from Pole {move.FromPoleId} to Pole {move.ToPoleId}");
-                    }
+                    board.AddRing(p, pole.Rings[r]);
                 }
-                else
+            }
+
+            var solveResult = LevelSolver.Solve(board, _maxCapacity);
+            if (solveResult.IsSolvable)
+            {
+                _solveStatus = $"Solvable in {solveResult.MoveCount} moves.";
+                _solutionSteps.Clear();
+                foreach (var move in solveResult.Moves)
                 {
-                    _solveStatus = "Unsolvable! Level generator seed failed validation.";
-                    _solutionSteps.Clear();
+                    _solutionSteps.Add($"Move top ring from Pole {move.FromPoleId} to Pole {move.ToPoleId}");
                 }
+                NexusLog.Info("RingFlowEditorWindow", "GenerateLevel", _levelIndex.ToString(),
+                    $"Successfully generated and solved level {_levelIndex}. Optimal moves: {solveResult.MoveCount}.");
+            }
+            else
+            {
+                _solveStatus = "Unsolvable! Level generator seed failed validation.";
+                _solutionSteps.Clear();
+                NexusLog.Error("RingFlowEditorWindow", "GenerateLevel", _levelIndex.ToString(),
+                    $"Level generator produced an unsolvable board state for Level {_levelIndex} (Seed={_seed}). Check mechanics.");
             }
         }
 
         private void BuildBoardInScene()
         {
-            // Try to load board from Nexus's GameplayModel if playing
             List<PoleState> polesToBuild = null;
             if (Application.isPlaying)
             {
@@ -300,36 +454,30 @@ namespace RingFlow.Editor
                 }
             }
 
-            if (polesToBuild == null)
+            if (polesToBuild == null && _generatedLevel == null)
             {
-                // Fallback to editor generated level in edit mode
-                if (_generatedLevel == null)
-                {
-                    EditorUtility.DisplayDialog("Error", "Please generate a level first VEYA enter PlayMode to load from active game!", "OK");
-                    return;
-                }
-            }
-
-            ClearSceneBoard();
-
-            // Root game object
-            var boardRoot = new GameObject("RingFlow_VisualBoard");
-            Undo.RegisterCreatedObjectUndo(boardRoot, "Build Visual Board");
-
-            // Load Torus model
-            var torusModel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Models/Torus.obj");
-            if (torusModel == null)
-            {
-                Debug.LogWarning("[RingFlowEditor] Torus.obj not found in Assets/Models. Creating simple disk primitives instead.");
+                EditorUtility.DisplayDialog("Error", "Please generate a level first OR enter PlayMode to load from active game!", "OK");
+                return;
             }
 
             int poleCount = polesToBuild != null ? polesToBuild.Count : _generatedLevel.Poles.Count;
+            NexusLog.Info("RingFlowEditorWindow", "BuildBoardInScene", "", $"Building visual board in scene with {poleCount} poles.");
 
-            // Build Poles & Rings
+            ClearSceneBoard();
+
+            var boardRoot = new GameObject("RingFlow_VisualBoard");
+            Undo.RegisterCreatedObjectUndo(boardRoot, "Build Visual Board");
+
+            var torusModel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Models/Torus.obj");
+            if (torusModel == null)
+            {
+                NexusLog.Warn("RingFlowEditorWindow", "BuildBoardInScene", "", "Torus.obj not found in Assets/Models. Using Cylinder disks as fallback rings.");
+            }
+
             for (int p = 0; p < poleCount; p++)
             {
                 bool isLocked = false;
-                List<RingData> rings = new List<RingData>();
+                List<RingData> rings = new();
 
                 if (polesToBuild != null)
                 {
@@ -344,22 +492,32 @@ namespace RingFlow.Editor
                     rings = poleData.Rings;
                 }
 
-                // 1. Spawn Pole Cylinder
                 var poleObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
                 poleObj.name = $"Pole_{p}" + (isLocked ? " [LOCKED]" : "");
                 poleObj.transform.SetParent(boardRoot.transform);
                 poleObj.transform.position = new Vector3(p * PoleSpacing, 2.0f, 0f);
                 poleObj.transform.localScale = new Vector3(0.2f, 2.0f, 0.2f);
 
-                // Add locked pole color decoration
+                var poleView = poleObj.AddComponent<PoleView>();
+                poleView.PoleId = p;
+
+                var capsule = poleObj.GetComponent<CapsuleCollider>();
+                if (capsule != null)
+                {
+                    capsule.radius = 1.5f;
+                }
+
                 if (isLocked)
                 {
                     var renderer = poleObj.GetComponent<Renderer>();
-                    renderer.sharedMaterial = new Material(GetDefaultShader());
-                    renderer.sharedMaterial.color = Color.black; // locked poles are dark
+                    if (renderer != null)
+                    {
+                        var poleMat = new Material(GetDefaultShader());
+                        poleMat.color = Color.black;
+                        renderer.sharedMaterial = poleMat;
+                    }
                 }
 
-                // 2. Spawn Rings
                 for (int r = 0; r < rings.Count; r++)
                 {
                     var ringData = rings[r];
@@ -370,14 +528,12 @@ namespace RingFlow.Editor
                         ringObj = Instantiate(torusModel);
                         ringObj.name = $"Ring_{r}_{ringData.Color}_{ringData.Type}";
                         ringObj.transform.SetParent(poleObj.transform);
-                        // Convert parent space (cylinder is scaled, so we adjust local position/scale)
                         ringObj.transform.localPosition = new Vector3(0f, -0.9f + (r * 0.4f), 0f);
                         ringObj.transform.localRotation = Quaternion.identity;
                         ringObj.transform.localScale = new Vector3(3.5f, 0.2f, 3.5f);
                     }
                     else
                     {
-                        // Fallback cylinder disk
                         ringObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
                         ringObj.name = $"Ring_{r}_{ringData.Color}_{ringData.Type}";
                         ringObj.transform.SetParent(poleObj.transform);
@@ -385,59 +541,26 @@ namespace RingFlow.Editor
                         ringObj.transform.localScale = new Vector3(4.0f, 0.08f, 4.0f);
                     }
 
-                    // Apply Material Color matching RingColor
                     var ringRenderer = ringObj.GetComponentInChildren<Renderer>();
                     if (ringRenderer != null)
                     {
                         var mat = new Material(GetDefaultShader());
-                        
-                        // Set basic color
-                        mat.color = GetUnityColor(ringData.Color);
-
-                        // Special ring visual adjustments
-                        switch (ringData.Type)
-                        {
-                            case RingType.Frozen:
-                                mat.color = Color.cyan; // Frozen ice coating
-                                break;
-                            case RingType.Locked:
-                                mat.color = new Color(1f, 0.84f, 0f); // Gold key color
-                                break;
-                            case RingType.Stone:
-                                mat.color = Color.grey; // Stone
-                                break;
-                            case RingType.Glass:
-                                mat.color = new Color(1f, 1f, 1f, 0.3f); // transparent Glass
-                                // Enable Alpha Blend
-                                mat.SetFloat("_Mode", 3f);
-                                mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                                mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                                mat.SetInt("_ZWrite", 0);
-                                mat.DisableKeyword("_ALPHATEST_ON");
-                                mat.EnableKeyword("_ALPHABLEND_ON");
-                                mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-                                mat.renderQueue = 3000;
-                                break;
-                            case RingType.Rainbow:
-                                mat.color = Color.magenta; // Magenta standin for rainbow
-                                break;
-                            case RingType.Ghost:
-                                mat.color = new Color(mat.color.r, mat.color.g, mat.color.b, 0.1f); // nearly invisible until selected
-                                mat.SetFloat("_Mode", 3f);
-                                mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                                mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                                mat.SetInt("_ZWrite", 0);
-                                mat.renderQueue = 3000;
-                                break;
-                        }
-
+                        mat.color = RingPalette.Get(ringData.Color);
+                        ApplySpecialRingMaterial(mat, ringData.Type);
                         ringRenderer.sharedMaterial = mat;
+                    }
+
+                    var col = ringObj.GetComponent<Collider>();
+                    if (col != null)
+                    {
+                        DestroyImmediate(col);
                     }
                 }
             }
 
             Selection.activeGameObject = boardRoot;
             SceneView.FrameLastActiveSceneView();
+            NexusLog.Info("RingFlowEditorWindow", "BuildBoardInScene", "", "Visual board successfully built in the scene.");
         }
 
         private void ClearSceneBoard()
@@ -446,22 +569,8 @@ namespace RingFlow.Editor
             if (boardRoot != null)
             {
                 Undo.DestroyObjectImmediate(boardRoot);
+                NexusLog.Info("RingFlowEditorWindow", "ClearSceneBoard", "", "Cleared visual board from scene.");
             }
-        }
-
-        private Color GetUnityColor(RingColor color)
-        {
-            return color switch
-            {
-                RingColor.Red => Color.red,
-                RingColor.Blue => Color.blue,
-                RingColor.Green => Color.green,
-                RingColor.Yellow => Color.yellow,
-                RingColor.Purple => new Color(0.5f, 0f, 0.5f),
-                RingColor.Orange => new Color(1f, 0.5f, 0f),
-                RingColor.Cyan => Color.cyan,
-                _ => Color.white
-            };
         }
 
         private void DrawRuntimeControls(
@@ -479,7 +588,7 @@ namespace RingFlow.Editor
 
             if (fsm != null)
             {
-                EditorGUILayout.LabelField($"Active State: {fsm.CurrentState?.GetType().Name}", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField($"Active State: {fsm.CurrentState?.GetType().Name ?? "None"}", EditorStyles.boldLabel);
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
@@ -524,38 +633,41 @@ namespace RingFlow.Editor
             var settings = context?.TryResolve<SettingsModel>();
             var localization = context?.TryResolve<ILocalizationService>();
 
-            if (settings != null)
+            if (settings == null)
             {
-                // Music & SFX
-                bool newMusic = EditorGUILayout.Toggle("Music Enabled", settings.MusicEnabled.Value);
-                if (newMusic != settings.MusicEnabled.Value) settings.MusicEnabled.Value = newMusic;
-
-                bool newSfx = EditorGUILayout.Toggle("SFX Enabled", settings.SfxEnabled.Value);
-                if (newSfx != settings.SfxEnabled.Value) settings.SfxEnabled.Value = newSfx;
-
-                bool newHaptic = EditorGUILayout.Toggle("Haptic Feedback", settings.HapticEnabled.Value);
-                if (newHaptic != settings.HapticEnabled.Value) settings.HapticEnabled.Value = newHaptic;
-
-                // Color Blind
-                int newBlind = EditorGUILayout.IntSlider("Color Blind Mode", settings.ColorBlindMode.Value, 0, 3);
-                if (newBlind != settings.ColorBlindMode.Value) settings.ColorBlindMode.Value = newBlind;
-
-                // Language
-                string[] langs = { "en", "tr", "id", "es", "fr", "de", "pt", "it", "ar", "hi", "ru", "ja", "zh", "ko", "vi" };
-                int currentLangIndex = Array.IndexOf(langs, settings.LanguageCode.Value);
-                if (currentLangIndex == -1) currentLangIndex = 0;
-
-                int newLangIndex = EditorGUILayout.Popup("Language", currentLangIndex, langs);
-                if (newLangIndex != currentLangIndex)
-                {
-                    settings.LanguageCode.Value = langs[newLangIndex];
-                }
+                EditorGUILayout.HelpBox("Enter PlayMode to control settings reactively. The Nexus context resolves SettingsModel at runtime.", MessageType.Info);
+                return;
             }
-            else
+
+            bool newMusic = EditorGUILayout.Toggle("Music Enabled", settings.MusicEnabled.Value);
+            if (newMusic != settings.MusicEnabled.Value) settings.MusicEnabled.Value = newMusic;
+
+            bool newSfx = EditorGUILayout.Toggle("SFX Enabled", settings.SfxEnabled.Value);
+            if (newSfx != settings.SfxEnabled.Value) settings.SfxEnabled.Value = newSfx;
+
+            bool newHaptic = EditorGUILayout.Toggle("Haptic Feedback", settings.HapticEnabled.Value);
+            if (newHaptic != settings.HapticEnabled.Value) settings.HapticEnabled.Value = newHaptic;
+
+            int newBlind = EditorGUILayout.IntSlider("Color Blind Mode", settings.ColorBlindMode.Value, 0, 3);
+            if (newBlind != settings.ColorBlindMode.Value) settings.ColorBlindMode.Value = newBlind;
+
+            string[] langs = { "en", "tr", "id", "es", "fr", "de", "pt", "it", "ar", "hi", "ru", "ja", "zh", "ko", "vi" };
+            int currentLangIndex = Array.IndexOf(langs, settings.LanguageCode.Value);
+            if (currentLangIndex == -1) currentLangIndex = 0;
+
+            int newLangIndex = EditorGUILayout.Popup("Language", currentLangIndex, langs);
+            if (newLangIndex != currentLangIndex)
             {
-                EditorGUILayout.HelpBox("Settings parameters can be controlled reactively in PlayMode.", MessageType.Info);
+                settings.LanguageCode.Value = langs[newLangIndex];
+            }
+
+            if (localization != null)
+            {
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField($"Current Language: {localization.CurrentLanguage ?? "—"}", EditorStyles.boldLabel);
             }
         }
+
         private Shader GetDefaultShader()
         {
             var s = Shader.Find("Universal Render Pipeline/Lit");
@@ -564,26 +676,82 @@ namespace RingFlow.Editor
             return s;
         }
 
-        private void SetupNexusBootstrapper()
+        private static System.Type ResolveInputSystemUIInputModuleType()
         {
-            var root = FindAnyObjectByType<Root>();
-            if (root != null)
+            return System.Type.GetType("UnityEngine.InputSystem.UI.InputSystemUIInputModule, Unity.InputSystem.ForUI")
+                ?? System.Type.GetType("UnityEngine.InputSystem.UI.InputSystemUIInputModule, Unity.InputSystem");
+        }
+
+        private static void AttachInputModule(GameObject target, System.Type moduleType)
+        {
+            if (target == null || moduleType == null) return;
+            var instance = target.AddComponent(moduleType);
+            if (instance != null) Undo.RegisterCreatedObjectUndo(instance, "Attach Input System Module");
+        }
+
+        private void ApplySpecialRingMaterial(Material mat, RingType type)
+        {
+            switch (type)
             {
+                case RingType.Frozen:
+                    mat.color = Color.cyan;
+                    break;
+                case RingType.Locked:
+                    mat.color = new Color(1f, 0.84f, 0f);
+                    break;
+                case RingType.Stone:
+                    mat.color = Color.grey;
+                    break;
+                case RingType.Glass:
+                    mat.color = new Color(1f, 1f, 1f, 0.3f);
+                    mat.SetFloat("_Mode", 3f);
+                    mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                    mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                    mat.SetInt("_ZWrite", 0);
+                    mat.EnableKeyword("_ALPHABLEND_ON");
+                    mat.renderQueue = 3000;
+                    break;
+                case RingType.Rainbow:
+                    mat.color = Color.magenta;
+                    break;
+                case RingType.Ghost:
+                    mat.color = new Color(mat.color.r, mat.color.g, mat.color.b, 0.1f);
+                    mat.SetFloat("_Mode", 3f);
+                    mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                    mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                    mat.SetInt("_ZWrite", 0);
+                    mat.renderQueue = 3000;
+                    break;
+            }
+        }
+
+        private static void SetupNexusBootstrapper()
+        {
+            NexusLog.Info("RingFlowEditorWindow", "SetupNexusBootstrapper", "", $"Setting up Nexus Bootstrapper in active scene. PlayMode={Application.isPlaying}");
+
+            var existingRoot = FindAnyObjectByType<Root>();
+            if (existingRoot != null)
+            {
+                NexusLog.Warn("RingFlowEditorWindow", "SetupNexusBootstrapper", "", "Nexus Bootstrapper already exists in the scene!");
                 EditorUtility.DisplayDialog("Setup", "Nexus Bootstrapper already exists in the scene!", "OK");
                 return;
             }
 
-            // Create ContextData asset if missing
-            string assetPath = "Assets/Settings/GameplayContextData.asset";
+            if (Application.isPlaying)
+            {
+                EditorUtility.DisplayDialog("Setup", "Cannot run setup during PlayMode. Exit PlayMode first.", "OK");
+                return;
+            }
+
+            // 1. Create ContextData asset if missing
+            const string assetPath = "Assets/Settings/GameplayContextData.asset";
             var contextData = AssetDatabase.LoadAssetAtPath<ContextData>(assetPath);
             if (contextData == null)
             {
-                // Ensure Settings directory exists
                 if (!AssetDatabase.IsValidFolder("Assets/Settings"))
                 {
                     AssetDatabase.CreateFolder("Assets", "Settings");
                 }
-
                 contextData = ScriptableObject.CreateInstance<ContextData>();
                 contextData.AssemblyScopes = new[] { "RingFlow" };
                 contextData.EnableAutoDiscovery = true;
@@ -591,11 +759,10 @@ namespace RingFlow.Editor
                 AssetDatabase.SaveAssets();
             }
 
-            // Spawn NexusRoot GameObject
+            // 2. Spawn NexusRoot GameObject
             var rootObj = new GameObject("NexusRoot");
             var newRoot = rootObj.AddComponent<Root>();
 
-            // Assign ContextData using SerializedProperty
             var serializedObject = new SerializedObject(newRoot);
             var prop = serializedObject.FindProperty("contextData");
             if (prop != null)
@@ -604,38 +771,57 @@ namespace RingFlow.Editor
                 serializedObject.ApplyModifiedProperties();
             }
 
-            // Add BoardView component so it initializes and manages scene board dynamically at runtime
+            // 3. BoardView for runtime board management
             var boardView = rootObj.AddComponent<BoardView>();
-            // Pre-assign torus model if it exists in Assets
             var torusModel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Models/Torus.obj");
             if (torusModel != null)
             {
-                var torusField = typeof(BoardView).GetField("_torusPrefab", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                var torusField = typeof(BoardView).GetField("_torusPrefab",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 if (torusField != null)
                 {
                     torusField.SetValue(boardView, torusModel);
                 }
             }
 
-            // Ensure EventSystem exists in the scene for click events
+            // 4. GameplayLifecycle (binds models, services, commands, FSM)
+            rootObj.AddComponent<GameplayLifecycle>();
+
+            // 5. UIRoot creates the Canvas and all UI screens
+            rootObj.AddComponent<UIRoot>();
+
+            // 6. EventSystem + InputSystemUIInputModule
             var eventSystem = FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>();
             if (eventSystem == null)
             {
                 var esObj = new GameObject("EventSystem");
-                esObj.AddComponent<UnityEngine.EventSystems.EventSystem>();
-                esObj.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                eventSystem = esObj.AddComponent<UnityEngine.EventSystems.EventSystem>();
             }
-
-            // Ensure PhysicsRaycaster exists on Main Camera so we can click 3D Cylinder poles
-            var mainCamera = Camera.main;
-            if (mainCamera != null && mainCamera.GetComponent<UnityEngine.EventSystems.PhysicsRaycaster>() == null)
+            var oldModule = eventSystem.GetComponent<BaseInputModule>();
+            var newInputModuleType = ResolveInputSystemUIInputModuleType();
+            if (oldModule != null && newInputModuleType != null && !newInputModuleType.IsInstanceOfType(oldModule))
             {
-                mainCamera.gameObject.AddComponent<UnityEngine.EventSystems.PhysicsRaycaster>();
+                Undo.DestroyObjectImmediate(oldModule);
+                AttachInputModule(eventSystem.gameObject, newInputModuleType);
+            }
+            else if (oldModule == null && newInputModuleType != null)
+            {
+                AttachInputModule(eventSystem.gameObject, newInputModuleType);
             }
 
-            // Mark Scene dirty so Unity prompts to save
-            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
+            // 7. PhysicsRaycaster on every camera so 3D pole colliders forward IPointerDownHandler events
+            foreach (var cam in FindObjectsByType<Camera>())
+            {
+                if (cam != null && cam.GetComponent<UnityEngine.EventSystems.PhysicsRaycaster>() == null)
+                {
+                    Undo.AddComponent<UnityEngine.EventSystems.PhysicsRaycaster>(cam.gameObject);
+                }
+            }
 
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
+                UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
+
+            NexusLog.Info("RingFlowEditorWindow", "SetupNexusBootstrapper", "", "Nexus Bootstrapper successfully added to the active scene.");
             EditorUtility.DisplayDialog("Setup", "Nexus Bootstrapper successfully added to the active scene! Press Play to run.", "OK");
         }
     }

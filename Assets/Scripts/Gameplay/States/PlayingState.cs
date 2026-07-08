@@ -14,6 +14,9 @@ namespace RingFlow.Gameplay
 
         public ValueTask OnEnterAsync(object args, CancellationToken ct)
         {
+            // Show Gameplay HUD
+            _signalBus?.Fire(new ShowScreenSignal(ScreenType.Gameplay));
+
             // GDD §12: oyun %40 (Boss seviyesiyse %80)
             if (_audio != null)
             {

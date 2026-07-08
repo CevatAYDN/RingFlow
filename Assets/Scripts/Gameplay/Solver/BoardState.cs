@@ -9,7 +9,7 @@ namespace RingFlow.Gameplay
     /// </summary>
     public struct BoardState : IEquatable<BoardState>
     {
-        // Renkler, Halka Sayısı ve Kilit/Buz bayrakları için 10 uint (Direkler)
+        // Renkler, Halka Sayısı ve Kilit/Buz bayrakları için 12 uint (Direkler)
         public uint Pole0;
         public uint Pole1;
         public uint Pole2;
@@ -20,8 +20,10 @@ namespace RingFlow.Gameplay
         public uint Pole7;
         public uint Pole8;
         public uint Pole9;
+        public uint Pole10;
+        public uint Pole11;
 
-        // Halka tipleri (Mystery, Paint, Chain vb.) için 10 uint
+        // Halka tipleri (Mystery, Paint, Chain vb.) için 12 uint
         public uint Types0;
         public uint Types1;
         public uint Types2;
@@ -32,6 +34,8 @@ namespace RingFlow.Gameplay
         public uint Types7;
         public uint Types8;
         public uint Types9;
+        public uint Types10;
+        public uint Types11;
 
         public int PoleCount;
 
@@ -49,6 +53,8 @@ namespace RingFlow.Gameplay
                 7 => Pole7,
                 8 => Pole8,
                 9 => Pole9,
+                10 => Pole10,
+                11 => Pole11,
                 _ => 0
             };
         }
@@ -67,6 +73,8 @@ namespace RingFlow.Gameplay
                 case 7: Pole7 = value; break;
                 case 8: Pole8 = value; break;
                 case 9: Pole9 = value; break;
+                case 10: Pole10 = value; break;
+                case 11: Pole11 = value; break;
             }
         }
 
@@ -84,6 +92,8 @@ namespace RingFlow.Gameplay
                 7 => Types7,
                 8 => Types8,
                 9 => Types9,
+                10 => Types10,
+                11 => Types11,
                 _ => 0
             };
         }
@@ -102,6 +112,8 @@ namespace RingFlow.Gameplay
                 case 7: Types7 = value; break;
                 case 8: Types8 = value; break;
                 case 9: Types9 = value; break;
+                case 10: Types10 = value; break;
+                case 11: Types11 = value; break;
             }
         }
 
@@ -249,10 +261,36 @@ namespace RingFlow.Gameplay
 
             int count = GetRingCount(poleIndex);
 
-            // Boyama kuralı
-            if (count > 0 && GetTopRingType(poleIndex) == RingType.Paint)
+            // Paint Kontrolü 1 — Gelen halka Paint ise altındaki halkayı boyar ve kendisi Standard olur
+            if (ring.Type == RingType.Paint)
+            {
+                if (count > 0)
+                {
+                    SetRingColor(poleIndex, count - 1, ring.Color);
+                }
+                ring.Type = RingType.Standard;
+            }
+            // Paint Kontrolü 2 — Paint halka üzerine gelen halkayı boyar ve Paint standartlaşır
+            else if (count > 0 && GetTopRingType(poleIndex) == RingType.Paint)
             {
                 ring.Color = GetTopRingColor(poleIndex);
+                SetRingType(poleIndex, count - 1, RingType.Standard);
+            }
+
+            // Rainbow Kontrolü 1 — Gelen halka Rainbow ise yerleştiği halkanın rengini alır ve standartlaşır
+            if (ring.Type == RingType.Rainbow)
+            {
+                if (count > 0)
+                {
+                    ring.Color = GetTopRingColor(poleIndex);
+                    ring.Type = RingType.Standard;
+                }
+            }
+            // Rainbow Kontrolü 2 — Rainbow halka üzerine gelen halkanın rengini kopyalar ve standartlaşır
+            else if (count > 0 && GetTopRingType(poleIndex) == RingType.Rainbow)
+            {
+                SetRingColor(poleIndex, count - 1, ring.Color);
+                SetRingType(poleIndex, count - 1, RingType.Standard);
             }
 
             SetRingColor(poleIndex, count, ring.Color);
@@ -279,9 +317,37 @@ namespace RingFlow.Gameplay
         public void AddRingSimple(int poleIndex, RingData ring)
         {
             int count = GetRingCount(poleIndex);
-            if (count > 0 && GetTopRingType(poleIndex) == RingType.Paint)
+
+            // Paint Kontrolü 1 — Gelen halka Paint ise altındaki halkayı boyar ve kendisi Standard olur
+            if (ring.Type == RingType.Paint)
+            {
+                if (count > 0)
+                {
+                    SetRingColor(poleIndex, count - 1, ring.Color);
+                }
+                ring.Type = RingType.Standard;
+            }
+            // Paint Kontrolü 2 — Paint halka üzerine gelen halkayı boyar ve Paint standartlaşır
+            else if (count > 0 && GetTopRingType(poleIndex) == RingType.Paint)
             {
                 ring.Color = GetTopRingColor(poleIndex);
+                SetRingType(poleIndex, count - 1, RingType.Standard);
+            }
+
+            // Rainbow Kontrolü 1 — Gelen halka Rainbow ise yerleştiği halkanın rengini alır ve standartlaşır
+            if (ring.Type == RingType.Rainbow)
+            {
+                if (count > 0)
+                {
+                    ring.Color = GetTopRingColor(poleIndex);
+                    ring.Type = RingType.Standard;
+                }
+            }
+            // Rainbow Kontrolü 2 — Rainbow halka üzerine gelen halkanın rengini kopyalar ve standartlaşır
+            else if (count > 0 && GetTopRingType(poleIndex) == RingType.Rainbow)
+            {
+                SetRingColor(poleIndex, count - 1, ring.Color);
+                SetRingType(poleIndex, count - 1, RingType.Standard);
             }
 
             SetRingColor(poleIndex, count, ring.Color);
@@ -305,6 +371,14 @@ namespace RingFlow.Gameplay
             {
                 SetTopRingFrozen(poleIndex, false);
             }
+
+            // Mystery Kontrolü: Yeni en üstte kalan halka Mystery ise açığa çıkar (Standartlaşır)
+            int newCount = count - 1;
+            if (newCount > 0 && GetRingType(poleIndex, newCount - 1) == RingType.Mystery)
+            {
+                SetRingType(poleIndex, newCount - 1, RingType.Standard);
+            }
+
             return ring;
         }
 
@@ -320,6 +394,8 @@ namespace RingFlow.Gameplay
                    Pole7 == other.Pole7 &&
                    Pole8 == other.Pole8 &&
                    Pole9 == other.Pole9 &&
+                   Pole10 == other.Pole10 &&
+                   Pole11 == other.Pole11 &&
                    Types0 == other.Types0 &&
                    Types1 == other.Types1 &&
                    Types2 == other.Types2 &&
@@ -330,6 +406,8 @@ namespace RingFlow.Gameplay
                    Types7 == other.Types7 &&
                    Types8 == other.Types8 &&
                    Types9 == other.Types9 &&
+                   Types10 == other.Types10 &&
+                   Types11 == other.Types11 &&
                    PoleCount == other.PoleCount;
         }
 
@@ -353,6 +431,8 @@ namespace RingFlow.Gameplay
                 hash = hash * 23 + (int)Pole7;
                 hash = hash * 23 + (int)Pole8;
                 hash = hash * 23 + (int)Pole9;
+                hash = hash * 23 + (int)Pole10;
+                hash = hash * 23 + (int)Pole11;
                 hash = hash * 23 + (int)Types0;
                 hash = hash * 23 + (int)Types1;
                 hash = hash * 23 + (int)Types2;
@@ -363,6 +443,8 @@ namespace RingFlow.Gameplay
                 hash = hash * 23 + (int)Types7;
                 hash = hash * 23 + (int)Types8;
                 hash = hash * 23 + (int)Types9;
+                hash = hash * 23 + (int)Types10;
+                hash = hash * 23 + (int)Types11;
                 hash = hash * 23 + PoleCount;
                 return hash;
             }

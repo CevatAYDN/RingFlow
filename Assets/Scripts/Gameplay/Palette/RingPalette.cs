@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace RingFlow.Gameplay
@@ -50,7 +49,7 @@ namespace RingFlow.Gameplay
                 case RingColor.Magenta: return new Color(0.90f, 0.32f, 0.72f);
                 case RingColor.Key:     return new Color(0.95f, 0.78f, 0.20f);   // Gold
                 case RingColor.Stone:   return new Color(0.55f, 0.55f, 0.58f);
-                case RingColor.Rainbow: return Color.HSVToRGB(0f, 0f, 1f);
+                case RingColor.Rainbow: return new Color(0.85f, 0.35f, 0.95f);
                 default:                return new Color(0.20f, 0.20f, 0.20f);
             }
         }
