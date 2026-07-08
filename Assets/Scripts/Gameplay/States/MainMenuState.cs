@@ -11,6 +11,8 @@ namespace RingFlow.Gameplay
         [Inject] private IAudioService _audio;
         [Inject] private ISignalBus _signalBus;
         [Inject] private DailyRewardService _dailyReward;
+        [Inject] private IAdService _adService;
+        [Inject] private PlayerProgressModel _progress;
 
         [Inject] private Diagnostics.IGameDiagnostics _diag;
 
@@ -35,10 +37,22 @@ namespace RingFlow.Gameplay
                 _signalBus?.Fire(new ShowScreenSignal(ScreenType.DailyReward));
             }
 
+            if (_adService != null && (_progress == null || !_progress.RemoveAds.Value))
+            {
+                _adService.ShowBanner("MainMenu", "bottom");
+            }
+
             return default;
         }
 
-        public ValueTask OnExitAsync(CancellationToken ct) => default;
+        public ValueTask OnExitAsync(CancellationToken ct)
+        {
+            if (_adService != null)
+            {
+                _adService.HideBanner();
+            }
+            return default;
+        }
         public void OnTick(float deltaTime) {}
     }
 }

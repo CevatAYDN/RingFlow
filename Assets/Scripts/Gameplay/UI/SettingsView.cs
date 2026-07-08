@@ -18,7 +18,9 @@ namespace RingFlow.Gameplay.UI
         public Dropdown LanguageDropdown { get; private set; }
         public Text TitleText { get; private set; }
         public Text[] SettingLabels { get; private set; }
-        private GameObject _closeBtn;
+        public Button RemoveAdsButton { get; private set; }
+        public Button RestoreButton { get; private set; }
+        private GameObject _closeBtn, _removeAdsBtn, _restoreBtn;
         private Text _musicLabel, _sfxLabel, _hapticLabel, _motionLabel, _bigLabel, _cbLabel, _langLabel;
 
         private void Awake()
@@ -91,8 +93,18 @@ namespace RingFlow.Gameplay.UI
                 LanguageDropdown.options.Add(new Dropdown.OptionData(code));
             }
 
-            _closeBtn = GameUIResources.CreateButton("CLOSE", transform, 200, 56);
-            GameUIResources.SetAnchors(_closeBtn.GetComponent<RectTransform>(), 0.35f, 0.04f, 0.65f, 0.14f);
+            _removeAdsBtn = GameUIResources.CreateButton("REMOVE ADS", transform, 180, 48);
+            GameUIResources.SetAnchors(_removeAdsBtn.GetComponent<RectTransform>(), 0.10f, 0.12f, 0.48f, 0.19f);
+            RemoveAdsButton = _removeAdsBtn.GetComponent<Button>();
+            GameUIResources.ApplyPrimaryStyle(_removeAdsBtn);
+
+            _restoreBtn = GameUIResources.CreateButton("RESTORE", transform, 180, 48);
+            GameUIResources.SetAnchors(_restoreBtn.GetComponent<RectTransform>(), 0.52f, 0.12f, 0.90f, 0.19f);
+            RestoreButton = _restoreBtn.GetComponent<Button>();
+            GameUIResources.ApplyOutlineStyle(_restoreBtn);
+
+            _closeBtn = GameUIResources.CreateButton("CLOSE", transform, 200, 48);
+            GameUIResources.SetAnchors(_closeBtn.GetComponent<RectTransform>(), 0.35f, 0.03f, 0.65f, 0.10f);
             GameUIResources.ApplyPrimaryStyle(_closeBtn);
             CloseButton = _closeBtn.GetComponent<Button>();
         }
@@ -107,6 +119,8 @@ namespace RingFlow.Gameplay.UI
             GameUIResources.LocalizeText(_bigLabel.gameObject, "settings_big_buttons", loc);
             GameUIResources.LocalizeText(_cbLabel.gameObject, "settings_color_blind", loc);
             GameUIResources.LocalizeText(_langLabel.gameObject, "settings_language", loc);
+            GameUIResources.LocalizeButtonText(_removeAdsBtn, "settings_remove_ads", loc);
+            GameUIResources.LocalizeButtonText(_restoreBtn, "settings_restore", loc);
             GameUIResources.LocalizeButtonText(_closeBtn, "settings_close", loc);
         }
 

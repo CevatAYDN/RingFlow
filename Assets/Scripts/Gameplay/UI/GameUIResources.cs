@@ -168,14 +168,27 @@ namespace RingFlow.Gameplay.UI
         {
             if (loc == null || btn == null) return;
             var text = btn.GetComponentInChildren<Text>();
-            if (text != null) text.text = loc.GetString(key, text.text);
+            if (text != null)
+            {
+                text.text = loc.GetString(key, text.text);
+                if (loc.IsRTL && text.alignment == TextAnchor.MiddleLeft) text.alignment = TextAnchor.MiddleRight;
+            }
         }
 
         public static void LocalizeText(GameObject go, string key, ILocalizationService loc)
         {
             if (loc == null || go == null) return;
             var text = go.GetComponent<Text>();
-            if (text != null) text.text = loc.GetString(key, text.text);
+            if (text != null)
+            {
+                text.text = loc.GetString(key, text.text);
+                if (loc.IsRTL)
+                {
+                    if (text.alignment == TextAnchor.MiddleLeft) text.alignment = TextAnchor.MiddleRight;
+                    else if (text.alignment == TextAnchor.UpperLeft) text.alignment = TextAnchor.UpperRight;
+                    else if (text.alignment == TextAnchor.LowerLeft) text.alignment = TextAnchor.LowerRight;
+                }
+            }
         }
 
         // ── Anchors helper ───────────────────────────────────────────────

@@ -9,6 +9,8 @@ namespace RingFlow.Gameplay.UI
         [Inject] private PlayerProgressModel _progress;
         [Inject] private SettingsModel _settings;
         [Inject] private ILocalizationService _loc;
+        [Inject] private IIapService _iapService;
+        [Inject] private IAdService _adService;
 
         protected override void OnBind()
         {
@@ -31,6 +33,50 @@ namespace RingFlow.Gameplay.UI
                 View.BigButtonsToggle.onValueChanged.AddListener(v => _settings.BigButtons.Value = v);
                 View.ColorBlindSlider.onValueChanged.AddListener(v => _settings.ColorBlindMode.Value = (int)v);
             }
+
+            if (_progress != null && View.RemoveAdsButton != null)
+            {
+                // Re-evaluate button visibility
+                View.RemoveAdsButton.gameObject.SetActive(!_progress.RemoveAds.Value);
+
+                View.RemoveAdsButton.onClick.AddListener(() =>
+                {
+                    _iapService?.PurchaseProduct("remove_ads", (success, productId) =>
+                    {
+                        if (success)
+                        {
+                            _progress.RemoveAds.Value = true;
+                            View.RemoveAdsButton.gameObject.SetActive(false);
+                            
+                            // Immediately hide banner
+                            _adService?.HideBanner();
+
+                            NexusLog.Info("SettingsMediator", "Purchase", productId, "Remove Ads purchased successfully.");
+                        }
+                    });
+                });
+            }
+
+            if (_progress != null && View.RestoreButton != null)
+            {
+                View.RestoreButton.onClick.AddListener(() =>
+                {
+                    _iapService?.RestorePurchases(success =>
+                    {
+                        if (success)
+                        {
+                            bool owned = _iapService != null && _iapService.IsProductOwned("remove_ads");
+                            _progress.RemoveAds.Value = owned;
+                            if (owned)
+                            {
+                                View.RemoveAdsButton.gameObject.SetActive(false);
+                                _adService?.HideBanner();
+                            }
+                            NexusLog.Info("SettingsMediator", "Restore", "", "Purchases restored successfully. RemoveAds=" + owned);
+                        }
+                    });
+                });
+            }
         }
 
         protected override void OnUnbind()
@@ -42,6 +88,9 @@ namespace RingFlow.Gameplay.UI
             View.ReduceMotionToggle.onValueChanged.RemoveAllListeners();
             View.BigButtonsToggle.onValueChanged.RemoveAllListeners();
             View.ColorBlindSlider.onValueChanged.RemoveAllListeners();
+
+            if (View.RemoveAdsButton != null) View.RemoveAdsButton.onClick.RemoveAllListeners();
+            if (View.RestoreButton != null) View.RestoreButton.onClick.RemoveAllListeners();
         }
     }
 }

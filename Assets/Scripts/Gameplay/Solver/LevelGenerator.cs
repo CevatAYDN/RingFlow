@@ -127,7 +127,11 @@ namespace RingFlow.Gameplay
                             int additionalData = 0;
                             if (type == RingType.Bomb)
                             {
-                                additionalData = 9;
+                                additionalData = 5; // GDD: Bomb (sayaç 5→0)
+                            }
+                            else if (type == RingType.Chain)
+                            {
+                                additionalData = (int)color;
                             }
                             poleData.Rings.Add(new RingData(color, type, additionalData));
                         }
@@ -163,135 +167,52 @@ namespace RingFlow.Gameplay
 
             int poleCount = board.PoleCount;
 
-            // Mystery Mechanic
+            // GDD §4: Map each mechanic specifically to teach in 1 world
             if (mechanic == WorldMechanicType.Mystery)
             {
-                // En üstte olmayan 1 ya da 2 halkayı Mystery yap
-                int count = 0;
-                for (int attempt = 0; attempt < 10 && count < 2; attempt++)
-                {
-                    int p = rand.Next(poleCount);
-                    int ringCount = board.GetRingCount(p);
-                    if (ringCount >= 2)
-                    {
-                        int r = rand.Next(ringCount - 1); // En üst halka hariç
-                        if (board.GetRingType(p, r) == RingType.Standard)
-                        {
-                            board.SetRingType(p, r, RingType.Mystery);
-                            count++;
-                        }
-                    }
-                }
+                InjectSingleType(ref board, RingType.Mystery, 2, rand);
             }
-            // Frozen Mechanic
             else if (mechanic == WorldMechanicType.Frozen)
             {
-                // 1 ya da 2 halkayı Frozen yap
-                int count = 0;
-                for (int attempt = 0; attempt < 10 && count < 2; attempt++)
-                {
-                    int p = rand.Next(poleCount);
-                    int ringCount = board.GetRingCount(p);
-                    if (ringCount > 0)
-                    {
-                        int r = rand.Next(ringCount);
-                        if (board.GetRingType(p, r) == RingType.Standard)
-                        {
-                            board.SetRingType(p, r, RingType.Frozen);
-                            if (r == ringCount - 1)
-                            {
-                                board.SetTopRingFrozen(p, true);
-                            }
-                            count++;
-                        }
-                    }
-                }
+                InjectFrozen(ref board, 2, rand);
             }
-            // Locked Pole Mechanic
             else if (mechanic == WorldMechanicType.LockedPole)
             {
-                // Boş direklerden birini kilitle
-                int lockedPole = -1;
-                for (int attempt = 0; attempt < 20; attempt++)
-                {
-                    int p = rand.Next(poleCount);
-                    if (board.IsEmpty(p))
-                    {
-                        board.SetPoleLocked(p, true);
-                        lockedPole = p;
-                        break;
-                    }
-                }
-
-                // Eğer tamamen boş direk bulunamadıysa, en az halkası olan direği bulup boşaltalım ve kilitleyelim
-                if (lockedPole == -1)
-                {
-                    int bestPole = 0;
-                    int minRings = 999;
-                    for (int p = 0; p < poleCount; p++)
-                    {
-                        int rc = board.GetRingCount(p);
-                        if (rc < minRings)
-                        {
-                            minRings = rc;
-                            bestPole = p;
-                        }
-                    }
-
-                    // Bu direği boşaltalım (halkalarını diğer boş yerleri olan direklere dağıtalım)
-                    while (board.GetRingCount(bestPole) > 0)
-                    {
-                        var ringToMove = board.GetTopRing(bestPole);
-                        board.PopRing(bestPole);
-                        
-                        // Başka bir direğe ekleyelim
-                        for (int target = 0; target < poleCount; target++)
-                        {
-                            if (target == bestPole) continue;
-                            if (board.GetRingCount(target) < 4)
-                            {
-                                board.AddRing(target, ringToMove);
-                                break;
-                            }
-                        }
-                    }
-                    board.SetPoleLocked(bestPole, true);
-                    lockedPole = bestPole;
-                }
-
-                // Diğer direklerden birindeki bir halkayı Anahtar (Locked) yap
-                if (lockedPole != -1)
-                {
-                    for (int attempt = 0; attempt < 20; attempt++)
-                    {
-                        int p = rand.Next(poleCount);
-                        if (p == lockedPole) continue;
-                        int ringCount = board.GetRingCount(p);
-                        if (ringCount > 0)
-                        {
-                            // Eğer serbest boş direk yoksa (yani tüm serbest direkler dolu olmak zorundaysa),
-                            // anahtar halkayı en üstte başlatmalıyız yoksa hamle yapılamaz ve kilitlenir.
-                            bool hasFreeEmptyPole = false;
-                            for (int x = 0; x < poleCount; x++)
-                            {
-                                if (x != lockedPole && board.IsEmpty(x))
-                                {
-                                    hasFreeEmptyPole = true;
-                                    break;
-                                }
-                            }
-
-                            int r = hasFreeEmptyPole ? rand.Next(ringCount) : (ringCount - 1);
-                            if (board.GetRingType(p, r) == RingType.Standard)
-                            {
-                                board.SetRingType(p, r, RingType.Locked);
-                                break;
-                            }
-                        }
-                    }
-                }
+                InjectLockedPole(ref board, rand);
             }
-            // Advanced mechanics pool (Rainbow, Bomb, Chain, Magnet, Paint, Ghost, Stone, Glass)
+            else if (mechanic == WorldMechanicType.Stone)
+            {
+                InjectSingleType(ref board, RingType.Stone, 2, rand);
+            }
+            else if (mechanic == WorldMechanicType.Glass)
+            {
+                InjectSingleType(ref board, RingType.Glass, 2, rand);
+            }
+            else if (mechanic == WorldMechanicType.Rainbow)
+            {
+                InjectSingleType(ref board, RingType.Rainbow, 2, rand);
+            }
+            else if (mechanic == WorldMechanicType.Bomb)
+            {
+                InjectSingleType(ref board, RingType.Bomb, 2, rand);
+            }
+            else if (mechanic == WorldMechanicType.Chain)
+            {
+                InjectSingleType(ref board, RingType.Chain, 2, rand);
+            }
+            else if (mechanic == WorldMechanicType.Magnet)
+            {
+                InjectSingleType(ref board, RingType.Magnet, 2, rand);
+            }
+            else if (mechanic == WorldMechanicType.Paint)
+            {
+                InjectSingleType(ref board, RingType.Paint, 2, rand);
+            }
+            else if (mechanic == WorldMechanicType.Ghost)
+            {
+                InjectSingleType(ref board, RingType.Ghost, 2, rand);
+            }
+            // Advanced mechanics pool (RandomPool1/2/3)
             else
             {
                 var availableTypes = new[] {
@@ -317,19 +238,175 @@ namespace RingFlow.Gameplay
 
                 foreach (var chosenType in chosenTypes)
                 {
-                    int count = 0;
-                    for (int attempt = 0; attempt < 20 && count < 2; attempt++)
+                    InjectSingleType(ref board, chosenType, 2, rand);
+                }
+            }
+
+            EnforceMaxMechanicsLimit(ref board);
+        }
+
+        private static void InjectSingleType(ref BoardState board, RingType type, int maxCount, Random rand)
+        {
+            int poleCount = board.PoleCount;
+            int count = 0;
+            for (int attempt = 0; attempt < 20 && count < maxCount; attempt++)
+            {
+                int p = rand.Next(poleCount);
+                int ringCount = board.GetRingCount(p);
+                if (ringCount > 0)
+                {
+                    int r = rand.Next(ringCount);
+                    if (board.GetRingType(p, r) == RingType.Standard)
                     {
-                        int p = rand.Next(poleCount);
-                        int ringCount = board.GetRingCount(p);
-                        if (ringCount > 0)
+                        board.SetRingType(p, r, type);
+                        count++;
+                    }
+                }
+            }
+        }
+
+        private static void InjectFrozen(ref BoardState board, int maxCount, Random rand)
+        {
+            int poleCount = board.PoleCount;
+            int count = 0;
+            for (int attempt = 0; attempt < 20 && count < maxCount; attempt++)
+            {
+                int p = rand.Next(poleCount);
+                int ringCount = board.GetRingCount(p);
+                if (ringCount > 0)
+                {
+                    int r = rand.Next(ringCount);
+                    if (board.GetRingType(p, r) == RingType.Standard)
+                    {
+                        board.SetRingType(p, r, RingType.Frozen);
+                        if (r == ringCount - 1)
                         {
-                            int r = rand.Next(ringCount);
-                            if (board.GetRingType(p, r) == RingType.Standard)
+                            board.SetTopRingFrozen(p, true);
+                        }
+                        count++;
+                    }
+                }
+            }
+        }
+
+        private static void InjectLockedPole(ref BoardState board, Random rand)
+        {
+            int poleCount = board.PoleCount;
+            int lockedPole = -1;
+            for (int attempt = 0; attempt < 20; attempt++)
+            {
+                int p = rand.Next(poleCount);
+                if (board.IsEmpty(p))
+                {
+                    board.SetPoleLocked(p, true);
+                    lockedPole = p;
+                    break;
+                }
+            }
+
+            if (lockedPole == -1)
+            {
+                int bestPole = 0;
+                int minRings = 999;
+                for (int p = 0; p < poleCount; p++)
+                {
+                    int rc = board.GetRingCount(p);
+                    if (rc < minRings)
+                    {
+                        minRings = rc;
+                        bestPole = p;
+                    }
+                }
+
+                while (board.GetRingCount(bestPole) > 0)
+                {
+                    var ringToMove = board.GetTopRing(bestPole);
+                    board.PopRing(bestPole);
+                    for (int target = 0; target < poleCount; target++)
+                    {
+                        if (target == bestPole) continue;
+                        if (board.GetRingCount(target) < 4)
+                        {
+                            board.AddRing(target, ringToMove);
+                            break;
+                        }
+                    }
+                }
+                board.SetPoleLocked(bestPole, true);
+                lockedPole = bestPole;
+            }
+
+            if (lockedPole != -1)
+            {
+                for (int attempt = 0; attempt < 20; attempt++)
+                {
+                    int p = rand.Next(poleCount);
+                    if (p == lockedPole) continue;
+                    int ringCount = board.GetRingCount(p);
+                    if (ringCount > 0)
+                    {
+                        bool hasFreeEmptyPole = false;
+                        for (int x = 0; x < poleCount; x++)
+                        {
+                            if (x != lockedPole && board.IsEmpty(x))
                             {
-                                board.SetRingType(p, r, chosenType);
-                                count++;
+                                hasFreeEmptyPole = true;
+                                break;
                             }
+                        }
+
+                        int r = hasFreeEmptyPole ? rand.Next(ringCount) : (ringCount - 1);
+                        if (board.GetRingType(p, r) == RingType.Standard)
+                        {
+                            board.SetRingType(p, r, RingType.Locked);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        private static void EnforceMaxMechanicsLimit(ref BoardState board)
+        {
+            var uniqueTypes = new HashSet<RingType>();
+            for (int p = 0; p < board.PoleCount; p++)
+            {
+                if (board.IsPoleLocked(p))
+                {
+                    uniqueTypes.Add(RingType.Locked);
+                }
+                int count = board.GetRingCount(p);
+                for (int r = 0; r < count; r++)
+                {
+                    var t = board.GetRingType(p, r);
+                    if (t != RingType.Standard)
+                    {
+                        uniqueTypes.Add(t);
+                    }
+                }
+            }
+
+            if (uniqueTypes.Count > 4)
+            {
+                var allowed = new List<RingType>(uniqueTypes);
+                while (allowed.Count > 4)
+                {
+                    allowed.RemoveAt(allowed.Count - 1);
+                }
+
+                for (int p = 0; p < board.PoleCount; p++)
+                {
+                    if (board.IsPoleLocked(p) && !allowed.Contains(RingType.Locked))
+                    {
+                        board.SetPoleLocked(p, false);
+                    }
+                    int count = board.GetRingCount(p);
+                    for (int r = 0; r < count; r++)
+                    {
+                        var t = board.GetRingType(p, r);
+                        if (t != RingType.Standard && !allowed.Contains(t))
+                        {
+                            board.SetRingType(p, r, RingType.Standard);
                         }
                     }
                 }

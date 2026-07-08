@@ -9,9 +9,17 @@ namespace RingFlow.Gameplay
         Mystery = 1,
         Frozen = 2,
         LockedPole = 3,
-        RandomPool1 = 4, // 1 random type from advanced pool
-        RandomPool2 = 5, // 2 random types from advanced pool
-        RandomPool3 = 6  // 3 random types from advanced pool
+        Stone = 4,
+        Glass = 5,
+        Rainbow = 6,
+        Bomb = 7,
+        Chain = 8,
+        Magnet = 9,
+        Paint = 10,
+        Ghost = 11,
+        RandomPool1 = 12, // 1 random type from advanced pool
+        RandomPool2 = 13, // 2 random types from advanced pool
+        RandomPool3 = 14  // 3 random types from advanced pool
     }
 
     [System.Serializable]
@@ -107,15 +115,23 @@ namespace RingFlow.Gameplay
                     IsEventWorld = (i + 1) % 5 == 0 // Boss world every 5 worlds
                 };
 
-                // Mechanics mapping based on world index
+                // Mechanics mapping based on world index (GDD: 12 worlds for 12 mechanics)
                 if (i == 0) w.MechanicType = WorldMechanicType.None;
                 else if (i == 1) w.MechanicType = WorldMechanicType.Mystery;
                 else if (i == 2) w.MechanicType = WorldMechanicType.Frozen;
                 else if (i == 3) w.MechanicType = WorldMechanicType.LockedPole;
+                else if (i == 4) w.MechanicType = WorldMechanicType.Stone;
+                else if (i == 5) w.MechanicType = WorldMechanicType.Glass;
+                else if (i == 6) w.MechanicType = WorldMechanicType.Rainbow;
+                else if (i == 7) w.MechanicType = WorldMechanicType.Bomb;
+                else if (i == 8) w.MechanicType = WorldMechanicType.Chain;
+                else if (i == 9) w.MechanicType = WorldMechanicType.Magnet;
+                else if (i == 10) w.MechanicType = WorldMechanicType.Paint;
+                else if (i == 11) w.MechanicType = WorldMechanicType.Ghost;
                 else
                 {
-                    if (i >= 14) w.MechanicType = WorldMechanicType.RandomPool3;
-                    else if (i >= 9) w.MechanicType = WorldMechanicType.RandomPool2;
+                    if (i >= 25) w.MechanicType = WorldMechanicType.RandomPool3;
+                    else if (i >= 18) w.MechanicType = WorldMechanicType.RandomPool2;
                     else w.MechanicType = WorldMechanicType.RandomPool1;
                 }
 

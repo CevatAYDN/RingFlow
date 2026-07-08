@@ -53,6 +53,7 @@ namespace RingFlow.Gameplay.UI
             CreateScreen<WinView>(ScreenType.Win, canvasGo.transform);
             CreateScreen<SettingsView>(ScreenType.Settings, canvasGo.transform);
             CreateScreen<DailyRewardPopupView>(ScreenType.DailyReward, canvasGo.transform);
+            CreateScreen<GameOverView>(ScreenType.GameOver, canvasGo.transform);
 
             _root = GetComponentInParent<Root>();
             if (_root == null)
@@ -105,7 +106,21 @@ namespace RingFlow.Gameplay.UI
                     {
                         var nextLevel = prog.CurrentLevel.Value + 1;
                         prog.SetLevel(nextLevel);
-                        fsm.ChangeStateAsync<PlayingState>(nextLevel);
+                        
+                        var completedLevel = nextLevel - 1;
+                        var ads = _root.Context.TryResolve<IAdService>();
+                        var progress = _root.Context.TryResolve<PlayerProgressModel>();
+                        if (ads != null && (progress == null || !progress.RemoveAds.Value) && completedLevel % 3 == 0)
+                        {
+                            ads.ShowInterstitial("LevelComplete", () =>
+                            {
+                                fsm.ChangeStateAsync<PlayingState>(nextLevel);
+                            });
+                        }
+                        else
+                        {
+                            fsm.ChangeStateAsync<PlayingState>(nextLevel);
+                        }
                     }
                 }));
 

@@ -20,6 +20,10 @@ namespace RingFlow.Gameplay
     /// </summary>
     public class GameplayLifecycle : MonoBehaviour, IContextLifecycle
     {
+        public static GameObject RingPopPrefab;
+        public static GameObject ConfettiPrefab;
+        private static float s_sessionStartTime = 0f;
+
         public void OnConfigure(IContextBuilder builder)
         {
             NexusLog.Info("GameplayLifecycle", nameof(OnConfigure), "Gameplay", "Configuring gameplay context.");
@@ -146,13 +150,90 @@ namespace RingFlow.Gameplay
 
             // Trigger initial load from disk into all reactive models.
             var prefs = context.TryResolve<IPlayerPrefsService>();
+            var progress = context.TryResolve<PlayerProgressModel>();
             if (prefs != null)
             {
-                var progress = context.TryResolve<PlayerProgressModel>();
-                var set = context.TryResolve<SettingsModel>();
                 if (progress != null) PlayerProgressSaveSystem.Load(prefs, progress);
-                if (set != null) SettingsSaveSystem.Load(prefs, set);
+                if (settings != null) SettingsSaveSystem.Load(prefs, settings);
             }
+
+            // Post-load initializations
+            s_sessionStartTime = Time.realtimeSinceStartup;
+
+            if (prefs != null)
+            {
+                string firstLaunchStr = prefs.GetString("RF_FirstLaunchTime", "");
+                System.DateTime firstLaunch;
+                if (string.IsNullOrEmpty(firstLaunchStr))
+                {
+                    firstLaunch = System.DateTime.UtcNow;
+                    prefs.SetString("RF_FirstLaunchTime", firstLaunch.ToString("o"));
+                    prefs.Save();
+                }
+                else
+                {
+                    System.DateTime.TryParse(firstLaunchStr, out firstLaunch);
+                }
+
+                int daysSinceFirstLaunch = (System.DateTime.UtcNow - firstLaunch).Days;
+                AnalyticsEvents.Track(AnalyticsEvents.EventSessionStart, new[] 
+                { 
+                    ("days_since_first_launch", daysSinceFirstLaunch.ToString()),
+                    ("player_level", (progress?.PlayerLevel.Value ?? 1).ToString())
+                });
+            }
+
+            if (settings != null)
+            {
+                settings.ColorBlindMode.OnChanged((_, n) => {
+                    RingPalette.SetColorBlindMode((RingColorPaletteSO.ColorBlindMode)n);
+                });
+                RingPalette.SetColorBlindMode((RingColorPaletteSO.ColorBlindMode)settings.ColorBlindMode.Value);
+            }
+
+            if (settings != null && haptics != null)
+            {
+                haptics.IsEnabled = settings.HapticEnabled.Value;
+            }
+
+            // Register IAP Products
+            var iap = context.TryResolve<IIapService>();
+            if (iap != null)
+            {
+                iap.RegisterProducts(
+                    new ProductDefinition { Id = "remove_ads", Type = ProductType.NonConsumable, PriceString = "$3.99" },
+                    new ProductDefinition { Id = "coins_100", Type = ProductType.Consumable, PriceString = "$0.99" },
+                    new ProductDefinition { Id = "diamonds_50", Type = ProductType.Consumable, PriceString = "$0.99" }
+                );
+            }
+
+            // Initialize programmatically created VFX prefabs
+            if (RingPopPrefab == null)
+            {
+                RingPopPrefab = new GameObject("RingPopVfxPrefab", typeof(RingPopVfx));
+                Object.DontDestroyOnLoad(RingPopPrefab);
+            }
+            if (ConfettiPrefab == null)
+            {
+                ConfettiPrefab = new GameObject("ConfettiVfxPrefab", typeof(ConfettiVfx));
+                Object.DontDestroyOnLoad(ConfettiPrefab);
+            }
+
+            var pool = context.TryResolve<IObjectPoolService>();
+            if (pool != null)
+            {
+                pool.Prewarm(RingPopPrefab, 50);
+                pool.Prewarm(ConfettiPrefab, 30);
+            }
+
+            if (audio != null)
+            {
+                int currentLvl = progress?.CurrentLevel.Value ?? 1;
+                int worldIdx = WorldConfigSO.WorldFromAbsoluteLevel(currentLvl);
+                var bgm = ProceduralAudio.GetOrCreateBgmClip(worldIdx);
+                audio.PlayBgm(bgm, true);
+            }
+
             diag?.Log("Lifecycle", "GameplayLifecycle.OnInitializeAsync completed");
         }
 
@@ -196,6 +277,12 @@ namespace RingFlow.Gameplay
 
         public void OnDispose()
         {
+            float sessionLen = Time.realtimeSinceStartup - s_sessionStartTime;
+            AnalyticsEvents.Track(AnalyticsEvents.EventSessionEnd, new[]
+            {
+                ("session_length", ((int)sessionLen).ToString())
+            });
+
             // Auto-flush save on dispose — ensure no loss when player quits to main menu.
             var context = NexusRuntime.CurrentContext;
             var prefs = context.TryResolve<IPlayerPrefsService>();
