@@ -24,6 +24,12 @@ namespace RingFlow.Gameplay
 
         public void BuildBoard(List<PoleState> poles)
         {
+            var visualBoard = GameObject.Find("RingFlow_VisualBoard");
+            if (visualBoard != null)
+            {
+                Destroy(visualBoard);
+            }
+
             ClearBoard();
 
             if (_torusPrefab == null)
@@ -44,11 +50,17 @@ namespace RingFlow.Gameplay
                 var poleObj = AcquirePole();
                 poleObj.name = $"Pole_{p}" + (poleData.IsLocked ? " [LOCKED]" : "");
 
-                poleObj.transform.SetParent(transform);
+                poleObj.transform.SetParent(transform, false);
                 poleObj.transform.position = new Vector3(p * _poleSpacing, 2.0f, 0f);
                 poleObj.transform.localScale = new Vector3(0.2f, 2.0f, 0.2f);
 
                 var poleView = poleObj.GetComponent<PoleView>();
+                if (poleView == null)
+                {
+                    poleView = poleObj.AddComponent<PoleView>();
+                }
+                poleObj.SetActive(true);
+
                 poleView.PoleId = p;
                 _spawnedPoles.Add(poleView);
 
@@ -123,7 +135,6 @@ namespace RingFlow.Gameplay
                 var pole = _polePool.Dequeue();
                 if (pole != null)
                 {
-                    pole.SetActive(true);
                     return pole;
                 }
             }
@@ -135,7 +146,6 @@ namespace RingFlow.Gameplay
             }
             var box = poleObj.AddComponent<BoxCollider>();
             box.size = new Vector3(3.0f, 2.0f, 3.0f);
-            poleObj.AddComponent<PoleView>();
             return poleObj;
         }
 

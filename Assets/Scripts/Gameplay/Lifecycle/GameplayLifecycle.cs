@@ -78,6 +78,12 @@ namespace RingFlow.Gameplay
 
         public async ValueTask OnInitializeAsync(CancellationToken ct)
         {
+            var visualBoard = UnityEngine.GameObject.Find("RingFlow_VisualBoard");
+            if (visualBoard != null)
+            {
+                UnityEngine.Object.Destroy(visualBoard);
+            }
+
             var context = NexusRuntime.CurrentContext;
             var diag = context.TryResolve<IGameDiagnostics>();
             diag?.Checkpoint("GameplayLifecycle.OnInitializeAsync");
