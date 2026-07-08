@@ -35,7 +35,7 @@ namespace RingFlow.Gameplay.UI
         private Root _root;
         private bool _subscribed;
         private ScreenType _activeExclusiveScreen = ScreenType.Splash;
-        private ScreenType? _pausedExclusiveScreen;
+        private readonly Stack<ScreenType> _popupStack = new();
         private readonly List<ISignalSubscription> _subscriptions = new();
 
         private void Awake()
@@ -101,7 +101,12 @@ namespace RingFlow.Gameplay.UI
             _subscriptions.Add(sb.Subscribe<HideScreenSignal>(OnHideScreen));
 
             var fsm = _root.Context.TryResolve<IGameStateMachine>();
-            if (fsm != null)
+            if (fsm == null)
+            {
+                NexusLog.Error("UIRoot", nameof(SubscribeOnce), "",
+                    "IGameStateMachine unbound; all UI button signals will be ignored. The UI will appear frozen.");
+            }
+            else
             {
                 _subscriptions.Add(sb.Subscribe<PlayRequestedSignal>(_ => fsm.ChangeStateAsync<LevelSelectState>()));
                 _subscriptions.Add(sb.Subscribe<LevelSelectedSignal>(s => fsm.ChangeStateAsync<PlayingState>(s.LevelIndex)));
@@ -184,7 +189,7 @@ namespace RingFlow.Gameplay.UI
                 kvp.Value.SetActive(kvp.Key == signal.Screen);
             }
             _activeExclusiveScreen = signal.Screen;
-            _pausedExclusiveScreen = null;
+            _popupStack.Clear();
         }
 
         private void OnHideScreen(HideScreenSignal signal)
@@ -196,9 +201,10 @@ namespace RingFlow.Gameplay.UI
         {
             if (!_screens.TryGetValue(popup, out var go)) return;
 
-            if (!_pausedExclusiveScreen.HasValue)
+            // Push current exclusive screen onto the stack before showing popup
+            if (_popupStack.Count == 0 || _popupStack.Peek() != popup)
             {
-                _pausedExclusiveScreen = _activeExclusiveScreen;
+                _popupStack.Push(_activeExclusiveScreen);
             }
 
             foreach (var kvp in _screens)
@@ -214,10 +220,9 @@ namespace RingFlow.Gameplay.UI
             if (!_screens.TryGetValue(popup, out var go)) return;
             go.SetActive(false);
 
-            if (_pausedExclusiveScreen.HasValue)
+            if (_popupStack.Count > 0)
             {
-                var restore = _pausedExclusiveScreen.Value;
-                _pausedExclusiveScreen = null;
+                var restore = _popupStack.Pop();
                 _activeExclusiveScreen = restore;
                 if (_screens.TryGetValue(restore, out var restoreGo))
                 {
@@ -235,7 +240,7 @@ namespace RingFlow.Gameplay.UI
                     go.SetActive(false);
                 }
             }
-            _pausedExclusiveScreen = null;
+            _popupStack.Clear();
         }
     }
 }

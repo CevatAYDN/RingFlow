@@ -58,12 +58,20 @@ namespace RingFlow.Gameplay
         public int PaintedRingIndex;
         public RingColor PaintedRingOriginalColor;
         public RingColor OriginalColor;
+        public bool WasRainbowTargetConverted;
+        public int RainbowTargetRingIndex;
+        public RingColor RainbowTargetOriginalColor;
         public List<MoveRecord> SubMoves;
 
         /// <summary>Snapshot of every bomb's counter BEFORE this move's TickAllBombs() ran.
         /// Undo restores these counters instead of blindly incrementing every current bomb.
         /// Null when no bombs existed at move time.</summary>
         public List<(int PoleId, int RingIndex, int Counter)> BombCountersBeforeTick;
+
+        /// <summary>Full ring data of bombs that exploded (counter reached 0) during this move.
+        /// Undo inserts these rings back at their original positions.
+        /// Null when no bombs exploded.</summary>
+        public List<(int PoleId, int RingIndex, RingData Ring)> BombExplodedRings;
 
         public MoveRecord(int fromPoleId, int toPoleId, RingData ring,
             bool wasMysteryRevealedOnFrom = false,
@@ -73,7 +81,11 @@ namespace RingFlow.Gameplay
             int paintedRingIndex = -1,
             RingColor paintedRingOriginalColor = RingColor.None,
             RingColor originalColor = RingColor.None,
-            List<(int PoleId, int RingIndex, int Counter)> bombCountersBeforeTick = null)
+            List<(int PoleId, int RingIndex, int Counter)> bombCountersBeforeTick = null,
+            bool wasRainbowTargetConverted = false,
+            int rainbowTargetRingIndex = -1,
+            RingColor rainbowTargetOriginalColor = RingColor.None,
+            List<(int PoleId, int RingIndex, RingData Ring)> bombExplodedRings = null)
         {
             FromPoleId = fromPoleId;
             ToPoleId = toPoleId;
@@ -87,6 +99,10 @@ namespace RingFlow.Gameplay
             OriginalColor = originalColor;
             SubMoves = null;
             BombCountersBeforeTick = bombCountersBeforeTick;
+            WasRainbowTargetConverted = wasRainbowTargetConverted;
+            RainbowTargetRingIndex = rainbowTargetRingIndex;
+            RainbowTargetOriginalColor = rainbowTargetOriginalColor;
+            BombExplodedRings = bombExplodedRings;
         }
     }
 

@@ -399,15 +399,19 @@ namespace RingFlow.Gameplay
             // Chain Kontrolü — Zincir halkası hareket ettiğinde eşini de yanına çeker
             if (ring.Type == RingType.Chain)
             {
-                for (int p = 0; p < PoleCount; p++)
+                int capacityLimit = MaxCapacity > 0 ? MaxCapacity : 4;
+                if (GetRingCount(poleIndex) < capacityLimit)
                 {
-                    if (p == poleIndex) continue;
-                    var topR = GetTopRing(p);
-                    if (topR.Type == RingType.Chain && topR.AdditionalData == ring.AdditionalData)
+                    for (int p = 0; p < PoleCount; p++)
                     {
-                        var partner = PopRing(p);
-                        AddRingSimple(poleIndex, partner);
-                        break;
+                        if (p == poleIndex) continue;
+                        var topR = GetTopRing(p);
+                        if (topR.Type == RingType.Chain && topR.AdditionalData == ring.AdditionalData)
+                        {
+                            var partner = PopRing(p);
+                            AddRingSimple(poleIndex, partner);
+                            break;
+                        }
                     }
                 }
             }

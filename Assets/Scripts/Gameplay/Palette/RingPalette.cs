@@ -47,6 +47,8 @@ namespace RingFlow.Gameplay
                 case RingColor.Purple:  return new Color(0.58f, 0.36f, 0.82f);
                 case RingColor.Cyan:    return new Color(0.20f, 0.86f, 0.90f);
                 case RingColor.Magenta: return new Color(0.90f, 0.32f, 0.72f);
+                case RingColor.Pink:    return new Color(1.00f, 0.41f, 0.71f);
+                case RingColor.Lime:    return new Color(0.55f, 0.92f, 0.18f);
                 default:                return new Color(0.20f, 0.20f, 0.20f);
             }
         }

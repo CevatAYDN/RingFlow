@@ -17,7 +17,8 @@ namespace RingFlow.Gameplay
         [Inject] private PlayerProgressModel _progress;
 
         private readonly Dictionary<string, ObservableProperty<long>> _balances = new();
-        private bool _isUpdating;
+        private readonly HashSet<string> _updatingCurrencies = new();
+        private const long IntOverflowBuffer = 1_000_000_000_000L; // 1T — long'un int kesimine ulaşacağı nokta. Üstünde kazanımlar reddedilir.
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
@@ -32,128 +33,114 @@ namespace RingFlow.Gameplay
             diamondsObs.Value = _progress.Diamonds.Value;
             hintsObs.Value = _progress.HintCount.Value;
 
-            // Hook changes: PlayerProgressModel -> EconomyService (with recursion guard)
-            _progress.Coins.OnChanged((_, newVal) => 
+            // Hook changes: PlayerProgressModel -> EconomyService (with per-currency recursion guard)
+            _progress.Coins.OnChanged((_, newVal) =>
             {
-                if (_isUpdating) return;
-                _isUpdating = true;
+                if (TryBeginCurrencySync("Coins")) return;
                 try
                 {
                     if (coinsObs.Value != newVal) coinsObs.Value = newVal;
                 }
-                finally
-                {
-                    _isUpdating = false;
-                }
+                finally { EndCurrencySync("Coins"); }
             });
-            _progress.Diamonds.OnChanged((_, newVal) => 
+            _progress.Diamonds.OnChanged((_, newVal) =>
             {
-                if (_isUpdating) return;
-                _isUpdating = true;
+                if (TryBeginCurrencySync("Diamonds")) return;
                 try
                 {
                     if (diamondsObs.Value != newVal) diamondsObs.Value = newVal;
                 }
-                finally
-                {
-                    _isUpdating = false;
-                }
+                finally { EndCurrencySync("Diamonds"); }
             });
-            _progress.HintCount.OnChanged((_, newVal) => 
+            _progress.HintCount.OnChanged((_, newVal) =>
             {
-                if (_isUpdating) return;
-                _isUpdating = true;
+                if (TryBeginCurrencySync("Hint")) return;
                 try
                 {
                     if (hintsObs.Value != newVal) hintsObs.Value = newVal;
                 }
-                finally
-                {
-                    _isUpdating = false;
-                }
+                finally { EndCurrencySync("Hint"); }
             });
 
-            // Hook changes: EconomyService -> PlayerProgressModel (with recursion guard)
+            // Hook changes: EconomyService -> PlayerProgressModel (with per-currency recursion guard)
             coinsObs.OnChanged((_, newVal) =>
             {
-                if (_isUpdating) return;
-                _isUpdating = true;
+                if (TryBeginCurrencySync("Coins")) return;
                 try
                 {
                     if (_progress.Coins.Value != (int)newVal)
-                    {
-                        if (newVal < int.MinValue || newVal > int.MaxValue)
-                        {
-                            NexusLog.Warn("EconomyService", nameof(InitializeAsync), newVal.ToString(),
-                                "Coin value over int range; clamping on next sync.");
-                            _progress.Coins.Value = newVal > 0 ? int.MaxValue : int.MinValue;
-                        }
-                        else
-                        {
-                            _progress.Coins.Value = (int)newVal;
-                        }
-                    }
+                        _progress.Coins.Value = ClampInt(newVal, "Coins");
                 }
-                finally
-                {
-                    _isUpdating = false;
-                }
+                finally { EndCurrencySync("Coins"); }
             });
             diamondsObs.OnChanged((_, newVal) =>
             {
-                if (_isUpdating) return;
-                _isUpdating = true;
+                if (TryBeginCurrencySync("Diamonds")) return;
                 try
                 {
                     if (_progress.Diamonds.Value != (int)newVal)
-                    {
-                        if (newVal < int.MinValue || newVal > int.MaxValue)
-                        {
-                            NexusLog.Warn("EconomyService", nameof(InitializeAsync), newVal.ToString(),
-                                "Diamond value over int range; clamping on next sync.");
-                            _progress.Diamonds.Value = newVal > 0 ? int.MaxValue : int.MinValue;
-                        }
-                        else
-                        {
-                            _progress.Diamonds.Value = (int)newVal;
-                        }
-                    }
+                        _progress.Diamonds.Value = ClampInt(newVal, "Diamonds");
                 }
-                finally
-                {
-                    _isUpdating = false;
-                }
+                finally { EndCurrencySync("Diamonds"); }
             });
             hintsObs.OnChanged((_, newVal) =>
             {
-                if (_isUpdating) return;
-                _isUpdating = true;
+                if (TryBeginCurrencySync("Hint")) return;
                 try
                 {
                     if (_progress.HintCount.Value != (int)newVal)
-                    {
-                        if (newVal < int.MinValue || newVal > int.MaxValue)
-                        {
-                            NexusLog.Warn("EconomyService", nameof(InitializeAsync), newVal.ToString(),
-                                "Hint count value over int range; clamping on next sync.");
-                            _progress.HintCount.Value = newVal > 0 ? int.MaxValue : int.MinValue;
-                        }
-                        else
-                        {
-                            _progress.HintCount.Value = (int)newVal;
-                        }
-                    }
+                        _progress.HintCount.Value = ClampInt(newVal, "Hint");
                 }
-                finally
-                {
-                    _isUpdating = false;
-                }
+                finally { EndCurrencySync("Hint"); }
             });
 
             return default;
         }
 
         public void OnDispose() => Dispose();
+
+        /// <summary>
+        /// Sadece tek bir currency için recursion guard'ı tetikler. Aynı frame'de birden fazla
+        /// currency değişse bile birbirini blok etmez.
+        /// </summary>
+        private bool TryBeginCurrencySync(string currencyId)
+        {
+            lock (_updatingCurrencies)
+            {
+                if (_updatingCurrencies.Contains(currencyId)) return true;
+                _updatingCurrencies.Add(currencyId);
+                return false;
+            }
+        }
+
+        private void EndCurrencySync(string currencyId)
+        {
+            lock (_updatingCurrencies)
+            {
+                _updatingCurrencies.Remove(currencyId);
+            }
+        }
+
+        /// <summary>
+        /// int taşmasından kaçınmak için PlayerProgressModel'e yazmadan önce clamp yapar.
+        /// long int aralığına sığmıyorsa değeri sınırda tutar (veri kaybını sessizce yutmaz, log düşürür).
+        /// </summary>
+        private static int ClampInt(long value, string currencyId)
+        {
+            if (value > int.MaxValue)
+            {
+                NexusLog.Warn("EconomyService", nameof(ClampInt), currencyId,
+                    $"Value {value} exceeds int range; clamped to int.MaxValue.");
+                return int.MaxValue;
+            }
+            if (value < int.MinValue)
+            {
+                NexusLog.Warn("EconomyService", nameof(ClampInt), currencyId,
+                    $"Value {value} exceeds int range; clamped to int.MinValue.");
+                return int.MinValue;
+            }
+            return (int)value;
+        }
 
         public ObservableProperty<long> GetObservableBalance(string currencyId)
         {

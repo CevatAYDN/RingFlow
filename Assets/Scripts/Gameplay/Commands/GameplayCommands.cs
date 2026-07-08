@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Nexus.Core;
 using Nexus.Core.FSM;
 using Nexus.Core.Services;
@@ -102,14 +103,18 @@ namespace RingFlow.Gameplay
 
             int worldIndex = WorldConfigSO.WorldFromAbsoluteLevel(currentLevel);
 
-            // Glass rings are handled as Standard (visual-only, no special mechanics)
-            int glassCount = 0;
-            foreach (var p in levelData.Poles)
-                foreach (var r in p.Rings)
-                    if (r.Type == RingType.Glass) glassCount++;
-            if (glassCount > 0)
-                NexusLog.Info("InitLevelCommand", "Execute", currentLevel.ToString(),
-                    $"Level has {glassCount} Glass ring(s) — treated as Standard (visual-only).");
+            // Glass rings are handled as Standard (visual-only, no special mechanics).
+            // Guard against null levelData (fallback tutorial path) to avoid NRE.
+            if (levelData != null)
+            {
+                int glassCount = 0;
+                foreach (var p in levelData.Poles)
+                    foreach (var r in p.Rings)
+                        if (r.Type == RingType.Glass) glassCount++;
+                if (glassCount > 0)
+                    NexusLog.Info("InitLevelCommand", "Execute", currentLevel.ToString(),
+                        $"Level has {glassCount} Glass ring(s) — treated as Standard (visual-only).");
+            }
 
             AnalyticsEvents.LevelStart(currentLevel, worldIndex);
 
@@ -262,18 +267,19 @@ namespace RingFlow.Gameplay
             NexusLog.Info("MoveRingCommand", "Execute", $"{signal.FromPoleId}->{signal.ToPoleId}",
                 $"Move {signal.FromPoleId}->{signal.ToPoleId} OK. Total moves={_model.MovesCount.Value}. Subs={mainRecord.SubMoves?.Count ?? 0}.");
 
-            bool bombExploded = TickAllBombs();
+            _signalBus.Fire(new RingMovedSignal(signal.FromPoleId, signal.ToPoleId));
+
+            var explodedRings = TickAllBombsAndCapture();
+            bool bombExploded = explodedRings != null && explodedRings.Count > 0;
             if (bombExploded)
             {
                 _model.IsGameWon.Value = false;
+                mainRecord.BombExplodedRings = explodedRings;
                 FireGameOverTransition();
-            }
-            else
-            {
-                _signalBus.Fire(new CheckWinSignal());
+                return;
             }
 
-            _signalBus.Fire(new RingMovedSignal(signal.FromPoleId, signal.ToPoleId));
+            _signalBus.Fire(new CheckWinSignal());
         }
 
         private void FireGameOverTransition()
@@ -355,6 +361,9 @@ namespace RingFlow.Gameplay
             else if (!state.ToPole.IsEmpty && state.ToPole.TopRing.Type == RingType.Rainbow)
             {
                 var rainbowTarget = state.ToPole.Rings[^1];
+                state.WasRainbowTargetConverted = true;
+                state.RainbowTargetRingIndex = state.ToPole.Rings.Count - 1;
+                state.RainbowTargetOriginalColor = rainbowTarget.Color;
                 rainbowTarget.Color = state.Ring.Color;
                 rainbowTarget.Type = RingType.Standard;
                 state.ToPole.Rings[^1] = rainbowTarget;
@@ -431,9 +440,9 @@ namespace RingFlow.Gameplay
             }
         }
 
-        private bool TickAllBombs()
+        private List<(int PoleId, int RingIndex, RingData Ring)> TickAllBombsAndCapture()
         {
-            bool exploded = false;
+            var explodedRings = new List<(int PoleId, int RingIndex, RingData Ring)>();
             var explodedIndices = new Dictionary<PoleState, List<int>>();
 
             foreach (var pole in _model.Poles)
@@ -449,7 +458,6 @@ namespace RingFlow.Gameplay
 
                     if (newCounter <= 0)
                     {
-                        exploded = true;
                         _signalBus.Fire(new BombExplodedSignal(pole.Id));
 
                         if (!explodedIndices.ContainsKey(pole))
@@ -459,7 +467,7 @@ namespace RingFlow.Gameplay
                 }
             }
 
-            if (exploded)
+            if (explodedIndices.Count > 0)
             {
                 foreach (var kvp in explodedIndices)
                 {
@@ -468,12 +476,14 @@ namespace RingFlow.Gameplay
                     indices.Sort((a, b) => b.CompareTo(a));
                     foreach (var idx in indices)
                     {
+                        // Capture the ring data BEFORE removing it (C4 fix: bomb undo restore)
+                        explodedRings.Add((pole.Id, idx, pole.Rings[idx]));
                         pole.Rings.RemoveAt(idx);
                     }
                 }
             }
 
-            return exploded;
+            return explodedRings;
         }
 
         private List<(int PoleId, int RingIndex, int Counter)> SnapshotBombCounters()
@@ -505,6 +515,9 @@ namespace RingFlow.Gameplay
             public bool WasPainted;
             public int PaintedRingIndex;
             public RingColor PaintedRingOriginalColor;
+            public bool WasRainbowTargetConverted;
+            public int RainbowTargetRingIndex;
+            public RingColor RainbowTargetOriginalColor;
 
             public MoveRecord ToRecord() => new MoveRecord(
                 FromPoleId, ToPoleId, Ring,
@@ -512,7 +525,10 @@ namespace RingFlow.Gameplay
                 PaintedRingIndex, PaintedRingOriginalColor, OriginalColor)
             {
                 WasMysteryRevealedOnFrom = WasMysteryRevealed,
-                IceBrokenRingIndices = IceBrokenRingIndices
+                IceBrokenRingIndices = IceBrokenRingIndices,
+                WasRainbowTargetConverted = WasRainbowTargetConverted,
+                RainbowTargetRingIndex = RainbowTargetRingIndex,
+                RainbowTargetOriginalColor = RainbowTargetOriginalColor
             };
         }
     }
@@ -539,6 +555,23 @@ namespace RingFlow.Gameplay
                     // Restore bomb counters BEFORE popping the main ring so that
                     // snapshot RingIndex entries still point to the correct position
                     RestoreBombCounters(lastMove.BombCountersBeforeTick);
+
+                    // C4: Restore exploded bomb rings BEFORE any other undo logic.
+                    // Insert the captured rings at their original positions (highest index first
+                    // to preserve ordering during insertion).
+                    if (lastMove.BombExplodedRings != null)
+                    {
+                        var sortedExploded = lastMove.BombExplodedRings
+                            .OrderByDescending(e => e.RingIndex)
+                            .ToList();
+                        foreach (var (poleId, ringIndex, ringData) in sortedExploded)
+                        {
+                            var pole = _model.Poles.Find(p => p.Id == poleId);
+                            if (pole == null) continue;
+                            int insertIdx = ringIndex < pole.Rings.Count ? ringIndex : pole.Rings.Count;
+                            pole.Rings.Insert(insertIdx, ringData);
+                        }
+                    }
 
                     // SubMoves (magnet, chain) reversed before main ring because
                     // they were applied after the main ring in the original move
@@ -580,8 +613,19 @@ namespace RingFlow.Gameplay
                         {
                             var painted = toPole.Rings[lastMove.PaintedRingIndex];
                             painted.Color = lastMove.PaintedRingOriginalColor;
+                            painted.Type = RingType.Paint;
                             toPole.Rings[lastMove.PaintedRingIndex] = painted;
                         }
+                    }
+
+                    if (lastMove.WasRainbowTargetConverted
+                        && lastMove.RainbowTargetRingIndex >= 0
+                        && lastMove.RainbowTargetRingIndex < toPole.Rings.Count)
+                    {
+                        var rainbow = toPole.Rings[lastMove.RainbowTargetRingIndex];
+                        rainbow.Color = lastMove.RainbowTargetOriginalColor;
+                        rainbow.Type = RingType.Rainbow;
+                        toPole.Rings[lastMove.RainbowTargetRingIndex] = rainbow;
                     }
 
                     fromPole.AddRing(movedRing);
@@ -601,6 +645,13 @@ namespace RingFlow.Gameplay
                     if (_model.MovesCount.Value > 0)
                     {
                         _model.MovesCount.Value--;
+                    }
+
+                    // Win bayrağını sıfırla: undo, kazanılan bir seviyeyi geri alıyorsa
+                    // CheckWinCommand erken dönüş yapmasın ve tahta yeniden değerlendirilsin.
+                    if (_model.IsGameWon.Value)
+                    {
+                        _model.IsGameWon.Value = false;
                     }
 
                     _model.SelectedPoleId.Value = -1;

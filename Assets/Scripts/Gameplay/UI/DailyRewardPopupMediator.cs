@@ -25,15 +25,15 @@ namespace RingFlow.Gameplay.UI
 
             if (_dailyReward != null && _progress != null)
             {
+                // m7 fix: DayIndexPreview is already "next claim index" (DailyDayIndex + 1).
+                // Do NOT subtract 1 — the preview must match what Claim() actually rewards.
                 int previewDay = _dailyReward.DayIndexPreview;
-                int tableIndex = previewDay - 1;
-                if (tableIndex < 0) tableIndex = 0;
 
-                var reward = DailyRewardTable.RewardForDayIndex(tableIndex);
+                var reward = DailyRewardTable.RewardForDayIndex(previewDay);
                 string rewardText = reward.Amount > 0
                     ? $"+{reward.Amount} {reward.CurrencyId}"
                     : reward.CurrencyId;
-                View.ShowReward(tableIndex, rewardText);
+                View.ShowReward(previewDay, rewardText);
 
                 if (View.ClaimButton != null)
                 {

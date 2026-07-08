@@ -35,6 +35,20 @@ namespace RingFlow.Gameplay
                 return;
             }
 
+            // C3: Pre-validate solver BEFORE any payment path.
+            // This prevents the ad-race problem where a user watches a rewarded ad
+            // but the solver cannot find a valid move, leaving the user unrewarded.
+            var (current, maxCapacity) = BuildBoardStateFromModel(_model);
+            var firstMove = TryFindFirstMove(current, maxCapacity);
+
+            if (firstMove.From == -1 || firstMove.To == -1)
+            {
+                NexusLog.Warn("HintCommand", nameof(Execute), _model.MovesCount.Value.ToString(),
+                    "Solver could not find a first move — level may be unsolvable from current state. Hint request denied before any payment.");
+                _signalBus?.Fire(HintResolvedSignal.Empty);
+                return;
+            }
+
             if (_economy == null)
             {
                 NexusLog.Warn("HintCommand", nameof(Execute), "",
@@ -43,13 +57,13 @@ namespace RingFlow.Gameplay
 
             if (_economy != null && _economy.CanAfford("Hint", 1))
             {
-                ResolveAndFire(true);
+                ResolveAndFire(firstMove, true);
                 return;
             }
 
             if (_economy != null && _economy.CanAfford("Coins", HintCostCoins))
             {
-                ResolveAndFire(false);
+                ResolveAndFire(firstMove, false);
                 return;
             }
 
@@ -57,7 +71,7 @@ namespace RingFlow.Gameplay
             {
                 _ads.ShowRewarded("Hint", success =>
                 {
-                    if (success) ResolveAndFire(false);
+                    if (success) ResolveAndFire(firstMove, false);
                     else _signalBus?.Fire(HintResolvedSignal.Empty);
                 });
                 return;
@@ -68,19 +82,9 @@ namespace RingFlow.Gameplay
             _signalBus?.Fire(HintResolvedSignal.Empty);
         }
 
-        private void ResolveAndFire(bool useHintCurrency)
+        private void ResolveAndFire(Move firstMove, bool useHintCurrency)
         {
             if (_model == null) return;
-            var (current, maxCapacity) = BuildBoardStateFromModel(_model);
-            var firstMove = TryFindFirstMove(current, maxCapacity);
-
-            if (firstMove.From == -1 || firstMove.To == -1)
-            {
-                NexusLog.Warn("HintCommand", nameof(ResolveAndFire), _model.MovesCount.Value.ToString(),
-                    "Solver could not find a first move — level may be unsolvable from current state.");
-                _signalBus?.Fire(HintResolvedSignal.Empty);
-                return;
-            }
 
             if (useHintCurrency)
             {
