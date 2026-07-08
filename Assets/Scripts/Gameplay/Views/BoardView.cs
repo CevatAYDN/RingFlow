@@ -23,6 +23,7 @@ namespace RingFlow.Gameplay
         private readonly List<PoleView> _spawnedPoles = new();
         private readonly List<List<GameObject>> _spawnedRings = new();
         private int _lastSelectedPoleId = -1;
+        private int _animatingTargetPoleId = -1;
 
         public void BuildBoard(List<PoleState> poles)
         {
@@ -107,6 +108,8 @@ namespace RingFlow.Gameplay
             float speedMultiplier = slowMode ? 2.0f : 1.0f;
             float duration = 0.3f * speedMultiplier;
 
+            _animatingTargetPoleId = toPoleId;
+
             Vector3 oldRingWorldPos = Vector3.zero;
             RingColor movedColor = RingColor.None;
             if (fromPoleId >= 0 && fromPoleId < _spawnedRings.Count
@@ -131,6 +134,7 @@ namespace RingFlow.Gameplay
                 var movedRing = _spawnedRings[toPoleId][^1];
                 if (movedRing != null)
                 {
+                    DOTween.Kill(movedRing.transform); // Kill active selection/deselection tweens on this transform!
                     movedRing.transform.position = oldRingWorldPos;
                     int ringIndex = _spawnedRings[toPoleId].Count - 1;
                     var targetLocal = new Vector3(0f, -0.9f + (ringIndex * 0.4f), 0f);
@@ -138,17 +142,25 @@ namespace RingFlow.Gameplay
                     if (reduceMotion)
                     {
                         movedRing.transform.localPosition = targetLocal;
+                        _animatingTargetPoleId = -1;
                         TriggerMoveEffects(movedRing.transform.position, movedColor);
+                        ApplySelection();
                     }
                     else
                     {
                         movedRing.transform.DOLocalJump(targetLocal, 0.8f, 1, duration)
                             .SetEase(Ease.InOutQuad)
                             .OnComplete(() => {
+                                _animatingTargetPoleId = -1;
                                 TriggerMoveEffects(movedRing.transform.position, movedColor);
+                                ApplySelection();
                             });
                     }
                 }
+            }
+            else
+            {
+                _animatingTargetPoleId = -1;
             }
         }
 
@@ -195,6 +207,9 @@ namespace RingFlow.Gameplay
                 
                 bool isSelected = (i == _lastSelectedPoleId);
                 _spawnedPoles[i].SetSelected(isSelected);
+
+                // Skip Y-animation for the pole whose ring is currently animating (jumping)
+                if (i == _animatingTargetPoleId) continue;
 
                 // Animate top ring of this pole
                 if (i < _spawnedRings.Count && _spawnedRings[i].Count > 0)
