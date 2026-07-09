@@ -17,7 +17,10 @@ namespace RingFlow.Gameplay.UI
             if (transform.childCount > 0) return;
 
             var overlay = GetComponent<Image>();
-            overlay.color = new Color(0.06f, 0.07f, 0.10f, 1f);
+            if (overlay != null)
+            {
+                overlay.color = new Color(0.06f, 0.07f, 0.10f, 1f);
+            }
 
             var logo = GameUIResources.CreateText("RING FLOW", transform, 64, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
             logo.GetComponent<Text>().fontStyle = FontStyle.Bold;

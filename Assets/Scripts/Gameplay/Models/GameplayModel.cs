@@ -73,6 +73,7 @@ namespace RingFlow.Gameplay
 
         public MoveRecord()
         {
+            Clear();
         }
 
         public MoveRecord(int fromPoleId, int toPoleId, RingData ring,

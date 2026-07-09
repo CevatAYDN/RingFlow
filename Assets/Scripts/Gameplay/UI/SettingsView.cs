@@ -28,7 +28,10 @@ namespace RingFlow.Gameplay.UI
             if (transform.childCount > 0) return;
 
             var overlay = GetComponent<Image>();
-            overlay.color = new Color(0, 0, 0, 0.85f);
+            if (overlay != null)
+            {
+                overlay.color = new Color(0, 0, 0, 0.85f);
+            }
 
             var card = GameUIResources.CreatePanel("Card", transform);
             GameUIResources.SetAnchors(card.GetComponent<RectTransform>(), 0.08f, 0.10f, 0.92f, 0.90f);

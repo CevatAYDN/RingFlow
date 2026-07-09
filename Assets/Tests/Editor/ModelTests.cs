@@ -310,7 +310,7 @@ namespace RingFlow.Tests
         {
             var ring = new RingData(RingColor.Red, RingType.Standard);
             var record = new MoveRecord(fromPoleId: 0, toPoleId: 1, ring: ring,
-                wasMysteryRevealedOnFrom: true, wasPainted: true, paintedRingIndex: 0,
+                wasMysteryRevealedOnFrom: true, wasPainted: true, paintedRingIndex: 1,
                 paintedRingOriginalColor: RingColor.Blue);
 
             Assert.AreEqual(0, record.FromPoleId);

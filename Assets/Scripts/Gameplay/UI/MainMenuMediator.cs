@@ -16,6 +16,7 @@ namespace RingFlow.Gameplay.UI
 
         protected override void OnBind()
         {
+            if (View == null) return;
             View.Localize(_loc);
             View.ContinueButton.onClick.AddListener(ContinueGame);
             View.PlayButton.onClick.AddListener(QuickPlay);
@@ -66,11 +67,14 @@ namespace RingFlow.Gameplay.UI
 
         protected override void OnUnbind()
         {
-            View.ContinueButton?.onClick.RemoveAllListeners();
-            View.PlayButton?.onClick.RemoveAllListeners();
-            View.LevelSelectButton?.onClick.RemoveAllListeners();
-            View.SettingsButton?.onClick.RemoveAllListeners();
-            View.DailyRewardButton?.onClick.RemoveAllListeners();
+            if (View != null)
+            {
+                View.ContinueButton?.onClick.RemoveAllListeners();
+                View.PlayButton?.onClick.RemoveAllListeners();
+                View.LevelSelectButton?.onClick.RemoveAllListeners();
+                View.SettingsButton?.onClick.RemoveAllListeners();
+                View.DailyRewardButton?.onClick.RemoveAllListeners();
+            }
 
             if (_progress != null)
             {

@@ -9,6 +9,7 @@ namespace RingFlow.Gameplay.UI
 
         protected override void OnBind()
         {
+            if (View == null) return;
             View.Localize(_loc);
             View.ResumeButton.onClick.AddListener(() => SignalBus.Fire(new ResumeRequestedSignal()));
             View.QuitButton.onClick.AddListener(() => SignalBus.Fire(new QuitToMenuRequestedSignal()));
@@ -16,8 +17,11 @@ namespace RingFlow.Gameplay.UI
 
         protected override void OnUnbind()
         {
-            View.ResumeButton?.onClick.RemoveAllListeners();
-            View.QuitButton?.onClick.RemoveAllListeners();
+            if (View != null)
+            {
+                View.ResumeButton?.onClick.RemoveAllListeners();
+                View.QuitButton?.onClick.RemoveAllListeners();
+            }
         }
     }
 }

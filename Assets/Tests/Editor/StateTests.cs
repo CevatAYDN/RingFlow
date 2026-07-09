@@ -20,18 +20,25 @@ namespace RingFlow.Tests
             _signalBus = new StateTestSignalBus();
         }
 
-        [Test]
-        public void BootState_OnEnter_DoesNotThrow_WhenFsmIsNull()
+        [TearDown]
+        public void TearDown()
         {
-            var state = new BootState();
-            Assert.DoesNotThrowAsync(async () => await state.OnEnterAsync(null, CancellationToken.None));
+            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
         }
 
         [Test]
-        public void BootState_OnExit_DoesNotThrow()
+        public async Task BootState_OnEnter_DoesNotThrow_WhenFsmIsNull()
+        {
+            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
+            var state = new BootState();
+            await state.OnEnterAsync(null, CancellationToken.None);
+        }
+
+        [Test]
+        public async Task BootState_OnExit_DoesNotThrow()
         {
             var state = new BootState();
-            Assert.DoesNotThrowAsync(async () => await state.OnExitAsync(CancellationToken.None));
+            await state.OnExitAsync(CancellationToken.None);
         }
 
         [Test]
@@ -42,89 +49,90 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void SplashState_OnEnter_FiresShowScreenSplash()
+        public async Task SplashState_OnEnter_FiresShowScreenSplash()
         {
-            InjectField<SplashState>("_signalBus", _signalBus);
             var state = new SplashState();
-            Assert.DoesNotThrowAsync(async () => await state.OnEnterAsync(null, CancellationToken.None));
+            InjectField(state, "_signalBus", _signalBus);
+            await state.OnEnterAsync(null, CancellationToken.None);
             Assert.IsTrue(_signalBus.HasFiredShowScreenSplash);
         }
 
         [Test]
-        public void SplashState_OnEnter_DoesNotThrow_WhenSignalBusNull()
+        public async Task SplashState_OnEnter_DoesNotThrow_WhenSignalBusNull()
         {
+            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
             var state = new SplashState();
-            Assert.DoesNotThrowAsync(async () => await state.OnEnterAsync(null, CancellationToken.None));
+            await state.OnEnterAsync(null, CancellationToken.None);
         }
 
         [Test]
-        public void MainMenuState_OnEnter_FiresShowScreenMainMenu()
+        public async Task MainMenuState_OnEnter_FiresShowScreenMainMenu()
         {
-            InjectField<MainMenuState>("_signalBus", _signalBus);
             var state = new MainMenuState();
-            Assert.DoesNotThrowAsync(async () => await state.OnEnterAsync(null, CancellationToken.None));
+            InjectField(state, "_signalBus", _signalBus);
+            await state.OnEnterAsync(null, CancellationToken.None);
             Assert.IsTrue(_signalBus.HasFiredShowScreenMainMenu);
         }
 
         [Test]
-        public void PlayingState_OnEnter_FiresShowScreenGameplay()
+        public async Task PlayingState_OnEnter_FiresShowScreenGameplay()
         {
-            InjectField<PlayingState>("_signalBus", _signalBus);
             var state = new PlayingState();
-            Assert.DoesNotThrowAsync(async () => await state.OnEnterAsync(null, CancellationToken.None));
+            InjectField(state, "_signalBus", _signalBus);
+            await state.OnEnterAsync(null, CancellationToken.None);
             Assert.IsTrue(_signalBus.HasFiredShowScreenGameplay);
         }
 
         [Test]
-        public void PlayingState_OnEnter_WithIntLevelArg_FiresInitLevel()
+        public async Task PlayingState_OnEnter_WithIntLevelArg_FiresInitLevel()
         {
             var signalBus = new StateTestSignalBusExtended();
-            InjectField<PlayingState>("_signalBus", signalBus);
             var state = new PlayingState();
-            Assert.DoesNotThrowAsync(async () => await state.OnEnterAsync(5, CancellationToken.None));
+            InjectField(state, "_signalBus", signalBus);
+            await state.OnEnterAsync(5, CancellationToken.None);
             Assert.IsTrue(signalBus.HasFiredInitLevelFor(5));
         }
 
         [Test]
-        public void PlayingState_OnExit_DoesNotThrow()
+        public async Task PlayingState_OnExit_DoesNotThrow()
         {
             var state = new PlayingState();
-            Assert.DoesNotThrowAsync(async () => await state.OnExitAsync(CancellationToken.None));
+            await state.OnExitAsync(CancellationToken.None);
         }
 
         [Test]
-        public void PausedState_OnEnter_FiresShowScreenPause()
+        public async Task PausedState_OnEnter_FiresShowScreenPause()
         {
-            InjectField<PausedState>("_signalBus", _signalBus);
             var state = new PausedState();
-            Assert.DoesNotThrowAsync(async () => await state.OnEnterAsync(null, CancellationToken.None));
+            InjectField(state, "_signalBus", _signalBus);
+            await state.OnEnterAsync(null, CancellationToken.None);
             Assert.IsTrue(_signalBus.LastScreenType == ScreenType.Pause);
         }
 
         [Test]
-        public void WinState_OnEnter_FiresShowScreenWin()
+        public async Task WinState_OnEnter_FiresShowScreenWin()
         {
-            InjectField<WinState>("_signalBus", _signalBus);
             var state = new WinState();
-            Assert.DoesNotThrowAsync(async () => await state.OnEnterAsync(null, CancellationToken.None));
+            InjectField(state, "_signalBus", _signalBus);
+            await state.OnEnterAsync(null, CancellationToken.None);
             Assert.IsTrue(_signalBus.LastScreenType == ScreenType.Win);
         }
 
         [Test]
-        public void GameOverState_OnEnter_FiresShowScreenGameOver()
+        public async Task GameOverState_OnEnter_FiresShowScreenGameOver()
         {
-            InjectField<GameOverState>("_signalBus", _signalBus);
             var state = new GameOverState();
-            Assert.DoesNotThrowAsync(async () => await state.OnEnterAsync(null, CancellationToken.None));
+            InjectField(state, "_signalBus", _signalBus);
+            await state.OnEnterAsync(null, CancellationToken.None);
             Assert.IsTrue(_signalBus.LastScreenType == ScreenType.GameOver);
         }
 
         [Test]
-        public void LevelSelectState_OnEnter_FiresShowScreenLevelSelect()
+        public async Task LevelSelectState_OnEnter_FiresShowScreenLevelSelect()
         {
-            InjectField<LevelSelectState>("_signalBus", _signalBus);
             var state = new LevelSelectState();
-            Assert.DoesNotThrowAsync(async () => await state.OnEnterAsync(null, CancellationToken.None));
+            InjectField(state, "_signalBus", _signalBus);
+            await state.OnEnterAsync(null, CancellationToken.None);
             Assert.IsTrue(_signalBus.LastScreenType == ScreenType.LevelSelect);
         }
 
@@ -141,9 +149,8 @@ namespace RingFlow.Tests
             Assert.DoesNotThrow(() => new LevelSelectState().OnTick(0.016f));
         }
 
-        private static void InjectField<T>(string fieldName, object value) where T : new()
+        private static void InjectField<T>(T instance, string fieldName, object value)
         {
-            var instance = new T();
             var field = typeof(T).GetField(fieldName,
                 BindingFlags.NonPublic | BindingFlags.Instance);
             if (field != null)

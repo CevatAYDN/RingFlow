@@ -16,78 +16,100 @@ namespace RingFlow.Tests
         [Test]
         public void SplashView_CanBeConstructed_WithoutScene()
         {
-            var view = new SplashView();
+            var go = new UnityEngine.GameObject("SplashView", typeof(UnityEngine.UI.Image));
+            var view = go.AddComponent<SplashView>();
             Assert.IsNotNull(view);
+            UnityEngine.Object.DestroyImmediate(go);
         }
 
         [Test]
         public void MainMenuView_CanBeConstructed_WithoutScene()
         {
-            var view = new MainMenuView();
+            var go = new UnityEngine.GameObject("MainMenuView");
+            var view = go.AddComponent<MainMenuView>();
             Assert.IsNotNull(view);
+            UnityEngine.Object.DestroyImmediate(go);
         }
 
         [Test]
         public void HUDView_CanBeConstructed_WithoutScene()
         {
-            var view = new HUDView();
+            var go = new UnityEngine.GameObject("HUDView");
+            var view = go.AddComponent<HUDView>();
             Assert.IsNotNull(view);
+            UnityEngine.Object.DestroyImmediate(go);
         }
 
         [Test]
         public void PauseView_CanBeConstructed_WithoutScene()
         {
-            var view = new PauseView();
+            var go = new UnityEngine.GameObject("PauseView", typeof(UnityEngine.UI.Image));
+            var view = go.AddComponent<PauseView>();
             Assert.IsNotNull(view);
+            UnityEngine.Object.DestroyImmediate(go);
         }
 
         [Test]
         public void WinView_CanBeConstructed_WithoutScene()
         {
-            var view = new WinView();
+            var go = new UnityEngine.GameObject("WinView", typeof(UnityEngine.UI.Image));
+            var view = go.AddComponent<WinView>();
             Assert.IsNotNull(view);
+            UnityEngine.Object.DestroyImmediate(go);
         }
 
         [Test]
         public void GameOverView_CanBeConstructed_WithoutScene()
         {
-            var view = new GameOverView();
+            var go = new UnityEngine.GameObject("GameOverView", typeof(UnityEngine.UI.Image));
+            var view = go.AddComponent<GameOverView>();
             Assert.IsNotNull(view);
+            UnityEngine.Object.DestroyImmediate(go);
         }
 
         [Test]
         public void LevelSelectView_CanBeConstructed_WithoutScene()
         {
-            var view = new LevelSelectView();
+            var go = new UnityEngine.GameObject("LevelSelectView");
+            var view = go.AddComponent<LevelSelectView>();
             Assert.IsNotNull(view);
+            UnityEngine.Object.DestroyImmediate(go);
         }
 
         [Test]
         public void SettingsView_CanBeConstructed_WithoutScene()
         {
-            var view = new SettingsView();
+            var go = new UnityEngine.GameObject("SettingsView", typeof(UnityEngine.UI.Image));
+            var view = go.AddComponent<SettingsView>();
             Assert.IsNotNull(view);
+            UnityEngine.Object.DestroyImmediate(go);
         }
 
         [Test]
         public void ChestPopupView_CanBeConstructed_WithoutScene()
         {
-            var view = new ChestPopupView();
+            var go = new UnityEngine.GameObject("ChestPopupView", typeof(UnityEngine.UI.Image));
+            var view = go.AddComponent<ChestPopupView>();
             Assert.IsNotNull(view);
+            UnityEngine.Object.DestroyImmediate(go);
         }
 
         [Test]
         public void DailyRewardPopupView_CanBeConstructed_WithoutScene()
         {
-            var view = new DailyRewardPopupView();
+            var go = new UnityEngine.GameObject("DailyRewardPopupView", typeof(UnityEngine.UI.Image));
+            var view = go.AddComponent<DailyRewardPopupView>();
             Assert.IsNotNull(view);
+            UnityEngine.Object.DestroyImmediate(go);
         }
 
         [Test]
         public void ParentalGatePopupView_CanBeConstructed_WithoutScene()
         {
-            var view = new ParentalGatePopupView();
+            var go = new UnityEngine.GameObject("ParentalGatePopupView");
+            var view = go.AddComponent<ParentalGatePopupView>();
             Assert.IsNotNull(view);
+            UnityEngine.Object.DestroyImmediate(go);
         }
 
         // ── Mediator Construction Tests ──────────────────────────────────────
@@ -163,6 +185,7 @@ namespace RingFlow.Tests
         [Test]
         public void SplashMediator_OnBind_NullView_DoesNotThrow()
         {
+            UnityEngine.TestTools.LogAssert.Expect(UnityEngine.LogType.Error, "[Nexus][SplashMediator][OnBind] View not bound.");
             var mediator = new SplashMediator();
             Assert.DoesNotThrow(() => InvokeOnBind(mediator));
         }
@@ -192,6 +215,7 @@ namespace RingFlow.Tests
         [Test]
         public void HUDMediator_OnBind_NullView_DoesNotThrow()
         {
+            UnityEngine.TestTools.LogAssert.Expect(UnityEngine.LogType.Error, "[Nexus][HUDMediator][OnBind] HUDView not bound.");
             var mediator = new HUDMediator();
             Assert.DoesNotThrow(() => InvokeOnBind(mediator));
         }
@@ -213,6 +237,7 @@ namespace RingFlow.Tests
         [Test]
         public void WinMediator_OnBind_NullView_DoesNotThrow()
         {
+            UnityEngine.TestTools.LogAssert.Expect(UnityEngine.LogType.Error, "[Nexus][WinMediator][OnBind] WinView not bound.");
             var mediator = new WinMediator();
             Assert.DoesNotThrow(() => InvokeOnBind(mediator));
         }
@@ -220,6 +245,7 @@ namespace RingFlow.Tests
         [Test]
         public void GameOverMediator_OnBind_NullView_DoesNotThrow()
         {
+            UnityEngine.TestTools.LogAssert.Expect(UnityEngine.LogType.Error, "[Nexus][GameOverMediator][OnBind] GameOverView not bound.");
             var mediator = new GameOverMediator();
             Assert.DoesNotThrow(() => InvokeOnBind(mediator));
         }

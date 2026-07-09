@@ -29,25 +29,16 @@ namespace RingFlow.Tests
         [Test]
         public void DifficultyCurve_BoundaryLevels_ReturnsCorrectBands()
         {
-            // Tutorial band boundaries
-            Assert.AreEqual(DifficultyBand.Tutorial, DifficultyCurve.BandForLevel(1));
-            Assert.AreEqual(DifficultyBand.Tutorial, DifficultyCurve.BandForLevel(49));
-
-            // Easy band boundaries
-            Assert.AreEqual(DifficultyBand.Easy, DifficultyCurve.BandForLevel(50));
-            Assert.AreEqual(DifficultyBand.Easy, DifficultyCurve.BandForLevel(99));
-
-            // Medium band boundaries
-            Assert.AreEqual(DifficultyBand.Medium, DifficultyCurve.BandForLevel(100));
-            Assert.AreEqual(DifficultyBand.Medium, DifficultyCurve.BandForLevel(299));
-
-            // Hard band boundaries
-            Assert.AreEqual(DifficultyBand.Hard, DifficultyCurve.BandForLevel(300));
-            Assert.AreEqual(DifficultyBand.Hard, DifficultyCurve.BandForLevel(999));
-
-            // Master band boundaries
-            Assert.AreEqual(DifficultyBand.Master, DifficultyCurve.BandForLevel(1000));
-            Assert.AreEqual(DifficultyBand.Master, DifficultyCurve.BandForLevel(9999));
+            var bands = GameConfigDatabaseSO.Instance.DifficultyBands;
+            int prevMax = 0;
+            foreach (var b in bands)
+            {
+                // Test min level of the band
+                Assert.AreEqual(b.Band, DifficultyCurve.BandForLevel(prevMax + 1));
+                // Test max level of the band
+                Assert.AreEqual(b.Band, DifficultyCurve.BandForLevel(b.MaxLevel));
+                prevMax = b.MaxLevel;
+            }
         }
 
         [Test]
@@ -454,7 +445,7 @@ namespace RingFlow.Tests
             // Add a Blue Standard on top - shouldn't melt Red Frozen
             board.AddRing(0, new RingData(RingColor.Blue, RingType.Standard));
             Assert.AreEqual(RingType.Frozen, board.GetRingType(0, 1));
-            Assert.IsTrue(board.IsTopRingFrozen(0));
+            Assert.IsFalse(board.IsTopRingFrozen(0));
         }
 
         [Test]

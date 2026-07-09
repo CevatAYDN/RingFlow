@@ -15,6 +15,7 @@ namespace RingFlow.Gameplay.UI
 
         protected override void OnBind()
         {
+            if (View == null) return;
             View.Localize(_loc);
             View.CloseButton.onClick.AddListener(() => SignalBus.Fire(new CloseSettingsSignal()));
 

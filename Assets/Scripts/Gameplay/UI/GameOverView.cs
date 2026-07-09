@@ -21,7 +21,10 @@ namespace RingFlow.Gameplay.UI
 
             // Dark overlay
             var overlay = GetComponent<Image>();
-            overlay.color = new Color(0, 0, 0, 0.75f);
+            if (overlay != null)
+            {
+                overlay.color = new Color(0, 0, 0, 0.75f);
+            }
 
             // Centered panel card
             var card = GameUIResources.CreatePanel("Card", transform);

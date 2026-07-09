@@ -335,12 +335,14 @@ namespace RingFlow.Gameplay
 
         public void AddRing(int poleIndex, RingData ring)
         {
+            int count = GetRingCount(poleIndex);
+            if (MaxCapacity > 0 && count >= MaxCapacity) return;
+
             if (IsPoleLocked(poleIndex) && ring.Type == RingType.Locked)
             {
                 SetPoleLocked(poleIndex, false);
+                ring.Type = RingType.Standard;
             }
-
-            int count = GetRingCount(poleIndex);
 
             // Paint Kontrolü 1 — Gelen halka Paint ise altındaki halkayı boyar ve kendisi Standard olur
             if (ring.Type == RingType.Paint)
@@ -378,6 +380,16 @@ namespace RingFlow.Gameplay
             SetRingType(poleIndex, count, ring.Type);
             SetRingAdditional(poleIndex, count, ring.AdditionalData);
             SetRingCount(poleIndex, count + 1);
+
+            // Update TopRingFrozen based on the added ring
+            if (ring.Type == RingType.Frozen)
+            {
+                SetTopRingFrozen(poleIndex, true);
+            }
+            else
+            {
+                SetTopRingFrozen(poleIndex, false);
+            }
 
             // Buz kırma — gerçek oyun TryBreakIceOnTarget mantığı:
             // yeni eklenen halkanın altındaki tüm contiguous Frozen halkaları

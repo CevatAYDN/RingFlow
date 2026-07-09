@@ -13,22 +13,19 @@ namespace RingFlow.Gameplay.Strategies
 
         public bool CanAddRing(RingData ring, RingData topRing, bool isPoleFull, bool isPoleLocked)
         {
-            // Stone rings cannot be placed on locked poles
             if (isPoleLocked) return false;
-            
-            // Cannot add if pole is full
             if (isPoleFull) return false;
             
-            // Stone rings can be placed on empty poles or matching color poles
-            if (topRing.Color == RingColor.None) return true;
+            // Cannot place any ring on top of a Stone ring (GDD §4)
+            if (topRing.Type == RingType.Stone) return false;
             
+            if (topRing.Color == RingColor.None) return true;
             return topRing.Color == ring.Color;
         }
 
         public bool CanPopRing(RingData topRing, bool isPoleLocked)
         {
-            // Stone rings can never be moved (GDD §4)
-            return false;
+            return topRing.Type != RingType.Stone;
         }
     }
 }

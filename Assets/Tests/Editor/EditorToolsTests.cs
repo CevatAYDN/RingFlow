@@ -38,7 +38,7 @@ namespace RingFlow.Tests
                 // Load it back
                 var loaded = AssetDatabase.LoadAssetAtPath<GameObject>(TestPrefabPath);
                 Assert.IsNotNull(loaded, "Loaded prefab should not be null");
-                Assert.AreEqual("TestScreen", loaded.name);
+                Assert.AreEqual("_TestGen_Screen", loaded.name);
             }
             finally
             {

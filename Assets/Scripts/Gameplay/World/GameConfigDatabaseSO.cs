@@ -84,6 +84,29 @@ namespace RingFlow.Gameplay
         public List<WorldConfigData> Worlds = new();
         public GameBalanceConfig BalanceConfig = new();
 
+        private void OnEnable()
+        {
+            if (BalanceConfig.ThreeStarTargetRatioPercent == 0)
+            {
+                BalanceConfig = new GameBalanceConfig
+                {
+                    FreeUndosPerSession = 5,
+                    UndoCoinCost = 5,
+                    NormalCoinReward = 50,
+                    BossCoinReward = 500,
+                    NormalXpReward = 10,
+                    BossXpReward = 50,
+                    LevelUpCoinReward = 100,
+                    ThreeStarTargetRatioPercent = 100,
+                    TwoStarTargetRatioPercent = 130,
+                    SilverChestChance = 0.40f,
+                    GoldChestChance = 0.20f,
+                    DiamondChestChance = 0.05f,
+                    InterstitialAdInterval = 3
+                };
+            }
+        }
+
         private static GameConfigDatabaseSO _instance;
         public static GameConfigDatabaseSO Instance
         {

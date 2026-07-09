@@ -11,6 +11,7 @@ namespace RingFlow.Gameplay.UI
 
         protected override void OnBind()
         {
+            if (View == null) return;
             View.Localize(_loc);
             // Lock buttons beyond MaxUnlockedLevel so the player can't select them
             int maxUnlocked = _progression?.MaxUnlockedLevel.Value ?? 1;
@@ -59,7 +60,7 @@ namespace RingFlow.Gameplay.UI
                 foreach (var btn in View.LevelButtons)
                     btn?.onClick.RemoveAllListeners();
             }
-            View.BackButton?.onClick.RemoveAllListeners();
+            View?.BackButton?.onClick.RemoveAllListeners();
         }
     }
 }
