@@ -46,6 +46,13 @@ namespace RingFlow.Gameplay
             await Task.Yield();
             if (_fsm != null)
             {
+                var context = NexusRuntime.CurrentContext;
+                var uiRoot = context?.TryResolve<RingFlow.Gameplay.UI.UIRoot>();
+                if (uiRoot != null)
+                {
+                    uiRoot.LoadPrefabScreensFromResources();
+                }
+
                 await _fsm.ChangeStateAsync<SplashState>();
             }
         }

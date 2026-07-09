@@ -29,70 +29,38 @@ namespace RingFlow.Gameplay.UI
 
         private void Awake()
         {
-            if (transform.childCount > 0) return;
-
-            // ── Dimmed background overlay ─────────────
-            var overlay = GetComponent<Image>();
-            if (overlay != null)
-            {
-                overlay.color = new Color(0, 0, 0, 0.80f);
-            }
-
-            // ── Centered card ─────────────────────────────────────────
-            var card = GameUIResources.CreatePanel("Card", transform);
-            GameUIResources.SetAnchors(card.GetComponent<RectTransform>(), 0.15f, 0.20f, 0.85f, 0.80f);
-            card.GetComponent<Image>().color = GameUIResources.PanelColor;
-
-            // ── Title ────────────────────────────────────────────────
-            var title = GameUIResources.CreateText("CHESTS", transform, 36, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
-            TitleText = title.GetComponent<Text>();
-            TitleText.fontStyle = FontStyle.Bold;
-            GameUIResources.SetAnchors(title.GetComponent<RectTransform>(), 0.2f, 0.72f, 0.8f, 0.78f);
-
-            // ── Chest rows ───────────────────────────────────────────
-            // Bronze
-            var bronze = GameUIResources.CreateText("Bronze: 0", transform, 22, TextAnchor.MiddleLeft, new Color(0.8f, 0.5f, 0.2f));
-            GameUIResources.SetAnchors(bronze.GetComponent<RectTransform>(), 0.25f, 0.62f, 0.75f, 0.68f);
-            BronzeText = bronze.GetComponent<Text>();
-
-            // Silver
-            var silver = GameUIResources.CreateText("Silver: 0", transform, 22, TextAnchor.MiddleLeft, new Color(0.75f, 0.75f, 0.80f));
-            GameUIResources.SetAnchors(silver.GetComponent<RectTransform>(), 0.25f, 0.55f, 0.75f, 0.61f);
-            SilverText = silver.GetComponent<Text>();
-
-            // Gold
-            var gold = GameUIResources.CreateText("Gold: 0", transform, 22, TextAnchor.MiddleLeft, new Color(1.0f, 0.84f, 0.0f));
-            GameUIResources.SetAnchors(gold.GetComponent<RectTransform>(), 0.25f, 0.48f, 0.75f, 0.54f);
-            GoldText = gold.GetComponent<Text>();
-
-            // Diamond
-            var diamond = GameUIResources.CreateText("Diamond: 0", transform, 22, TextAnchor.MiddleLeft, new Color(0.0f, 0.8f, 1.0f));
-            GameUIResources.SetAnchors(diamond.GetComponent<RectTransform>(), 0.25f, 0.41f, 0.75f, 0.47f);
-            DiamondText = diamond.GetComponent<Text>();
-
-            // ── Total XP line ────────────────────────────────────────
-            var total = GameUIResources.CreateText("Total XP: 0", transform, 24, TextAnchor.MiddleCenter, GameUIResources.SuccessColor);
-            GameUIResources.SetAnchors(total.GetComponent<RectTransform>(), 0.2f, 0.34f, 0.8f, 0.40f);
-            TotalXpText = total.GetComponent<Text>();
-
-            // ── Claim All button (primary) ───────────────────────────
-            _claimBtn = GameUIResources.CreateButton("CLAIM ALL", transform, 280, 56);
-            GameUIResources.SetAnchors(_claimBtn.GetComponent<RectTransform>(), 0.30f, 0.26f, 0.70f, 0.32f);
-            ClaimButton = _claimBtn.GetComponent<Button>();
-
-            // ── Close button (secondary) ─────────────────────────────
-            _closeBtn = GameUIResources.CreateButton("CLOSE", transform, 200, 44);
-            GameUIResources.SetAnchors(_closeBtn.GetComponent<RectTransform>(), 0.36f, 0.20f, 0.64f, 0.24f);
-            GameUIResources.ApplySecondaryStyle(_closeBtn);
-            CloseButton = _closeBtn.GetComponent<Button>();
+            BindReferencesFromChildren();
         }
 
         public void Localize(ILocalizationService loc)
         {
             if (loc == null) return;
-            GameUIResources.LocalizeText(TitleText.gameObject, "chest_title", loc);
+            if (TitleText != null) GameUIResources.LocalizeText(TitleText.gameObject, "chest_title", loc);
             GameUIResources.LocalizeButtonText(_claimBtn, "chest_claim_all", loc);
             GameUIResources.LocalizeButtonText(_closeBtn, "settings_close", loc);
+        }
+
+        private void BindReferencesFromChildren()
+        {
+            var buttons = GetComponentsInChildren<Button>(true);
+            foreach (var btn in buttons)
+            {
+                var upper = btn.name.ToUpperInvariant();
+                if (upper.Contains("CLAIM ALL") || upper.Contains("CLAIM")) { _claimBtn = btn.gameObject; ClaimButton = btn; }
+                else if (upper.Contains("CLOSE")) { _closeBtn = btn.gameObject; CloseButton = btn; }
+            }
+
+            var texts = GetComponentsInChildren<Text>(true);
+            foreach (var txt in texts)
+            {
+                var upper = txt.name.ToUpperInvariant();
+                if (upper.Contains("TITLE") || upper.Contains("CHEST")) TitleText = txt;
+                else if (upper.Contains("BRONZE")) BronzeText = txt;
+                else if (upper.Contains("SILVER")) SilverText = txt;
+                else if (upper.Contains("GOLD")) GoldText = txt;
+                else if (upper.Contains("DIAMOND")) DiamondText = txt;
+                else if (upper.Contains("TOTAL")) TotalXpText = txt;
+            }
         }
 
         public void ShowChestCounts(int bronze, int silver, int gold, int diamond)

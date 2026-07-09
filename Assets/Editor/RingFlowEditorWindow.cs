@@ -551,7 +551,6 @@ namespace RingFlow.Editor
 
             var commands = new (string key, string label, System.Action action)[]
             {
-                ("init ui", "Init UIRoot in Editor", () => EnsureUIRootInitialized()),
                 ("reset canvas", "Reset UIRoot Canvas", () =>
                 {
                     var uiRoot = GetCachedUIRoot();
@@ -760,9 +759,8 @@ namespace RingFlow.Editor
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 EditorGUILayout.HelpBox(
-                    "Inspect, initialize, and test UIRoot screens directly from the editor. " +
-                    "'Init in Editor' populates screens without PlayMode (calls Awake via reflection). " +
-                    "Manual Show/Hide call SetActive directly; Signal Show/Hide routes through ISignalBus (requires PlayMode + Root.Context).",
+                    "Inspect and test existing UIRoot screens directly from the editor. " +
+                    "Show/Hide in the editor only toggles existing scene objects; runtime Signal Show/Hide routes through ISignalBus (requires PlayMode + Root.Context).",
                     MessageType.Info);
 
                 DrawUIStudioInitControls();
@@ -794,18 +792,18 @@ namespace RingFlow.Editor
             {
                 using (new EditorGUI.DisabledScope(uiRoot == null))
                 {
-                    if (GUILayout.Button("Init in Editor", GUILayout.Height(24)))
-                    {
-                        EnsureUIRootInitialized();
-                    }
                     if (GUILayout.Button("Reset Canvas", GUILayout.Height(24)))
                     {
                         if (EditorUtility.DisplayDialog("Reset UIRoot Canvas",
-                            "Destroy the runtime canvas and all screens created by UIRoot.Awake()?",
+                            "Destroy the runtime canvas and all loaded screen instances?",
                             "Reset", "Cancel"))
                         {
                             ResetUIRootCanvas(uiRoot);
                         }
+                    }
+                    if (GUILayout.Button("Reload Prefab Screens", GUILayout.Height(24)))
+                    {
+                        ReloadPrefabScreens(uiRoot);
                     }
                 }
                 if (GUILayout.Button("Refresh", GUILayout.Width(80f), GUILayout.Height(24)))
@@ -825,7 +823,6 @@ namespace RingFlow.Editor
                 return;
             }
 
-            EnsureUIRootInitialized();
             var screens = GetUIRootScreens(uiRoot);
             var active = GetUIRootActiveScreen(uiRoot);
             var popupStack = GetUIRootPopupStack(uiRoot);
@@ -841,7 +838,7 @@ namespace RingFlow.Editor
 
             if (screens == null || screens.Count == 0)
             {
-                EditorGUILayout.HelpBox("UIRoot has no screens yet. Click 'Init in Editor' to populate.", MessageType.Info);
+                EditorGUILayout.HelpBox("UIRoot has no screens yet. Add your authored UI screens to the scene or load prefabs.", MessageType.Info);
                 return;
             }
 
@@ -870,7 +867,7 @@ namespace RingFlow.Editor
                         if (GUILayout.Button("Show", GUILayout.Width(50f))) ManualSetScreenActive(uiRoot, screen, true);
                         if (GUILayout.Button("Hide", GUILayout.Width(50f))) ManualSetScreenActive(uiRoot, screen, false);
                         if (GUILayout.Button("Signal", GUILayout.Width(55f))) FireShowScreen(screen);
-                        if (GUILayout.Button("Ping", GUILayout.Width(50f))) EditorGUIUtility.PingObject(go);
+                        if (GUILayout.Button("Open", GUILayout.Width(50f))) OpenPrefabSourceForScreen(screen, go);
                     }
                 }
             }
@@ -894,14 +891,12 @@ namespace RingFlow.Editor
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 EditorGUILayout.HelpBox(
-                    "Init in Editor keeps the UI tree in scene memory. The runtime is now prefab-driven: " +
-                    "UIRoot.CreateScreen() first looks for a prefab in Assets/Resources/UI/ via Resources.Load, " +
-                    "and falls back to the hardcoded factory only when no prefab exists.\n\n" +
-                    "• Save Screens as Prefabs writes each screen into Assets/Resources/UI/{ScreenType}.prefab.\n" +
-                    "• Load Screens from Prefabs replaces the screens under the UIRoot canvas with prefab instances.\n" +
-                    "• Save Scene (Ctrl+S) writes the UI tree into the active scene asset.\n" +
+                    "Manage UI authored in the scene or imported from prefabs. The editor does not auto-build screens anymore.\n\n" +
+                    "• Reload Prefab Screens loads screen prefabs from Assets/Resources/UI into the active UIRoot canvas.\n" +
+                    "• Open lets you jump to the prefab asset backing a screen.\n" +
+                    "• Save Scene (Ctrl+S) writes the current UI tree into the active scene asset.\n" +
                     "• Export UI Tree (JSON) serializes the hierarchy for backup or external tooling.\n\n" +
-                    "Design workflow: edit in Inspector → Save Screens as Prefabs → runtime picks up the prefab on next Awake.",
+                    "Design workflow: edit the prefab asset → reload it into the scene → save the scene if you want the layout persisted.",
                     MessageType.Info);
 
                 using (new EditorGUILayout.HorizontalScope())
@@ -911,16 +906,22 @@ namespace RingFlow.Editor
                         UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
                         Debug.Log("[RingFlow] Scene saved with current UI state.");
                     }
-                    if (GUILayout.Button("Save Screens as Prefabs", GUILayout.Height(28)))
+                    if (GUILayout.Button("Reload Prefab Screens", GUILayout.Height(28)))
                     {
-                        SaveScreensAsPrefabs();
+                        try
+                        {
+                            var uiRoot = GetCachedUIRoot();
+                            if (uiRoot != null) ReloadPrefabScreens(uiRoot);
+                        }
+                        catch (System.Exception ex)
+                        {
+                            Debug.LogException(ex);
+                            EditorUtility.DisplayDialog("Reload Prefab Screens", ex.Message, "OK");
+                        }
                     }
-                }
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    if (GUILayout.Button("Load Screens from Prefabs", GUILayout.Height(28)))
+                    if (GUILayout.Button("Create Missing UI Screens", GUILayout.Height(28)))
                     {
-                        LoadScreensFromPrefabs();
+                        RingFlowEditorUiStudio.CreateMissingUIScreenPrefabs();
                     }
                     if (GUILayout.Button("Export UI Tree (JSON)", GUILayout.Height(28)))
                     {
@@ -930,110 +931,53 @@ namespace RingFlow.Editor
             }
         }
 
-        private const string ScreenPrefabFolder = "Assets/Resources/UI";
-        private const string ResourcesLoadPath = "UI/";
-
-        private static void EnsureScreenPrefabFolder()
+        private static void ReloadPrefabScreens(UIRoot uiRoot)
         {
-            if (!AssetDatabase.IsValidFolder("Assets/Resources"))
-                AssetDatabase.CreateFolder("Assets", "Resources");
-            if (!AssetDatabase.IsValidFolder(ScreenPrefabFolder))
-                AssetDatabase.CreateFolder("Assets/Resources", "UI");
-        }
-
-        private static void SaveScreensAsPrefabs()
-        {
-            var uiRoot = GetCachedUIRoot();
             if (uiRoot == null)
             {
-                EditorUtility.DisplayDialog("Save Screens", "UIRoot missing. Run Setup Bootstrapper first.", "OK");
+                EditorUtility.DisplayDialog("Reload Prefab Screens", "UIRoot missing. Run Setup Bootstrapper first.", "OK");
                 return;
             }
+
+            uiRoot.RebindFromSceneForEditor();
+
             var screens = GetUIRootScreens(uiRoot);
             if (screens == null || screens.Count == 0)
             {
-                EditorUtility.DisplayDialog("Save Screens", "No screens registered. Click 'Init in Editor' first.", "OK");
+                uiRoot.LoadPrefabScreensFromResources();
+                screens = GetUIRootScreens(uiRoot);
+            }
+
+            if (screens == null || screens.Count == 0)
+            {
+                EditorUtility.DisplayDialog("Reload Prefab Screens",
+                    "No screen objects were found in the UICanvas and no matching prefabs exist in Assets/Resources/UI.",
+                    "OK");
                 return;
             }
 
-            EnsureScreenPrefabFolder();
-
-            int saved = 0;
-            var savedPaths = new List<string>();
-            foreach (var key in screens.Keys)
-            {
-                var go = screens[key] as GameObject;
-                if (go == null) continue;
-                string path = $"{ScreenPrefabFolder}/{key}.prefab";
-                PrefabUtility.SaveAsPrefabAsset(go, path);
-                savedPaths.Add(path);
-                saved++;
-            }
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-            EditorUtility.DisplayDialog("Save Screens",
-                $"Saved {saved} screen prefab(s) to {ScreenPrefabFolder}/.\n\nFiles:\n" + string.Join("\n", savedPaths),
-                "OK");
+            EditorUtility.DisplayDialog("Reload Prefab Screens", $"Loaded {screens.Count} screen object(s) into UIRoot.", "OK");
         }
 
-        private static void LoadScreensFromPrefabs()
+        private static void OpenPrefabSourceForScreen(ScreenType screen, GameObject go)
         {
-            var uiRoot = GetCachedUIRoot();
-            if (uiRoot == null)
+            var path = RingFlowEditorUiStudio.GetPrefabPathForScreen(screen);
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab != null)
             {
-                EditorUtility.DisplayDialog("Load Screens", "UIRoot missing. Run Setup Bootstrapper first.", "OK");
-                return;
-            }
-            if (GetUIRootCanvas(uiRoot) == null)
-            {
-                EditorUtility.DisplayDialog("Load Screens", "UIRoot canvas missing. Click 'Init in Editor' first.", "OK");
-                return;
-            }
-            if (!AssetDatabase.IsValidFolder(ScreenPrefabFolder))
-            {
-                EditorUtility.DisplayDialog("Load Screens", $"Folder not found: {ScreenPrefabFolder}. Save prefabs first.", "OK");
+                Selection.activeObject = prefab;
+                EditorGUIUtility.PingObject(prefab);
+                AssetDatabase.OpenAsset(prefab);
                 return;
             }
 
-            var canvas = GetUIRootCanvas(uiRoot);
-            var screens = GetUIRootScreens(uiRoot);
-            var guids = AssetDatabase.FindAssets("t:Prefab", new[] { ScreenPrefabFolder });
-            int loaded = 0;
-            int skipped = 0;
-            var loadedNames = new List<string>();
-
-            foreach (var guid in guids)
+            if (go != null)
             {
-                var path = AssetDatabase.GUIDToAssetPath(guid);
-                var name = System.IO.Path.GetFileNameWithoutExtension(path);
-                if (!System.Enum.TryParse<ScreenType>(name, out var screen))
-                {
-                    skipped++;
-                    continue;
-                }
-
-                if (screens.Contains(screen) && screens[screen] is GameObject existing && existing != null)
-                {
-                    Object.DestroyImmediate(existing);
-                }
-
-                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-                if (prefab == null) { skipped++; continue; }
-
-                var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, canvas.transform);
-                instance.name = name;
-                instance.SetActive(false);
-                screens[screen] = instance;
-                loadedNames.Add(name);
-                loaded++;
+                Selection.activeGameObject = go;
+                EditorGUIUtility.PingObject(go);
             }
 
-            AssetDatabase.SaveAssets();
-            EditorUtility.DisplayDialog("Load Screens",
-                loaded == 0
-                    ? $"No matching screen prefabs found in {ScreenPrefabFolder}/."
-                    : $"Loaded {loaded} screen(s), skipped {skipped}.\n\n" + string.Join("\n", loadedNames),
-                "OK");
+            EditorUtility.DisplayDialog("Open Prefab", $"Prefab not found at:\n{path}", "OK");
         }
 
         private static void ExportUIHierarchyAsJson()
@@ -1047,7 +991,7 @@ namespace RingFlow.Editor
             var screens = GetUIRootScreens(uiRoot);
             if (screens == null || screens.Count == 0)
             {
-                EditorUtility.DisplayDialog("Export UI Tree", "No screens to export. Click 'Init in Editor' first.", "OK");
+                EditorUtility.DisplayDialog("Export UI Tree", "No screens to export. Add authored UI screens to the scene first.", "OK");
                 return;
             }
 
@@ -1300,11 +1244,6 @@ namespace RingFlow.Editor
                 ExecuteAndRemember("Build Board", _visualBuilder.BuildFromDashboard);
             else if (ContainsAny(command, "generate", "generate level"))
                 ExecuteAndRemember("Generate Level", _generator.GenerateFromDashboard);
-            else if (ContainsAny(command, "init", "initialize"))
-            {
-                EnsureUIRootInitialized();
-                ExecuteAndRemember("Init UIRoot", null);
-            }
             else if (ContainsAny(command, "reset canvas", "reset ui"))
             {
                 var uiRoot = GetCachedUIRoot();
@@ -1318,7 +1257,7 @@ namespace RingFlow.Editor
             else
             {
                 EditorUtility.DisplayDialog("Command Palette",
-                    $"Unknown command: '{command}'. Try: ui, level, data, runtime, system, setup, home, scene, build, generate, init, reset, snapshot.",
+                    $"Unknown command: '{command}'. Try: ui, level, data, runtime, system, setup, home, scene, build, generate, reset, snapshot.",
                     "OK");
             }
         }
@@ -1370,7 +1309,6 @@ namespace RingFlow.Editor
         private static readonly System.Type s_uiRootType = typeof(UIRoot);
         private static readonly System.Collections.Generic.Dictionary<string, FieldInfo> s_uiRootFieldCache
             = new System.Collections.Generic.Dictionary<string, FieldInfo>();
-        private static MethodInfo s_uiRootAwakeMethod;
 
         private static FieldInfo GetCachedUIRootField(string name)
         {
@@ -1415,69 +1353,6 @@ namespace RingFlow.Editor
         private static void InvalidateUIRootCache()
         {
             s_cachedUIRoot = null;
-        }
-
-        private static UIRoot EnsureUIRootInitialized()
-        {
-            var uiRoot = GetCachedUIRoot();
-            if (uiRoot == null) return null;
-
-            if (GetUIRootCanvas(uiRoot) != null) return uiRoot;
-
-            if (s_uiRootAwakeMethod == null)
-            {
-                s_uiRootAwakeMethod = s_uiRootType.GetMethod("Awake", s_privInst);
-            }
-            if (s_uiRootAwakeMethod == null) return uiRoot;
-
-            try
-            {
-                s_uiRootAwakeMethod.Invoke(uiRoot, null);
-                InvokeViewAwakes(uiRoot);
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogWarning($"[RingFlow] UIRoot.Awake invocation failed: {ex.InnerException?.Message ?? ex.Message}");
-            }
-            return uiRoot;
-        }
-
-        private static void InvokeViewAwakes(UIRoot uiRoot)
-        {
-            var screens = GetUIRootScreens(uiRoot);
-            if (screens == null) return;
-
-            int invoked = 0;
-            int failed = 0;
-            foreach (var key in screens.Keys)
-            {
-                var go = screens[key] as GameObject;
-                if (go == null) continue;
-
-                var components = go.GetComponents<MonoBehaviour>();
-                foreach (var mb in components)
-                {
-                    if (mb == null) continue;
-                    var type = mb.GetType();
-                    var method = type.GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-                    if (method == null || method.GetParameters().Length != 0) continue;
-                    try
-                    {
-                        method.Invoke(mb, null);
-                        invoked++;
-                    }
-                    catch (System.Exception ex)
-                    {
-                        failed++;
-                        Debug.LogWarning($"[RingFlow] {type.Name}.Awake failed: {ex.InnerException?.Message ?? ex.Message}");
-                    }
-                }
-            }
-
-            if (invoked > 0 || failed > 0)
-            {
-                Debug.Log($"[RingFlow] View init: {invoked} Awake() invoked, {failed} failed.");
-            }
         }
 
         private static void ResetUIRootCanvas(UIRoot uiRoot)
@@ -1557,14 +1432,7 @@ namespace RingFlow.Editor
             var canvas = GetUIRootCanvas(uiRoot);
             if (canvas == null)
             {
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    EditorGUILayout.HelpBox("UIRoot.Awake() has not been invoked. Click 'Init' to populate screens in the editor.", MessageType.Info);
-                    if (GUILayout.Button("Init in Editor", GUILayout.Width(120f), GUILayout.Height(22)))
-                    {
-                        EnsureUIRootInitialized();
-                    }
-                }
+                EditorGUILayout.HelpBox("UIRoot canvas is missing. Reload prefab screens from Resources/UI.", MessageType.Info);
                 return;
             }
 
@@ -1589,7 +1457,7 @@ namespace RingFlow.Editor
 
             if (screens == null || screens.Count == 0)
             {
-                EditorGUILayout.HelpBox("UIRoot has no registered screens. Re-init or check UIRoot.Awake() implementation.", MessageType.Warning);
+                EditorGUILayout.HelpBox("UIRoot has no registered screens. Load prefab screens from Resources/UI first.", MessageType.Warning);
                 return;
             }
 

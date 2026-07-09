@@ -25,105 +25,19 @@ namespace RingFlow.Gameplay.UI
 
         private void Awake()
         {
-            if (transform.childCount > 0) return;
-
-            var overlay = GetComponent<Image>();
-            if (overlay != null)
-            {
-                overlay.color = new Color(0, 0, 0, 0.85f);
-            }
-
-            var card = GameUIResources.CreatePanel("Card", transform);
-            GameUIResources.SetAnchors(card.GetComponent<RectTransform>(), 0.08f, 0.10f, 0.92f, 0.90f);
-            card.GetComponent<Image>().color = GameUIResources.PanelColor;
-
-            var title = GameUIResources.CreateText("SETTINGS", transform, 40, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
-            TitleText = title.GetComponent<Text>();
-            TitleText.fontStyle = FontStyle.Bold;
-            GameUIResources.SetAnchors(title.GetComponent<RectTransform>(), 0.2f, 0.84f, 0.8f, 0.92f);
-
-            var musicLabel = GameUIResources.CreateText("Music", transform, 22, TextAnchor.MiddleLeft, GameUIResources.TextColor);
-            _musicLabel = musicLabel.GetComponent<Text>();
-            GameUIResources.SetAnchors(musicLabel.GetComponent<RectTransform>(), 0.10f, 0.74f, 0.55f, 0.80f);
-            MusicToggle = CreateToggle(card.transform, 0.55f, 0.76f, true);
-
-            var sfxLabel = GameUIResources.CreateText("Sound Effects", transform, 22, TextAnchor.MiddleLeft, GameUIResources.TextColor);
-            _sfxLabel = sfxLabel.GetComponent<Text>();
-            GameUIResources.SetAnchors(sfxLabel.GetComponent<RectTransform>(), 0.10f, 0.66f, 0.55f, 0.72f);
-            SfxToggle = CreateToggle(card.transform, 0.55f, 0.68f, true);
-
-            var hapticLabel = GameUIResources.CreateText("Haptic Feedback", transform, 22, TextAnchor.MiddleLeft, GameUIResources.TextColor);
-            _hapticLabel = hapticLabel.GetComponent<Text>();
-            GameUIResources.SetAnchors(hapticLabel.GetComponent<RectTransform>(), 0.10f, 0.58f, 0.55f, 0.64f);
-            HapticToggle = CreateToggle(card.transform, 0.55f, 0.60f, true);
-
-            var motionLabel = GameUIResources.CreateText("Reduce Motion", transform, 22, TextAnchor.MiddleLeft, GameUIResources.TextColor);
-            _motionLabel = motionLabel.GetComponent<Text>();
-            GameUIResources.SetAnchors(motionLabel.GetComponent<RectTransform>(), 0.10f, 0.50f, 0.55f, 0.56f);
-            ReduceMotionToggle = CreateToggle(card.transform, 0.55f, 0.52f, false);
-
-            var bigLabel = GameUIResources.CreateText("Big Buttons", transform, 22, TextAnchor.MiddleLeft, GameUIResources.TextColor);
-            _bigLabel = bigLabel.GetComponent<Text>();
-            GameUIResources.SetAnchors(bigLabel.GetComponent<RectTransform>(), 0.10f, 0.42f, 0.55f, 0.48f);
-            BigButtonsToggle = CreateToggle(card.transform, 0.55f, 0.44f, false);
-
-            var cbLabel = GameUIResources.CreateText("Color Blind Mode", transform, 20, TextAnchor.MiddleLeft, GameUIResources.TextColor);
-            _cbLabel = cbLabel.GetComponent<Text>();
-            GameUIResources.SetAnchors(cbLabel.GetComponent<RectTransform>(), 0.10f, 0.32f, 0.50f, 0.38f);
-
-            var cbBg = GameUIResources.CreatePanel("SliderBg", card.transform);
-            GameUIResources.SetAnchors(cbBg.GetComponent<RectTransform>(), 0.50f, 0.34f, 0.90f, 0.38f);
-            cbBg.GetComponent<Image>().color = GameUIResources.SurfaceColor;
-            var cbSlider = cbBg.AddComponent<Slider>();
-            cbSlider.direction = Slider.Direction.LeftToRight;
-            cbSlider.minValue = 0;
-            cbSlider.maxValue = 3;
-            cbSlider.wholeNumbers = true;
-            cbSlider.value = 0;
-            ColorBlindSlider = cbSlider;
-
-            var langLabel = GameUIResources.CreateText("Language", transform, 20, TextAnchor.MiddleLeft, GameUIResources.TextColor);
-            _langLabel = langLabel.GetComponent<Text>();
-            GameUIResources.SetAnchors(langLabel.GetComponent<RectTransform>(), 0.10f, 0.22f, 0.50f, 0.28f);
-
-            var langDdGo = new GameObject("LangDD", typeof(RectTransform), typeof(Image), typeof(Dropdown));
-            langDdGo.transform.SetParent(card.transform, false);
-            var langRect = langDdGo.GetComponent<RectTransform>();
-            GameUIResources.SetAnchors(langRect, 0.50f, 0.22f, 0.90f, 0.30f);
-            langDdGo.GetComponent<Image>().color = GameUIResources.SurfaceColor;
-            LanguageDropdown = langDdGo.GetComponent<Dropdown>();
-            string[] langCodes = { "en", "tr", "id", "es", "fr", "de", "pt", "it", "ar", "hi", "ru", "ja", "zh", "ko", "vi" };
-            foreach (var code in langCodes)
-            {
-                LanguageDropdown.options.Add(new Dropdown.OptionData(code));
-            }
-
-            _removeAdsBtn = GameUIResources.CreateButton("REMOVE ADS", transform, 180, 48);
-            GameUIResources.SetAnchors(_removeAdsBtn.GetComponent<RectTransform>(), 0.10f, 0.12f, 0.48f, 0.19f);
-            RemoveAdsButton = _removeAdsBtn.GetComponent<Button>();
-            GameUIResources.ApplyPrimaryStyle(_removeAdsBtn);
-
-            _restoreBtn = GameUIResources.CreateButton("RESTORE", transform, 180, 48);
-            GameUIResources.SetAnchors(_restoreBtn.GetComponent<RectTransform>(), 0.52f, 0.12f, 0.90f, 0.19f);
-            RestoreButton = _restoreBtn.GetComponent<Button>();
-            GameUIResources.ApplyOutlineStyle(_restoreBtn);
-
-            _closeBtn = GameUIResources.CreateButton("CLOSE", transform, 200, 48);
-            GameUIResources.SetAnchors(_closeBtn.GetComponent<RectTransform>(), 0.35f, 0.03f, 0.65f, 0.10f);
-            GameUIResources.ApplyPrimaryStyle(_closeBtn);
-            CloseButton = _closeBtn.GetComponent<Button>();
+            BindReferencesFromChildren();
         }
 
         public void Localize(ILocalizationService loc)
         {
-            GameUIResources.LocalizeText(TitleText.gameObject, "settings_title", loc);
-            GameUIResources.LocalizeText(_musicLabel.gameObject, "settings_music", loc);
-            GameUIResources.LocalizeText(_sfxLabel.gameObject, "settings_sfx", loc);
-            GameUIResources.LocalizeText(_hapticLabel.gameObject, "settings_haptic", loc);
-            GameUIResources.LocalizeText(_motionLabel.gameObject, "settings_reduce_motion", loc);
-            GameUIResources.LocalizeText(_bigLabel.gameObject, "settings_big_buttons", loc);
-            GameUIResources.LocalizeText(_cbLabel.gameObject, "settings_color_blind", loc);
-            GameUIResources.LocalizeText(_langLabel.gameObject, "settings_language", loc);
+            if (TitleText != null) GameUIResources.LocalizeText(TitleText.gameObject, "settings_title", loc);
+            if (_musicLabel != null) GameUIResources.LocalizeText(_musicLabel.gameObject, "settings_music", loc);
+            if (_sfxLabel != null) GameUIResources.LocalizeText(_sfxLabel.gameObject, "settings_sfx", loc);
+            if (_hapticLabel != null) GameUIResources.LocalizeText(_hapticLabel.gameObject, "settings_haptic", loc);
+            if (_motionLabel != null) GameUIResources.LocalizeText(_motionLabel.gameObject, "settings_reduce_motion", loc);
+            if (_bigLabel != null) GameUIResources.LocalizeText(_bigLabel.gameObject, "settings_big_buttons", loc);
+            if (_cbLabel != null) GameUIResources.LocalizeText(_cbLabel.gameObject, "settings_color_blind", loc);
+            if (_langLabel != null) GameUIResources.LocalizeText(_langLabel.gameObject, "settings_language", loc);
             GameUIResources.LocalizeButtonText(_removeAdsBtn, "settings_remove_ads", loc);
             GameUIResources.LocalizeButtonText(_restoreBtn, "settings_restore", loc);
             GameUIResources.LocalizeButtonText(_closeBtn, "settings_close", loc);
@@ -149,6 +63,46 @@ namespace RingFlow.Gameplay.UI
             toggle.targetGraphic = checkmarkGo.GetComponent<Image>();
             toggle.graphic = checkmarkGo.GetComponent<Image>();
             return toggle;
+        }
+
+        private void BindReferencesFromChildren()
+        {
+            var buttons = GetComponentsInChildren<Button>(true);
+            foreach (var btn in buttons)
+            {
+                var upper = btn.name.ToUpperInvariant();
+                if (upper.Contains("CLOSE")) { _closeBtn = btn.gameObject; CloseButton = btn; }
+                else if (upper.Contains("REMOVE ADS")) { _removeAdsBtn = btn.gameObject; RemoveAdsButton = btn; }
+                else if (upper.Contains("RESTORE")) { _restoreBtn = btn.gameObject; RestoreButton = btn; }
+            }
+
+            var toggles = GetComponentsInChildren<Toggle>(true);
+            foreach (var toggle in toggles)
+            {
+                var upper = toggle.name.ToUpperInvariant();
+                if (upper.Contains("MUSIC")) MusicToggle = toggle;
+                else if (upper.Contains("SFX") || upper.Contains("SOUND")) SfxToggle = toggle;
+                else if (upper.Contains("HAPTIC")) HapticToggle = toggle;
+                else if (upper.Contains("MOTION")) ReduceMotionToggle = toggle;
+                else if (upper.Contains("BIG")) BigButtonsToggle = toggle;
+            }
+
+            ColorBlindSlider = GetComponentInChildren<Slider>(true);
+            LanguageDropdown = GetComponentInChildren<Dropdown>(true);
+
+            var texts = GetComponentsInChildren<Text>(true);
+            foreach (var txt in texts)
+            {
+                var upper = txt.name.ToUpperInvariant();
+                if (upper.Contains("TITLE")) TitleText = txt;
+                else if (upper.Contains("MUSIC")) _musicLabel = txt;
+                else if (upper.Contains("SFX") || upper.Contains("SOUND")) _sfxLabel = txt;
+                else if (upper.Contains("HAPTIC")) _hapticLabel = txt;
+                else if (upper.Contains("MOTION")) _motionLabel = txt;
+                else if (upper.Contains("BIG")) _bigLabel = txt;
+                else if (upper.Contains("COLOR") || upper.Contains("CB")) _cbLabel = txt;
+                else if (upper.Contains("LANG")) _langLabel = txt;
+            }
         }
 
 

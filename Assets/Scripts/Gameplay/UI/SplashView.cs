@@ -14,32 +14,24 @@ namespace RingFlow.Gameplay.UI
 
         private void Awake()
         {
-            if (transform.childCount > 0) return;
-
-            var overlay = GetComponent<Image>();
-            if (overlay != null)
-            {
-                overlay.color = new Color(0.06f, 0.07f, 0.10f, 1f);
-            }
-
-            var logo = GameUIResources.CreateText("RING FLOW", transform, 64, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
-            logo.GetComponent<Text>().fontStyle = FontStyle.Bold;
-            GameUIResources.SetAnchors(logo.GetComponent<RectTransform>(), 0.1f, 0.45f, 0.9f, 0.60f);
-            LogoText = logo.GetComponent<Text>();
-
-            var tag = GameUIResources.CreateText("Loading...", transform, 18, TextAnchor.MiddleCenter, GameUIResources.MutedText);
-            GameUIResources.SetAnchors(tag.GetComponent<RectTransform>(), 0.1f, 0.38f, 0.9f, 0.44f);
-            TaglineText = tag.GetComponent<Text>();
-
-            var prog = GameUIResources.CreateText("", transform, 14, TextAnchor.MiddleCenter, GameUIResources.MutedText);
-            GameUIResources.SetAnchors(prog.GetComponent<RectTransform>(), 0.1f, 0.30f, 0.9f, 0.36f);
-            ProgressText = prog.GetComponent<Text>();
+            BindReferencesFromChildren();
         }
 
         public void Localize(ILocalizationService loc)
         {
-            GameUIResources.LocalizeText(LogoText.gameObject, "game_title", loc);
-            GameUIResources.LocalizeText(TaglineText.gameObject, "game_loading", loc);
+            if (LogoText != null) GameUIResources.LocalizeText(LogoText.gameObject, "game_title", loc);
+            if (TaglineText != null) GameUIResources.LocalizeText(TaglineText.gameObject, "game_loading", loc);
+        }
+
+        private void BindReferencesFromChildren()
+        {
+            var texts = GetComponentsInChildren<Text>(true);
+            foreach (var txt in texts)
+            {
+                if (txt.fontSize == 64 || txt.name.Contains("Logo")) LogoText = txt;
+                else if (txt.fontSize == 18 || txt.name.Contains("Tag") || txt.name.Contains("Loading")) TaglineText = txt;
+                else if (txt.fontSize == 14 || txt.name.Contains("Progress")) ProgressText = txt;
+            }
         }
     }
 }

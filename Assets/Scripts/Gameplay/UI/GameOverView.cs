@@ -17,50 +17,34 @@ namespace RingFlow.Gameplay.UI
 
         private void Awake()
         {
-            if (transform.childCount > 0) return;
-
-            // Dark overlay
-            var overlay = GetComponent<Image>();
-            if (overlay != null)
-            {
-                overlay.color = new Color(0, 0, 0, 0.75f);
-            }
-
-            // Centered panel card
-            var card = GameUIResources.CreatePanel("Card", transform);
-            GameUIResources.SetAnchors(card.GetComponent<RectTransform>(), 0.16f, 0.25f, 0.84f, 0.75f);
-            card.GetComponent<Image>().color = GameUIResources.PanelColor;
-
-            // Title "GAME OVER"
-            var titleGo = GameUIResources.CreateText("GAME OVER", transform, 52, TextAnchor.MiddleCenter, GameUIResources.DangerColor);
-            TitleText = titleGo.GetComponent<Text>();
-            TitleText.fontStyle = FontStyle.Bold;
-            GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.2f, 0.60f, 0.8f, 0.70f);
-
-            // Message e.g. "A bomb exploded!"
-            var msgGo = GameUIResources.CreateText("Level Failed!", transform, 24, TextAnchor.MiddleCenter, GameUIResources.TextColor);
-            MessageText = msgGo.GetComponent<Text>();
-            GameUIResources.SetAnchors(msgGo.GetComponent<RectTransform>(), 0.2f, 0.48f, 0.8f, 0.58f);
-
-            // RESTART Button
-            _restartBtn = GameUIResources.CreateButton("RESTART", transform, 300, 68);
-            GameUIResources.SetAnchors(_restartBtn.GetComponent<RectTransform>(), 0.28f, 0.34f, 0.72f, 0.44f);
-            RestartButton = _restartBtn.GetComponent<Button>();
-            GameUIResources.ApplyPrimaryStyle(_restartBtn);
-
-            // MAIN MENU Button
-            _quitBtn = GameUIResources.CreateButton("MAIN MENU", transform, 300, 56);
-            GameUIResources.SetAnchors(_quitBtn.GetComponent<RectTransform>(), 0.28f, 0.24f, 0.72f, 0.32f);
-            QuitButton = _quitBtn.GetComponent<Button>();
-            GameUIResources.ApplyOutlineStyle(_quitBtn);
+            BindReferencesFromChildren();
         }
 
         public void Localize(ILocalizationService loc)
         {
-            GameUIResources.LocalizeText(TitleText.gameObject, "game_over_title", loc);
-            GameUIResources.LocalizeText(MessageText.gameObject, "game_over_message", loc);
+            if (TitleText != null) GameUIResources.LocalizeText(TitleText.gameObject, "game_over_title", loc);
+            if (MessageText != null) GameUIResources.LocalizeText(MessageText.gameObject, "game_over_message", loc);
             GameUIResources.LocalizeButtonText(_restartBtn, "game_restart", loc);
             GameUIResources.LocalizeButtonText(_quitBtn, "menu_main_menu", loc);
+        }
+
+        private void BindReferencesFromChildren()
+        {
+            var buttons = GetComponentsInChildren<Button>(true);
+            foreach (var btn in buttons)
+            {
+                var upper = btn.name.ToUpperInvariant();
+                if (upper.Contains("RESTART")) { _restartBtn = btn.gameObject; RestartButton = btn; }
+                else if (upper.Contains("MAIN MENU")) { _quitBtn = btn.gameObject; QuitButton = btn; }
+            }
+
+            var texts = GetComponentsInChildren<Text>(true);
+            foreach (var txt in texts)
+            {
+                var upper = txt.name.ToUpperInvariant();
+                if (upper.Contains("TITLE") || upper.Contains("GAME OVER")) TitleText = txt;
+                else if (upper.Contains("MESSAGE") || upper.Contains("FAILED")) MessageText = txt;
+            }
         }
     }
 }

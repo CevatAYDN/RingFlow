@@ -18,22 +18,40 @@ namespace RingFlow.Gameplay.UI
 
         private void Awake()
         {
-            if (transform.childCount > 0) return;
-
             var overlay = GetComponent<Image>();
             if (overlay != null)
             {
                 overlay.color = new Color(0, 0, 0, 0.70f);
             }
 
-            var card = GameUIResources.CreatePanel("Card", transform);
-            GameUIResources.SetAnchors(card.GetComponent<RectTransform>(), 0.16f, 0.20f, 0.84f, 0.80f);
-            card.GetComponent<Image>().color = GameUIResources.PanelColor;
+            if (TitleText == null)
+            {
+                var existingTitle = transform.Find("Text");
+                if (existingTitle != null)
+                {
+                    TitleText = existingTitle.GetComponent<Text>();
+                }
+            }
 
-            var titleGo = GameUIResources.CreateText("YOU WIN!", transform, 52, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
-            TitleText = titleGo.GetComponent<Text>();
-            TitleText.fontStyle = FontStyle.Bold;
-            GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.2f, 0.66f, 0.8f, 0.76f);
+            if (TitleText == null)
+            {
+                var titleGo = GameUIResources.CreateText("YOU WIN!", transform, 52, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
+                TitleText = titleGo.GetComponent<Text>();
+                GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.2f, 0.66f, 0.8f, 0.76f);
+            }
+
+            if (TitleText != null)
+            {
+                TitleText.fontStyle = FontStyle.Bold;
+            }
+
+            var card = transform.Find("Card")?.gameObject;
+            if (card == null)
+            {
+                card = GameUIResources.CreatePanel("Card", transform);
+                GameUIResources.SetAnchors(card.GetComponent<RectTransform>(), 0.16f, 0.20f, 0.84f, 0.80f);
+            }
+            card.GetComponent<Image>().color = GameUIResources.PanelColor;
 
             var starRow = new GameObject("Stars", typeof(RectTransform), typeof(HorizontalLayoutGroup));
             starRow.transform.SetParent(transform, false);
@@ -63,13 +81,21 @@ namespace RingFlow.Gameplay.UI
             GameUIResources.SetAnchors(rewardGo.GetComponent<RectTransform>(), 0.2f, 0.42f, 0.8f, 0.49f);
             RewardText = rewardGo.GetComponent<Text>();
 
-            _nextBtn = GameUIResources.CreateButton("NEXT LEVEL", transform, 300, 68);
-            GameUIResources.SetAnchors(_nextBtn.GetComponent<RectTransform>(), 0.28f, 0.30f, 0.72f, 0.40f);
+            _nextBtn = transform.Find("Btn_NEXT LEVEL")?.gameObject;
+            if (_nextBtn == null)
+            {
+                _nextBtn = GameUIResources.CreateButton("NEXT LEVEL", transform, 300, 68);
+                GameUIResources.SetAnchors(_nextBtn.GetComponent<RectTransform>(), 0.28f, 0.30f, 0.72f, 0.40f);
+            }
             NextLevelButton = _nextBtn.GetComponent<Button>();
 
-            _quitBtn = GameUIResources.CreateButton("MAIN MENU", transform, 300, 56);
-            GameUIResources.SetAnchors(_quitBtn.GetComponent<RectTransform>(), 0.28f, 0.22f, 0.72f, 0.28f);
-            GameUIResources.ApplyOutlineStyle(_quitBtn);
+            _quitBtn = transform.Find("Btn_MAIN MENU")?.gameObject;
+            if (_quitBtn == null)
+            {
+                _quitBtn = GameUIResources.CreateButton("MAIN MENU", transform, 300, 56);
+                GameUIResources.SetAnchors(_quitBtn.GetComponent<RectTransform>(), 0.28f, 0.22f, 0.72f, 0.28f);
+                GameUIResources.ApplyOutlineStyle(_quitBtn);
+            }
             QuitButton = _quitBtn.GetComponent<Button>();
         }
 
@@ -92,9 +118,28 @@ namespace RingFlow.Gameplay.UI
 
         public void Localize(ILocalizationService loc)
         {
-            GameUIResources.LocalizeText(TitleText.gameObject, "game_you_win", loc);
-            GameUIResources.LocalizeButtonText(_nextBtn, "game_next_level", loc);
-            GameUIResources.LocalizeButtonText(_quitBtn, "menu_main_menu", loc);
+            if (loc == null) return;
+
+            if (TitleText != null)
+            {
+                GameUIResources.LocalizeText(TitleText.gameObject, "game_you_win", loc);
+            }
+
+            if (_nextBtn != null)
+            {
+                GameUIResources.LocalizeButtonText(_nextBtn, "game_next_level", loc);
+            }
+
+            if (_quitBtn != null)
+            {
+                GameUIResources.LocalizeButtonText(_quitBtn, "menu_main_menu", loc);
+            }
+
+            if (TitleText == null || _nextBtn == null || _quitBtn == null)
+            {
+                NexusLog.Warn("WinView", nameof(Localize), "",
+                    "One or more WinView UI references were missing during localization.");
+            }
         }
 
         public void ShowResults(int moves, int targetMoves, int coins, int xp)
