@@ -94,7 +94,7 @@ namespace RingFlow.Gameplay
                 var scrambledState = board;
 
                 // 3. Çözülebilirliği ve optimal hamle sayısını test et
-                var solveResult = LevelSolver.Solve(scrambledState, maxCapacity);
+                var solveResult = LevelSolver.Solve(scrambledState, maxCapacity, maxStatesLimit: 5000);
 
                 if (solveResult.IsSolvable && solveResult.MoveCount > 0)
                 {

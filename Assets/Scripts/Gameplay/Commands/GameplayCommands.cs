@@ -262,7 +262,6 @@ namespace RingFlow.Gameplay
 
             mainRecord.BombCountersBeforeTick = SnapshotBombCounters();
 
-            _model.MoveHistory.Push(mainRecord);
             _model.MovesCount.Value++;
 
             NexusLog.Info("MoveRingCommand", "Execute", $"{signal.FromPoleId}->{signal.ToPoleId}",
@@ -276,10 +275,12 @@ namespace RingFlow.Gameplay
             {
                 _model.IsGameWon.Value = false;
                 mainRecord.BombExplodedRings = explodedRings;
+                _model.MoveHistory.Push(mainRecord);
                 FireGameOverTransition();
                 return;
             }
 
+            _model.MoveHistory.Push(mainRecord);
             _signalBus.Fire(new CheckWinSignal());
         }
 

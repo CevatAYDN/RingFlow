@@ -281,12 +281,6 @@ namespace RingFlow.Gameplay
         {
             pole.SetActive(false);
             pole.transform.SetParent(null);
-            var renderer = pole.GetComponent<Renderer>();
-            if (renderer != null && renderer.sharedMaterial != null
-                && renderer.sharedMaterial.name.StartsWith("PoleMat_"))
-            {
-                Destroy(renderer.sharedMaterial);
-            }
             _polePool.Enqueue(pole);
         }
 
