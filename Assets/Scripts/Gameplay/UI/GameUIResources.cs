@@ -49,6 +49,14 @@ namespace RingFlow.Gameplay.UI
             return go;
         }
 
+        // ── Safe-Area-aware panel ────────────────────────────────────────
+        public static GameObject CreateSafeAreaPanel(string name, Transform parent)
+        {
+            var go = CreatePanel(name, parent);
+            go.AddComponent<SafeAreaHandler>();
+            return go;
+        }
+
         // ── Button (with proper Selectable feedback) ─────────────────────
         public static GameObject CreateButton(string label, Transform parent, float width, float height)
         {

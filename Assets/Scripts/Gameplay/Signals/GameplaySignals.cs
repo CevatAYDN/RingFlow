@@ -13,7 +13,8 @@ namespace RingFlow.Gameplay
         Settings,
         DailyReward,
         Onboarding,
-        GameOver
+        GameOver,
+        ChestPopup
     }
 
     public readonly struct ShowScreenSignal
@@ -231,4 +232,25 @@ namespace RingFlow.Gameplay
             Amount = amount;
         }
     }
+
+    // ── Chest System Signals (GDD §9) ─────────────────────
+    public readonly struct ChestAwardedSignal
+    {
+        public readonly int Bronze;
+        public readonly int Silver;
+        public readonly int Gold;
+        public readonly int Diamond;
+        public ChestAwardedSignal(int bronze, int silver, int gold, int diamond)
+        {
+            Bronze = bronze;
+            Silver = silver;
+            Gold = gold;
+            Diamond = diamond;
+        }
+    }
+
+    public readonly struct ChestClaimAllSignal {}
+
+    public readonly struct OpenChestPopupSignal {}
+    public readonly struct CloseChestPopupSignal {}
 }

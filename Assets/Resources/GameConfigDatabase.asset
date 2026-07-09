@@ -1,0 +1,262 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f132cd875a226c447bb35db28e54b6f1, type: 3}
+  m_Name: GameConfigDatabase
+  m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.GameConfigDatabaseSO
+  TotalLevels: 2000
+  DifficultyBands:
+  - Band: 0
+    MaxLevel: 20
+    MinEmptyPoles: 2
+    MaxCapacity: 4
+  - Band: 1
+    MaxLevel: 100
+    MinEmptyPoles: 2
+    MaxCapacity: 4
+  - Band: 2
+    MaxLevel: 350
+    MinEmptyPoles: 1
+    MaxCapacity: 4
+  - Band: 3
+    MaxLevel: 600
+    MinEmptyPoles: 1
+    MaxCapacity: 4
+  - Band: 4
+    MaxLevel: 1000
+    MinEmptyPoles: 1
+    MaxCapacity: 4
+  - Band: 5
+    MaxLevel: 1500
+    MinEmptyPoles: 1
+    MaxCapacity: 4
+  - Band: 6
+    MaxLevel: 2000
+    MinEmptyPoles: 1
+    MaxCapacity: 4
+  ColorCurve:
+  - LevelThreshold: 1
+    ColorCount: 3
+  - LevelThreshold: 20
+    ColorCount: 4
+  - LevelThreshold: 80
+    ColorCount: 5
+  - LevelThreshold: 150
+    ColorCount: 6
+  - LevelThreshold: 300
+    ColorCount: 7
+  - LevelThreshold: 500
+    ColorCount: 8
+  - LevelThreshold: 800
+    ColorCount: 9
+  - LevelThreshold: 2000
+    ColorCount: 10
+  Worlds:
+  - WorldIndex: 0
+    Theme: Grass Valley
+    UnlockedByWorldIndex: 0
+    IsEventWorld: 0
+    MechanicType: 0
+  - WorldIndex: 1
+    Theme: World 2
+    UnlockedByWorldIndex: 0
+    IsEventWorld: 0
+    MechanicType: 1
+  - WorldIndex: 2
+    Theme: World 3
+    UnlockedByWorldIndex: 1
+    IsEventWorld: 0
+    MechanicType: 2
+  - WorldIndex: 3
+    Theme: World 4
+    UnlockedByWorldIndex: 2
+    IsEventWorld: 0
+    MechanicType: 3
+  - WorldIndex: 4
+    Theme: World 5
+    UnlockedByWorldIndex: 3
+    IsEventWorld: 1
+    MechanicType: 4
+  - WorldIndex: 5
+    Theme: World 6
+    UnlockedByWorldIndex: 4
+    IsEventWorld: 0
+    MechanicType: 5
+  - WorldIndex: 6
+    Theme: World 7
+    UnlockedByWorldIndex: 5
+    IsEventWorld: 0
+    MechanicType: 6
+  - WorldIndex: 7
+    Theme: World 8
+    UnlockedByWorldIndex: 6
+    IsEventWorld: 0
+    MechanicType: 7
+  - WorldIndex: 8
+    Theme: World 9
+    UnlockedByWorldIndex: 7
+    IsEventWorld: 0
+    MechanicType: 8
+  - WorldIndex: 9
+    Theme: World 10
+    UnlockedByWorldIndex: 8
+    IsEventWorld: 1
+    MechanicType: 9
+  - WorldIndex: 10
+    Theme: World 11
+    UnlockedByWorldIndex: 9
+    IsEventWorld: 0
+    MechanicType: 10
+  - WorldIndex: 11
+    Theme: World 12
+    UnlockedByWorldIndex: 10
+    IsEventWorld: 0
+    MechanicType: 11
+  - WorldIndex: 12
+    Theme: World 13
+    UnlockedByWorldIndex: 11
+    IsEventWorld: 0
+    MechanicType: 12
+  - WorldIndex: 13
+    Theme: World 14
+    UnlockedByWorldIndex: 12
+    IsEventWorld: 0
+    MechanicType: 12
+  - WorldIndex: 14
+    Theme: World 15
+    UnlockedByWorldIndex: 13
+    IsEventWorld: 1
+    MechanicType: 12
+  - WorldIndex: 15
+    Theme: World 16
+    UnlockedByWorldIndex: 14
+    IsEventWorld: 0
+    MechanicType: 12
+  - WorldIndex: 16
+    Theme: World 17
+    UnlockedByWorldIndex: 15
+    IsEventWorld: 0
+    MechanicType: 12
+  - WorldIndex: 17
+    Theme: World 18
+    UnlockedByWorldIndex: 16
+    IsEventWorld: 0
+    MechanicType: 12
+  - WorldIndex: 18
+    Theme: World 19
+    UnlockedByWorldIndex: 17
+    IsEventWorld: 0
+    MechanicType: 13
+  - WorldIndex: 19
+    Theme: World 20
+    UnlockedByWorldIndex: 18
+    IsEventWorld: 1
+    MechanicType: 13
+  - WorldIndex: 20
+    Theme: World 21
+    UnlockedByWorldIndex: 19
+    IsEventWorld: 0
+    MechanicType: 13
+  - WorldIndex: 21
+    Theme: World 22
+    UnlockedByWorldIndex: 20
+    IsEventWorld: 0
+    MechanicType: 13
+  - WorldIndex: 22
+    Theme: World 23
+    UnlockedByWorldIndex: 21
+    IsEventWorld: 0
+    MechanicType: 13
+  - WorldIndex: 23
+    Theme: World 24
+    UnlockedByWorldIndex: 22
+    IsEventWorld: 0
+    MechanicType: 13
+  - WorldIndex: 24
+    Theme: World 25
+    UnlockedByWorldIndex: 23
+    IsEventWorld: 1
+    MechanicType: 13
+  - WorldIndex: 25
+    Theme: World 26
+    UnlockedByWorldIndex: 24
+    IsEventWorld: 0
+    MechanicType: 14
+  - WorldIndex: 26
+    Theme: World 27
+    UnlockedByWorldIndex: 25
+    IsEventWorld: 0
+    MechanicType: 14
+  - WorldIndex: 27
+    Theme: World 28
+    UnlockedByWorldIndex: 26
+    IsEventWorld: 0
+    MechanicType: 14
+  - WorldIndex: 28
+    Theme: World 29
+    UnlockedByWorldIndex: 27
+    IsEventWorld: 0
+    MechanicType: 14
+  - WorldIndex: 29
+    Theme: World 30
+    UnlockedByWorldIndex: 28
+    IsEventWorld: 1
+    MechanicType: 14
+  - WorldIndex: 30
+    Theme: World 31
+    UnlockedByWorldIndex: 29
+    IsEventWorld: 0
+    MechanicType: 14
+  - WorldIndex: 31
+    Theme: World 32
+    UnlockedByWorldIndex: 30
+    IsEventWorld: 0
+    MechanicType: 14
+  - WorldIndex: 32
+    Theme: World 33
+    UnlockedByWorldIndex: 31
+    IsEventWorld: 0
+    MechanicType: 14
+  - WorldIndex: 33
+    Theme: World 34
+    UnlockedByWorldIndex: 32
+    IsEventWorld: 0
+    MechanicType: 14
+  - WorldIndex: 34
+    Theme: World 35
+    UnlockedByWorldIndex: 33
+    IsEventWorld: 1
+    MechanicType: 14
+  - WorldIndex: 35
+    Theme: World 36
+    UnlockedByWorldIndex: 34
+    IsEventWorld: 0
+    MechanicType: 14
+  - WorldIndex: 36
+    Theme: World 37
+    UnlockedByWorldIndex: 35
+    IsEventWorld: 0
+    MechanicType: 14
+  - WorldIndex: 37
+    Theme: World 38
+    UnlockedByWorldIndex: 36
+    IsEventWorld: 0
+    MechanicType: 14
+  - WorldIndex: 38
+    Theme: World 39
+    UnlockedByWorldIndex: 37
+    IsEventWorld: 0
+    MechanicType: 14
+  - WorldIndex: 39
+    Theme: World 40
+    UnlockedByWorldIndex: 38
+    IsEventWorld: 1
+    MechanicType: 14

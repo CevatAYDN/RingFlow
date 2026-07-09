@@ -20,6 +20,7 @@ namespace RingFlow.Gameplay
         public const string EventUndoUse       = "undo_use";
         public const string EventRestartUse    = "restart_use";
         public const string EventRewardedAd    = "rewarded_ad";
+        public const string EventInterstitialAd = "interstitial_ad";
         public const string EventSessionStart  = "session_start";
         public const string EventSessionEnd    = "session_end";
 
@@ -80,6 +81,14 @@ namespace RingFlow.Gameplay
             {
                 ("placement", placement),
                 ("completed", completed ? "1" : "0")
+            });
+        }
+
+        public static void InterstitialAd(string placement)
+        {
+            Track(EventInterstitialAd, new[]
+            {
+                ("placement", placement)
             });
         }
     }

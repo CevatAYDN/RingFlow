@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 
 using RingFlow.Gameplay.Diagnostics;
+using RingFlow.Gameplay.Services;
 
 namespace RingFlow.Gameplay
 {
@@ -44,6 +45,9 @@ namespace RingFlow.Gameplay
             builder.BindService<IIapService, IapService>();
             builder.BindService<IObjectPoolService, ObjectPoolService>();
 
+            // -------------------- Asset Service (GDD §6) --------------------
+            builder.Bind<IAssetService, ResourcesAssetService>();
+
             // -------------------- Diagnostics & Tracing --------------------
             builder.BindService<IGameDiagnostics, GameDiagnostics>();
             builder.BindService<IFsmTransitionTracer, FsmTransitionTracer>();
@@ -78,6 +82,7 @@ namespace RingFlow.Gameplay
             builder.BindCommand<UndoRequestedSignal, UndoRequestedCommand>();
             builder.BindCommand<CheckWinSignal, CheckWinCommand>();
             builder.BindCommand<HintRequestedSignal, HintCommand>();
+            builder.BindCommand<ChestClaimAllSignal, ChestClaimCommand>();
             builder.BindCommand<DailyRewardClaimSignal, DailyRewardClaimCommand>();
         }
 

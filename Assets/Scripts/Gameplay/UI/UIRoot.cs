@@ -19,6 +19,7 @@ namespace RingFlow.Gameplay.UI
             ScreenType.DailyReward,
             ScreenType.Settings,
             ScreenType.Pause,
+            ScreenType.ChestPopup,
         };
 
         /// <summary>
@@ -62,6 +63,7 @@ namespace RingFlow.Gameplay.UI
             CreateScreen<WinView>(ScreenType.Win, canvasGo.transform);
             CreateScreen<SettingsView>(ScreenType.Settings, canvasGo.transform);
             CreateScreen<DailyRewardPopupView>(ScreenType.DailyReward, canvasGo.transform);
+            CreateScreen<ChestPopupView>(ScreenType.ChestPopup, canvasGo.transform);
             CreateScreen<GameOverView>(ScreenType.GameOver, canvasGo.transform);
 
             _root = GetComponentInParent<Root>();
@@ -141,6 +143,9 @@ namespace RingFlow.Gameplay.UI
                 _subscriptions.Add(sb.Subscribe<CloseDailyRewardSignal>(_ => ClosePopup(ScreenType.DailyReward)));
                 _subscriptions.Add(sb.Subscribe<CloseSettingsSignal>(_ => ClosePopup(ScreenType.Settings)));
 
+                _subscriptions.Add(sb.Subscribe<OpenChestPopupSignal>(_ => OpenPopup(ScreenType.ChestPopup)));
+                _subscriptions.Add(sb.Subscribe<CloseChestPopupSignal>(_ => ClosePopup(ScreenType.ChestPopup)));
+
                 _subscriptions.Add(sb.Subscribe<QuitToMenuRequestedSignal>(_ =>
                 {
                     CloseAllPopups();
@@ -160,7 +165,7 @@ namespace RingFlow.Gameplay.UI
 
         private void CreateScreen<T>(ScreenType type, Transform parent) where T : View
         {
-            var go = GameUIResources.CreatePanel(type.ToString(), parent);
+            var go = GameUIResources.CreateSafeAreaPanel(type.ToString(), parent);
             go.SetActive(false);
             go.AddComponent<T>();
             _screens[type] = go;

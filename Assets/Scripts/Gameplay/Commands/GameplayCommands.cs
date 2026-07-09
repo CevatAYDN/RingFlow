@@ -3,6 +3,7 @@ using System.Linq;
 using Nexus.Core;
 using Nexus.Core.FSM;
 using Nexus.Core.Services;
+using UnityEngine;
 
 namespace RingFlow.Gameplay
 {
@@ -693,6 +694,10 @@ namespace RingFlow.Gameplay
         [Inject] private IEconomyService _economyService;
         [Inject] private PlayerProgressModel _progress;
         [Inject] private IGameStateMachine _fsm;
+        [Inject] private IAdService _ads;
+
+        // ── GDD §10 — Interstitial every 3 levels ─────────────
+        private const int InterstitialInterval = 3;
 
         public void Execute(CheckWinSignal signal)
         {
@@ -816,6 +821,36 @@ namespace RingFlow.Gameplay
                     $"Level {prevLevel} WON! Moves={prevMoves}, Target={prevTarget}, Stars={stars}, Coins+={coinReward}, XP+={xpEarned}");
 
                 AnalyticsEvents.LevelComplete(prevLevel, prevMoves, stars);
+
+                // ── GDD §9 — Award chests on win ─────────────────────
+                if (_progress != null)
+                {
+                    // 1 Bronze per clear
+                    _progress.ChestBronze.Value++;
+                    // 40% chance Silver
+                    if (Random.value < 0.40f) _progress.ChestSilver.Value++;
+                    // 10% chance Gold (3★ only)
+                    if (stars >= 3 && Random.value < 0.10f) _progress.ChestGold.Value++;
+                    // 1% chance Diamond (3★ only)
+                    if (stars >= 3 && Random.value < 0.01f) _progress.ChestDiamond.Value++;
+                }
+
+                // ── GDD §10 — Interstitial ad every 3 levels ────────
+                if (_progress != null && _ads != null && !_progress.RemoveAds.Value)
+                {
+                    _progress.LevelsSinceLastInterstitial++;
+                    if (_progress.LevelsSinceLastInterstitial >= InterstitialInterval)
+                    {
+                        _progress.LevelsSinceLastInterstitial = 0;
+                        if (_ads.IsInterstitialAvailable("LevelComplete"))
+                        {
+                            NexusLog.Info("CheckWinCommand", "Execute", "",
+                                $"Showing interstitial ad (interval={InterstitialInterval}).");
+                            _ads.ShowInterstitial("LevelComplete");
+                            AnalyticsEvents.InterstitialAd("LevelComplete");
+                        }
+                    }
+                }
 
                 _ = _fsm?.ChangeStateAsync<WinState>();
             }

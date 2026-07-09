@@ -38,3 +38,12 @@ format_level,"Level {0}","Seviye {0}","Level {0}","Nivel {0}","Niveau {0}","Leve
 format_moves,"Moves: {0}","Hamle: {0}","Langkah: {0}","Movimientos: {0}","Mouvements: {0}","Züge: {0}","Movimentos: {0}","Mosse: {0}","الحركات: {0}","चालें: {0}","Ходы: {0}","手数: {0}","步数: {0}","Hamle: {0}","Nước đi: {0}"
 format_moves_target,"Moves: {0} / {1}","Hamle: {0} / {1}","Langkah: {0} / {1}","Movimientos: {0} / {1}","Mouvements: {0} / {1}","Züge: {0} / {1}","Movimentos: {0} / {1}","Mosse: {0} / {1}","الحركات: {0} / {1}","चालें: {0} / {1}","Ходы: {0} / {1}","手数: {0} / {1}","步数: {0} / {1}","Hamle: {0} / {1}","Nước đi: {0} / {1}"
 format_reward,"+{0} Coins   +{1} XP","+{0} Para   +{1} XP","+{0} Koin   +{1} XP","+{0} Monedas   +{1} EXP","+{0} Pièces   +{1} XP","+{0} Münzen   +{1} EP","+{0} Moedas   +{1} XP","+{0} Monete   +{1} XP","+{0} عملات   +{1} خبرة","+{0} सिक्के   +{1} अनुभव","+{0} Монет   +{1} Опыта","+{0}コイン  +{1}経験値","+{0}金币  +{1}经验","+{0} Para  +{1} XP","+{0} Xu  +{1} KN"
+chest_title,Chests,Kasalar,Brankas,Cofres,Coffres,Trühen,Baús,Casse,صناديق,संदूक,Сундуки,宝箱,宝箱,Kasalar,Rương
+chest_claim_all,CLAIM ALL,HEPSİNİ AL,KLAIM SEMUA,RECLAMAR TODO,TOUT RÉCLAMER,ALLE EINLÖSEN,RECLAMAR TUDO,RICHIEDI TUTTO,استلام الكل,सभी दावा करें,ЗАБРАТЬ ВСЁ,全て受け取る,全部领取,HEPSİNİ AL,NHẬN TẤT CẢ
+chest_bronze,Bronze,Bronz,Perunggu,Bronce,Bronze,Bronze,Bronze,Bronzo,برونزي,कांस्य,Бронза,ブロンズ,青铜,Bronz,Đồng
+chest_silver,Silver,Gümüş,Perak,Plata,Argent,Silber,Prata,Argento,فضة,चांदी,Серебро,シルバー,白银,Gümüş,Bạc
+chest_gold,Gold,Altın,Emas,Oro,Or,Gold,Ouro,Oro,ذهب,सोना,Золото,ゴールド,黄金,Altın,Vàng
+chest_diamond,Diamond,Elmas,Intan,Diamante,Diamant,Diamant,Diamante,Diamante,ألماس,हीरा,Алмаз,ダイヤモンド,钻石,Elmas,Kim Cương
+chest_xp_label,"{0} XP","{0} XP","{0} XP","{0} EXP","{0} XP","{0} EP","{0} XP","{0} XP","{0} خبرة","{0} अनुभव","{0} Опыта","{0}経験値","{0}经验","{0} XP","{0} KN"
+chest_gained,"Chests Earned!","Kasa Kazanıldı!","Brankas Diperoleh!","Cofres Ganados!","Coffres Gagnés!","Truhen Verdient!","Baús Ganhos!","Casse Guadagnati!","تم الحصول على صناديق!","संदूक अर्जित!","Сундуки Получены!","宝箱獲得！","获得宝箱！","Kasa Kazanıldı!","Rương Nhận Được!"
+chest_total,"Total: {0}","Toplam: {0}","Total: {0}","Total: {0}","Total: {0}","Gesamt: {0}","Total: {0}","Totale: {0}","المجموع: {0}","कुल: {0}","Итого: {0}","合計: {0}","总计: {0}","Toplam: {0}","Tổng: {0}"

@@ -51,6 +51,10 @@ namespace RingFlow.Gameplay
 
         public ObservableProperty<bool> RemoveAds { get; } = new(false);
 
+        // ── Interstitial ad counter (GDD §10) ────────────────
+        // Non-persisted; resets each session. Tracks levels since last interstitial.
+        public int LevelsSinceLastInterstitial { get; set; } = 0;
+
         /// <summary>0..39 — unlocked state per world.</summary>
         public List<bool> UnlockedWorlds { get; } = new(40);
         /// <summary>themes owned (by ID, arbitrary strings managed outside).</summary>
