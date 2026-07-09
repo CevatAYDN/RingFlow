@@ -38,6 +38,7 @@ namespace RingFlow.Gameplay.UI
             if (_rect == null) return;
 
             Rect safeArea = Screen.safeArea;
+            _lastSafeArea = safeArea;
             Vector2 screenSize = new Vector2(Screen.width, Screen.height);
 
             Vector2 anchorMin = new Vector2(safeArea.xMin / screenSize.x, safeArea.yMin / screenSize.y);

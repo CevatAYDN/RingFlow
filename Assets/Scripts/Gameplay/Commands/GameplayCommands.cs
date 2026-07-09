@@ -268,6 +268,22 @@ namespace RingFlow.Gameplay
             // Execute post-move strategies (Paint application, Rainbow conversion, etc.)
             _strategyManager.ExecutePostMoveExecution(ring.Type, ref context);
 
+            // Paint/Rainbow targets: If standard ring lands on top of Paint or Rainbow ring, run their strategy
+            if (toPole.Rings.Count >= 2)
+            {
+                var targetType = toPole.Rings[toPole.Rings.Count - 2].Type;
+                if (targetType == RingType.Paint || targetType == RingType.Rainbow)
+                {
+                    _strategyManager.ExecutePostMoveExecution(targetType, ref context);
+                }
+            }
+
+            // Mystery reveal: If the new top ring on the source pole (FromPole) is Mystery, reveal it
+            if (fromPole.Rings.Count > 0 && fromPole.TopRing.Type == RingType.Mystery)
+            {
+                _strategyManager.ExecutePostMoveExecution(RingType.Mystery, ref context);
+            }
+
             // Handle remaining complex mechanics (Chain, Magnet, Bomb, Ice)
             // These will be migrated to strategies in future iterations
             var mainRecord = BuildMoveRecord(context);
@@ -561,24 +577,19 @@ namespace RingFlow.Gameplay
                     {
                         movedRing.Color = lastMove.OriginalColor;
 
-                        if (lastMove.PaintedRingIndex >= 0
-                            && lastMove.PaintedRingIndex < toPole.Rings.Count)
+                        int paintTargetIndex = lastMove.PaintedRingIndex - 1;
+                        if (paintTargetIndex >= 0 && paintTargetIndex < toPole.Rings.Count)
                         {
-                            var painted = toPole.Rings[lastMove.PaintedRingIndex];
-                            painted.Color = lastMove.PaintedRingOriginalColor;
+                            var painted = toPole.Rings[paintTargetIndex];
                             painted.Type = RingType.Paint;
-                            toPole.Rings[lastMove.PaintedRingIndex] = painted;
+                            toPole.Rings[paintTargetIndex] = painted;
                         }
                     }
 
-                    if (lastMove.WasRainbowTargetConverted
-                        && lastMove.RainbowTargetRingIndex >= 0
-                        && lastMove.RainbowTargetRingIndex < toPole.Rings.Count)
+                    if (lastMove.WasRainbowTargetConverted)
                     {
-                        var rainbow = toPole.Rings[lastMove.RainbowTargetRingIndex];
-                        rainbow.Color = lastMove.RainbowTargetOriginalColor;
-                        rainbow.Type = RingType.Rainbow;
-                        toPole.Rings[lastMove.RainbowTargetRingIndex] = rainbow;
+                        movedRing.Type = RingType.Rainbow;
+                        movedRing.Color = lastMove.RainbowTargetOriginalColor;
                     }
 
                     fromPole.AddRing(movedRing);

@@ -1,0 +1,62 @@
+using System;
+using Nexus.Core;
+using Nexus.Core.FSM;
+using Nexus.Core.Services;
+using UnityEngine;
+
+namespace RingFlow.Gameplay.UI
+{
+    public class ParentalGatePopupMediator : Mediator<ParentalGatePopupView>
+    {
+        [Inject] private IGameStateMachine _fsm;
+        [Inject] private ISignalBus _signalBus;
+
+        protected override void OnBind()
+        {
+            if (View == null) return;
+
+            View.AcceptButton?.onClick.AddListener(HandleAccept);
+            View.TermsButton?.onClick.AddListener(HandleOpenTerms);
+            View.PrivacyButton?.onClick.AddListener(HandleOpenPrivacy);
+        }
+
+        private void HandleAccept()
+        {
+            if (View == null) return;
+
+            if (View.ValidateAnswer())
+            {
+                // Save acceptance state locally (device bound)
+                PlayerPrefs.SetInt("RF_GdprAccepted", 1);
+                PlayerPrefs.Save();
+
+                NexusLog.Info("ParentalGatePopupMediator", "HandleAccept", "", "Parental gate verification passed. GDPR accepted.");
+                
+                // Hide popup and transition to main menu
+                _signalBus?.Fire(new ShowScreenSignal(ScreenType.MainMenu));
+                if (_fsm != null)
+                {
+                    _ = _fsm.ChangeStateAsync<MainMenuState>();
+                }
+            }
+        }
+
+        private void HandleOpenTerms()
+        {
+            Application.OpenURL("https://fecestudios.com/terms");
+        }
+
+        private void HandleOpenPrivacy()
+        {
+            Application.OpenURL("https://fecestudios.com/privacy");
+        }
+
+        protected override void OnUnbind()
+        {
+            if (View == null) return;
+            View.AcceptButton?.onClick.RemoveListener(HandleAccept);
+            View.TermsButton?.onClick.RemoveListener(HandleOpenTerms);
+            View.PrivacyButton?.onClick.RemoveListener(HandleOpenPrivacy);
+        }
+    }
+}

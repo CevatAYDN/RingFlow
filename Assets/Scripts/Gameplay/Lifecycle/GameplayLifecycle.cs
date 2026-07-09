@@ -194,7 +194,11 @@ namespace RingFlow.Gameplay
             var progress = context.TryResolve<PlayerProgressModel>();
             if (prefs != null)
             {
-                if (progress != null) PlayerProgressSaveSystem.Load(prefs, progress);
+                if (progress != null)
+                {
+                    PlayerProgressSaveSystem.Load(prefs, progress);
+                    progress.FreeUndosUsedThisSession.Value = 0;
+                }
                 if (settings != null) SettingsSaveSystem.Load(prefs, settings);
             }
 

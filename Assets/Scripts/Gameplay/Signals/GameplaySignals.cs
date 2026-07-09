@@ -14,7 +14,8 @@ namespace RingFlow.Gameplay
         DailyReward,
         Onboarding,
         GameOver,
-        ChestPopup
+        ChestPopup,
+        ParentalGate
     }
 
     public readonly struct ShowScreenSignal

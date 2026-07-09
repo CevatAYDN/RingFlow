@@ -65,6 +65,7 @@ namespace RingFlow.Gameplay.UI
             CreateScreen<DailyRewardPopupView>(ScreenType.DailyReward, canvasGo.transform);
             CreateScreen<ChestPopupView>(ScreenType.ChestPopup, canvasGo.transform);
             CreateScreen<GameOverView>(ScreenType.GameOver, canvasGo.transform);
+            CreateScreen<ParentalGatePopupView>(ScreenType.ParentalGate, canvasGo.transform);
 
             _root = GetComponentInParent<Root>();
             if (_root == null)

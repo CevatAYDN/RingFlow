@@ -19,6 +19,9 @@ namespace RingFlow.Gameplay.Strategies
             // Cannot add if pole is full
             if (isPoleFull) return false;
             
+            // Stone rings cannot have any rings placed on top of them (GDD §4)
+            if (topRing.Type == RingType.Stone) return false;
+            
             // Can always add to empty pole
             if (topRing.Color == RingColor.None) return true;
             

@@ -69,6 +69,7 @@ namespace RingFlow.Gameplay.AOT
             typeof(UI.DailyRewardPopupMediator).ToString();
             typeof(UI.ChestPopupMediator).ToString();
             typeof(UI.GameOverMediator).ToString();
+            typeof(UI.ParentalGatePopupMediator).ToString();
         }
 
         /// <summary>
@@ -185,6 +186,7 @@ namespace RingFlow.Gameplay.AOT
             typeof(UI.ChestPopupView).ToString();
             typeof(UI.GameOverView).ToString();
             typeof(UI.SplashView).ToString();
+            typeof(UI.ParentalGatePopupView).ToString();
         }
     }
 }

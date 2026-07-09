@@ -6,6 +6,7 @@ using NUnit.Framework;
 using Nexus.Core;
 using Nexus.Core.Services;
 using RingFlow.Gameplay;
+using RingFlow.Gameplay.Strategies;
 
 namespace RingFlow.Tests
 {
@@ -61,6 +62,10 @@ namespace RingFlow.Tests
                         f.SetValue(target, _adService);
                     else if (f.FieldType == typeof(IProgressionService))
                         f.SetValue(target, _progressionService);
+                    else if (f.FieldType == typeof(RingMoveStrategyManager))
+                        f.SetValue(target, new RingMoveStrategyManager());
+                    else if (f.FieldType == typeof(Nexus.Core.FSM.IGameStateMachine))
+                        f.SetValue(target, new MockGameStateMachine());
                 }
             }
         }
@@ -752,5 +757,14 @@ namespace RingFlow.Tests
         public void ShowRewarded(string placement, Action<bool> onComplete) => onComplete?.Invoke(true);
         public void ShowBanner(string placement = "default", string position = "bottom") {}
         public void HideBanner() {}
+    }
+
+    public class MockGameStateMachine : Nexus.Core.FSM.IGameStateMachine
+    {
+        public Nexus.Core.FSM.IGameState CurrentState => null;
+        public void RegisterState<TState>(TState state) where TState : class, Nexus.Core.FSM.IGameState {}
+        public Task ChangeStateAsync<TState>(object args = null) where TState : class, Nexus.Core.FSM.IGameState => Task.CompletedTask;
+        public Task ChangeStateAsync(Type stateType, object args = null) => Task.CompletedTask;
+        public Task ChangeStateAsync(Type stateType, CancellationToken ct, object args = null) => Task.CompletedTask;
     }
 }

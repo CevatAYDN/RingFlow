@@ -10,6 +10,7 @@ namespace RingFlow.Gameplay.UI
     {
         [Inject] private IGameStateMachine _fsm;
         [Inject] private ILocalizationService _loc;
+        [Inject] private ISignalBus _signalBus;
 
         protected override void OnBind()
         {
@@ -49,13 +50,21 @@ namespace RingFlow.Gameplay.UI
                 return;
             }
 
-            try
+            if (PlayerPrefs.GetInt("RF_GdprAccepted", 0) == 1)
             {
-                await _fsm.ChangeStateAsync<MainMenuState>();
+                try
+                {
+                    await _fsm.ChangeStateAsync<MainMenuState>();
+                }
+                catch (System.Exception ex)
+                {
+                    NexusLog.Error("SplashMediator", nameof(TransitionAfterDelay), "", ex);
+                }
             }
-            catch (System.Exception ex)
+            else
             {
-                NexusLog.Error("SplashMediator", nameof(TransitionAfterDelay), "", ex);
+                NexusLog.Info("SplashMediator", "TransitionAfterDelay", "", "GDPR not accepted. Opening Parental Gate popup.");
+                _signalBus?.Fire(new ShowScreenSignal(ScreenType.ParentalGate));
             }
         }
 
