@@ -9,15 +9,21 @@ namespace RingFlow.Gameplay
     [Mediator(typeof(BoardMediator))]
     public class BoardView : View
     {
+        [UnityEngine.Scripting.Preserve]
         [SerializeField] private GameObject _torusPrefab;
+        [UnityEngine.Scripting.Preserve]
         [SerializeField] private float _poleSpacing = 2.5f;
 
         public void SetTorusPrefab(GameObject prefab) { _torusPrefab = prefab; }
 
         private static Shader _cachedShader;
+        private GameObject _polePrefab;
 
-        private readonly Queue<GameObject> _ringPool = new();
-        private readonly Queue<GameObject> _polePool = new();
+        [Inject] private IObjectPoolService _objectPoolService;
+        [Inject] private VfxPrefabRegistry _vfxRegistry;
+        [Inject] private IAudioService _audioService;
+        [Inject] private SettingsModel _settingsModel;
+
         private readonly Dictionary<(RingColor, RingType), Material> _ringMaterialCache = new();
 
         private readonly List<PoleView> _spawnedPoles = new();
@@ -71,8 +77,7 @@ namespace RingFlow.Gameplay
                     float targetY = -0.9f + (r * 0.4f);
                     if (p == _lastSelectedPoleId && r == poleData.Rings.Count - 1)
                     {
-                        var settings = NexusRuntime.CurrentContext?.TryResolve<SettingsModel>();
-                        bool reduceMotion = settings != null && settings.ReduceMotion.Value;
+                        bool reduceMotion = _settingsModel != null && _settingsModel.ReduceMotion.Value;
                         if (!reduceMotion)
                         {
                             targetY += 0.35f;
@@ -102,9 +107,8 @@ namespace RingFlow.Gameplay
 
         public void AnimateRingMove(int fromPoleId, int toPoleId, List<PoleState> poles)
         {
-            var settings = NexusRuntime.CurrentContext?.TryResolve<SettingsModel>();
-            bool reduceMotion = settings != null && settings.ReduceMotion.Value;
-            bool slowMode = settings != null && settings.SlowMode.Value;
+            bool reduceMotion = _settingsModel != null && _settingsModel.ReduceMotion.Value;
+            bool slowMode = _settingsModel != null && _settingsModel.SlowMode.Value;
             float speedMultiplier = slowMode ? 2.0f : 1.0f;
             float duration = 0.3f * speedMultiplier;
 
@@ -183,21 +187,19 @@ namespace RingFlow.Gameplay
             {
                 pv.FlashError();
                 
-                // Play procedural error SFX
-                var audioService = NexusRuntime.CurrentContext?.TryResolve<IAudioService>();
-                if (audioService != null)
+                // Play procedural error SFX through injected service
+                if (_audioService != null)
                 {
                     var errClip = ProceduralAudio.GetOrCreateErrorClip();
-                    audioService.PlaySfx(errClip, 1.0f);
+                    _audioService.PlaySfx(errClip, 1.0f);
                 }
             }
         }
 
         private void ApplySelection()
         {
-            var settings = NexusRuntime.CurrentContext?.TryResolve<SettingsModel>();
-            bool reduceMotion = settings != null && settings.ReduceMotion.Value;
-            bool slowMode = settings != null && settings.SlowMode.Value;
+            bool reduceMotion = _settingsModel != null && _settingsModel.ReduceMotion.Value;
+            bool slowMode = _settingsModel != null && _settingsModel.SlowMode.Value;
             float speedMultiplier = slowMode ? 2.0f : 1.0f;
             float duration = 0.15f * speedMultiplier;
 
@@ -262,42 +264,60 @@ namespace RingFlow.Gameplay
             return _cachedShader;
         }
 
+        private void EnsurePolePrefabCreated()
+        {
+            if (_polePrefab != null) return;
+
+            _polePrefab = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            _polePrefab.name = "Pole_Template";
+            
+            var capsule = _polePrefab.GetComponent<CapsuleCollider>();
+            if (capsule != null) DestroyImmediate(capsule);
+            
+            var box = _polePrefab.GetComponent<BoxCollider>();
+            if (box == null)
+            {
+                box = _polePrefab.AddComponent<BoxCollider>();
+                box.size = new Vector3(3.0f, 2.0f, 3.0f);
+            }
+            
+            _polePrefab.SetActive(false);
+            _polePrefab.transform.SetParent(transform, false);
+        }
+
         private GameObject AcquirePole()
         {
-            while (_polePool.Count > 0)
+            EnsurePolePrefabCreated();
+
+            // Use Nexus IObjectPoolService if available (GDD §6)
+            if (_objectPoolService != null)
             {
-                var pole = _polePool.Dequeue();
-                if (pole != null) return pole;
+                // Use GameObject pooling through service
+                return _objectPoolService.Spawn(_polePrefab, Vector3.zero, Quaternion.identity);
             }
-            var poleObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            var capsule = poleObj.GetComponent<CapsuleCollider>();
-            if (capsule != null) DestroyImmediate(capsule);
-            var box = poleObj.AddComponent<BoxCollider>();
-            box.size = new Vector3(3.0f, 2.0f, 3.0f);
+
+            // Fallback to direct creation
+            GameObject poleObj = GameObject.Instantiate(_polePrefab, Vector3.zero, Quaternion.identity);
             return poleObj;
         }
 
         private void RecyclePole(GameObject pole)
         {
-            pole.SetActive(false);
-            pole.transform.SetParent(null);
-            _polePool.Enqueue(pole);
+            if (_objectPoolService != null)
+            {
+                _objectPoolService.Despawn(pole);
+            }
+            else
+            {
+                pole.SetActive(false);
+                pole.transform.SetParent(null);
+                Destroy(pole);
+            }
         }
 
         private GameObject AcquireRing()
         {
-            while (_ringPool.Count > 0)
-            {
-                var ring = _ringPool.Dequeue();
-                if (ring != null)
-                {
-                    ring.SetActive(true);
-                    KillTweens(ring);
-                    return ring;
-                }
-            }
-
-            // Load Torus.obj from Resources if no prefab assigned yet
+            // Use prefab if available
             if (_torusPrefab == null)
                 _torusPrefab = Resources.Load<GameObject>("Torus");
 
@@ -308,6 +328,8 @@ namespace RingFlow.Gameplay
                 var col = ringObj.GetComponent<Collider>();
                 if (col != null) Destroy(col);
 
+                ringObj.SetActive(true);
+                KillTweens(ringObj);
                 return ringObj;
             }
 
@@ -332,9 +354,16 @@ namespace RingFlow.Gameplay
                 }
             }
 
-            ring.SetActive(false);
-            ring.transform.SetParent(null);
-            _ringPool.Enqueue(ring);
+            if (_objectPoolService != null)
+            {
+                _objectPoolService.Despawn(ring);
+            }
+            else
+            {
+                ring.SetActive(false);
+                ring.transform.SetParent(null);
+                Destroy(ring);
+            }
         }
 
         private static void KillTweens(GameObject obj)
@@ -487,23 +516,25 @@ namespace RingFlow.Gameplay
 
         private void TriggerMoveEffects(Vector3 position, RingColor color)
         {
-            // Play procedural move SFX
-            var audioService = NexusRuntime.CurrentContext?.TryResolve<IAudioService>();
-            if (audioService != null)
+            // Play procedural move SFX through injected service (Nexus pattern)
+            if (_audioService != null)
             {
                 var moveClip = ProceduralAudio.GetOrCreateMoveClip();
-                audioService.PlaySfx(moveClip, 1.0f);
+                _audioService.PlaySfx(moveClip, 1.0f);
             }
 
-            // Spawn color pop particle VFX from object pool
-            var pool = NexusRuntime.CurrentContext?.TryResolve<IObjectPoolService>();
-            if (pool != null && GameplayLifecycle.RingPopPrefab != null)
+            // Spawn color pop particle VFX through proper DI (Nexus pattern)
+            if (_vfxRegistry != null && _objectPoolService != null)
             {
-                var popInstance = pool.Spawn(GameplayLifecycle.RingPopPrefab, position, Quaternion.identity);
-                var vfx = popInstance.GetComponent<RingPopVfx>();
-                if (vfx != null)
+                var prefab = _vfxRegistry.GetRingPopPrefab();
+                if (prefab != null)
                 {
-                    vfx.Initialize(RingPalette.Get(color));
+                    var popInstance = _objectPoolService.Spawn(prefab, position, Quaternion.identity);
+                    var vfx = popInstance.GetComponent<RingPopVfx>();
+                    if (vfx != null)
+                    {
+                        vfx.Initialize(RingPalette.Get(color));
+                    }
                 }
             }
         }

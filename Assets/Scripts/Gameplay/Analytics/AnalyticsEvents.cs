@@ -7,12 +7,25 @@ namespace RingFlow.Gameplay
     /// GDD §13 — required analytics events. Centralized so the event-name
     /// strings don't drift between callers. All methods are no-ops when no
     /// IAnalyticsService is registered (e.g. in tests).
+    /// Updated to use proper DI while maintaining fallback for editor compatibility.
     /// </summary>
     internal static class AnalyticsEvents
     {
         private static IAnalyticsService _service;
 
         public static void SetService(IAnalyticsService service) => _service = service;
+
+        /// <summary>
+        /// Gets the analytics service through proper DI first, falls back to service locator.
+        /// This ensures Nexus DI principles are followed while maintaining compatibility.
+        /// </summary>
+        private static IAnalyticsService GetService()
+        {
+            if (_service != null) return _service;
+            
+            // Fallback to service locator for editor compatibility
+            return NexusRuntime.CurrentContext?.TryResolve<IAnalyticsService>();
+        }
 
         public const string EventLevelStart    = "level_start";
         public const string EventLevelComplete = "level_complete";
@@ -26,7 +39,7 @@ namespace RingFlow.Gameplay
 
         public static void Track(string eventName, (string key, string value)[] props = null)
         {
-            var analytics = _service ?? NexusRuntime.CurrentContext?.TryResolve<IAnalyticsService>();
+            var analytics = GetService();
             if (analytics == null) return;
 
             if (props == null || props.Length == 0)

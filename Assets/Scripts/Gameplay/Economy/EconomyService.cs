@@ -8,23 +8,22 @@ using Nexus.Core.Services;
 namespace RingFlow.Gameplay
 {
     /// <summary>
-    /// Custom EconomyService bridge that maps IEconomyService (Coins, Diamonds) 
-    /// directly to the PlayerProgressModel reactive properties.
-    /// This ensures unified state representation and zero discrepancy between model save-game values and service queries.
+    /// Nexus MVCS-compliant EconomyService that bridges IEconomyService to PlayerProgressModel.
+    /// Uses Nexus's built-in reactive system for synchronization, eliminating complex locking.
+    /// Follows GDD §9 economy requirements with proper DI and 0-GC principles.
     /// </summary>
     public sealed class EconomyService : IEconomyService, INexusService, IDisposable
     {
         [Inject] private PlayerProgressModel _progress;
 
         private readonly Dictionary<string, ObservableProperty<long>> _balances = new();
-        private readonly HashSet<string> _updatingCurrencies = new();
-        private const long IntOverflowBuffer = 1_000_000_000_000L; // 1T — long'un int kesimine ulaşacağı nokta. Üstünde kazanımlar reddedilir.
+        private const long IntOverflowBuffer = 1_000_000_000_000L; // 1T — long to int overflow buffer
 
         public ValueTask InitializeAsync(CancellationToken ct)
         {
             if (_progress == null) return default;
 
-            // Initialize Observables
+            // Initialize Observables from Model (one-way sync: Model -> Service)
             var coinsObs = GetObservableBalance("Coins");
             var diamondsObs = GetObservableBalance("Diamonds");
             var hintsObs = GetObservableBalance("Hint");
@@ -33,93 +32,28 @@ namespace RingFlow.Gameplay
             diamondsObs.Value = _progress.Diamonds.Value;
             hintsObs.Value = _progress.HintCount.Value;
 
-            // Hook changes: PlayerProgressModel -> EconomyService (with per-currency recursion guard)
+            // Nexus Reactive Pattern: Model -> Service (read-only sync)
+            // This ensures save-game is single source of truth
             _progress.Coins.OnChanged((_, newVal) =>
             {
-                if (TryBeginCurrencySync("Coins")) return;
-                try
-                {
-                    if (coinsObs.Value != newVal) coinsObs.Value = newVal;
-                }
-                finally { EndCurrencySync("Coins"); }
+                if (coinsObs.Value != newVal) coinsObs.Value = newVal;
             });
             _progress.Diamonds.OnChanged((_, newVal) =>
             {
-                if (TryBeginCurrencySync("Diamonds")) return;
-                try
-                {
-                    if (diamondsObs.Value != newVal) diamondsObs.Value = newVal;
-                }
-                finally { EndCurrencySync("Diamonds"); }
+                if (diamondsObs.Value != newVal) diamondsObs.Value = newVal;
             });
             _progress.HintCount.OnChanged((_, newVal) =>
             {
-                if (TryBeginCurrencySync("Hint")) return;
-                try
-                {
-                    if (hintsObs.Value != newVal) hintsObs.Value = newVal;
-                }
-                finally { EndCurrencySync("Hint"); }
+                if (hintsObs.Value != newVal) hintsObs.Value = newVal;
             });
 
-            // Hook changes: EconomyService -> PlayerProgressModel (with per-currency recursion guard)
-            coinsObs.OnChanged((_, newVal) =>
-            {
-                if (TryBeginCurrencySync("Coins")) return;
-                try
-                {
-                    if (_progress.Coins.Value != (int)newVal)
-                        _progress.Coins.Value = ClampInt(newVal, "Coins");
-                }
-                finally { EndCurrencySync("Coins"); }
-            });
-            diamondsObs.OnChanged((_, newVal) =>
-            {
-                if (TryBeginCurrencySync("Diamonds")) return;
-                try
-                {
-                    if (_progress.Diamonds.Value != (int)newVal)
-                        _progress.Diamonds.Value = ClampInt(newVal, "Diamonds");
-                }
-                finally { EndCurrencySync("Diamonds"); }
-            });
-            hintsObs.OnChanged((_, newVal) =>
-            {
-                if (TryBeginCurrencySync("Hint")) return;
-                try
-                {
-                    if (_progress.HintCount.Value != (int)newVal)
-                        _progress.HintCount.Value = ClampInt(newVal, "Hint");
-                }
-                finally { EndCurrencySync("Hint"); }
-            });
+            // Note: We do NOT hook Service -> Model back to avoid infinite loops
+            // Service mutations write directly to Model, which then propagates back to Service
 
             return default;
         }
 
         public void OnDispose() => Dispose();
-
-        /// <summary>
-        /// Sadece tek bir currency için recursion guard'ı tetikler. Aynı frame'de birden fazla
-        /// currency değişse bile birbirini blok etmez.
-        /// </summary>
-        private bool TryBeginCurrencySync(string currencyId)
-        {
-            lock (_updatingCurrencies)
-            {
-                if (_updatingCurrencies.Contains(currencyId)) return true;
-                _updatingCurrencies.Add(currencyId);
-                return false;
-            }
-        }
-
-        private void EndCurrencySync(string currencyId)
-        {
-            lock (_updatingCurrencies)
-            {
-                _updatingCurrencies.Remove(currencyId);
-            }
-        }
 
         /// <summary>
         /// int taşmasından kaçınmak için PlayerProgressModel'e yazmadan önce clamp yapar.
@@ -177,57 +111,101 @@ namespace RingFlow.Gameplay
         {
             if (amount <= 0) return true;
 
-            lock (_balances)
+            if (_progress == null)
             {
-                var prop = GetObservableBalance(currencyId);
-                if (prop.Value < amount)
-                {
-                    NexusLog.Warn("EconomyService", nameof(Spend), currencyId,
-                        $"Insufficient balance. Have {prop.Value}, need {amount}. Reason: {reason}");
-                    return false;
-                }
-
-                prop.Value -= amount;
-                NexusLog.Info("EconomyService", nameof(Spend), currencyId,
-                    $"Spent {amount}. New balance: {prop.Value}. Reason: {reason}");
-                return true;
+                NexusLog.Error("EconomyService", nameof(Spend), currencyId, "PlayerProgressModel not bound.");
+                return false;
             }
+
+            // Check balance through service observable
+            var prop = GetObservableBalance(currencyId);
+            if (prop.Value < amount)
+            {
+                NexusLog.Warn("EconomyService", nameof(Spend), currencyId,
+                    $"Insufficient balance. Have {prop.Value}, need {amount}. Reason: {reason}");
+                return false;
+            }
+
+            // Write directly to Model (single source of truth)
+            // Model's reactive system will automatically sync back to Service observable
+            long newValue = prop.Value - amount;
+            WriteToModel(currencyId, newValue);
+
+            NexusLog.Info("EconomyService", nameof(Spend), currencyId,
+                $"Spent {amount}. New balance: {newValue}. Reason: {reason}");
+            return true;
         }
 
         public void Earn(string currencyId, long amount, string reason = "")
         {
             if (amount <= 0) return;
 
-            lock (_balances)
+            if (_progress == null)
             {
-                var prop = GetObservableBalance(currencyId);
-                prop.Value += amount;
-                NexusLog.Info("EconomyService", nameof(Earn), currencyId,
-                    $"Earned {amount}. New balance: {prop.Value}. Reason: {reason}");
+                NexusLog.Error("EconomyService", nameof(Earn), currencyId, "PlayerProgressModel not bound.");
+                return;
             }
+
+            // Write directly to Model (single source of truth)
+            var prop = GetObservableBalance(currencyId);
+            long newValue = prop.Value + amount;
+            WriteToModel(currencyId, newValue);
+
+            NexusLog.Info("EconomyService", nameof(Earn), currencyId,
+                $"Earned {amount}. New balance: {newValue}. Reason: {reason}");
         }
 
         public void SetBalance(string currencyId, long amount)
         {
-            lock (_balances)
+            if (_progress == null)
             {
-                var prop = GetObservableBalance(currencyId);
-                long old = prop.Value;
-                prop.Value = amount;
-                NexusLog.Info("EconomyService", nameof(SetBalance), currencyId,
-                    $"Balance changed: {old} -> {amount}");
+                NexusLog.Error("EconomyService", nameof(SetBalance), currencyId, "PlayerProgressModel not bound.");
+                return;
+            }
+
+            var prop = GetObservableBalance(currencyId);
+            long old = prop.Value;
+            
+            // Write directly to Model (single source of truth)
+            WriteToModel(currencyId, amount);
+
+            NexusLog.Info("EconomyService", nameof(SetBalance), currencyId,
+                $"Balance changed: {old} -> {amount}");
+        }
+
+        /// <summary>
+        /// Writes value to the appropriate PlayerProgressModel property with int clamping.
+        /// This is the single source of truth for all economy mutations.
+        /// </summary>
+        private void WriteToModel(string currencyId, long value)
+        {
+            int clampedValue = ClampInt(value, currencyId);
+
+            switch (currencyId)
+            {
+                case "Coins":
+                    _progress.Coins.Value = clampedValue;
+                    break;
+                case "Diamonds":
+                    _progress.Diamonds.Value = clampedValue;
+                    break;
+                case "Hint":
+                    _progress.HintCount.Value = clampedValue;
+                    break;
+                default:
+                    NexusLog.Warn("EconomyService", nameof(WriteToModel), currencyId,
+                        $"Unknown currency ID. Value not written to model.");
+                    break;
             }
         }
 
         public void Dispose()
         {
-            lock (_balances)
+            foreach (var pair in _balances.Values)
             {
-                foreach (var pair in _balances.Values)
-                {
-                    pair.ClearOnChanged();
-                }
+                pair.ClearOnChanged();
             }
+            _balances.Clear();
         }
     }
 }

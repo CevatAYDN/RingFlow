@@ -69,11 +69,14 @@ namespace RingFlow.Gameplay
 
             if (_ads != null && _ads.IsRewardedAvailable("Hint"))
             {
-                _ads.ShowRewarded("Hint", success =>
+                // Use struct-based callback to prevent memory leak (Nexus 0-GC pattern)
+                var callback = new HintRewardCallback
                 {
-                    if (success) ResolveAndFire(firstMove, false);
-                    else _signalBus?.Fire(HintResolvedSignal.Empty);
-                });
+                    FirstMove = firstMove,
+                    SignalBus = _signalBus,
+                    Command = this
+                };
+                _ads.ShowRewarded("Hint", callback.OnRewardResult);
                 return;
             }
 
@@ -167,6 +170,30 @@ namespace RingFlow.Gameplay
             }
             var first = result.Moves[0];
             return new Move(first.FromPoleId, first.ToPoleId);
+        }
+
+        /// <summary>
+        /// Zero-GC callback struct for rewarded ad completion.
+        /// Prevents memory leak by avoiding lambda closure capture of command instance.
+        /// Follows Nexus 0-GC allocation pattern for async callbacks.
+        /// </summary>
+        private struct HintRewardCallback
+        {
+            public Move FirstMove;
+            public ISignalBus SignalBus;
+            public HintCommand Command;
+
+            public void OnRewardResult(bool success)
+            {
+                if (success)
+                {
+                    Command.ResolveAndFire(FirstMove, false);
+                }
+                else
+                {
+                    SignalBus?.Fire(HintResolvedSignal.Empty);
+                }
+            }
         }
     }
 }

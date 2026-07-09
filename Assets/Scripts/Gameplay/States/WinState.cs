@@ -10,6 +10,8 @@ namespace RingFlow.Gameplay
     {
         [Inject] private ISignalBus _signalBus;
         [Inject] private IAudioService _audio;
+        [Inject] private IObjectPoolService _objectPoolService;
+        [Inject] private VfxPrefabRegistry _vfxRegistry;
 
         public ValueTask OnEnterAsync(object args, CancellationToken ct)
         {
@@ -22,15 +24,18 @@ namespace RingFlow.Gameplay
                 _audio.PlaySfx(winClip, 1.0f);
             }
 
-            // Spawn Confetti VFX
-            var pool = NexusRuntime.CurrentContext?.TryResolve<IObjectPoolService>();
-            if (pool != null && GameplayLifecycle.ConfettiPrefab != null)
+            // Spawn Confetti VFX through proper DI (Nexus pattern)
+            if (_vfxRegistry != null && _objectPoolService != null)
             {
-                var confettiGo = pool.Spawn(GameplayLifecycle.ConfettiPrefab, UnityEngine.Vector3.zero, UnityEngine.Quaternion.identity);
-                var vfx = confettiGo.GetComponent<ConfettiVfx>();
-                if (vfx != null)
+                var prefab = _vfxRegistry.GetConfettiPrefab();
+                if (prefab != null)
                 {
-                    vfx.Initialize();
+                    var confettiGo = _objectPoolService.Spawn(prefab, UnityEngine.Vector3.zero, UnityEngine.Quaternion.identity);
+                    var vfx = confettiGo.GetComponent<ConfettiVfx>();
+                    if (vfx != null)
+                    {
+                        vfx.Initialize();
+                    }
                 }
             }
 

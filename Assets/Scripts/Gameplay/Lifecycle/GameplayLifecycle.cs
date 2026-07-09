@@ -8,6 +8,7 @@ using UnityEngine.EventSystems;
 
 using RingFlow.Gameplay.Diagnostics;
 using RingFlow.Gameplay.Services;
+using RingFlow.Gameplay.Strategies;
 
 namespace RingFlow.Gameplay
 {
@@ -21,13 +22,26 @@ namespace RingFlow.Gameplay
     /// </summary>
     public class GameplayLifecycle : MonoBehaviour, IContextLifecycle
     {
-        public static GameObject RingPopPrefab;
-        public static GameObject ConfettiPrefab;
+        [UnityEngine.Scripting.Preserve]
+        [SerializeField] private GameObject _ringPopPrefab;
+        [UnityEngine.Scripting.Preserve]
+        [SerializeField] private GameObject _confettiPrefab;
+        
         private static float s_sessionStartTime = 0f;
 
         public void OnConfigure(IContextBuilder builder)
         {
             NexusLog.Info("GameplayLifecycle", nameof(OnConfigure), "Gameplay", "Configuring gameplay context.");
+            
+            // -------------------- VFX Prefab Registration --------------------
+            // Register prefab references as a service for proper DI access
+            var vfxRegistry = new VfxPrefabRegistry
+            {
+                RingPopPrefab = _ringPopPrefab,
+                ConfettiPrefab = _confettiPrefab
+            };
+            builder.BindInstance<VfxPrefabRegistry>(vfxRegistry);
+            
             // -------------------- Storage --------------------
             builder.Bind<IPlayerPrefsService, EncryptedStorageService>();
             builder.Bind<ILocalizationTableProvider, CSVLocalizationTableProvider>();
@@ -73,6 +87,14 @@ namespace RingFlow.Gameplay
             // -------------------- POCO Services (typed factory injection) --------------------
             // DailyRewardService takes PlayerProgressModel via constructor — bind manually so DI resolves it.
             builder.Bind<DailyRewardService>(); // singleton default
+
+            // -------------------- Ring Move Strategies (Strategy Pattern) --------------------
+            // Register strategy manager for special ring mechanics (GDD §4)
+            builder.Bind<RingMoveStrategyManager>();
+
+            // -------------------- Ring Validation Strategies (Strategy Pattern) --------------------
+            // Register validation strategy manager for pole placement rules (GDD §4)
+            builder.Bind<RingValidationStrategyManager>();
 
             // -------------------- Commands --------------------
             builder.BindCommand<InitLevelSignal, InitLevelCommand>();
@@ -149,6 +171,20 @@ namespace RingFlow.Gameplay
             fsm.RegisterState(context.Resolve<WinState>());
             fsm.RegisterState(context.Resolve<GameOverState>());
 
+            // Initialize validation strategy manager for PoleState (Strategy Pattern)
+            var validationManager = context.Resolve<RingValidationStrategyManager>();
+            PoleState.SetValidationManager(validationManager);
+
+            // Initialize AOT preservation for IL2CPP builds
+            AOT.AOTPreserveAttributes.PreserveCommands();
+            AOT.AOTPreserveAttributes.PreserveStates();
+            AOT.AOTPreserveAttributes.PreserveMediators();
+            AOT.AOTPreserveAttributes.PreserveStrategies();
+            AOT.AOTPreserveAttributes.PreserveSignals();
+            AOT.AOTPreserveAttributes.PreserveModels();
+            AOT.AOTPreserveAttributes.PreserveServices();
+            AOT.AOTPreserveAttributes.PreserveViews();
+
             // Transition to BootState on startup
             diag?.Log("Lifecycle", "Transitioning to BootState on startup");
             await fsm.ChangeStateAsync<BootState>();
@@ -212,23 +248,39 @@ namespace RingFlow.Gameplay
                 );
             }
 
-            // Initialize programmatically created VFX prefabs
-            if (RingPopPrefab == null)
+            // Initialize VFX prefabs through proper DI (Nexus pattern)
+            var vfxRegistry = context.TryResolve<VfxPrefabRegistry>();
+            if (vfxRegistry != null)
             {
-                RingPopPrefab = new GameObject("RingPopVfxPrefab", typeof(RingPopVfx));
-                Object.DontDestroyOnLoad(RingPopPrefab);
-            }
-            if (ConfettiPrefab == null)
-            {
-                ConfettiPrefab = new GameObject("ConfettiVfxPrefab", typeof(ConfettiVfx));
-                Object.DontDestroyOnLoad(ConfettiPrefab);
-            }
+                // Validate prefab assignments
+                vfxRegistry.Validate();
+                
+                // Fallback: Create programmatic prefabs if not assigned (editor convenience)
+                if (vfxRegistry.RingPopPrefab == null)
+                {
+                    var ringPopObj = new GameObject("RingPopVfxPrefab", typeof(RingPopVfx));
+                    Object.DontDestroyOnLoad(ringPopObj);
+                    vfxRegistry.RingPopPrefab = ringPopObj;
+                }
+                if (vfxRegistry.ConfettiPrefab == null)
+                {
+                    var confettiObj = new GameObject("ConfettiVfxPrefab", typeof(ConfettiVfx));
+                    Object.DontDestroyOnLoad(confettiObj);
+                    vfxRegistry.ConfettiPrefab = confettiObj;
+                }
 
-            var pool = context.TryResolve<IObjectPoolService>();
-            if (pool != null)
+                // Prewarm object pools (GDD §6)
+                var pool = context.TryResolve<IObjectPoolService>();
+                if (pool != null)
+                {
+                    pool.Prewarm(vfxRegistry.RingPopPrefab, 50);
+                    pool.Prewarm(vfxRegistry.ConfettiPrefab, 30);
+                }
+            }
+            else
             {
-                pool.Prewarm(RingPopPrefab, 50);
-                pool.Prewarm(ConfettiPrefab, 30);
+                NexusLog.Error("GameplayLifecycle", nameof(OnInitializeAsync), "", 
+                    "VfxPrefabRegistry not bound. VFX system will be non-functional.");
             }
 
             if (audio != null)

@@ -10,6 +10,7 @@ namespace RingFlow.Gameplay
     {
         private GameObject[] _particles;
         private static Shader _litShader;
+        [Inject] private IObjectPoolService _objectPoolService;
 
         private void Awake()
         {
@@ -18,6 +19,13 @@ namespace RingFlow.Gameplay
                 _litShader = Shader.Find("Universal Render Pipeline/Lit") 
                             ?? Shader.Find("Universal Render Pipeline/Simple Lit") 
                             ?? Shader.Find("Standard");
+            }
+
+            // Inject dependencies if available (runtime initialization)
+            var context = NexusRuntime.CurrentContext;
+            if (context != null)
+            {
+                _objectPoolService = context.TryResolve<IObjectPoolService>();
             }
         }
 
@@ -67,10 +75,9 @@ namespace RingFlow.Gameplay
         private IEnumerator AutoDespawn(float delay)
         {
             yield return new WaitForSeconds(delay);
-            var pool = NexusRuntime.CurrentContext?.TryResolve<IObjectPoolService>();
-            if (pool != null)
+            if (_objectPoolService != null)
             {
-                pool.Despawn(gameObject);
+                _objectPoolService.Despawn(gameObject);
             }
             else
             {

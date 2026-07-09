@@ -4,6 +4,7 @@ using Nexus.Core;
 using Nexus.Core.FSM;
 using Nexus.Core.Services;
 using UnityEngine;
+using RingFlow.Gameplay.Strategies;
 
 namespace RingFlow.Gameplay
 {
@@ -210,6 +211,8 @@ namespace RingFlow.Gameplay
         [Inject] private GameplayModel _model;
         [Inject] private ISignalBus _signalBus;
         [Inject] private IGameStateMachine _fsm;
+        [Inject] private RingMoveStrategyManager _strategyManager;
+        [Inject] private IProgressionService _progression;
 
         public void Execute(MoveRingSignal signal)
         {
@@ -228,37 +231,51 @@ namespace RingFlow.Gameplay
             if (!TryReserveChainCapacity(ref ring, fromPole, toPole)) return;
             if (!toPole.CanAddRing(ring)) return;
 
-            var state = new MoveContext
+            // Build strategy context (Nexus pattern: struct for 0-GC)
+            var context = new MoveContext
             {
-                Ring = ring,
-                OriginalColor = ring.Color,
+                FromPoleId = signal.FromPoleId,
+                ToPoleId = signal.ToPoleId,
+                MovingRing = ring,
                 FromPole = fromPole,
                 ToPole = toPole,
-                ToPoleId = signal.ToPoleId,
-                FromPoleId = signal.FromPoleId
+                Model = _model,
+                SignalBus = _signalBus,
+                Progression = _progression
             };
 
-            ApplyPaintPreMove(ref state);
-            ApplyRainbowPreMove(ref state);
-
-            fromPole.PopRing();
-            RevealMysteryOnFrom(ref state);
-
-            if (state.ToPole.IsLocked && state.Ring.Type == RingType.Locked)
+            // Execute pre-move strategies (Mystery, Paint, Rainbow)
+            if (!_strategyManager.ExecutePreMoveValidation(ring.Type, ref context))
             {
-                state.ToPole.IsLocked = false;
-                state.WasTargetPoleUnlocked = true;
-                _signalBus.Fire(new UnlockPoleSignal(state.ToPoleId));
+                NexusLog.Info("MoveRingCommand", "Execute", $"{signal.FromPoleId}->{signal.ToPoleId}",
+                    "Move blocked by strategy validation.");
+                return;
             }
 
-            state.ToPole.AddRing(state.Ring);
-            TryBreakIceOnTarget(ref state);
+            // Execute the main move
+            fromPole.PopRing();
 
-            var mainRecord = state.ToRecord();
+            // Handle locked pole unlock (Key ring logic)
+            if (toPole.IsLocked && ring.Type == RingType.Locked)
+            {
+                toPole.IsLocked = false;
+                context.WasPoleUnlocked = true;
+                _signalBus.Fire(new UnlockPoleSignal(signal.ToPoleId));
+            }
+
+            toPole.AddRing(ring);
+
+            // Execute post-move strategies (Paint application, Rainbow conversion, etc.)
+            _strategyManager.ExecutePostMoveExecution(ring.Type, ref context);
+
+            // Handle remaining complex mechanics (Chain, Magnet, Bomb, Ice)
+            // These will be migrated to strategies in future iterations
+            var mainRecord = BuildMoveRecord(context);
             mainRecord.SubMoves ??= new List<MoveRecord>();
 
-            ApplyChainSubMove(ref state, mainRecord);
-            ApplyMagnetPull(ref state, mainRecord);
+            ApplyChainSubMove(ref context, mainRecord);
+            ApplyMagnetPull(ref context, mainRecord);
+            TryBreakIceOnTarget(ref context, mainRecord);
 
             mainRecord.BombCountersBeforeTick = SnapshotBombCounters();
 
@@ -282,6 +299,27 @@ namespace RingFlow.Gameplay
 
             _model.MoveHistory.Push(mainRecord);
             _signalBus.Fire(new CheckWinSignal());
+        }
+
+        private MoveRecord BuildMoveRecord(MoveContext context)
+        {
+            return new MoveRecord(
+                context.FromPoleId,
+                context.ToPoleId,
+                context.MovingRing,
+                context.WasMysteryRevealed,
+                context.WasIceBroken,
+                context.WasPoleUnlocked,
+                context.WasPaintApplied,
+                context.PaintedRingIndex,
+                context.PaintedRingOriginalColor,
+                context.MovingRing.Color,
+                context.BombCountersBeforeTick,
+                context.WasRainbowConverted,
+                context.RainbowTargetIndex,
+                context.RainbowTargetOriginalColor,
+                context.BombExplodedRings
+            );
         }
 
         private void FireGameOverTransition()
@@ -319,126 +357,68 @@ namespace RingFlow.Gameplay
             return true;
         }
 
-        private void ApplyPaintPreMove(ref MoveContext state)
+        // These methods are now handled by the Strategy Pattern implementation
+        // Removed: ApplyPaintPreMove, ApplyRainbowPreMove, RevealMysteryOnFrom
+        // They are now in PaintRingStrategy, RainbowRingStrategy, and MysteryRingStrategy
+
+        private void TryBreakIceOnTarget(ref MoveContext context, MoveRecord mainRecord)
         {
-            if (state.Ring.Type == RingType.Paint)
-            {
-                if (!state.ToPole.IsEmpty)
-                {
-                    state.WasPainted = true;
-                    state.PaintedRingIndex = state.ToPole.Rings.Count - 1;
-                    state.PaintedRingOriginalColor = state.ToPole.Rings[state.PaintedRingIndex].Color;
-                    var paintTarget = state.ToPole.Rings[state.PaintedRingIndex];
-                    paintTarget.Color = state.Ring.Color;
-                    state.ToPole.Rings[state.PaintedRingIndex] = paintTarget;
-                    _signalBus.Fire(new PaintRingSignal(state.ToPoleId, state.Ring.Color));
-                }
-                state.Ring.Type = RingType.Standard;
-            }
-            else if (!state.ToPole.IsEmpty && state.ToPole.TopRing.Type == RingType.Paint)
-            {
-                state.WasPainted = true;
-                state.Ring.Color = state.ToPole.TopRing.Color;
+            if (context.ToPole.Rings.Count < 2) return;
 
-                state.PaintedRingIndex = state.ToPole.Rings.Count - 1;
-                state.PaintedRingOriginalColor = state.ToPole.Rings[state.PaintedRingIndex].Color;
-                var paintTarget = state.ToPole.Rings[state.PaintedRingIndex];
-                paintTarget.Type = RingType.Standard;
-                state.ToPole.Rings[state.PaintedRingIndex] = paintTarget;
-
-                _signalBus.Fire(new PaintRingSignal(state.ToPoleId, state.Ring.Color));
-            }
-        }
-
-        private void ApplyRainbowPreMove(ref MoveContext state)
-        {
-            if (state.Ring.Type == RingType.Rainbow)
-            {
-                if (!state.ToPole.IsEmpty)
-                {
-                    state.Ring.Color = state.ToPole.TopRing.Color;
-                    state.Ring.Type = RingType.Standard;
-                }
-            }
-            else if (!state.ToPole.IsEmpty && state.ToPole.TopRing.Type == RingType.Rainbow)
-            {
-                var rainbowTarget = state.ToPole.Rings[^1];
-                state.WasRainbowTargetConverted = true;
-                state.RainbowTargetRingIndex = state.ToPole.Rings.Count - 1;
-                state.RainbowTargetOriginalColor = rainbowTarget.Color;
-                rainbowTarget.Color = state.Ring.Color;
-                rainbowTarget.Type = RingType.Standard;
-                state.ToPole.Rings[^1] = rainbowTarget;
-            }
-        }
-
-        private void RevealMysteryOnFrom(ref MoveContext state)
-        {
-            if (!state.FromPole.IsEmpty && state.FromPole.TopRing.Type == RingType.Mystery)
-            {
-                state.WasMysteryRevealed = true;
-                var mysteryRing = state.FromPole.Rings[^1];
-                mysteryRing.Type = RingType.Standard;
-                state.FromPole.Rings[^1] = mysteryRing;
-                _signalBus.Fire(new RevealMysterySignal(state.FromPoleId, mysteryRing));
-            }
-        }
-
-        private void TryBreakIceOnTarget(ref MoveContext state)
-        {
-            if (state.ToPole.Rings.Count < 2) return;
-
-            int checkIndex = state.ToPole.Rings.Count - 2;
+            int checkIndex = context.ToPole.Rings.Count - 2;
             bool anyBroken = false;
+            context.IceBrokenRingIndices = new List<int>();
+            
             while (checkIndex >= 0)
             {
-                var current = state.ToPole.Rings[checkIndex];
-                if (current.Type != RingType.Frozen || current.Color != state.Ring.Color)
+                var current = context.ToPole.Rings[checkIndex];
+                if (current.Type != RingType.Frozen || current.Color != context.MovingRing.Color)
                     break;
 
-                state.ToPole.Rings[checkIndex] = new RingData(current.Color, RingType.Standard);
-                (state.IceBrokenRingIndices ??= new List<int>()).Add(checkIndex);
+                context.ToPole.Rings[checkIndex] = new RingData(current.Color, RingType.Standard);
+                context.IceBrokenRingIndices.Add(checkIndex);
                 anyBroken = true;
                 checkIndex--;
             }
 
             if (anyBroken)
             {
-                state.IceBrokenRingIndices?.Sort();
-                _signalBus.Fire(new BreakIceSignal(state.ToPoleId));
+                context.IceBrokenRingIndices.Sort();
+                context.WasIceBroken = true;
+                _signalBus.Fire(new BreakIceSignal(context.ToPoleId));
             }
         }
 
-        private void ApplyChainSubMove(ref MoveContext state, MoveRecord mainRecord)
+        private void ApplyChainSubMove(ref MoveContext context, MoveRecord mainRecord)
         {
-            if (state.Ring.Type != RingType.Chain) return;
+            if (context.MovingRing.Type != RingType.Chain) return;
 
             foreach (var pole in _model.Poles)
             {
-                if (pole.Id == state.FromPole.Id) continue;
+                if (pole.Id == context.FromPole.Id) continue;
                 var topR = pole.TopRing;
-                if (topR.Type != RingType.Chain || topR.AdditionalData != state.Ring.AdditionalData) continue;
+                if (topR.Type != RingType.Chain || topR.AdditionalData != context.MovingRing.AdditionalData) continue;
 
                 pole.PopRing();
-                state.ToPole.AddRing(topR);
-                mainRecord.SubMoves.Add(new MoveRecord(pole.Id, state.ToPole.Id, topR));
+                context.ToPole.AddRing(topR);
+                mainRecord.SubMoves.Add(new MoveRecord(pole.Id, context.ToPoleId, topR));
                 return;
             }
         }
 
-        private void ApplyMagnetPull(ref MoveContext state, MoveRecord mainRecord)
+        private void ApplyMagnetPull(ref MoveContext context, MoveRecord mainRecord)
         {
-            if (state.Ring.Type != RingType.Magnet) return;
+            if (context.MovingRing.Type != RingType.Magnet) return;
 
             foreach (var p in _model.Poles)
             {
-                if (p.Id == state.ToPole.Id) continue;
-                if (state.ToPole.IsFull) break;
-                if (!p.CanPopRing() || p.TopRing.Color != state.Ring.Color) continue;
+                if (p.Id == context.ToPoleId) continue;
+                if (context.ToPole.IsFull) break;
+                if (!p.CanPopRing() || p.TopRing.Color != context.MovingRing.Color) continue;
 
                 var pulled = p.PopRing();
-                state.ToPole.AddRing(pulled);
-                mainRecord.SubMoves.Add(new MoveRecord(p.Id, state.ToPole.Id, pulled));
+                context.ToPole.AddRing(pulled);
+                mainRecord.SubMoves.Add(new MoveRecord(p.Id, context.ToPoleId, pulled));
             }
         }
 
@@ -503,36 +483,7 @@ namespace RingFlow.Gameplay
             return snapshot;
         }
 
-        private struct MoveContext
-        {
-            public RingData Ring;
-            public RingColor OriginalColor;
-            public PoleState FromPole;
-            public PoleState ToPole;
-            public int FromPoleId;
-            public int ToPoleId;
-            public bool WasMysteryRevealed;
-            public List<int> IceBrokenRingIndices; // indices of rings whose ice was broken, from top to bottom
-            public bool WasTargetPoleUnlocked;
-            public bool WasPainted;
-            public int PaintedRingIndex;
-            public RingColor PaintedRingOriginalColor;
-            public bool WasRainbowTargetConverted;
-            public int RainbowTargetRingIndex;
-            public RingColor RainbowTargetOriginalColor;
-
-            public MoveRecord ToRecord() => new MoveRecord(
-                FromPoleId, ToPoleId, Ring,
-                false, false, WasTargetPoleUnlocked, WasPainted,
-                PaintedRingIndex, PaintedRingOriginalColor, OriginalColor)
-            {
-                WasMysteryRevealedOnFrom = WasMysteryRevealed,
-                IceBrokenRingIndices = IceBrokenRingIndices,
-                WasRainbowTargetConverted = WasRainbowTargetConverted,
-                RainbowTargetRingIndex = RainbowTargetRingIndex,
-                RainbowTargetOriginalColor = RainbowTargetOriginalColor
-            };
-        }
+        // MoveContext struct is now in Strategies namespace with proper using directive
     }
 
     public class UndoCommand : ICommand<UndoSignal>
