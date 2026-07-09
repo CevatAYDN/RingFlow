@@ -30,17 +30,19 @@ namespace RingFlow.Tests
             _adService = new MockAdService();
             _progressionService = new RingFlow.Gameplay.ProgressionService(_progressModel);
 
-            // Initialize progress fields
             _progressModel.Coins.Value = 100;
             _progressModel.FreeUndosUsedThisSession.Value = 0;
             _progressModel.Xp.Value = 0;
             _progressModel.PlayerLevel.Value = 1;
-            
-            // Register worlds list
+
             for (int i = 0; i < 40; i++)
             {
-                _progressModel.UnlockedWorlds.Add(i == 0); // Unlock first world
+                _progressModel.UnlockedWorlds.Add(i == 0);
             }
+
+            var levelWonCommand = new LevelWonCommand();
+            InjectDependencies(levelWonCommand);
+            _signalBus.RegisterHandler<LevelWonSignal>(levelWonCommand.Execute);
         }
 
         private void InjectDependencies(object target)
@@ -334,14 +336,14 @@ namespace RingFlow.Tests
             var pole1 = new PoleState { Id = 1, MaxCapacity = 4 };
 
             pole0.AddRing(new RingData(RingColor.Red, RingType.Standard));
-            pole1.AddRing(new RingData(RingColor.Blue, RingType.Standard)); // No bomb
 
             _gameplayModel.Poles.Add(pole0);
             _gameplayModel.Poles.Add(pole1);
 
-            // Execute move - no bombs ticked, snapshot should be null/empty
             moveCommand.Execute(new MoveRingSignal(0, 1));
-            Assert.IsNull(_gameplayModel.MoveHistory.Pop().BombCountersBeforeTick);
+            var lastRecord = _gameplayModel.MoveHistory.Pop();
+            Assert.IsNotNull(lastRecord, "Move should have been recorded.");
+            Assert.AreEqual(0, lastRecord.BombCountersBeforeTick.Count);
 
             // Undo should work without error
             _gameplayModel.MoveHistory.Push(new MoveRecord(0, 1, new RingData(RingColor.Red)));
@@ -666,7 +668,20 @@ namespace RingFlow.Tests
         public bool HasFiredBreakIce { get; private set; }
         public bool HasFiredUnlockPole { get; private set; }
 
+        private readonly System.Collections.Generic.Dictionary<Type, System.Collections.Generic.List<Delegate>> _handlers
+            = new System.Collections.Generic.Dictionary<Type, System.Collections.Generic.List<Delegate>>();
+
         public System.Collections.Generic.IReadOnlyDictionary<Type, System.Collections.Generic.IReadOnlyList<CommandHandlerInfo>> RegisteredHandlers => null;
+
+        public void RegisterHandler<T>(Action<T> handler) where T : struct
+        {
+            if (!_handlers.TryGetValue(typeof(T), out var list))
+            {
+                list = new System.Collections.Generic.List<Delegate>();
+                _handlers[typeof(T)] = list;
+            }
+            list.Add(handler);
+        }
 
         public void Fire<T>(T signal) where T : struct
         {
@@ -680,6 +695,14 @@ namespace RingFlow.Tests
                 HasFiredBreakIce = true;
             else if (typeof(T) == typeof(UnlockPoleSignal))
                 HasFiredUnlockPole = true;
+
+            if (_handlers.TryGetValue(typeof(T), out var list))
+            {
+                for (int i = 0; i < list.Count; i++)
+                {
+                    ((Action<T>)list[i])?.Invoke(signal);
+                }
+            }
         }
 
         public ValueTask FireAsync<T>(T signal) where T : struct => default;
@@ -688,7 +711,11 @@ namespace RingFlow.Tests
         public ValueTask FireAsyncWithTimeout<T>(T signal, int timeoutMilliseconds) where T : struct => default;
         public ValueTask FireAsyncAndForget<T>(T signal, Action<Exception> onError = null) where T : struct => default;
 
-        public ISignalSubscription Subscribe<T>(Action<T> handler) where T : struct => null;
+        public ISignalSubscription Subscribe<T>(Action<T> handler) where T : struct
+        {
+            RegisterHandler(handler);
+            return null;
+        }
         public ISignalSubscription SubscribeAsync<T>(Func<T, CancellationToken, ValueTask> handler) where T : struct => null;
     }
 

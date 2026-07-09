@@ -20,6 +20,8 @@ namespace RingFlow.Gameplay.UI
 
         private void Awake()
         {
+            if (transform.childCount > 0) return;
+
             var topBar = GameUIResources.CreatePanel("TopBar", transform);
             GameUIResources.SetAnchors(topBar.GetComponent<RectTransform>(), 0f, 0.88f, 1f, 1f);
             topBar.GetComponent<Image>().color = new Color(0, 0, 0, 0.45f);

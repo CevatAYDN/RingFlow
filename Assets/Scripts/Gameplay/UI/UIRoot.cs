@@ -20,6 +20,7 @@ namespace RingFlow.Gameplay.UI
             ScreenType.Settings,
             ScreenType.Pause,
             ScreenType.ChestPopup,
+            ScreenType.ParentalGate,
         };
 
         /// <summary>
@@ -166,9 +167,21 @@ namespace RingFlow.Gameplay.UI
 
         private void CreateScreen<T>(ScreenType type, Transform parent) where T : View
         {
-            var go = GameUIResources.CreateSafeAreaPanel(type.ToString(), parent);
+            GameObject go = null;
+            var prefab = Resources.Load<GameObject>($"UI/{type}");
+            if (prefab != null)
+            {
+                go = Object.Instantiate(prefab, parent);
+                go.name = type.ToString();
+                if (go.GetComponent<T>() == null) go.AddComponent<T>();
+            }
+            else
+            {
+                go = GameUIResources.CreateSafeAreaPanel(type.ToString(), parent);
+                go.AddComponent<T>();
+            }
+
             go.SetActive(false);
-            go.AddComponent<T>();
             _screens[type] = go;
 
             if (type == ScreenType.Gameplay)

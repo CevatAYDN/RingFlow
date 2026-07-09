@@ -22,6 +22,12 @@ namespace RingFlow.Gameplay.UI
 
         private void Awake()
         {
+            if (transform.childCount > 0)
+            {
+                BindReferencesFromChildren();
+                return;
+            }
+
             var titleGo = GameUIResources.CreateText("RING FLOW", transform, 64, TextAnchor.UpperCenter, GameUIResources.AccentColor);
             var titleRect = titleGo.GetComponent<RectTransform>();
             TitleText = titleGo.GetComponent<Text>();
@@ -104,6 +110,49 @@ namespace RingFlow.Gameplay.UI
             }
         }
 
+        private void BindReferencesFromChildren()
+        {
+            var buttons = GetComponentsInChildren<Button>(true);
+            foreach (var btn in buttons)
+            {
+                if (btn.name.Contains("CONTINUE")) { _continueBtn = btn.gameObject; ContinueButton = btn; }
+                else if (btn.name.Contains("QUICK PLAY")) { _playBtn = btn.gameObject; PlayButton = btn; }
+                else if (btn.name.Contains("LEVELS")) { _lvlBtn = btn.gameObject; LevelSelectButton = btn; }
+                else if (btn.name.Contains("DAILY REWARD")) { _dailyBtn = btn.gameObject; DailyRewardButton = btn; }
+                else if (btn.name.Contains("⚙")) SettingsButton = btn;
+            }
 
+            var texts = GetComponentsInChildren<Text>(true);
+            foreach (var txt in texts)
+            {
+                // Only consider texts that are direct children of the MainMenuView canvas to avoid matching button labels
+                if (txt.transform.parent != transform) continue;
+
+                if (txt.fontSize == 64)
+                {
+                    TitleText = txt;
+                }
+                else if (txt.fontSize == 22)
+                {
+                    TaglineText = txt;
+                }
+                else if (txt.fontSize == 12)
+                {
+                    VersionLabel = txt;
+                }
+                else if (txt.fontSize == 16)
+                {
+                    // Differentiate coins vs diamonds by text content or color
+                    if (txt.text.Contains("Coins") || (txt.color.r > 0.9f && txt.color.b < 0.3f))
+                    {
+                        CoinsText = txt;
+                    }
+                    else
+                    {
+                        DiamondsText = txt;
+                    }
+                }
+            }
+        }
     }
 }

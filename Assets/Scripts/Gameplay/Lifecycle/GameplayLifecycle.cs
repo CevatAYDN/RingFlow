@@ -122,16 +122,50 @@ namespace RingFlow.Gameplay
             diag?.Checkpoint("GameplayLifecycle.OnInitializeAsync");
             diag?.Log("Lifecycle", "GameplayLifecycle.OnInitializeAsync started");
 
-            // Hook the audio service to the settings model's reactive bits.
             var settings = context.TryResolve<SettingsModel>();
             var audio = context.TryResolve<IAudioService>();
             var haptics = context.TryResolve<IHapticService>();
+            var progress = context.TryResolve<PlayerProgressModel>();
+
+            HookSettingsToServices(context, settings, audio, haptics);
+            AnalyticsEvents.SetService(context.TryResolve<IAnalyticsService>());
+
+            var fsm = context.Resolve<IGameStateMachine>();
+            RegisterFsmAndStates(fsm, context);
+            PoleState.SetValidationManager(context.Resolve<RingValidationStrategyManager>());
+
+            PreserveAotTypes();
+
+            await fsm.ChangeStateAsync<BootState>();
+
+            var prefs = context.TryResolve<IPlayerPrefsService>();
+            InitializePlayerPrefsService(prefs, progress, settings);
+            InitializeSessionAnalytics(prefs, progress);
+            InitializeColorBlindMode(settings);
+            InitializeHapticState(settings, haptics);
+            RegisterIapProducts(context);
+            InitializeVfxAndPools(context);
+            InitializeAudio(audio, progress);
+
+            diag?.Log("Lifecycle", "GameplayLifecycle.OnInitializeAsync completed");
+        }
+
+        private void RegisterFsmAndStates(IGameStateMachine fsm, IContext context)
+        {
+            fsm.RegisterState(context.Resolve<BootState>());
+            fsm.RegisterState(context.Resolve<SplashState>());
+            fsm.RegisterState(context.Resolve<MainMenuState>());
+            fsm.RegisterState(context.Resolve<LevelSelectState>());
+            fsm.RegisterState(context.Resolve<PlayingState>());
+            fsm.RegisterState(context.Resolve<PausedState>());
+            fsm.RegisterState(context.Resolve<WinState>());
+            fsm.RegisterState(context.Resolve<GameOverState>());
+        }
+
+        private static void HookSettingsToServices(IContext context, SettingsModel settings, IAudioService audio, IHapticService haptics)
+        {
             var localization = context.TryResolve<ILocalizationService>();
-
             var provider = context.TryResolve<ILocalizationTableProvider>();
-
-            var analytics = context.TryResolve<IAnalyticsService>();
-            if (analytics != null) AnalyticsEvents.SetService(analytics);
 
             if (settings != null && audio != null)
             {
@@ -160,23 +194,10 @@ namespace RingFlow.Gameplay
                 settings.LanguageCode.OnChanged((_, n) => localization.SetLanguage(n));
                 localization.SetLanguage(settings.LanguageCode.Value);
             }
+        }
 
-            // Register FSM States
-            var fsm = context.Resolve<IGameStateMachine>();
-            fsm.RegisterState(context.Resolve<BootState>());
-            fsm.RegisterState(context.Resolve<SplashState>());
-            fsm.RegisterState(context.Resolve<MainMenuState>());
-            fsm.RegisterState(context.Resolve<LevelSelectState>());
-            fsm.RegisterState(context.Resolve<PlayingState>());
-            fsm.RegisterState(context.Resolve<PausedState>());
-            fsm.RegisterState(context.Resolve<WinState>());
-            fsm.RegisterState(context.Resolve<GameOverState>());
-
-            // Initialize validation strategy manager for PoleState (Strategy Pattern)
-            var validationManager = context.Resolve<RingValidationStrategyManager>();
-            PoleState.SetValidationManager(validationManager);
-
-            // Initialize AOT preservation for IL2CPP builds
+        private static void PreserveAotTypes()
+        {
             AOT.AOTPreserveAttributes.PreserveCommands();
             AOT.AOTPreserveAttributes.PreserveStates();
             AOT.AOTPreserveAttributes.PreserveMediators();
@@ -185,64 +206,64 @@ namespace RingFlow.Gameplay
             AOT.AOTPreserveAttributes.PreserveModels();
             AOT.AOTPreserveAttributes.PreserveServices();
             AOT.AOTPreserveAttributes.PreserveViews();
+        }
 
-            // Transition to BootState on startup
-            diag?.Log("Lifecycle", "Transitioning to BootState on startup");
-            await fsm.ChangeStateAsync<BootState>();
-
-            // Trigger initial load from disk into all reactive models.
-            var prefs = context.TryResolve<IPlayerPrefsService>();
-            var progress = context.TryResolve<PlayerProgressModel>();
-            if (prefs != null)
+        private static void InitializePlayerPrefsService(IPlayerPrefsService prefs, PlayerProgressModel progress, SettingsModel settings)
+        {
+            if (prefs == null) return;
+            if (progress != null)
             {
-                if (progress != null)
-                {
-                    PlayerProgressSaveSystem.Load(prefs, progress);
-                    progress.FreeUndosUsedThisSession.Value = 0;
-                }
-                if (settings != null) SettingsSaveSystem.Load(prefs, settings);
+                PlayerProgressSaveSystem.Load(prefs, progress);
+                progress.FreeUndosUsedThisSession.Value = 0;
             }
+            if (settings != null) SettingsSaveSystem.Load(prefs, settings);
+        }
 
-            // Post-load initializations
+        private static void InitializeSessionAnalytics(IPlayerPrefsService prefs, PlayerProgressModel progress)
+        {
             s_sessionStartTime = Time.realtimeSinceStartup;
 
-            if (prefs != null)
+            if (prefs == null) return;
+            string firstLaunchStr = prefs.GetString("RF_FirstLaunchTime", "");
+            System.DateTime firstLaunch;
+            if (string.IsNullOrEmpty(firstLaunchStr))
             {
-                string firstLaunchStr = prefs.GetString("RF_FirstLaunchTime", "");
-                System.DateTime firstLaunch;
-                if (string.IsNullOrEmpty(firstLaunchStr))
-                {
-                    firstLaunch = System.DateTime.UtcNow;
-                    prefs.SetString("RF_FirstLaunchTime", firstLaunch.ToString("o"));
-                    prefs.Save();
-                }
-                else
-                {
-                    System.DateTime.TryParse(firstLaunchStr, out firstLaunch);
-                }
-
-                int daysSinceFirstLaunch = (System.DateTime.UtcNow - firstLaunch).Days;
-                AnalyticsEvents.Track(AnalyticsEvents.EventSessionStart, new[] 
-                { 
-                    ("days_since_first_launch", daysSinceFirstLaunch.ToString()),
-                    ("player_level", (progress?.PlayerLevel.Value ?? 1).ToString())
-                });
+                firstLaunch = System.DateTime.UtcNow;
+                prefs.SetString("RF_FirstLaunchTime", firstLaunch.ToString("o"));
+                prefs.Save();
+            }
+            else
+            {
+                System.DateTime.TryParse(firstLaunchStr, out firstLaunch);
             }
 
-            if (settings != null)
-            {
-                settings.ColorBlindMode.OnChanged((_, n) => {
-                    RingPalette.SetColorBlindMode((RingColorPaletteSO.ColorBlindMode)n);
-                });
-                RingPalette.SetColorBlindMode((RingColorPaletteSO.ColorBlindMode)settings.ColorBlindMode.Value);
-            }
+            int daysSinceFirstLaunch = (System.DateTime.UtcNow - firstLaunch).Days;
+            AnalyticsEvents.Track(AnalyticsEvents.EventSessionStart, new[] 
+            { 
+                ("days_since_first_launch", daysSinceFirstLaunch.ToString()),
+                ("player_level", (progress?.PlayerLevel.Value ?? 1).ToString())
+            });
+        }
 
+        private static void InitializeColorBlindMode(SettingsModel settings)
+        {
+            if (settings == null) return;
+            settings.ColorBlindMode.OnChanged((_, n) => {
+                RingPalette.SetColorBlindMode((RingColorPaletteSO.ColorBlindMode)n);
+            });
+            RingPalette.SetColorBlindMode((RingColorPaletteSO.ColorBlindMode)settings.ColorBlindMode.Value);
+        }
+
+        private static void InitializeHapticState(SettingsModel settings, IHapticService haptics)
+        {
             if (settings != null && haptics != null)
             {
                 haptics.IsEnabled = settings.HapticEnabled.Value;
             }
+        }
 
-            // Register IAP Products
+        private static void RegisterIapProducts(IContext context)
+        {
             var iap = context.TryResolve<IIapService>();
             if (iap != null)
             {
@@ -252,15 +273,15 @@ namespace RingFlow.Gameplay
                     new ProductDefinition { Id = "diamonds_50", Type = ProductType.Consumable, PriceString = "$0.99" }
                 );
             }
+        }
 
-            // Initialize VFX prefabs through proper DI (Nexus pattern)
+        private static void InitializeVfxAndPools(IContext context)
+        {
             var vfxRegistry = context.TryResolve<VfxPrefabRegistry>();
             if (vfxRegistry != null)
             {
-                // Validate prefab assignments
                 vfxRegistry.Validate();
                 
-                // Fallback: Create programmatic prefabs if not assigned (editor convenience)
                 if (vfxRegistry.RingPopPrefab == null)
                 {
                     var ringPopObj = new GameObject("RingPopVfxPrefab", typeof(RingPopVfx));
@@ -274,7 +295,6 @@ namespace RingFlow.Gameplay
                     vfxRegistry.ConfettiPrefab = confettiObj;
                 }
 
-                // Prewarm object pools (GDD §6)
                 var pool = context.TryResolve<IObjectPoolService>();
                 if (pool != null)
                 {
@@ -287,7 +307,10 @@ namespace RingFlow.Gameplay
                 NexusLog.Error("GameplayLifecycle", nameof(OnInitializeAsync), "", 
                     "VfxPrefabRegistry not bound. VFX system will be non-functional.");
             }
+        }
 
+        private static void InitializeAudio(IAudioService audio, PlayerProgressModel progress)
+        {
             if (audio != null)
             {
                 int currentLvl = progress?.CurrentLevel.Value ?? 1;
@@ -295,8 +318,6 @@ namespace RingFlow.Gameplay
                 var bgm = ProceduralAudio.GetOrCreateBgmClip(worldIdx);
                 audio.PlayBgm(bgm, true);
             }
-
-            diag?.Log("Lifecycle", "GameplayLifecycle.OnInitializeAsync completed");
         }
 
         public ValueTask OnStartAsync(CancellationToken ct)

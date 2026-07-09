@@ -43,6 +43,11 @@ namespace RingFlow.Editor
             }
         }
 
+        public void BuildFromDashboard()
+        {
+            BuildInScene();
+        }
+
         private void BuildInScene()
         {
             List<PoleState> polesToBuild = null;

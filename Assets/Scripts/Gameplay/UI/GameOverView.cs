@@ -17,6 +17,8 @@ namespace RingFlow.Gameplay.UI
 
         private void Awake()
         {
+            if (transform.childCount > 0) return;
+
             // Dark overlay
             var overlay = GetComponent<Image>();
             overlay.color = new Color(0, 0, 0, 0.75f);

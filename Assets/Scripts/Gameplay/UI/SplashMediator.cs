@@ -43,6 +43,11 @@ namespace RingFlow.Gameplay.UI
                 return;
             }
 
+            if (!IsViewValid)
+            {
+                return; // View was disabled/unbound before the delay completed
+            }
+
             if (_fsm == null)
             {
                 NexusLog.Error("SplashMediator", nameof(TransitionAfterDelay), "",

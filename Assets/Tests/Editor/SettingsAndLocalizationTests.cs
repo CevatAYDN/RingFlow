@@ -80,6 +80,156 @@ namespace RingFlow.Tests
         }
 
         [Test]
+        public void PlayerProgressSaveSystem_RoundTrip_PreservesAllFields()
+        {
+            var prefs = new MockPlayerPrefsService();
+            var progress = new PlayerProgressModel();
+
+            progress.Coins.Value = 999;
+            progress.Diamonds.Value = 50;
+            progress.Xp.Value = 4200;
+            progress.PlayerLevel.Value = 12;
+            progress.CurrentLevel.Value = 150;
+            progress.MaxUnlockedLevel.Value = 200;
+            progress.ChestBronze.Value = 3;
+            progress.ChestSilver.Value = 1;
+            progress.ChestGold.Value = 0;
+            progress.ChestDiamond.Value = 2;
+            progress.DailyDayIndex.Value = 5;
+            progress.FreeUndosUsedThisSession.Value = 2;
+            progress.HintCount.Value = 7;
+            progress.RemoveAds.Value = true;
+            progress.LevelsSinceLastInterstitial = 4;
+
+            PlayerProgressSaveSystem.Save(prefs, progress);
+
+            var loaded = new PlayerProgressModel();
+            PlayerProgressSaveSystem.Load(prefs, loaded);
+
+            Assert.AreEqual(999, loaded.Coins.Value);
+            Assert.AreEqual(50, loaded.Diamonds.Value);
+            Assert.AreEqual(4200, loaded.Xp.Value);
+            Assert.AreEqual(12, loaded.PlayerLevel.Value);
+            Assert.AreEqual(150, loaded.CurrentLevel.Value);
+            Assert.AreEqual(200, loaded.MaxUnlockedLevel.Value);
+            Assert.AreEqual(3, loaded.ChestBronze.Value);
+            Assert.AreEqual(1, loaded.ChestSilver.Value);
+            Assert.AreEqual(0, loaded.ChestGold.Value);
+            Assert.AreEqual(2, loaded.ChestDiamond.Value);
+            Assert.AreEqual(5, loaded.DailyDayIndex.Value);
+            Assert.AreEqual(2, loaded.FreeUndosUsedThisSession.Value);
+            Assert.AreEqual(7, loaded.HintCount.Value);
+            Assert.IsTrue(loaded.RemoveAds.Value);
+        }
+
+        [Test]
+        public void PlayerProgressSaveSystem_HandlesDefaultValues_OnEmptyPrefs()
+        {
+            var prefs = new MockPlayerPrefsService();
+            var loaded = new PlayerProgressModel();
+            PlayerProgressSaveSystem.Load(prefs, loaded);
+
+            Assert.AreEqual(0, loaded.Coins.Value);
+            Assert.AreEqual(1, loaded.CurrentLevel.Value);
+            Assert.AreEqual(1, loaded.MaxUnlockedLevel.Value);
+            Assert.AreEqual(1, loaded.PlayerLevel.Value);
+            Assert.AreEqual(0, loaded.Xp.Value);
+            Assert.IsFalse(loaded.RemoveAds.Value);
+        }
+
+        [Test]
+        public void PlayerProgressSaveSystem_SaveAndLoadStringLists()
+        {
+            var prefs = new MockPlayerPrefsService();
+            var progress = new PlayerProgressModel();
+
+            progress.OwnedThemes.Add("sakura");
+            progress.OwnedThemes.Add("ocean");
+            progress.Achievements.Add("first_win");
+            progress.Achievements.Add("speed_demon");
+
+            PlayerProgressSaveSystem.Save(prefs, progress);
+
+            var loaded = new PlayerProgressModel();
+            PlayerProgressSaveSystem.Load(prefs, loaded);
+
+            Assert.AreEqual(2, loaded.OwnedThemes.Count);
+            Assert.Contains("sakura", loaded.OwnedThemes);
+            Assert.Contains("ocean", loaded.OwnedThemes);
+            Assert.AreEqual(2, loaded.Achievements.Count);
+            Assert.Contains("first_win", loaded.Achievements);
+            Assert.Contains("speed_demon", loaded.Achievements);
+        }
+
+        [Test]
+        public void PlayerProgressSaveSystem_SaveAndLoadEmptyStringLists()
+        {
+            var prefs = new MockPlayerPrefsService();
+            var progress = new PlayerProgressModel();
+
+            PlayerProgressSaveSystem.Save(prefs, progress);
+            var loaded = new PlayerProgressModel();
+            PlayerProgressSaveSystem.Load(prefs, loaded);
+
+            Assert.AreEqual(0, loaded.OwnedThemes.Count);
+            Assert.AreEqual(0, loaded.Achievements.Count);
+        }
+
+        [Test]
+        public void PlayerProgressSaveSystem_SaveAndLoadBoolList()
+        {
+            var prefs = new MockPlayerPrefsService();
+            var progress = new PlayerProgressModel();
+
+            progress.UnlockedWorlds.Clear();
+            for (int i = 0; i < 40; i++) progress.UnlockedWorlds.Add(i == 0 || i == 10 || i == 25);
+
+            PlayerProgressSaveSystem.Save(prefs, progress);
+
+            var loaded = new PlayerProgressModel();
+            PlayerProgressSaveSystem.Load(prefs, loaded);
+
+            Assert.AreEqual(40, loaded.UnlockedWorlds.Count);
+            Assert.IsTrue(loaded.UnlockedWorlds[0]);
+            Assert.IsTrue(loaded.UnlockedWorlds[10]);
+            Assert.IsTrue(loaded.UnlockedWorlds[25]);
+            for (int i = 1; i < 40; i++)
+            {
+                if (i != 10 && i != 25)
+                    Assert.IsFalse(loaded.UnlockedWorlds[i], $"World {i} should be locked");
+            }
+        }
+
+        [Test]
+        public void SettingsSaveSystem_RoundAll_PreservesAllFields()
+        {
+            var prefs = new MockPlayerPrefsService();
+            var settings = new SettingsModel();
+
+            settings.MusicEnabled.Value = false;
+            settings.SfxEnabled.Value = false;
+            settings.HapticEnabled.Value = true;
+            settings.ReduceMotion.Value = true;
+            settings.SlowMode.Value = true;
+            settings.BigButtons.Value = true;
+            settings.ColorBlindMode.Value = 3;
+            settings.LanguageCode.Value = "de";
+
+            SettingsSaveSystem.Save(prefs, settings);
+            var loaded = new SettingsModel();
+            SettingsSaveSystem.Load(prefs, loaded);
+
+            Assert.IsFalse(loaded.MusicEnabled.Value);
+            Assert.IsFalse(loaded.SfxEnabled.Value);
+            Assert.IsTrue(loaded.HapticEnabled.Value);
+            Assert.IsTrue(loaded.ReduceMotion.Value);
+            Assert.IsTrue(loaded.SlowMode.Value);
+            Assert.IsTrue(loaded.BigButtons.Value);
+            Assert.AreEqual(3, loaded.ColorBlindMode.Value);
+            Assert.AreEqual("de", loaded.LanguageCode.Value);
+        }
+
+        [Test]
         public void CSVLocalizationTableProvider_ParsesCSVHeadersAndRows()
         {
             var provider = new CSVLocalizationTableProvider();

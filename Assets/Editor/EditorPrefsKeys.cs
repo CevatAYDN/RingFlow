@@ -1,4 +1,3 @@
-// EditorPrefs keys centralized so sections don't collide.
 namespace RingFlow.Editor
 {
     internal static class EditorPrefsKeys
@@ -14,5 +13,11 @@ namespace RingFlow.Editor
         public const string Poles           = "RingFlow.Poles";
         public const string Colors          = "RingFlow.Colors";
         public const string MaxCap          = "RingFlow.MaxCap";
+        public const string SelectedTab     = "RingFlow.SelectedTab";
+        public const string Favorites       = "RingFlow.Favorites";
+        public const string RecentActions   = "RingFlow.RecentActions";
+        public const string ShowStatusBar   = "RingFlow.ShowStatusBar";
+        public const string ShowPerfMonitor = "RingFlow.ShowPerfMonitor";
+        public const string ShowSceneTree   = "RingFlow.ShowSceneTree";
     }
 }

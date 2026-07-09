@@ -26,10 +26,10 @@ namespace RingFlow.Editor
 
         public void OnEnable()
         {
-            _levelIndex  = EditorPrefs.GetInt(EditorPrefsKeys.LevelIndex, 1);
-            _seed        = EditorPrefs.GetInt(EditorPrefsKeys.Seed, 100);
-            _poleCount   = EditorPrefs.GetInt(EditorPrefsKeys.Poles, 4);
-            _colorCount  = EditorPrefs.GetInt(EditorPrefsKeys.Colors, 3);
+            _levelIndex = EditorPrefs.GetInt(EditorPrefsKeys.LevelIndex, 1);
+            _seed = EditorPrefs.GetInt(EditorPrefsKeys.Seed, 100);
+            _poleCount = EditorPrefs.GetInt(EditorPrefsKeys.Poles, 4);
+            _colorCount = EditorPrefs.GetInt(EditorPrefsKeys.Colors, 3);
             _maxCapacity = EditorPrefs.GetInt(EditorPrefsKeys.MaxCap, 4);
         }
 
@@ -257,6 +257,11 @@ namespace RingFlow.Editor
 
             NexusLog.Info("RingFlowEditor", nameof(ApplyGddCurveParams), _levelIndex.ToString(),
                 $"Applied GDD curve: Poles={_poleCount}, Colors={_colorCount}, MaxCapacity={_maxCapacity}");
+        }
+
+        public void GenerateFromDashboard()
+        {
+            Generate();
         }
 
         private void Generate()

@@ -23,6 +23,8 @@ namespace RingFlow.Gameplay.UI
 
         private void Awake()
         {
+            if (transform.childCount > 0) return;
+
             // Title
             var titleGo = GameUIResources.CreateText("SELECT LEVEL", transform, 36, TextAnchor.UpperCenter, GameUIResources.AccentColor);
             TitleText = titleGo.GetComponent<Text>();

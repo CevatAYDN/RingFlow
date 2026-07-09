@@ -33,7 +33,7 @@ namespace RingFlow.Gameplay.UI
                 NexusLog.Info("ParentalGatePopupMediator", "HandleAccept", "", "Parental gate verification passed. GDPR accepted.");
                 
                 // Hide popup and transition to main menu
-                _signalBus?.Fire(new ShowScreenSignal(ScreenType.MainMenu));
+                _signalBus?.Fire(new HideScreenSignal(ScreenType.ParentalGate));
                 if (_fsm != null)
                 {
                     _ = _fsm.ChangeStateAsync<MainMenuState>();

@@ -33,6 +33,33 @@ namespace RingFlow.Gameplay
     }
 
     [System.Serializable]
+    public struct GameBalanceConfig
+    {
+        [Header("Undo")]
+        public int FreeUndosPerSession;
+        public int UndoCoinCost;
+
+        [Header("Level Completion Rewards")]
+        public int NormalCoinReward;
+        public int BossCoinReward;
+        public int NormalXpReward;
+        public int BossXpReward;
+        public int LevelUpCoinReward;
+
+        [Header("Star Thresholds")]
+        public int ThreeStarTargetRatioPercent; // e.g. 100 → ≤target, 130 → ≤target*1.3
+        public int TwoStarTargetRatioPercent;
+
+        [Header("Chest Drop Rates")]
+        public float SilverChestChance;
+        public float GoldChestChance;
+        public float DiamondChestChance;
+
+        [Header("Ad Intervals")]
+        public int InterstitialAdInterval;
+    }
+
+    [System.Serializable]
     public struct DifficultyBandData
     {
         public DifficultyBand Band;
@@ -55,6 +82,7 @@ namespace RingFlow.Gameplay
         public List<DifficultyBandData> DifficultyBands = new();
         public List<ColorCurvePoint> ColorCurve = new();
         public List<WorldConfigData> Worlds = new();
+        public GameBalanceConfig BalanceConfig = new();
 
         private static GameConfigDatabaseSO _instance;
         public static GameConfigDatabaseSO Instance
@@ -77,6 +105,23 @@ namespace RingFlow.Gameplay
         public void InitializeDefaults()
         {
             TotalLevels = 2000;
+
+            BalanceConfig = new GameBalanceConfig
+            {
+                FreeUndosPerSession = 5,
+                UndoCoinCost = 5,
+                NormalCoinReward = 50,
+                BossCoinReward = 500,
+                NormalXpReward = 10,
+                BossXpReward = 50,
+                LevelUpCoinReward = 100,
+                ThreeStarTargetRatioPercent = 100,
+                TwoStarTargetRatioPercent = 130,
+                SilverChestChance = 0.40f,
+                GoldChestChance = 0.10f,
+                DiamondChestChance = 0.01f,
+                InterstitialAdInterval = 3
+            };
 
             // Default Difficulty Bands (GDD §5)
             DifficultyBands = new List<DifficultyBandData>

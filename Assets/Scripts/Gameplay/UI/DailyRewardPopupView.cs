@@ -17,7 +17,9 @@ namespace RingFlow.Gameplay.UI
 
         private void Awake()
         {
-            // ── Dimmed background overlay ─────────────────────────────
+            if (transform.childCount > 0) return;
+
+            // ── Dimmed background overlay ─────────────
             var overlay = GetComponent<Image>();
             overlay.color = new Color(0, 0, 0, 0.80f);
 
