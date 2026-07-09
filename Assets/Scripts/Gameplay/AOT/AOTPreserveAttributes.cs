@@ -29,6 +29,7 @@ namespace RingFlow.Gameplay.AOT
             typeof(UndoCommand).ToString();
             typeof(UndoRequestedCommand).ToString();
             typeof(CheckWinCommand).ToString();
+            typeof(LevelWonCommand).ToString();
             typeof(HintCommand).ToString();
             typeof(ChestClaimCommand).ToString();
             typeof(DailyRewardClaimCommand).ToString();
@@ -122,6 +123,8 @@ namespace RingFlow.Gameplay.AOT
             typeof(RingMovedSignal).ToString();
             typeof(UndoSignal).ToString();
             typeof(CheckWinSignal).ToString();
+            typeof(LevelWonSignal).ToString();
+            typeof(PlayingStateArgs).ToString();
             typeof(RevealMysterySignal).ToString();
             typeof(BreakIceSignal).ToString();
             typeof(UnlockPoleSignal).ToString();

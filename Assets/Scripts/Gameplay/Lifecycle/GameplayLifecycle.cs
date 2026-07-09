@@ -103,6 +103,7 @@ namespace RingFlow.Gameplay
             builder.BindCommand<UndoSignal, UndoCommand>();
             builder.BindCommand<UndoRequestedSignal, UndoRequestedCommand>();
             builder.BindCommand<CheckWinSignal, CheckWinCommand>();
+            builder.BindCommand<LevelWonSignal, LevelWonCommand>();
             builder.BindCommand<HintRequestedSignal, HintCommand>();
             builder.BindCommand<ChestClaimAllSignal, ChestClaimCommand>();
             builder.BindCommand<DailyRewardClaimSignal, DailyRewardClaimCommand>();
@@ -110,7 +111,7 @@ namespace RingFlow.Gameplay
 
         public async ValueTask OnInitializeAsync(CancellationToken ct)
         {
-            var visualBoard = UnityEngine.GameObject.Find("RingFlow_VisualBoard");
+            var visualBoard = GameplayHelpers.FindRootGameObject("RingFlow_VisualBoard");
             if (visualBoard != null)
             {
                 UnityEngine.Object.Destroy(visualBoard);
@@ -317,23 +318,18 @@ namespace RingFlow.Gameplay
             {
                 var esObj = new GameObject("EventSystem");
                 esObj.AddComponent<EventSystem>();
-                var inputModuleType = ResolveInputSystemUIInputModuleType() ?? typeof(StandaloneInputModule);
-                esObj.AddComponent(inputModuleType);
+                esObj.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
             }
 
-            foreach (var cam in Object.FindObjectsByType<Camera>())
+            var cameras = Camera.allCameras;
+            for (int i = 0; i < cameras.Length; i++)
             {
+                var cam = cameras[i];
                 if (cam != null && cam.GetComponent<PhysicsRaycaster>() == null)
                 {
                     cam.gameObject.AddComponent<PhysicsRaycaster>();
                 }
             }
-        }
-
-        private static System.Type ResolveInputSystemUIInputModuleType()
-        {
-            return System.Type.GetType("UnityEngine.InputSystem.UI.InputSystemUIInputModule, Unity.InputSystem.ForUI")
-                   ?? System.Type.GetType("UnityEngine.InputSystem.UI.InputSystemUIInputModule, Unity.InputSystem");
         }
 
         public void OnDispose()

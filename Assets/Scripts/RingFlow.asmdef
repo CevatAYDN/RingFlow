@@ -3,7 +3,8 @@
     "rootNamespace": "RingFlow",
     "references": [
         "com.nexus.core",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

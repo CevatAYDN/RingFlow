@@ -15,6 +15,18 @@ namespace RingFlow.Gameplay
         private Action<int, int> _selectedPoleHandler;
         private Action<int, int> _movesCountHandler;
 
+        // Cache delegate instances to ensure zero garbage collection allocation when binding/unbinding
+        private Action<LevelLoadedSignal> _levelLoadedHandler;
+        private Action<RingMovedSignal> _ringMovedHandler;
+        private Action<UndoSignal> _undoHandler;
+        private Action<RevealMysterySignal> _revealMysteryHandler;
+        private Action<BreakIceSignal> _breakIceHandler;
+        private Action<UnlockPoleSignal> _unlockPoleHandler;
+        private Action<PaintRingSignal> _paintRingHandler;
+        private Action<BombExplodedSignal> _bombExplodedHandler;
+        private Action<HintResolvedSignal> _hintResolvedHandler;
+        private Action<MoveBlockedSignal> _moveBlockedHandler;
+
         protected override void OnBind()
         {
             if (_model == null || View == null)
@@ -30,16 +42,30 @@ namespace RingFlow.Gameplay
 
             _logger?.Log("[BoardMediator] Binding BoardView to signals...");
 
-            Subscribe<LevelLoadedSignal>(OnLevelLoaded);
-            Subscribe<RingMovedSignal>(OnRingMoved);
-            Subscribe<UndoSignal>(_ => RebuildBoard());
-            Subscribe<RevealMysterySignal>(_ => RebuildBoard());
-            Subscribe<BreakIceSignal>(_ => RebuildBoard());
-            Subscribe<UnlockPoleSignal>(_ => RebuildBoard());
-            Subscribe<PaintRingSignal>(_ => RebuildBoard());
-            Subscribe<BombExplodedSignal>(OnBombExploded);
-            Subscribe<HintResolvedSignal>(OnHintResolved);
-            Subscribe<MoveBlockedSignal>(OnMoveBlocked);
+            // Initialize and cache delegate handlers to avoid closure allocation garbage
+            _levelLoadedHandler ??= OnLevelLoaded;
+            _ringMovedHandler ??= OnRingMoved;
+            _undoHandler ??= _ => RebuildBoard();
+            _revealMysteryHandler ??= _ => RebuildBoard();
+            _breakIceHandler ??= _ => RebuildBoard();
+            _unlockPoleHandler ??= _ => RebuildBoard();
+            _paintRingHandler ??= _ => RebuildBoard();
+            _bombExplodedHandler ??= OnBombExploded;
+            _hintResolvedHandler ??= OnHintResolved;
+            _moveBlockedHandler ??= OnMoveBlocked;
+
+            // Note: The base Nexus Mediator automatically disposes and unsubscribes all 
+            // subscriptions added via Subscribe<T>() inside the base Unbind() method.
+            Subscribe<LevelLoadedSignal>(_levelLoadedHandler);
+            Subscribe<RingMovedSignal>(_ringMovedHandler);
+            Subscribe<UndoSignal>(_undoHandler);
+            Subscribe<RevealMysterySignal>(_revealMysteryHandler);
+            Subscribe<BreakIceSignal>(_breakIceHandler);
+            Subscribe<UnlockPoleSignal>(_unlockPoleHandler);
+            Subscribe<PaintRingSignal>(_paintRingHandler);
+            Subscribe<BombExplodedSignal>(_bombExplodedHandler);
+            Subscribe<HintResolvedSignal>(_hintResolvedHandler);
+            Subscribe<MoveBlockedSignal>(_moveBlockedHandler);
 
             _selectedPoleHandler = (_, id) => ApplySelection(id);
             _movesCountHandler = (_, _) => _logger?.Log($"[BoardMediator] Moves now {_model.MovesCount.Value}");

@@ -254,4 +254,27 @@ namespace RingFlow.Gameplay
 
     public readonly struct OpenChestPopupSignal {}
     public readonly struct CloseChestPopupSignal {}
+
+    // ── Refactoring: Type-safe Level Won & State Arguments ─────────────
+    public readonly struct LevelWonSignal {}
+
+    public class PlayingStateArgs
+    {
+        public bool IsResume { get; }
+        public int LevelIndex { get; }
+
+        public PlayingStateArgs(int levelIndex)
+        {
+            IsResume = false;
+            LevelIndex = levelIndex;
+        }
+
+        private PlayingStateArgs(bool isResume)
+        {
+            IsResume = isResume;
+            LevelIndex = -1;
+        }
+
+        public static PlayingStateArgs Resume { get; } = new PlayingStateArgs(true);
+    }
 }

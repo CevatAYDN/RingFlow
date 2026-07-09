@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Nexus.Core;
@@ -142,7 +143,7 @@ namespace RingFlow.Gameplay
 
             if (currentSelected == -1)
             {
-                var pole = _model.Poles.Find(p => p.Id == signal.PoleId);
+                var pole = _model.Poles.GetPoleById(signal.PoleId);
                 if (pole != null && pole.CanPopRing())
                 {
                     _model.SelectedPoleId.Value = signal.PoleId;
@@ -161,8 +162,8 @@ namespace RingFlow.Gameplay
                 {
                     int fromId = currentSelected;
                     int toId = signal.PoleId;
-                    var fromPole = _model.Poles.Find(p => p.Id == fromId);
-                    var toPole = _model.Poles.Find(p => p.Id == toId);
+                    var fromPole = _model.Poles.GetPoleById(fromId);
+                    var toPole = _model.Poles.GetPoleById(toId);
 
                     if (fromPole == null || toPole == null || !fromPole.CanPopRing())
                     {
@@ -216,8 +217,8 @@ namespace RingFlow.Gameplay
 
         public void Execute(MoveRingSignal signal)
         {
-            var fromPole = _model.Poles.Find(p => p.Id == signal.FromPoleId);
-            var toPole = _model.Poles.Find(p => p.Id == signal.ToPoleId);
+            var fromPole = _model.Poles.GetPoleById(signal.FromPoleId);
+            var toPole = _model.Poles.GetPoleById(signal.ToPoleId);
 
             if (fromPole == null || toPole == null || !fromPole.CanPopRing())
             {
@@ -284,16 +285,13 @@ namespace RingFlow.Gameplay
                 _strategyManager.ExecutePostMoveExecution(RingType.Mystery, ref context);
             }
 
-            // Handle remaining complex mechanics (Chain, Magnet, Bomb, Ice)
-            // These will be migrated to strategies in future iterations
             var mainRecord = BuildMoveRecord(context);
-            mainRecord.SubMoves ??= new List<MoveRecord>();
 
             ApplyChainSubMove(ref context, mainRecord);
             ApplyMagnetPull(ref context, mainRecord);
             TryBreakIceOnTarget(ref context, mainRecord);
 
-            mainRecord.BombCountersBeforeTick = SnapshotBombCounters();
+            SnapshotBombCounters(mainRecord);
 
             _model.MovesCount.Value++;
 
@@ -302,12 +300,11 @@ namespace RingFlow.Gameplay
 
             _signalBus.Fire(new RingMovedSignal(signal.FromPoleId, signal.ToPoleId));
 
-            var explodedRings = TickAllBombsAndCapture();
-            bool bombExploded = explodedRings != null && explodedRings.Count > 0;
+            TickAllBombsAndCapture(mainRecord);
+            bool bombExploded = mainRecord.BombExplodedRings.Count > 0;
             if (bombExploded)
             {
                 _model.IsGameWon.Value = false;
-                mainRecord.BombExplodedRings = explodedRings;
                 _model.MoveHistory.Push(mainRecord);
                 FireGameOverTransition();
                 return;
@@ -319,23 +316,20 @@ namespace RingFlow.Gameplay
 
         private MoveRecord BuildMoveRecord(MoveContext context)
         {
-            return new MoveRecord(
-                context.FromPoleId,
-                context.ToPoleId,
-                context.MovingRing,
-                context.WasMysteryRevealed,
-                context.WasIceBroken,
-                context.WasPoleUnlocked,
-                context.WasPaintApplied,
-                context.PaintedRingIndex,
-                context.PaintedRingOriginalColor,
-                context.MovingRing.Color,
-                context.BombCountersBeforeTick,
-                context.WasRainbowConverted,
-                context.RainbowTargetIndex,
-                context.RainbowTargetOriginalColor,
-                context.BombExplodedRings
-            );
+            var record = MoveRecordPool.Rent();
+            record.FromPoleId = context.FromPoleId;
+            record.ToPoleId = context.ToPoleId;
+            record.Ring = context.MovingRing;
+            record.WasMysteryRevealedOnFrom = context.WasMysteryRevealed;
+            record.WasTargetPoleUnlocked = context.WasPoleUnlocked;
+            record.WasPainted = context.WasPaintApplied;
+            record.PaintedRingIndex = context.PaintedRingIndex;
+            record.PaintedRingOriginalColor = context.PaintedRingOriginalColor;
+            record.OriginalColor = context.MovingRing.Color;
+            record.WasRainbowTargetConverted = context.WasRainbowConverted;
+            record.RainbowTargetRingIndex = context.RainbowTargetIndex;
+            record.RainbowTargetOriginalColor = context.RainbowTargetOriginalColor;
+            return record;
         }
 
         private void FireGameOverTransition()
@@ -373,17 +367,12 @@ namespace RingFlow.Gameplay
             return true;
         }
 
-        // These methods are now handled by the Strategy Pattern implementation
-        // Removed: ApplyPaintPreMove, ApplyRainbowPreMove, RevealMysteryOnFrom
-        // They are now in PaintRingStrategy, RainbowRingStrategy, and MysteryRingStrategy
-
         private void TryBreakIceOnTarget(ref MoveContext context, MoveRecord mainRecord)
         {
             if (context.ToPole.Rings.Count < 2) return;
 
             int checkIndex = context.ToPole.Rings.Count - 2;
             bool anyBroken = false;
-            context.IceBrokenRingIndices = new List<int>();
             
             while (checkIndex >= 0)
             {
@@ -392,15 +381,16 @@ namespace RingFlow.Gameplay
                     break;
 
                 context.ToPole.Rings[checkIndex] = new RingData(current.Color, RingType.Standard);
-                context.IceBrokenRingIndices.Add(checkIndex);
+                mainRecord.IceBrokenRingIndices.Add(checkIndex);
                 anyBroken = true;
                 checkIndex--;
             }
 
             if (anyBroken)
             {
-                context.IceBrokenRingIndices.Sort();
+                mainRecord.IceBrokenRingIndices.Sort();
                 context.WasIceBroken = true;
+                context.IceBrokenRingIndices = mainRecord.IceBrokenRingIndices;
                 _signalBus.Fire(new BreakIceSignal(context.ToPoleId));
             }
         }
@@ -417,7 +407,12 @@ namespace RingFlow.Gameplay
 
                 pole.PopRing();
                 context.ToPole.AddRing(topR);
-                mainRecord.SubMoves.Add(new MoveRecord(pole.Id, context.ToPoleId, topR));
+
+                var subRecord = MoveRecordPool.Rent();
+                subRecord.FromPoleId = pole.Id;
+                subRecord.ToPoleId = context.ToPoleId;
+                subRecord.Ring = topR;
+                mainRecord.SubMoves.Add(subRecord);
                 return;
             }
         }
@@ -434,72 +429,79 @@ namespace RingFlow.Gameplay
 
                 var pulled = p.PopRing();
                 context.ToPole.AddRing(pulled);
-                mainRecord.SubMoves.Add(new MoveRecord(p.Id, context.ToPoleId, pulled));
+
+                var subRecord = MoveRecordPool.Rent();
+                subRecord.FromPoleId = p.Id;
+                subRecord.ToPoleId = context.ToPoleId;
+                subRecord.Ring = pulled;
+                mainRecord.SubMoves.Add(subRecord);
             }
         }
 
-        private List<(int PoleId, int RingIndex, RingData Ring)> TickAllBombsAndCapture()
+        private void TickAllBombsAndCapture(MoveRecord mainRecord)
         {
-            var explodedRings = new List<(int PoleId, int RingIndex, RingData Ring)>();
-            var explodedIndices = new Dictionary<PoleState, List<int>>();
-
-            foreach (var pole in _model.Poles)
+            bool hasBombs = false;
+            for (int p = 0; p < _model.Poles.Count; p++)
             {
-                for (int i = 0; i < pole.Rings.Count; i++)
+                var pole = _model.Poles[p];
+                for (int r = 0; r < pole.Rings.Count; r++)
                 {
-                    var r = pole.Rings[i];
-                    if (r.Type != RingType.Bomb) continue;
+                    if (pole.Rings[r].Type == RingType.Bomb)
+                    {
+                        hasBombs = true;
+                        break;
+                    }
+                }
+                if (hasBombs) break;
+            }
+            if (!hasBombs) return;
 
-                    int newCounter = r.AdditionalData - 1;
-                    pole.Rings[i] = new RingData(r.Color, RingType.Bomb, newCounter);
+            for (int p = 0; p < _model.Poles.Count; p++)
+            {
+                var pole = _model.Poles[p];
+                int explodedCount = 0;
+                Span<int> explodedIdx = stackalloc int[4];
+
+                for (int r = 0; r < pole.Rings.Count; r++)
+                {
+                    var ring = pole.Rings[r];
+                    if (ring.Type != RingType.Bomb) continue;
+
+                    int newCounter = ring.AdditionalData - 1;
+                    pole.Rings[r] = new RingData(ring.Color, RingType.Bomb, newCounter);
                     _signalBus.Fire(new BombTickSignal(pole.Id, newCounter));
 
                     if (newCounter <= 0)
                     {
                         _signalBus.Fire(new BombExplodedSignal(pole.Id));
-
-                        if (!explodedIndices.ContainsKey(pole))
-                            explodedIndices[pole] = new List<int>();
-                        explodedIndices[pole].Add(i);
+                        explodedIdx[explodedCount++] = r;
                     }
                 }
-            }
 
-            if (explodedIndices.Count > 0)
-            {
-                foreach (var kvp in explodedIndices)
+                if (explodedCount > 0)
                 {
-                    var pole = kvp.Key;
-                    var indices = kvp.Value;
-                    indices.Sort((a, b) => b.CompareTo(a));
-                    foreach (var idx in indices)
+                    for (int i = explodedCount - 1; i >= 0; i--)
                     {
-                        // Capture the ring data BEFORE removing it (C4 fix: bomb undo restore)
-                        explodedRings.Add((pole.Id, idx, pole.Rings[idx]));
+                        int idx = explodedIdx[i];
+                        mainRecord.BombExplodedRings.Add((pole.Id, idx, pole.Rings[idx]));
                         pole.Rings.RemoveAt(idx);
                     }
                 }
             }
-
-            return explodedRings;
         }
 
-        private List<(int PoleId, int RingIndex, int Counter)> SnapshotBombCounters()
+        private void SnapshotBombCounters(MoveRecord mainRecord)
         {
-            List<(int, int, int)> snapshot = null;
-            foreach (var pole in _model.Poles)
+            for (int p = 0; p < _model.Poles.Count; p++)
             {
+                var pole = _model.Poles[p];
                 for (int i = 0; i < pole.Rings.Count; i++)
                 {
                     if (pole.Rings[i].Type != RingType.Bomb) continue;
-                    snapshot ??= new List<(int, int, int)>();
-                    snapshot.Add((pole.Id, i, pole.Rings[i].AdditionalData));
+                    mainRecord.BombCountersBeforeTick.Add((pole.Id, i, pole.Rings[i].AdditionalData));
                 }
             }
-            return snapshot;
         }
-
-        // MoveContext struct is now in Strategies namespace with proper using directive
     }
 
     public class UndoCommand : ICommand<UndoSignal>
@@ -516,25 +518,24 @@ namespace RingFlow.Gameplay
                 NexusLog.Info("UndoCommand", "Execute", $"{lastMove.FromPoleId}->{lastMove.ToPoleId}",
                     $"Undoing move. History depth: {depthAfterPop} remaining.");
 
-                var fromPole = _model.Poles.Find(p => p.Id == lastMove.FromPoleId);
-                var toPole = _model.Poles.Find(p => p.Id == lastMove.ToPoleId);
+                var fromPole = _model.Poles.GetPoleById(lastMove.FromPoleId);
+                var toPole = _model.Poles.GetPoleById(lastMove.ToPoleId);
 
                 if (fromPole != null && toPole != null)
                 {
                     // C4: Restore exploded bomb rings BEFORE any other undo logic.
                     // Insert the captured rings at their original positions (highest index first
                     // to preserve ordering during insertion).
-                    if (lastMove.BombExplodedRings != null)
+                    if (lastMove.BombExplodedRings.Count > 0)
                     {
-                        var sortedExploded = lastMove.BombExplodedRings
-                            .OrderByDescending(e => e.RingIndex)
-                            .ToList();
-                        foreach (var (poleId, ringIndex, ringData) in sortedExploded)
+                        lastMove.BombExplodedRings.Sort(static (a, b) => b.RingIndex.CompareTo(a.RingIndex));
+                        for (int i = 0; i < lastMove.BombExplodedRings.Count; i++)
                         {
-                            var pole = _model.Poles.Find(p => p.Id == poleId);
+                            var entry = lastMove.BombExplodedRings[i];
+                            var pole = _model.Poles.GetPoleById(entry.PoleId);
                             if (pole == null) continue;
-                            int insertIdx = ringIndex < pole.Rings.Count ? ringIndex : pole.Rings.Count;
-                            pole.Rings.Insert(insertIdx, ringData);
+                            int insertIdx = entry.RingIndex < pole.Rings.Count ? entry.RingIndex : pole.Rings.Count;
+                            pole.Rings.Insert(insertIdx, entry.Ring);
                         }
                     }
 
@@ -544,13 +545,13 @@ namespace RingFlow.Gameplay
 
                     // SubMoves (magnet, chain) reversed before main ring because
                     // they were applied after the main ring in the original move
-                    if (lastMove.SubMoves != null)
+                    if (lastMove.SubMoves.Count > 0)
                     {
                         for (int i = lastMove.SubMoves.Count - 1; i >= 0; i--)
                         {
                             var sub = lastMove.SubMoves[i];
-                            var subFrom = _model.Poles.Find(p => p.Id == sub.FromPoleId);
-                            var subTo = _model.Poles.Find(p => p.Id == sub.ToPoleId);
+                            var subFrom = _model.Poles.GetPoleById(sub.FromPoleId);
+                            var subTo = _model.Poles.GetPoleById(sub.ToPoleId);
 
                             if (subFrom != null && subTo != null)
                             {
@@ -594,10 +595,11 @@ namespace RingFlow.Gameplay
 
                     fromPole.AddRing(movedRing);
 
-                    if (lastMove.IceBrokenRingIndices != null)
+                    if (lastMove.IceBrokenRingIndices.Count > 0)
                     {
-                        foreach (var idx in lastMove.IceBrokenRingIndices)
+                        for (int i = 0; i < lastMove.IceBrokenRingIndices.Count; i++)
                         {
+                            int idx = lastMove.IceBrokenRingIndices[i];
                             if (idx >= 0 && idx < toPole.Rings.Count)
                             {
                                 var ringAtIdx = toPole.Rings[idx];
@@ -621,12 +623,19 @@ namespace RingFlow.Gameplay
                     _model.SelectedPoleId.Value = -1;
                     NexusLog.Info("UndoCommand", "Execute", $"{lastMove.FromPoleId}->{lastMove.ToPoleId}",
                         $"Undo complete. Moves now: {_model.MovesCount.Value}");
+
+                    // Return to pool after we're done using it
+                    MoveRecordPool.Return(lastMove);
+
                     _signalBus.Fire(new CheckWinSignal());
                 }
                 else
                 {
                     NexusLog.Warn("UndoCommand", "Execute", $"{lastMove.FromPoleId}->{lastMove.ToPoleId}",
                         $"Undo failed: pole lookup returned null. fromNull={fromPole == null}, toNull={toPole == null}");
+                    
+                    // Even if failed, we must return to pool to avoid leaking the record
+                    MoveRecordPool.Return(lastMove);
                 }
             }
             else
@@ -637,10 +646,11 @@ namespace RingFlow.Gameplay
 
         private void RestoreBombCounters(List<(int PoleId, int RingIndex, int Counter)> snapshot)
         {
-            if (snapshot == null) return;
-            foreach (var entry in snapshot)
+            if (snapshot == null || snapshot.Count == 0) return;
+            for (int i = 0; i < snapshot.Count; i++)
             {
-                var pole = _model.Poles.Find(p => p.Id == entry.PoleId);
+                var entry = snapshot[i];
+                var pole = _model.Poles.GetPoleById(entry.PoleId);
                 if (pole == null || entry.RingIndex >= pole.Rings.Count) continue;
                 var r = pole.Rings[entry.RingIndex];
                 if (r.Type != RingType.Bomb) continue;
@@ -653,14 +663,7 @@ namespace RingFlow.Gameplay
     public class CheckWinCommand : ICommand<CheckWinSignal>
     {
         [Inject] private GameplayModel _model;
-        [Inject] private IProgressionService _progressionService;
-        [Inject] private IEconomyService _economyService;
-        [Inject] private PlayerProgressModel _progress;
-        [Inject] private IGameStateMachine _fsm;
-        [Inject] private IAdService _ads;
-
-        // ── GDD §10 — Interstitial every 3 levels ─────────────
-        private const int InterstitialInterval = 3;
+        [Inject] private ISignalBus _signalBus;
 
         public void Execute(CheckWinSignal signal)
         {
@@ -684,25 +687,6 @@ namespace RingFlow.Gameplay
                 bool poleSolved = LevelSolver.IsSolved(pole, pole.MaxCapacity);
                 if (!poleSolved)
                 {
-                    if (!pole.IsFull)
-                    {
-                        NexusLog.Info("CheckWinCommand", "Execute", pole.Id.ToString(),
-                            $"Pole not full ({pole.Rings.Count}/{pole.MaxCapacity}); cannot win.");
-                    }
-                    else
-                    {
-                        var firstRing = pole.Rings[0];
-                        for (int i = 1; i < pole.Rings.Count; i++)
-                        {
-                            if (pole.Rings[i].Color != firstRing.Color)
-                            {
-                                NexusLog.Info("CheckWinCommand", "Execute", pole.Id.ToString(),
-                                    $"Mixed colors on pole {pole.Id} (pos 0={firstRing.Color} vs pos {i}={pole.Rings[i].Color}).");
-                                break;
-                            }
-                        }
-                    }
-
                     won = false;
                     break;
                 }
@@ -716,107 +700,119 @@ namespace RingFlow.Gameplay
             if (won)
             {
                 _model.IsGameWon.Value = true;
-
-                if (_progressionService == null)
-                {
-                    NexusLog.Error("CheckWinCommand", "Execute", "",
-                        "IProgressionService unbound; cannot advance level even though board was solved.");
-                }
-                if (_economyService == null)
-                {
-                    NexusLog.Error("CheckWinCommand", "Execute", "",
-                        "IEconomyService unbound; coin/xp reward dropped.");
-                }
-                if (_progress == null)
-                {
-                    NexusLog.Error("CheckWinCommand", "Execute", "",
-                        "PlayerProgressModel unbound; xp/world unlock dropped.");
-                }
-
-                int prevLevel = _progressionService != null ? _progressionService.CurrentLevel.Value : 0;
-                int prevMoves = _model.MovesCount.Value;
-                int prevTarget = _model.TargetMovesCount.Value;
-
-                int stars = 1;
-                if (prevTarget > 0)
-                {
-                    if (prevMoves <= prevTarget) stars = 3;
-                    else if (prevMoves <= prevTarget * 1.3) stars = 2;
-                }
-
-                if (_progressionService != null)
-                {
-                    _progressionService.CompleteCurrentLevel();
-                }
-
-                int newLevel = _progressionService != null ? _progressionService.CurrentLevel.Value : prevLevel;
-
-                int newWorldIndex = WorldConfigSO.WorldFromAbsoluteLevel(newLevel);
-                if (_progress != null &&
-                    newWorldIndex >= 0 &&
-                    newWorldIndex < _progress.UnlockedWorlds.Count)
-                {
-                    _progress.UnlockedWorlds[newWorldIndex] = true;
-                }
-
-                bool isBoss = WorldConfigSO.IsBossLevel(prevLevel);
-                int coinReward = isBoss ? 500 : 50 + (prevLevel % 11) * 10;
-                _economyService?.Earn("Coins", coinReward, isBoss ? "Boss Win Reward" : "Level Win Reward");
-
-                int xpEarned = isBoss ? 50 : 10;
-                if (_progress != null)
-                {
-                    _progress.Xp.Value += xpEarned;
-
-                    int xpRequired = _progress.XpToNextLevel(_progress.PlayerLevel.Value);
-                    while (_progress.Xp.Value >= xpRequired)
-                    {
-                        _progress.Xp.Value -= xpRequired;
-                        _progress.PlayerLevel.Value++;
-                        _economyService?.Earn("Coins", 100, "Player Level Up Reward");
-                        xpRequired = _progress.XpToNextLevel(_progress.PlayerLevel.Value);
-                    }
-                }
-
-                _model.LastReward.Value = WinReward.From(prevMoves, prevTarget, coinReward, xpEarned, stars);
-
-                NexusLog.Info("CheckWinCommand", "Execute", "",
-                    $"Level {prevLevel} WON! Moves={prevMoves}, Target={prevTarget}, Stars={stars}, Coins+={coinReward}, XP+={xpEarned}");
-
-                AnalyticsEvents.LevelComplete(prevLevel, prevMoves, stars);
-
-                // ── GDD §9 — Award chests on win ─────────────────────
-                if (_progress != null)
-                {
-                    // 1 Bronze per clear
-                    _progress.ChestBronze.Value++;
-                    // 40% chance Silver
-                    if (Random.value < 0.40f) _progress.ChestSilver.Value++;
-                    // 10% chance Gold (3★ only)
-                    if (stars >= 3 && Random.value < 0.10f) _progress.ChestGold.Value++;
-                    // 1% chance Diamond (3★ only)
-                    if (stars >= 3 && Random.value < 0.01f) _progress.ChestDiamond.Value++;
-                }
-
-                // ── GDD §10 — Interstitial ad every 3 levels ────────
-                if (_progress != null && _ads != null && !_progress.RemoveAds.Value)
-                {
-                    _progress.LevelsSinceLastInterstitial++;
-                    if (_progress.LevelsSinceLastInterstitial >= InterstitialInterval)
-                    {
-                        _progress.LevelsSinceLastInterstitial = 0;
-                        if (_ads.IsInterstitialAvailable("LevelComplete"))
-                        {
-                            NexusLog.Info("CheckWinCommand", "Execute", "",
-                                $"Showing interstitial ad (interval={InterstitialInterval}).");
-                            _ads.ShowInterstitial("LevelComplete");
-                            AnalyticsEvents.InterstitialAd("LevelComplete");
-                        }
-                    }
-                }
-
-                _ = _fsm?.ChangeStateAsync<WinState>();
+                _signalBus.Fire(new LevelWonSignal());
             }
+        }
+    }
+
+    public class LevelWonCommand : ICommand<LevelWonSignal>
+    {
+        [Inject] private GameplayModel _model;
+        [Inject] private IProgressionService _progressionService;
+        [Inject] private IEconomyService _economyService;
+        [Inject] private PlayerProgressModel _progress;
+        [Inject] private IGameStateMachine _fsm;
+        [Inject] private IAdService _ads;
+
+        private const int InterstitialInterval = 3;
+
+        public void Execute(LevelWonSignal signal)
+        {
+            if (_progressionService == null)
+            {
+                NexusLog.Error("LevelWonCommand", "Execute", "",
+                    "IProgressionService unbound; cannot advance level even though board was solved.");
+            }
+            if (_economyService == null)
+            {
+                NexusLog.Error("LevelWonCommand", "Execute", "",
+                    "IEconomyService unbound; coin/xp reward dropped.");
+            }
+            if (_progress == null)
+            {
+                NexusLog.Error("LevelWonCommand", "Execute", "",
+                    "PlayerProgressModel unbound; xp/world unlock dropped.");
+            }
+
+            int prevLevel = _progressionService != null ? _progressionService.CurrentLevel.Value : 0;
+            int prevMoves = _model.MovesCount.Value;
+            int prevTarget = _model.TargetMovesCount.Value;
+
+            int stars = 1;
+            if (prevTarget > 0)
+            {
+                if (prevMoves <= prevTarget) stars = 3;
+                else if (prevMoves <= prevTarget * 1.3) stars = 2;
+            }
+
+            if (_progressionService != null)
+            {
+                _progressionService.CompleteCurrentLevel();
+            }
+
+            int newLevel = _progressionService != null ? _progressionService.CurrentLevel.Value : prevLevel;
+
+            int newWorldIndex = WorldConfigSO.WorldFromAbsoluteLevel(newLevel);
+            if (_progress != null &&
+                newWorldIndex >= 0 &&
+                newWorldIndex < _progress.UnlockedWorlds.Count)
+            {
+                _progress.UnlockedWorlds[newWorldIndex] = true;
+            }
+
+            bool isBoss = WorldConfigSO.IsBossLevel(prevLevel);
+            int coinReward = isBoss ? 500 : 50 + (prevLevel % 11) * 10;
+            _economyService?.Earn("Coins", coinReward, isBoss ? "Boss Win Reward" : "Level Win Reward");
+
+            int xpEarned = isBoss ? 50 : 10;
+            if (_progress != null)
+            {
+                _progress.Xp.Value += xpEarned;
+
+                int xpRequired = _progress.XpToNextLevel(_progress.PlayerLevel.Value);
+                while (_progress.Xp.Value >= xpRequired)
+                {
+                    _progress.Xp.Value -= xpRequired;
+                    _progress.PlayerLevel.Value++;
+                    _economyService?.Earn("Coins", 100, "Player Level Up Reward");
+                    xpRequired = _progress.XpToNextLevel(_progress.PlayerLevel.Value);
+                }
+            }
+
+            _model.LastReward.Value = WinReward.From(prevMoves, prevTarget, coinReward, xpEarned, stars);
+
+            NexusLog.Info("LevelWonCommand", "Execute", "",
+                $"Level {prevLevel} WON! Moves={prevMoves}, Target={prevTarget}, Stars={stars}, Coins+={coinReward}, XP+={xpEarned}");
+
+            AnalyticsEvents.LevelComplete(prevLevel, prevMoves, stars);
+
+            // Award chests on win (GDD §9)
+            if (_progress != null)
+            {
+                _progress.ChestBronze.Value++;
+                if (UnityEngine.Random.value < 0.40f) _progress.ChestSilver.Value++;
+                if (stars >= 3 && UnityEngine.Random.value < 0.10f) _progress.ChestGold.Value++;
+                if (stars >= 3 && UnityEngine.Random.value < 0.01f) _progress.ChestDiamond.Value++;
+            }
+
+            // Interstitial ad every 3 levels (GDD §10)
+            if (_progress != null && _ads != null && !_progress.RemoveAds.Value)
+            {
+                _progress.LevelsSinceLastInterstitial++;
+                if (_progress.LevelsSinceLastInterstitial >= InterstitialInterval)
+                {
+                    _progress.LevelsSinceLastInterstitial = 0;
+                    if (_ads.IsInterstitialAvailable("LevelComplete"))
+                    {
+                        NexusLog.Info("LevelWonCommand", "Execute", "",
+                            $"Showing interstitial ad (interval={InterstitialInterval}).");
+                        _ads.ShowInterstitial("LevelComplete");
+                        AnalyticsEvents.InterstitialAd("LevelComplete");
+                    }
+                }
+            }
+
+            _ = _fsm?.ChangeStateAsync<WinState>();
         }
     }
 
@@ -888,6 +884,35 @@ namespace RingFlow.Gameplay
 
     public static class GameplayHelpers
     {
+        public static GameObject FindRootGameObject(string name)
+        {
+            var activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            var rootObjects = activeScene.GetRootGameObjects();
+            for (int i = 0; i < rootObjects.Length; i++)
+            {
+                if (rootObjects[i] != null && rootObjects[i].name == name)
+                {
+                    return rootObjects[i];
+                }
+            }
+            return null;
+        }
+
+        public static PoleState GetPoleById(this List<PoleState> poles, int id)
+        {
+            if (poles == null) return null;
+            if (id >= 0 && id < poles.Count)
+            {
+                var pole = poles[id];
+                if (pole != null && pole.Id == id) return pole;
+            }
+            for (int i = 0; i < poles.Count; i++)
+            {
+                if (poles[i] != null && poles[i].Id == id) return poles[i];
+            }
+            return null;
+        }
+
         public static string DescribeBlockReason(PoleState fromPole, PoleState toPole)
         {
             if (toPole.IsLocked) return "Locked";

@@ -112,9 +112,9 @@ namespace RingFlow.Gameplay.UI
             else
             {
                 _subscriptions.Add(sb.Subscribe<PlayRequestedSignal>(_ => fsm.ChangeStateAsync<LevelSelectState>()));
-                _subscriptions.Add(sb.Subscribe<LevelSelectedSignal>(s => fsm.ChangeStateAsync<PlayingState>(s.LevelIndex)));
+                _subscriptions.Add(sb.Subscribe<LevelSelectedSignal>(s => fsm.ChangeStateAsync<PlayingState>(new PlayingStateArgs(s.LevelIndex))));
                 _subscriptions.Add(sb.Subscribe<PauseRequestedSignal>(_ => fsm.ChangeStateAsync<PausedState>()));
-                _subscriptions.Add(sb.Subscribe<ResumeRequestedSignal>(_ => fsm.ChangeStateAsync<PlayingState>("resume")));
+                _subscriptions.Add(sb.Subscribe<ResumeRequestedSignal>(_ => fsm.ChangeStateAsync<PlayingState>(PlayingStateArgs.Resume)));
 
                 _subscriptions.Add(sb.Subscribe<NextLevelRequestedSignal>(_ =>
                 {
@@ -129,12 +129,12 @@ namespace RingFlow.Gameplay.UI
                         {
                             ads.ShowInterstitial("LevelComplete", () =>
                             {
-                                fsm.ChangeStateAsync<PlayingState>(nextLevel);
+                                fsm.ChangeStateAsync<PlayingState>(new PlayingStateArgs(nextLevel));
                             });
                         }
                         else
                         {
-                            fsm.ChangeStateAsync<PlayingState>(nextLevel);
+                            fsm.ChangeStateAsync<PlayingState>(new PlayingStateArgs(nextLevel));
                         }
                     }
                 }));

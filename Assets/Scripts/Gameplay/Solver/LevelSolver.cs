@@ -134,23 +134,17 @@ namespace RingFlow.Gameplay
             }
             int validSortedCount = sortIdx;
 
-            // Selection sort on stackalloc span
-            for (int i = 0; i < validSortedCount - 1; i++)
+            // Sort valid moves based on heuristic (ascending) using insertion sort
+            for (int i = 1; i < validSortedCount; i++)
             {
-                int bestIdx = i;
-                for (int j = i + 1; j < validSortedCount; j++)
+                var key = sortedMoves[i];
+                int j = i - 1;
+                while (j >= 0 && sortedMoves[j].Heuristic > key.Heuristic)
                 {
-                    if (sortedMoves[j].Heuristic < sortedMoves[bestIdx].Heuristic)
-                    {
-                        bestIdx = j;
-                    }
+                    sortedMoves[j + 1] = sortedMoves[j];
+                    j--;
                 }
-                if (bestIdx != i)
-                {
-                    var temp = sortedMoves[i];
-                    sortedMoves[i] = sortedMoves[bestIdx];
-                    sortedMoves[bestIdx] = temp;
-                }
+                sortedMoves[j + 1] = key;
             }
 
             for (int i = 0; i < validSortedCount; i++)

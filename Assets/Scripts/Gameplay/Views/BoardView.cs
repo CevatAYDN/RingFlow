@@ -33,7 +33,7 @@ namespace RingFlow.Gameplay
 
         public void BuildBoard(List<PoleState> poles)
         {
-            var visualBoard = GameObject.Find("RingFlow_VisualBoard");
+            var visualBoard = GameplayHelpers.FindRootGameObject("RingFlow_VisualBoard");
             if (visualBoard != null)
                 Destroy(visualBoard);
 
