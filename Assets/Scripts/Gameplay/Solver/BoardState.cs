@@ -296,13 +296,32 @@ namespace RingFlow.Gameplay
             return true;
         }
 
-        public bool CanAddRing(int poleIndex, RingColor color, RingType type, int maxCapacity)
+        public bool CanAddRing(int poleIndex, RingColor color, RingType type, int maxCapacity, int additionalData = 0)
         {
             if (IsPoleLocked(poleIndex))
             {
                 return type == RingType.Locked;
             }
             if (GetRingCount(poleIndex) >= maxCapacity) return false;
+
+            // Chain kapasite kuralı: Çözücüde de 2 boşluk gerektiği kontrol edilmeli
+            if (type == RingType.Chain && additionalData > 0)
+            {
+                int partners = 0;
+                for (int p = 0; p < PoleCount; p++)
+                {
+                    if (p == poleIndex) continue;
+                    if (IsEmpty(p)) continue;
+                    var partnerTop = GetTopRing(p);
+                    if (partnerTop.Type == RingType.Chain && partnerTop.AdditionalData == additionalData)
+                        partners++;
+                }
+                if (GetRingCount(poleIndex) + 1 + partners > maxCapacity)
+                {
+                    return false;
+                }
+            }
+
             if (IsEmpty(poleIndex)) return true;
 
             var top = GetTopRing(poleIndex);
@@ -391,7 +410,7 @@ namespace RingFlow.Gameplay
                     if (CanPopRing(p) && GetTopRingColor(p) == ring.Color)
                     {
                         var pulled = PopRing(p);
-                        AddRingSimple(poleIndex, pulled);
+                        AddRingSimple(poleIndex, pulled, true);
                     }
                 }
             }
@@ -409,7 +428,7 @@ namespace RingFlow.Gameplay
                         if (topR.Type == RingType.Chain && topR.AdditionalData == ring.AdditionalData)
                         {
                             var partner = PopRing(p);
-                            AddRingSimple(poleIndex, partner);
+                            AddRingSimple(poleIndex, partner, true);
                             break;
                         }
                     }
@@ -417,45 +436,65 @@ namespace RingFlow.Gameplay
             }
         }
 
-        public void AddRingSimple(int poleIndex, RingData ring)
+        public void AddRingSimple(int poleIndex, RingData ring, bool isSubMove = false)
         {
             int count = GetRingCount(poleIndex);
 
-            // Paint Kontrolü 1 — Gelen halka Paint ise altındaki halkayı boyar ve kendisi Standard olur
-            if (ring.Type == RingType.Paint)
+            if (!isSubMove)
             {
-                if (count > 0)
+                // Paint Kontrolü 1 — Gelen halka Paint ise altındaki halkayı boyar ve kendisi Standard olur
+                if (ring.Type == RingType.Paint)
                 {
-                    SetRingColor(poleIndex, count - 1, ring.Color);
-                }
-                ring.Type = RingType.Standard;
-            }
-            // Paint Kontrolü 2 — Paint halka üzerine gelen halkayı boyar ve Paint standartlaşır
-            else if (count > 0 && GetTopRingType(poleIndex) == RingType.Paint)
-            {
-                ring.Color = GetTopRingColor(poleIndex);
-                SetRingType(poleIndex, count - 1, RingType.Standard);
-            }
-
-            // Rainbow Kontrolü 1 — Gelen halka Rainbow ise yerleştiği halkanın rengini alır ve standartlaşır
-            if (ring.Type == RingType.Rainbow)
-            {
-                if (count > 0)
-                {
-                    ring.Color = GetTopRingColor(poleIndex);
+                    if (count > 0)
+                    {
+                        SetRingColor(poleIndex, count - 1, ring.Color);
+                    }
                     ring.Type = RingType.Standard;
                 }
-            }
-            // Rainbow Kontrolü 2 — Rainbow halka üzerine gelen halkanın rengini kopyalar ve standartlaşır
-            else if (count > 0 && GetTopRingType(poleIndex) == RingType.Rainbow)
-            {
-                SetRingColor(poleIndex, count - 1, ring.Color);
-                SetRingType(poleIndex, count - 1, RingType.Standard);
+                // Paint Kontrolü 2 — Paint halka üzerine gelen halkayı boyar ve Paint standartlaşır
+                else if (count > 0 && GetTopRingType(poleIndex) == RingType.Paint)
+                {
+                    ring.Color = GetTopRingColor(poleIndex);
+                    SetRingType(poleIndex, count - 1, RingType.Standard);
+                }
+
+                // Rainbow Kontrolü 1 — Gelen halka Rainbow ise yerleştiği halkanın rengini alır ve standartlaşır
+                if (ring.Type == RingType.Rainbow)
+                {
+                    if (count > 0)
+                    {
+                        ring.Color = GetTopRingColor(poleIndex);
+                        ring.Type = RingType.Standard;
+                    }
+                }
+                // Rainbow Kontrolü 2 — Rainbow halka üzerine gelen halkanın rengini kopyalar ve standartlaşır
+                else if (count > 0 && GetTopRingType(poleIndex) == RingType.Rainbow)
+                {
+                    SetRingColor(poleIndex, count - 1, ring.Color);
+                    SetRingType(poleIndex, count - 1, RingType.Standard);
+                }
             }
 
             SetRingColor(poleIndex, count, ring.Color);
             SetRingType(poleIndex, count, ring.Type);
+            SetRingAdditional(poleIndex, count, ring.AdditionalData);
             SetRingCount(poleIndex, count + 1);
+        }
+
+        public bool HasExplodedBomb()
+        {
+            for (int p = 0; p < PoleCount; p++)
+            {
+                int count = GetRingCount(p);
+                for (int r = 0; r < count; r++)
+                {
+                    if (GetRingType(p, r) == RingType.Bomb && GetRingAdditional(p, r) <= 0)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         public RingData PopRing(int poleIndex)

@@ -47,8 +47,8 @@ namespace RingFlow.Gameplay.UI
         protected override void OnUnbind()
         {
             if (View == null) return;
-            View.RestartButton.onClick.RemoveAllListeners();
-            View.QuitButton.onClick.RemoveAllListeners();
+            View.RestartButton?.onClick.RemoveAllListeners();
+            View.QuitButton?.onClick.RemoveAllListeners();
         }
     }
 }

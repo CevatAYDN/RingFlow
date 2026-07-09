@@ -54,9 +54,12 @@ namespace RingFlow.Gameplay.UI
 
         protected override void OnUnbind()
         {
-            foreach (var btn in View.LevelButtons)
-                btn.onClick.RemoveAllListeners();
-            View.BackButton.onClick.RemoveAllListeners();
+            if (View?.LevelButtons != null)
+            {
+                foreach (var btn in View.LevelButtons)
+                    btn?.onClick.RemoveAllListeners();
+            }
+            View.BackButton?.onClick.RemoveAllListeners();
         }
     }
 }

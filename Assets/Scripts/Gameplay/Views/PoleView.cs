@@ -24,16 +24,15 @@ namespace RingFlow.Gameplay
         private static readonly Color LockedTint = Color.black;
 
         private Renderer _renderer;
-        private Material _material;
         private Color _baseColor = Color.white;
         private Coroutine _flashRoutine;
         private bool _isSelected;
         private bool _isLocked;
+        private MaterialPropertyBlock _propBlock;
 
         private void Awake()
         {
             EnsureMaterialAccess();
-            if (_material != null) _baseColor = _material.color;
         }
 
         public void SetLocked(bool locked)
@@ -72,17 +71,21 @@ namespace RingFlow.Gameplay
 
         private void SetColor(Color c)
         {
-            if (_material == null) EnsureMaterialAccess();
-            if (_material == null) return;
-            _material.color = c;
+            if (_renderer == null) _renderer = GetComponent<Renderer>();
+            if (_renderer == null) return;
+            if (_propBlock == null) _propBlock = new MaterialPropertyBlock();
+            _renderer.GetPropertyBlock(_propBlock);
+            _propBlock.SetColor("_Color", c);
+            _propBlock.SetColor("_BaseColor", c);
+            _renderer.SetPropertyBlock(_propBlock);
         }
 
         private void EnsureMaterialAccess()
         {
             if (_renderer == null) _renderer = GetComponent<Renderer>();
-            if (_renderer != null)
+            if (_renderer != null && _renderer.sharedMaterial != null)
             {
-                _material = _renderer.sharedMaterial;
+                _baseColor = _renderer.sharedMaterial.color;
             }
         }
 
@@ -93,8 +96,10 @@ namespace RingFlow.Gameplay
         public void SyncMaterial()
         {
             if (_renderer == null) _renderer = GetComponent<Renderer>();
-            _material = _renderer != null ? _renderer.sharedMaterial : null;
-            if (_material != null) _baseColor = _material.color;
+            if (_renderer != null && _renderer.sharedMaterial != null)
+            {
+                _baseColor = _renderer.sharedMaterial.color;
+            }
         }
 
         public void OnPointerDown(PointerEventData eventData)

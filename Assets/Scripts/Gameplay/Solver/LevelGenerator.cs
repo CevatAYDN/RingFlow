@@ -259,6 +259,14 @@ namespace RingFlow.Gameplay
                     if (board.GetRingType(p, r) == RingType.Standard)
                     {
                         board.SetRingType(p, r, type);
+                        if (type == RingType.Bomb)
+                        {
+                            board.SetRingAdditional(p, r, 5);
+                        }
+                        else if (type == RingType.Chain)
+                        {
+                            board.SetRingAdditional(p, r, (int)board.GetRingColor(p, r));
+                        }
                         count++;
                     }
                 }

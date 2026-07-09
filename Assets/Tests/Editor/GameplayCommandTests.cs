@@ -576,6 +576,67 @@ namespace RingFlow.Tests
             Assert.AreEqual(RingType.Bomb, pole0.TopRing.Type);
             Assert.AreEqual(3, pole0.TopRing.AdditionalData);
         }
+
+        [Test]
+        public void UndoCommand_RestoresExplodedBombRingsAndCounters()
+        {
+            var moveCommand = new MoveRingCommand();
+            InjectDependencies(moveCommand);
+
+            var undoCommand = new UndoCommand();
+            InjectDependencies(undoCommand);
+
+            var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };
+            var pole1 = new PoleState { Id = 1, MaxCapacity = 4 };
+
+            // Bomb on pole1 with counter = 1 (will explode on next move)
+            pole1.AddRing(new RingData(RingColor.Red, RingType.Bomb, 1));
+            // A standard ring on pole0 to move
+            pole0.AddRing(new RingData(RingColor.Red, RingType.Standard));
+
+            _gameplayModel.Poles.Add(pole0);
+            _gameplayModel.Poles.Add(pole1);
+
+            // Execute move - bomb should tick from 1 to 0 and explode (removing it)
+            moveCommand.Execute(new MoveRingSignal(0, 1));
+
+            // Verify that the bomb exploded and is gone from the pole, and signal was fired
+            Assert.AreEqual(1, pole1.Rings.Count); // only the moved red standard ring is there, bomb is gone
+            Assert.IsTrue(_signalBus.HasFiredBombExploded);
+
+            // Undo - the bomb should be restored to index 0 on pole1, with its counter set back to 1
+            undoCommand.Execute(new UndoSignal());
+
+            // pole0 should have 1 ring (the standard red ring).
+            // pole1 should have 1 ring (the restored bomb).
+            Assert.AreEqual(1, pole0.Rings.Count);
+            Assert.AreEqual(1, pole1.Rings.Count);
+            Assert.AreEqual(RingType.Bomb, pole1.Rings[0].Type);
+            Assert.AreEqual(1, pole1.Rings[0].AdditionalData); // restored counter
+        }
+
+        [Test]
+        public void BoardState_EnforcesChainRingCapacityConstraint()
+        {
+            var board = new BoardState { PoleCount = 3, MaxCapacity = 4 };
+            
+            // Set up pole 0 with 3 rings (1 slot left)
+            board.AddRingSimple(0, new RingData(RingColor.Red, RingType.Standard));
+            board.AddRingSimple(0, new RingData(RingColor.Red, RingType.Standard));
+            board.AddRingSimple(0, new RingData(RingColor.Red, RingType.Standard));
+
+            // Set up pole 1 with a Chain ring of color Red (partner)
+            board.AddRingSimple(1, new RingData(RingColor.Red, RingType.Chain, 10));
+
+            // Set up pole 2 with the moving Chain ring of color Red (group 10)
+            board.AddRingSimple(2, new RingData(RingColor.Red, RingType.Chain, 10));
+
+            // Can we add the chain ring to pole 0? It has only 1 slot left.
+            // Chain moving requires 2 slots because it pulls its partner.
+            // So CanAddRing should return false!
+            bool canAdd = board.CanAddRing(0, RingColor.Red, RingType.Chain, 4, 10);
+            Assert.IsFalse(canAdd);
+        }
     }
 
     // --- Minimal Mocks for Unit Testing ---

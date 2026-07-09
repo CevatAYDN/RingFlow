@@ -28,8 +28,12 @@ namespace RingFlow.Gameplay
     /// </summary>
     public static class LevelSolver
     {
-        private static readonly Dictionary<BoardState, int> _transpositionTable = new(80000);
-        private static int _statesSearched = 0;
+        private class SolverContext
+        {
+            public readonly Dictionary<BoardState, int> TranspositionTable = new(80000);
+            public int StatesSearched = 0;
+        }
+
         private const int MaxStatesLimit = 100000;
 
         private struct MoveWithHeuristic : IComparable<MoveWithHeuristic>
@@ -51,13 +55,14 @@ namespace RingFlow.Gameplay
             int maxMovesLimit = 200;
             
             var path = new List<Move>(maxMovesLimit);
+            var context = new SolverContext();
 
             while (threshold <= maxMovesLimit)
             {
-                _transpositionTable.Clear();
-                _statesSearched = 0;
+                context.TranspositionTable.Clear();
+                context.StatesSearched = 0;
                 
-                int nextThreshold = Search(initialState, 0, threshold, maxCapacity, path);
+                int nextThreshold = Search(initialState, 0, threshold, maxCapacity, path, context);
                 if (nextThreshold == -1) // Çözüm bulundu
                 {
                     var movesList = new List<MoveRecord>(path.Count);
@@ -74,7 +79,7 @@ namespace RingFlow.Gameplay
                     };
                 }
                 
-                if (nextThreshold == int.MaxValue || _statesSearched >= MaxStatesLimit)
+                if (nextThreshold == int.MaxValue || context.StatesSearched >= MaxStatesLimit)
                 {
                     // Çözülemez durum veya limit aşıldı
                     break;
@@ -90,10 +95,10 @@ namespace RingFlow.Gameplay
             };
         }
 
-        private static int Search(BoardState state, int g, int threshold, int maxCapacity, List<Move> path)
+        private static int Search(BoardState state, int g, int threshold, int maxCapacity, List<Move> path, SolverContext context)
         {
-            _statesSearched++;
-            if (_statesSearched >= MaxStatesLimit)
+            context.StatesSearched++;
+            if (context.StatesSearched >= MaxStatesLimit)
             {
                 return int.MaxValue; // Prune due to search limit
             }
@@ -104,11 +109,11 @@ namespace RingFlow.Gameplay
             if (IsSolved(state, maxCapacity)) return -1; // Çözüme ulaşıldı
 
             // Transposition Table check
-            if (_transpositionTable.TryGetValue(state, out int prevG) && prevG <= g)
+            if (context.TranspositionTable.TryGetValue(state, out int prevG) && prevG <= g)
             {
                 return int.MaxValue; // Already visited at a shorter or equal path
             }
-            _transpositionTable[state] = g;
+            context.TranspositionTable[state] = g;
 
             int min = int.MaxValue;
             Span<Move> moves = stackalloc Move[132]; // 12 direk * 11 hedef = maks 132 hamle kombinasyonu
@@ -160,7 +165,7 @@ namespace RingFlow.Gameplay
 
                 path.Add(move);
 
-                int result = Search(nextState, g + 1, threshold, maxCapacity, path);
+                int result = Search(nextState, g + 1, threshold, maxCapacity, path, context);
                 if (result == -1) return -1; // Bulunduysa yukarı doğru propagate et
                 if (result < min) min = result;
 

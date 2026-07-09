@@ -54,7 +54,7 @@ namespace RingFlow.Gameplay
 
                 var renderer = poleObj.GetComponent<Renderer>();
                 if (renderer != null)
-                    renderer.sharedMaterial = CreatePoleMaterial(poleData.IsLocked);
+                    renderer.sharedMaterial = GetPoleMaterial(poleData.IsLocked);
                 poleView.SyncMaterial();
 
                 _spawnedPoles.Add(poleView);
@@ -349,18 +349,38 @@ namespace RingFlow.Gameplay
                 DOTween.Kill(obj.transform);
         }
 
-        private static int _poleMaterialIdCounter;
-        private static Material CreatePoleMaterial(bool locked)
+        private static Material _openPoleMaterial;
+        private static Material _lockedPoleMaterial;
+        private static Material GetPoleMaterial(bool locked)
         {
-            var mat = new Material(GetDefaultShader())
+            if (locked)
             {
-                color = locked ? Color.black : Color.white
-            };
-            mat.name = "PoleMat_" + (locked ? "locked" : "open") + "_"
-                + System.Threading.Interlocked.Increment(ref _poleMaterialIdCounter);
-            mat.SetFloat("_Metallic", 0.3f);
-            mat.SetFloat("_Smoothness", 0.4f);
-            return mat;
+                if (_lockedPoleMaterial == null)
+                {
+                    _lockedPoleMaterial = new Material(GetDefaultShader())
+                    {
+                        color = Color.black,
+                        name = "PoleMat_Locked"
+                    };
+                    _lockedPoleMaterial.SetFloat("_Metallic", 0.3f);
+                    _lockedPoleMaterial.SetFloat("_Smoothness", 0.4f);
+                }
+                return _lockedPoleMaterial;
+            }
+            else
+            {
+                if (_openPoleMaterial == null)
+                {
+                    _openPoleMaterial = new Material(GetDefaultShader())
+                    {
+                        color = Color.white,
+                        name = "PoleMat_Open"
+                    };
+                    _openPoleMaterial.SetFloat("_Metallic", 0.3f);
+                    _openPoleMaterial.SetFloat("_Smoothness", 0.4f);
+                }
+                return _openPoleMaterial;
+            }
         }
 
         private Material GetRingMaterial(RingColor color, RingType type)
@@ -578,32 +598,24 @@ namespace RingFlow.Gameplay
     public class RainbowCycle : MonoBehaviour
     {
         private Renderer _renderer;
-        private Material _material;
+        private MaterialPropertyBlock _propBlock;
 
         private void Start()
         {
             _renderer = GetComponentInParent<Renderer>();
-            if (_renderer != null)
-            {
-                _material = _renderer.material;
-            }
+            _propBlock = new MaterialPropertyBlock();
         }
 
         private void Update()
         {
-            if (_material == null) return;
+            if (_renderer == null) return;
             float hue = (Time.time * 0.25f) % 1.0f;
             Color color = Color.HSVToRGB(hue, 0.8f, 0.9f);
-            _material.color = color;
-            _material.SetColor("_EmissionColor", color * 0.3f);
-        }
-
-        private void OnDestroy()
-        {
-            if (_material != null)
-            {
-                Destroy(_material);
-            }
+            _renderer.GetPropertyBlock(_propBlock);
+            _propBlock.SetColor("_Color", color);
+            _propBlock.SetColor("_BaseColor", color);
+            _propBlock.SetColor("_EmissionColor", color * 0.3f);
+            _renderer.SetPropertyBlock(_propBlock);
         }
     }
 }

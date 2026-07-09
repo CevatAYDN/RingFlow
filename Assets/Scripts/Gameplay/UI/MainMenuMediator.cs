@@ -66,11 +66,11 @@ namespace RingFlow.Gameplay.UI
 
         protected override void OnUnbind()
         {
-            View.ContinueButton.onClick.RemoveAllListeners();
-            View.PlayButton.onClick.RemoveAllListeners();
-            View.LevelSelectButton.onClick.RemoveAllListeners();
-            View.SettingsButton.onClick.RemoveAllListeners();
-            View.DailyRewardButton.onClick.RemoveAllListeners();
+            View.ContinueButton?.onClick.RemoveAllListeners();
+            View.PlayButton?.onClick.RemoveAllListeners();
+            View.LevelSelectButton?.onClick.RemoveAllListeners();
+            View.SettingsButton?.onClick.RemoveAllListeners();
+            View.DailyRewardButton?.onClick.RemoveAllListeners();
 
             if (_progress != null)
             {

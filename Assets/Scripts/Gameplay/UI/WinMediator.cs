@@ -67,8 +67,8 @@ namespace RingFlow.Gameplay.UI
         protected override void OnUnbind()
         {
             if (View == null) return;
-            View.NextLevelButton.onClick.RemoveAllListeners();
-            View.QuitButton.onClick.RemoveAllListeners();
+            View.NextLevelButton?.onClick.RemoveAllListeners();
+            View.QuitButton?.onClick.RemoveAllListeners();
 
             if (_model != null)
             {

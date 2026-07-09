@@ -553,10 +553,6 @@ namespace RingFlow.Gameplay
 
                 if (fromPole != null && toPole != null)
                 {
-                    // Restore bomb counters BEFORE popping the main ring so that
-                    // snapshot RingIndex entries still point to the correct position
-                    RestoreBombCounters(lastMove.BombCountersBeforeTick);
-
                     // C4: Restore exploded bomb rings BEFORE any other undo logic.
                     // Insert the captured rings at their original positions (highest index first
                     // to preserve ordering during insertion).
@@ -573,6 +569,10 @@ namespace RingFlow.Gameplay
                             pole.Rings.Insert(insertIdx, ringData);
                         }
                     }
+
+                    // Restore bomb counters AFTER restoring exploded bombs so that
+                    // snapshot RingIndex entries point to the correct position.
+                    RestoreBombCounters(lastMove.BombCountersBeforeTick);
 
                     // SubMoves (magnet, chain) reversed before main ring because
                     // they were applied after the main ring in the original move
