@@ -11,6 +11,7 @@ namespace RingFlow.Gameplay.UI
         [Inject] private ILocalizationService _loc;
         [Inject] private IIapService _iapService;
         [Inject] private IAdService _adService;
+        [Inject] private ISignalBus _signalBus;
 
         protected override void OnBind()
         {
@@ -43,15 +44,27 @@ namespace RingFlow.Gameplay.UI
                 {
                     _iapService?.PurchaseProduct("remove_ads", (success, productId) =>
                     {
+                        // FIX P0.2: surface store-unavailability gracefully instead of
+                        // silently swallowing the failure. The mediator now also fires
+                        // a FailedPurchaseSignal so toasts / analytics can react.
                         if (success)
                         {
                             _progress.RemoveAds.Value = true;
                             View.RemoveAdsButton.gameObject.SetActive(false);
-                            
+
                             // Immediately hide banner
                             _adService?.HideBanner();
 
                             NexusLog.Info("SettingsMediator", "Purchase", productId, "Remove Ads purchased successfully.");
+                        }
+                        else
+                        {
+                            // success=false covers both user-cancel and store_unavailable flows.
+                            // Distinguish them so analytics doesn't lump cancels with outages.
+                            bool storeUnavailable = string.Equals(productId, "store_unavailable", System.StringComparison.Ordinal);
+                            NexusLog.Warn("SettingsMediator", "Purchase", productId,
+                                $"Remove Ads purchase did not complete. storeUnavailable={storeUnavailable}.");
+                            _signalBus?.Fire(new PurchaseFailedSignal(productId ?? "remove_ads", storeUnavailable));
                         }
                     });
                 });

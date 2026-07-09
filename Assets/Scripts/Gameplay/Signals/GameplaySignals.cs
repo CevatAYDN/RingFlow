@@ -255,6 +255,20 @@ namespace RingFlow.Gameplay
     public readonly struct OpenChestPopupSignal {}
     public readonly struct CloseChestPopupSignal {}
 
+    // ── Purchase Failure (P0.2 fix) ─────────────────────────
+    // Fires when IIapService.PurchaseProduct/RestorePurchases completes with success=false.
+    // UI mediators (toasts) and analytics should subscribe.
+    public readonly struct PurchaseFailedSignal
+    {
+        public readonly string ProductId;
+        public readonly bool StoreUnavailable;
+        public PurchaseFailedSignal(string productId, bool storeUnavailable)
+        {
+            ProductId = productId;
+            StoreUnavailable = storeUnavailable;
+        }
+    }
+
     // ── Refactoring: Type-safe Level Won & State Arguments ─────────────
     public readonly struct LevelWonSignal {}
 

@@ -29,7 +29,9 @@ namespace RingFlow.Gameplay
 
             if (_audio != null)
             {
-                _audio.BgmVolume = 0.70f;
+                // FIX P0.3: GDD §12 says the menu ducks BGM to 70%. Set the *state multiplier*,
+                // not BgmVolume — leaving BgmVolume untouched preserves the user's slider value.
+                _audio.BgmStateMultiplier = 0.70f;
             }
 
             if (_dailyReward != null && _dailyReward.CanClaimNow())

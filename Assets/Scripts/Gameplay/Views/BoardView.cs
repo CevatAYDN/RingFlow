@@ -14,6 +14,10 @@ namespace RingFlow.Gameplay
         [UnityEngine.Scripting.Preserve]
         [SerializeField] private float _poleSpacing = 2.5f;
 
+        // GDD §6 — pool size for rings; chosen so that a fully populated 2000-level board
+        // (max 10 poles × 4 capacity = 40 rings) plus transient VFX population fits comfortably.
+        private const int RingPoolPrewarmCount = 100;
+
         public void SetTorusPrefab(GameObject prefab) { _torusPrefab = prefab; }
 
         private static Shader _cachedShader;
@@ -30,6 +34,21 @@ namespace RingFlow.Gameplay
         private readonly List<List<GameObject>> _spawnedRings = new();
         private int _lastSelectedPoleId = -1;
         private int _animatingTargetPoleId = -1;
+        private bool _ringPrewarmed;
+
+        // GDD §6 — prewarm the ring pool once per session so the first move produces
+        // zero GC allocations. Called by the lifecycle through SetupEnvironment or lazily
+        // here on first board build if the lifecycle didn't prewarm.
+        public void EnsureRingPoolPrewarmed()
+        {
+            if (_ringPrewarmed) return;
+            if (_torusPrefab == null) _torusPrefab = Resources.Load<GameObject>("Torus");
+            if (_torusPrefab != null && _objectPoolService != null)
+            {
+                _objectPoolService.Prewarm(_torusPrefab, RingPoolPrewarmCount);
+                _ringPrewarmed = true;
+            }
+        }
 
         public void BuildBoard(List<PoleState> poles)
         {
@@ -38,6 +57,10 @@ namespace RingFlow.Gameplay
                 Destroy(visualBoard);
 
             ClearBoard();
+
+            // P0.1 fix: warm the pool BEFORE we start spawning rings so the very first
+            // scramble does not allocate. Idempotent — only runs once per session.
+            EnsureRingPoolPrewarmed();
 
             for (int p = 0; p < poles.Count; p++)
             {
@@ -317,10 +340,37 @@ namespace RingFlow.Gameplay
 
         private GameObject AcquireRing()
         {
+            // GDD §6 — Pool first, factory fallback.
             // Use prefab if available
             if (_torusPrefab == null)
                 _torusPrefab = Resources.Load<GameObject>("Torus");
 
+            if (_torusPrefab != null && _objectPoolService != null)
+            {
+                // FIX P0.1: previous code called Instantiate directly here, which (a) bypassed
+                // the pool and (b) leaked memory because RecycleRing later sent these
+                // unmanaged instances to the pool (corrupting its instance-tracking map).
+                // Spawning through the service keeps Prefab-id keyed bookkeeping consistent.
+                var ringObj = _objectPoolService.Spawn(
+                    _torusPrefab,
+                    Vector3.zero,
+                    Quaternion.identity);
+
+                if (ringObj != null)
+                {
+                    ringObj.name = "Ring_Torus";
+                    var col = ringObj.GetComponent<Collider>();
+                    if (col != null) Destroy(col);
+
+                    ringObj.SetActive(true);
+                    KillTweens(ringObj);
+                    return ringObj;
+                }
+            }
+
+            // Fallback path: either no prefab bound, or pool service offline.
+            // We intentionally do NOT register these unmanaged instances with the pool so
+            // RecycleRing stays internally consistent (it falls back to Destroy()).
             if (_torusPrefab != null)
             {
                 var ringObj = Instantiate(_torusPrefab);
@@ -343,8 +393,10 @@ namespace RingFlow.Gameplay
         private void RecycleRing(GameObject ring)
         {
             KillTweens(ring);
-            
-            // Destroy any special overlays or cycle scripts
+
+            // Destroy any special overlays or cycle scripts attached to this ring.
+            // These are per-instance artefacts (Snowflake icons, Rainbow cycles) that must
+            // not survive the pool — otherwise re-spawned rings would carry stale overlays.
             for (int i = ring.transform.childCount - 1; i >= 0; i--)
             {
                 var child = ring.transform.GetChild(i);
@@ -354,6 +406,9 @@ namespace RingFlow.Gameplay
                 }
             }
 
+            // P0.1 fix: this method used to be the only place that called Despawn. Since
+            // AcquireRing now spawns through _objectPoolService too, both ends of the
+            // lifecycle are coherent — the instance-id map stays in sync.
             if (_objectPoolService != null)
             {
                 _objectPoolService.Despawn(ring);

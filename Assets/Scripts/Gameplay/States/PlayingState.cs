@@ -28,7 +28,9 @@ namespace RingFlow.Gameplay
                     {
                         int currentLevel = _progression?.CurrentLevel.Value ?? 1;
                         bool isBoss = WorldConfigSO.IsBossLevel(currentLevel);
-                        _audio.BgmVolume = isBoss ? 0.80f : 0.40f;
+                        // FIX P0.3: use the transient state multiplier so the player's saved
+                        // BGM slider stays at whatever they last set in Settings.
+                        _audio.BgmStateMultiplier = isBoss ? 0.80f : 0.40f;
                     }
                     return default;
                 }
@@ -48,7 +50,9 @@ namespace RingFlow.Gameplay
             if (_audio != null)
             {
                 bool isBoss = WorldConfigSO.IsBossLevel(targetLevel);
-                _audio.BgmVolume = isBoss ? 0.80f : 0.40f;
+                // FIX P0.3: push the transient state multiplier; the user's saved BgmVolume is
+                // preserved untouched across level transitions.
+                _audio.BgmStateMultiplier = isBoss ? 0.80f : 0.40f;
 
                 int worldIdx = WorldConfigSO.WorldFromAbsoluteLevel(targetLevel);
                 var bgm = ProceduralAudio.GetOrCreateBgmClip(worldIdx);

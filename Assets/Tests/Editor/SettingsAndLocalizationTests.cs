@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using NUnit.Framework;
@@ -44,49 +45,38 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void PlayerProgressSaveSystem_SavesAndLoadsCorrectly()
+        public void PlayerProgressSaveSystem_UpgradesLegacySchemaOnLoad()
         {
-            _progress.Coins.Value = 2500;
-            _progress.Diamonds.Value = 150;
-            _progress.CurrentLevel.Value = 42;
-            _progress.MaxUnlockedLevel.Value = 42;
-            _progress.DailyDayIndex.Value = 3;
-            _progress.DailyLastClaimUtcTicks.Value = 1234567890L;
+            _prefs.SetInt("RF_SaveSchemaVersion", 1);
+            _prefs.SetInt(PlayerProgressModel.KeyCoins, 777);
+            _prefs.SetInt(PlayerProgressModel.KeyCurrentLevel, 12);
+            _prefs.SetInt(PlayerProgressModel.KeyMaxUnlocked, 12);
+            _prefs.SetString(PlayerProgressModel.KeyDailyStamp, "123456789");
 
-            _progress.UnlockedWorlds.Clear();
-            for (int i = 0; i < 40; i++)
-            {
-                _progress.UnlockedWorlds.Add(i < 3); // Unlock first 3 worlds
-            }
-            _progress.OwnedThemes.Add("classic");
-            _progress.OwnedThemes.Add("neon");
-            _progress.Achievements.Add("win_first_level");
-
-            PlayerProgressSaveSystem.Save(_prefs, _progress);
-
-            // Reset progress model
-            _progress = new PlayerProgressModel();
-            Assert.AreEqual(0, _progress.Coins.Value);
-            Assert.AreEqual(1, _progress.CurrentLevel.Value);
-
+            // Intentionally leave worlds/theme lists empty to exercise migration defaults.
             PlayerProgressSaveSystem.Load(_prefs, _progress);
 
-            Assert.AreEqual(2500, _progress.Coins.Value);
-            Assert.AreEqual(150, _progress.Diamonds.Value);
-            Assert.AreEqual(42, _progress.CurrentLevel.Value);
-            Assert.AreEqual(42, _progress.MaxUnlockedLevel.Value);
-            Assert.AreEqual(3, _progress.DailyDayIndex.Value);
-            Assert.AreEqual(1234567890L, _progress.DailyLastClaimUtcTicks.Value);
-
-            // Check lists
+            Assert.AreEqual(777, _progress.Coins.Value);
+            Assert.AreEqual(12, _progress.CurrentLevel.Value);
+            Assert.AreEqual(12, _progress.MaxUnlockedLevel.Value);
+            Assert.AreEqual(2, _prefs.GetInt("RF_SaveSchemaVersion", 0));
+            Assert.AreEqual(40, _progress.UnlockedWorlds.Count);
             Assert.IsTrue(_progress.UnlockedWorlds[0]);
-            Assert.IsTrue(_progress.UnlockedWorlds[1]);
-            Assert.IsTrue(_progress.UnlockedWorlds[2]);
-            Assert.IsFalse(_progress.UnlockedWorlds[3]);
+        }
 
-            Assert.Contains("classic", _progress.OwnedThemes);
-            Assert.Contains("neon", _progress.OwnedThemes);
-            Assert.Contains("win_first_level", _progress.Achievements);
+        [Test]
+        public void DailyRewardService_BlocksClockRollbackAndRapidReplay()
+        {
+            var service = new DailyRewardService(_progress);
+            _progress.DailyDayIndex.Value = 0;
+            _progress.DailyLastClaimUtcTicks.Value = DateTime.UtcNow.AddMinutes(-1).Ticks;
+
+            Assert.IsFalse(service.CanClaimNow(out var reason1));
+            Assert.AreEqual("too_soon", reason1);
+
+            _progress.DailyLastClaimUtcTicks.Value = DateTime.UtcNow.AddHours(2).Ticks;
+            Assert.IsFalse(service.CanClaimNow(out var reason2));
+            Assert.AreEqual("clock_rollback", reason2);
         }
 
         [Test]

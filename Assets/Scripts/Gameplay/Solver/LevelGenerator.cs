@@ -165,6 +165,23 @@ namespace RingFlow.Gameplay
             
             if (mechanic == WorldMechanicType.None) return;
 
+            // FIX P1.EmptyPoles — GDD §5 sets MinEmptyPoles per band. Validate that the
+            // generated layout keeps that floor so the player always has at least the
+            // breathing-room the design promises. The LevelGenerator itself pads poleCount
+            // to colourCount + 1; here we only warn if the chosen build drifts below the band
+            // minimum. Engineers can alter poleCount from the Editor Dashboard to reconcile.
+            int minEmptyPoles = DifficultyCurve.MinEmptyPolesForLevel(levelIndex);
+            int occupiedPoles = 0;
+            for (int p = 0; p < board.PoleCount; p++)
+                if (!board.IsEmpty(p)) occupiedPoles++;
+            int emptyPoles = board.PoleCount - occupiedPoles;
+            if (emptyPoles < minEmptyPoles)
+            {
+                NexusLog.Warn("LevelGenerator", nameof(InjectSpecialMechanics), levelIndex.ToString(),
+                    $"Empty-pole floor violated for band of level {levelIndex}: empty={emptyPoles}, required>={minEmptyPoles}. " +
+                    $"Reduce colour/pole counts in the Generator section to comply with GDD §5.");
+            }
+
             int poleCount = board.PoleCount;
 
             // GDD §4: Map each mechanic specifically to teach in 1 world

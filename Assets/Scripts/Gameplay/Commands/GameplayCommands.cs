@@ -300,17 +300,27 @@ namespace RingFlow.Gameplay
 
             _signalBus.Fire(new RingMovedSignal(signal.FromPoleId, signal.ToPoleId));
 
+            // FIX P1.Bomb / GDD §3:
+            // Classic mode treats bombs as a hazard (rings are lost) but does NOT trigger
+            // GameOver. The player can continue solving — they may still win after losing rings,
+            // or choose to undo (paying coins) to recover the ring. Challenge mode is the only
+            // mode that ends the level on bomb explosion, and that flow is owned by the
+            // challenge-mode state, not by MoveRingCommand.
+            //
+            // We still record the explosion on the MoveRecord (so undo can restore the rings
+            // from the same snapshot path that's already been verified by undo tests), but
+            // we no longer hijack IsGameWon / FireGameOverTransition here.
             TickAllBombsAndCapture(mainRecord);
             bool bombExploded = mainRecord.BombExplodedRings.Count > 0;
+            _model.MoveHistory.Push(mainRecord);
+
             if (bombExploded)
             {
-                _model.IsGameWon.Value = false;
-                _model.MoveHistory.Push(mainRecord);
-                FireGameOverTransition();
-                return;
+                // Let listeners (HUD warning, analytics) react. Win check still runs.
+                NexusLog.Warn("MoveRingCommand", "Execute", $"{signal.FromPoleId}->{signal.ToPoleId}",
+                    "Bomb exploded during classic-mode move. Continuing level per GDD §3 — only Challenge mode ends the run.");
             }
 
-            _model.MoveHistory.Push(mainRecord);
             _signalBus.Fire(new CheckWinSignal());
         }
 
@@ -334,6 +344,9 @@ namespace RingFlow.Gameplay
 
         private void FireGameOverTransition()
         {
+            // FIX P1.Bomb — kept for future challenge-mode wiring. Classic mode no longer
+            // ends the level on bomb explosion (see GDD §3). When a Challenge mode state
+            // is added it should call this directly with the appropriate constraint signal.
             if (_fsm == null)
             {
                 NexusLog.Warn("MoveRingCommand", nameof(FireGameOverTransition), "",
@@ -421,17 +434,28 @@ namespace RingFlow.Gameplay
         {
             if (context.MovingRing.Type != RingType.Magnet) return;
 
-            foreach (var p in _model.Poles)
-            {
-                if (p.Id == context.ToPoleId) continue;
-                if (context.ToPole.IsFull) break;
-                if (!p.CanPopRing() || p.TopRing.Color != context.MovingRing.Color) continue;
+            // GDD §4 / Magnet: pulls same-colour tops from poles at *exactly one pole-distance*
+            // away from the landing pole. Previous implementation walked the entire board,
+            // which broke fairness at high pole counts and trivialised magnet levels.
+            int toIdx = context.ToPoleId;
+            int[] candidateIdx = (toIdx % 2 == 0)
+                ? new[] { toIdx - 1, toIdx + 1 }
+                : new[] { toIdx - 1, toIdx + 1 };
 
-                var pulled = p.PopRing();
+            for (int i = 0; i < candidateIdx.Length; i++)
+            {
+                int p = candidateIdx[i];
+                if (p < 0 || p >= _model.Poles.Count) continue;
+                if (p == context.ToPoleId) continue;
+                if (context.ToPole.IsFull) break;
+                var pole = _model.Poles[p];
+                if (!pole.CanPopRing() || pole.TopRing.Color != context.MovingRing.Color) continue;
+
+                var pulled = pole.PopRing();
                 context.ToPole.AddRing(pulled);
 
                 var subRecord = MoveRecordPool.Rent();
-                subRecord.FromPoleId = p.Id;
+                subRecord.FromPoleId = p;
                 subRecord.ToPoleId = context.ToPoleId;
                 subRecord.Ring = pulled;
                 mainRecord.SubMoves.Add(subRecord);

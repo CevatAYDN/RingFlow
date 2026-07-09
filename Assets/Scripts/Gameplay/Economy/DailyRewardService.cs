@@ -49,6 +49,7 @@ namespace RingFlow.Gameplay
 
     public sealed class DailyRewardService
     {
+        private const long MinClaimIntervalTicks = TimeSpan.TicksPerMinute * 5;
         private readonly PlayerProgressModel _progress;
 
         public DailyRewardService(PlayerProgressModel progress)
@@ -61,18 +62,47 @@ namespace RingFlow.Gameplay
 
         public bool CanClaimNow()
         {
-            return DailyRewardTable.IsDailyRewardClaimable(
-                _progress.DailyLastClaimUtcTicks.Value,
-                DateTime.UtcNow);
+            return CanClaimNow(out _);
+        }
+
+        public bool CanClaimNow(out string reason)
+        {
+            var nowTicks = DateTime.UtcNow.Ticks;
+            var lastTicks = _progress.DailyLastClaimUtcTicks.Value;
+
+            // FIX P2.DailyRewardTamper — reject rollback and ultra-fast reclaims.
+            // The original day-based gating is preserved, but we additionally ensure the
+            // monotonic timestamp never moves backward and that a minimum interval passes
+            // before any repeated claim can occur.
+            if (lastTicks > 0 && nowTicks < lastTicks)
+            {
+                reason = "clock_rollback";
+                return false;
+            }
+
+            if (lastTicks > 0 && (nowTicks - lastTicks) < MinClaimIntervalTicks)
+            {
+                reason = "too_soon";
+                return false;
+            }
+
+            if (!DailyRewardTable.IsDailyRewardClaimable(lastTicks, DateTime.UtcNow))
+            {
+                reason = "daily_reset_not_elapsed";
+                return false;
+            }
+
+            reason = string.Empty;
+            return true;
         }
 
         /// <summary>Returns the next day's reward after this claim. Updates stamp + index.</summary>
         public CurrencyAmount Claim()
         {
-            if (!CanClaimNow())
+            if (!CanClaimNow(out var reason))
             {
                 NexusLog.Warn("DailyRewardService", nameof(Claim), _progress.DailyLastClaimUtcTicks.Value.ToString(),
-                    "Cannot claim yet (24h reset not elapsed). Returning zero Coins.");
+                    $"Cannot claim yet ({reason}). Returning zero Coins.");
                 return new CurrencyAmount("Coins", 0);
             }
 

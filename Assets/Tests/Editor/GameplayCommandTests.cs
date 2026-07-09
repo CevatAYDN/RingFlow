@@ -256,8 +256,13 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void MoveRingCommand_HandlesBombTickingDownAndTriggersDefeat()
+        public void MoveRingCommand_BombExplosionDoesNotEndClassicMode()
         {
+            // FIX P1.Bomb — classic-mode level no longer transitions to GameOver when a bomb
+            // detonates. Per GDD §3, GameOver is reserved for Challenge mode. The bomb ticks
+            // down, the explosion signal still fires (HUD/analytics reaction), but the move
+            // history is preserved so the player can undo the move (paying coins) and recover
+            // the lost ring.
             var command = new MoveRingCommand();
             InjectDependencies(command);
 
@@ -271,12 +276,19 @@ namespace RingFlow.Tests
             _gameplayModel.Poles.Add(pole0);
             _gameplayModel.Poles.Add(pole1);
 
+            // Snapshot move-count so we can assert nothing got reset to 0.
+            int movesBefore = _gameplayModel.MovesCount.Value;
+
             // Execute move
             command.Execute(new MoveRingSignal(0, 1));
 
-            // Game should detect bomb explosion and mark lost
-            Assert.IsFalse(_gameplayModel.IsGameWon.Value);
+            // Bomb exploded signal still fires (UI + analytics), but IsGameWon is not flipped.
             Assert.IsTrue(_signalBus.HasFiredBombExploded);
+            Assert.IsFalse(_gameplayModel.IsGameWon.Value);
+
+            // Move history was pushed (so the player can pay coins to undo and recover the bomb).
+            Assert.AreEqual(1, _gameplayModel.MoveHistory.Count);
+            Assert.AreEqual(movesBefore + 1, _gameplayModel.MovesCount.Value);
         }
 
         [Test]

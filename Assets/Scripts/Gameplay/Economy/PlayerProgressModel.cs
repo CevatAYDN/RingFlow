@@ -119,8 +119,12 @@ namespace RingFlow.Gameplay
     /// </summary>
     public static class PlayerProgressSaveSystem
     {
+        private const int CurrentSchemaVersion = 2;
+        private const string KeySchemaVersion = "RF_SaveSchemaVersion";
+
         public static void Save(IPlayerPrefsService prefs, PlayerProgressModel m)
         {
+            prefs.SetInt(KeySchemaVersion, CurrentSchemaVersion);
             prefs.SetInt(PlayerProgressModel.KeyCoins, m.Coins.Value);
             prefs.SetInt(PlayerProgressModel.KeyDiamonds, m.Diamonds.Value);
             prefs.SetInt(PlayerProgressModel.KeyXp, m.Xp.Value);
@@ -137,7 +141,6 @@ namespace RingFlow.Gameplay
             prefs.SetInt(PlayerProgressModel.KeyHintCount, m.HintCount.Value);
             prefs.SetBool(PlayerProgressModel.KeyRemoveAds, m.RemoveAds.Value);
 
-            // Worlds / themes / achievements encode as compact strings (csv-equivalent)
             SaveBoolList(prefs, PlayerProgressModel.KeyWorlds, m.UnlockedWorlds);
             SaveStringList(prefs, PlayerProgressModel.KeyThemes, m.OwnedThemes);
             SaveStringList(prefs, PlayerProgressModel.KeyAchieves, m.Achievements);
@@ -147,30 +150,31 @@ namespace RingFlow.Gameplay
 
         public static void Load(IPlayerPrefsService prefs, PlayerProgressModel m)
         {
-            m.Coins.Value          = prefs.GetInt(PlayerProgressModel.KeyCoins, 0);
-            m.Diamonds.Value       = prefs.GetInt(PlayerProgressModel.KeyDiamonds, 0);
-            m.Xp.Value             = prefs.GetInt(PlayerProgressModel.KeyXp, 0);
-            m.CurrentLevel.Value   = prefs.GetInt(PlayerProgressModel.KeyCurrentLevel, 1);
+            int schemaVersion = prefs.GetInt(KeySchemaVersion, 1);
+
+            m.Coins.Value = prefs.GetInt(PlayerProgressModel.KeyCoins, 0);
+            m.Diamonds.Value = prefs.GetInt(PlayerProgressModel.KeyDiamonds, 0);
+            m.Xp.Value = prefs.GetInt(PlayerProgressModel.KeyXp, 0);
+            m.CurrentLevel.Value = prefs.GetInt(PlayerProgressModel.KeyCurrentLevel, 1);
             m.MaxUnlockedLevel.Value = prefs.GetInt(PlayerProgressModel.KeyMaxUnlocked, 1);
             if (m.CurrentLevel.Value < 1) m.CurrentLevel.Value = 1;
             if (m.MaxUnlockedLevel.Value < 1) m.MaxUnlockedLevel.Value = 1;
 
-            m.PlayerLevel.Value       = prefs.GetInt(PlayerProgressModel.KeyPlayerLvl, 1);
-            m.ChestBronze.Value       = prefs.GetInt(PlayerProgressModel.KeyChestsBronze, 0);
-            m.ChestSilver.Value       = prefs.GetInt(PlayerProgressModel.KeyChestsSilver, 0);
-            m.ChestGold.Value         = prefs.GetInt(PlayerProgressModel.KeyChestsGold, 0);
-            m.ChestDiamond.Value      = prefs.GetInt(PlayerProgressModel.KeyChestsDiamond, 0);
-            m.DailyDayIndex.Value     = prefs.GetInt(PlayerProgressModel.KeyDailyDay, -1);
+            m.PlayerLevel.Value = prefs.GetInt(PlayerProgressModel.KeyPlayerLvl, 1);
+            m.ChestBronze.Value = prefs.GetInt(PlayerProgressModel.KeyChestsBronze, 0);
+            m.ChestSilver.Value = prefs.GetInt(PlayerProgressModel.KeyChestsSilver, 0);
+            m.ChestGold.Value = prefs.GetInt(PlayerProgressModel.KeyChestsGold, 0);
+            m.ChestDiamond.Value = prefs.GetInt(PlayerProgressModel.KeyChestsDiamond, 0);
+            m.DailyDayIndex.Value = prefs.GetInt(PlayerProgressModel.KeyDailyDay, -1);
 
-            // IPlayerPrefsService has no long primitive — encode as string (base 10).
             var stampStr = prefs.GetString(PlayerProgressModel.KeyDailyStamp, "0");
             long stampTicks = 0;
             long.TryParse(stampStr, out stampTicks);
             m.DailyLastClaimUtcTicks.Value = stampTicks;
 
             m.FreeUndosUsedThisSession.Value = prefs.GetInt(PlayerProgressModel.KeyUndoUsed, 0);
-            m.HintCount.Value         = prefs.GetInt(PlayerProgressModel.KeyHintCount, 0);
-            m.RemoveAds.Value         = prefs.GetBool(PlayerProgressModel.KeyRemoveAds, false);
+            m.HintCount.Value = prefs.GetInt(PlayerProgressModel.KeyHintCount, 0);
+            m.RemoveAds.Value = prefs.GetBool(PlayerProgressModel.KeyRemoveAds, false);
 
             m.UnlockedWorlds.Clear();
             LoadBoolList(prefs, PlayerProgressModel.KeyWorlds, m.UnlockedWorlds, 40, true, 0);
@@ -178,6 +182,18 @@ namespace RingFlow.Gameplay
             LoadStringList(prefs, PlayerProgressModel.KeyThemes, m.OwnedThemes);
             m.Achievements.Clear();
             LoadStringList(prefs, PlayerProgressModel.KeyAchieves, m.Achievements);
+
+            if (schemaVersion < CurrentSchemaVersion)
+            {
+                if (m.UnlockedWorlds.Count == 0)
+                {
+                    for (int i = 0; i < 40; i++) m.UnlockedWorlds.Add(i == 0);
+                }
+                if (m.CurrentLevel.Value < 1) m.CurrentLevel.Value = 1;
+                if (m.MaxUnlockedLevel.Value < 1) m.MaxUnlockedLevel.Value = 1;
+                prefs.SetInt(KeySchemaVersion, CurrentSchemaVersion);
+                prefs.Save();
+            }
         }
 
         // ---- list codec ----

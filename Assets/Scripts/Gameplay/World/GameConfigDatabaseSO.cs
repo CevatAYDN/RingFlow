@@ -91,6 +91,9 @@ namespace RingFlow.Gameplay
             };
 
             // Default Color Curve Points (GDD §5)
+            // GDD explicitly stops the ramp at 9 colours and uses the last bucket (10 colours)
+            // only from level 1200+. The previous default transitioned to 10 colours at level 801,
+            // which compounded with the wider empty-pole drop to make Expert bands feel 1.5x harder.
             ColorCurve = new List<ColorCurvePoint>
             {
                 new() { LevelThreshold = 1, ColorCount = 3 },
@@ -100,7 +103,7 @@ namespace RingFlow.Gameplay
                 new() { LevelThreshold = 300, ColorCount = 7 },
                 new() { LevelThreshold = 500, ColorCount = 8 },
                 new() { LevelThreshold = 800, ColorCount = 9 },
-                new() { LevelThreshold = 2000, ColorCount = 10 }
+                new() { LevelThreshold = 1200, ColorCount = 10 }
             };
 
             // Default 40 Worlds configuration
