@@ -27,7 +27,8 @@ namespace RingFlow.Gameplay
         [UnityEngine.Scripting.Preserve]
         [SerializeField] private GameObject _confettiPrefab;
         
-        private static float s_sessionStartTime = 0f;
+        private static float s_sessionStartTime;
+        private static bool s_sessionEndTracked;
 
         public void OnConfigure(IContextBuilder builder)
         {
@@ -223,6 +224,7 @@ namespace RingFlow.Gameplay
         private static void InitializeSessionAnalytics(IPlayerPrefsService prefs, PlayerProgressModel progress)
         {
             s_sessionStartTime = Time.realtimeSinceStartup;
+            s_sessionEndTracked = false;
 
             if (prefs == null) return;
             string firstLaunchStr = prefs.GetString("RF_FirstLaunchTime", "");
@@ -356,11 +358,27 @@ namespace RingFlow.Gameplay
 
         public void OnDispose()
         {
-            float sessionLen = Time.realtimeSinceStartup - s_sessionStartTime;
-            AnalyticsEvents.Track(AnalyticsEvents.EventSessionEnd, new[]
+            FlushSave();
+        }
+
+        private void OnApplicationPause(bool pauseStatus)
+        {
+            if (pauseStatus)
+                FlushSave();
+        }
+
+        private static void FlushSave()
+        {
+            // Prevent double-tracking: OnApplicationPause + OnDispose can fire back-to-back
+            if (!s_sessionEndTracked)
             {
-                ("session_length", ((int)sessionLen).ToString())
-            });
+                s_sessionEndTracked = true;
+                float sessionLen = Time.realtimeSinceStartup - s_sessionStartTime;
+                AnalyticsEvents.Track(AnalyticsEvents.EventSessionEnd, new[]
+                {
+                    ("session_length", ((int)sessionLen).ToString())
+                });
+            }
 
             // Auto-flush save on dispose — ensure no loss when player quits to main menu.
             var context = NexusRuntime.CurrentContext;

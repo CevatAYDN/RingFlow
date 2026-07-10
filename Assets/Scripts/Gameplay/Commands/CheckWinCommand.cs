@@ -10,13 +10,14 @@ namespace RingFlow.Gameplay
 
         public void Execute(CheckWinSignal signal)
         {
-            if (_model.IsGameWon.Value) return;
-            if (_model == null || _model.Poles.Count == 0)
+            if (_model == null || _model.Poles == null || _model.Poles.Count == 0)
             {
                 NexusLog.Warn("CheckWinCommand", "Execute", "",
                     "Model or poles empty — cannot evaluate win.");
                 return;
             }
+
+            if (_model.IsGameWon.Value) return;
 
             bool won = true;
             int nonEmptyPoleCount = 0;

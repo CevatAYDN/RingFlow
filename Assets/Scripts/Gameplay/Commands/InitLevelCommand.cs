@@ -27,6 +27,19 @@ namespace RingFlow.Gameplay
 
             LevelData levelData = null;
             var savedLevel = Resources.Load<LevelDataSO>($"Levels/Level_{currentLevel}");
+
+            // GDD curve params — always computed so retry logic can reuse them
+            int poleCount = DifficultyCurve.PoleCountForLevel(currentLevel);
+            int colorCount = DifficultyCurve.ColorCountForLevel(currentLevel);
+            int maxCapacity = DifficultyCurve.MaxCapacityForLevel(currentLevel);
+            if (poleCount < colorCount + 1) poleCount = colorCount + 1;
+            if (poleCount > 12)
+            {
+                NexusLog.Warn("InitLevelCommand", "Execute", currentLevel.ToString(),
+                    $"Computed pole count exceeded 12; clamping from {poleCount}.");
+                poleCount = 12;
+            }
+
             if (savedLevel != null && savedLevel.Data != null)
             {
                 levelData = savedLevel.Data;
@@ -39,61 +52,37 @@ namespace RingFlow.Gameplay
                         "Progression service not bound and no level index specified — defaulting to level 1.");
                 }
 
-                int poleCount = DifficultyCurve.PoleCountForLevel(currentLevel);
-                int colorCount = DifficultyCurve.ColorCountForLevel(currentLevel);
-                int maxCapacity = DifficultyCurve.MaxCapacityForLevel(currentLevel);
-
-                if (poleCount < colorCount + 1) poleCount = colorCount + 1;
-                if (poleCount > 12)
-                {
-                    NexusLog.Warn("InitLevelCommand", "Execute", currentLevel.ToString(),
-                        $"Computed pole count exceeded 12; clamping from {poleCount}.");
-                    poleCount = 12;
-                }
-
                 levelData = LevelGenerator.GenerateLevel(
                     currentLevel, currentLevel * 12345, poleCount, colorCount, maxCapacity);
             }
 
             if (levelData != null)
             {
-                for (int i = 0; i < levelData.Poles.Count; i++)
-                {
-                    var pData = levelData.Poles[i];
-                    var poleState = new PoleState
-                    {
-                        Id = i,
-                        MaxCapacity = pData.MaxCapacity,
-                        IsLocked = pData.IsLocked
-                    };
-
-                    for (int r = 0; r < pData.Rings.Count; r++)
-                    {
-                        poleState.AddRing(pData.Rings[r]);
-                    }
-
-                    _model.Poles.Add(poleState);
-                }
-
-                _model.TargetMovesCount.Value = levelData.TargetMoves;
+                PopulatePoles(levelData);
             }
             else
             {
-                NexusLog.Error("InitLevelCommand", "Execute", currentLevel.ToString(),
-                    "LevelGenerator returned null — fallback to hardcoded 3-pole tutorial. Likely cause: solver hit search limits or seed exhausted.");
+                // P0 fix: retry with alternate seeds before falling back to tutorial.
+                var retrySeeds = new[] { currentLevel * 27779, currentLevel * 31415, currentLevel * 16180 };
+                foreach (var retrySeed in retrySeeds)
+                {
+                    levelData = LevelGenerator.GenerateLevel(
+                        currentLevel, retrySeed, poleCount, colorCount, maxCapacity);
+                    if (levelData != null) break;
+                }
 
-                var p0 = new PoleState { Id = 0 };
-                p0.AddRing(new RingData(RingColor.Red));
-                p0.AddRing(new RingData(RingColor.Blue));
-                var p1 = new PoleState { Id = 1 };
-                p1.AddRing(new RingData(RingColor.Blue));
-                p1.AddRing(new RingData(RingColor.Red));
-                var p2 = new PoleState { Id = 2 };
-
-                _model.Poles.Add(p0);
-                _model.Poles.Add(p1);
-                _model.Poles.Add(p2);
-                _model.TargetMovesCount.Value = 2;
+                if (levelData != null)
+                {
+                    NexusLog.Warn("InitLevelCommand", "Execute", currentLevel.ToString(),
+                        "Primary seed exhausted; level generated with retry seed.");
+                    PopulatePoles(levelData);
+                }
+                else
+                {
+                    NexusLog.Error("InitLevelCommand", "Execute", currentLevel.ToString(),
+                        "All seed attempts exhausted — emergency fallback to hardcoded 3-pole tutorial level.");
+                    BuildFallbackTutorialLevel();
+                }
             }
 
             NexusLog.Info("InitLevelCommand", "Execute", currentLevel.ToString(),
@@ -115,6 +104,34 @@ namespace RingFlow.Gameplay
             AnalyticsEvents.LevelStart(currentLevel, worldIndex);
 
             _signalBus?.Fire(new LevelLoadedSignal(currentLevel));
+        }
+
+        private void PopulatePoles(LevelData levelData)
+        {
+            for (int i = 0; i < levelData.Poles.Count; i++)
+            {
+                var pData = levelData.Poles[i];
+                var poleState = new PoleState { Id = i, MaxCapacity = pData.MaxCapacity, IsLocked = pData.IsLocked };
+                for (int r = 0; r < pData.Rings.Count; r++)
+                    poleState.AddRing(pData.Rings[r]);
+                _model.Poles.Add(poleState);
+            }
+            _model.TargetMovesCount.Value = levelData.TargetMoves;
+        }
+
+        private void BuildFallbackTutorialLevel()
+        {
+            var p0 = new PoleState { Id = 0 };
+            p0.AddRing(new RingData(RingColor.Red));
+            p0.AddRing(new RingData(RingColor.Blue));
+            var p1 = new PoleState { Id = 1 };
+            p1.AddRing(new RingData(RingColor.Blue));
+            p1.AddRing(new RingData(RingColor.Red));
+            var p2 = new PoleState { Id = 2 };
+            _model.Poles.Add(p0);
+            _model.Poles.Add(p1);
+            _model.Poles.Add(p2);
+            _model.TargetMovesCount.Value = 2;
         }
     }
 }

@@ -18,7 +18,7 @@ namespace RingFlow.Editor
 
         [System.NonSerialized] private LevelData _generatedLevel;
         private string _solveStatus = "No level loaded / generated.";
-        private readonly System.Collections.Generic.List<string> _solutionSteps = new();
+        private readonly List<string> _solutionSteps = new();
         private Vector2 _solutionScroll;
 
         public LevelData GeneratedLevel => _generatedLevel;
@@ -71,13 +71,10 @@ namespace RingFlow.Editor
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     if (GUILayout.Button("Apply GDD Curve", GUILayout.Height(ButtonHeight)))
-                    {
                         ApplyGddCurveParams();
-                    }
+
                     if (GUILayout.Button("Generate Level", GUILayout.Height(ButtonHeight)))
-                    {
                         Generate();
-                    }
                 }
 
                 _autoSave = EditorGUILayout.Toggle("Auto-save to Asset", _autoSave);
@@ -85,21 +82,15 @@ namespace RingFlow.Editor
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     if (GUILayout.Button("Generate All 500 Levels", GUILayout.Height(ButtonHeight)))
-                    {
                         GenerateAllLevels();
-                    }
 
                     if (_generatedLevel != null && !_autoSave &&
                         GUILayout.Button("Save Current to Asset", GUILayout.Height(ButtonHeight)))
-                    {
                         SaveLevelAsset(_generatedLevel);
-                    }
                 }
 
                 if (_generateInProgress)
-                {
                     EditorGUILayout.HelpBox("Generating all levels... Check Console for progress.", MessageType.Info);
-                }
 
                 DrawGenerationResults();
             }
@@ -123,9 +114,7 @@ namespace RingFlow.Editor
             if (_solutionSteps.Count == 0) return;
             _solutionScroll = EditorGUILayout.BeginScrollView(_solutionScroll, GUILayout.Height(120));
             for (int i = 0; i < _solutionSteps.Count; i++)
-            {
                 EditorGUILayout.LabelField($"{i + 1}. {_solutionSteps[i]}");
-            }
             EditorGUILayout.EndScrollView();
         }
 
@@ -143,37 +132,28 @@ namespace RingFlow.Editor
             float poleWidth = 60f;
             float ringHeight = 18f;
             float poleGap = 8f;
-            int maxCapacity = 4; // default GDD capacity
+            int maxCapacity = levelData.Poles[0].MaxCapacity;
 
-            // Determine max capacity dynamically based on level poles if possible
-            if (levelData.Poles.Count > 0)
-            {
-                maxCapacity = levelData.Poles[0].MaxCapacity;
-            }
-
-            // Begin horizontal layout
             using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
             {
                 for (int p = 0; p < levelData.Poles.Count; p++)
                 {
                     var pole = levelData.Poles[p];
+                    int poleMaxCap = pole.MaxCapacity;
 
                     using (new EditorGUILayout.VerticalScope(GUILayout.Width(poleWidth)))
                     {
-                        var poleLabelStyle = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleCenter };
-                        EditorGUILayout.LabelField($"Pole {p}", poleLabelStyle, GUILayout.Width(poleWidth));
+                        EditorGUILayout.LabelField($"Pole {p}", RingFlowEditorUtils.CenteredMiniLabel, GUILayout.Width(poleWidth));
 
-                        // Draw pole background (vertical column)
-                        float height = maxCapacity * (ringHeight + 2f) + 12f;
+                        float height = poleMaxCap * (ringHeight + 2f) + 12f;
                         Rect rect = GUILayoutUtility.GetRect(poleWidth, height);
 
                         Color colBg = pole.IsLocked ? new Color(0.18f, 0.12f, 0.12f, 1f) : new Color(0.16f, 0.16f, 0.18f, 1f);
                         Color borderCol = pole.IsLocked ? new Color(0.8f, 0.2f, 0.2f) : new Color(0.35f, 0.35f, 0.38f);
-                        
-                        EditorGUI.DrawRect(rect, colBg);
-                        DrawRectBorder(rect, borderCol, 1);
 
-                        // Draw rings from bottom to top
+                        EditorGUI.DrawRect(rect, colBg);
+                        RingFlowEditorUtils.DrawRectBorder(rect, borderCol, 1);
+
                         for (int r = 0; r < pole.Rings.Count; r++)
                         {
                             var ring = pole.Rings[r];
@@ -182,79 +162,35 @@ namespace RingFlow.Editor
 
                             Color ringColor = RingPalette.Get(ring.Color);
                             EditorGUI.DrawRect(ringRect, ringColor);
-                            DrawRectBorder(ringRect, Color.black, 1);
+                            RingFlowEditorUtils.DrawRectBorder(ringRect, Color.black, 1);
 
-                            string ringLabel = GetRingShortLabel(ring.Type);
+                            string ringLabel = RingFlowEditorUtils.GetRingShortLabel(ring.Type);
                             if (ring.AdditionalData > 0 && ring.Type == RingType.Bomb)
-                            {
                                 ringLabel += ring.AdditionalData;
-                            }
 
-                            var textStyle = new GUIStyle(EditorStyles.miniLabel)
+                            var textStyle = new GUIStyle(RingFlowEditorUtils.CenteredMiniLabel)
                             {
-                                alignment = TextAnchor.MiddleCenter,
                                 fontStyle = FontStyle.Bold,
-                                normal = { textColor = GetContrastColor(ringColor) }
+                                normal = { textColor = RingFlowEditorUtils.GetContrastColor(ringColor) }
                             };
                             GUI.Label(ringRect, ringLabel, textStyle);
                         }
 
-                        // Locked label at top of pole if locked
                         if (pole.IsLocked)
                         {
                             Rect lockRect = new Rect(rect.x + 3f, rect.y + 4f, poleWidth - 6f, 13f);
                             EditorGUI.DrawRect(lockRect, new Color(0.8f, 0.1f, 0.1f, 0.9f));
                             var lockStyle = new GUIStyle(EditorStyles.miniBoldLabel)
-                            {
-                                alignment = TextAnchor.MiddleCenter,
-                                normal = { textColor = Color.white }
-                            };
+                                { alignment = TextAnchor.MiddleCenter, normal = { textColor = Color.white } };
                             GUI.Label(lockRect, "LOCKED", lockStyle);
                         }
                     }
 
                     if (p < levelData.Poles.Count - 1)
-                    {
                         GUILayout.Space(poleGap);
-                    }
                 }
             }
             EditorGUILayout.Space(5f);
-        }
-
-        private static string GetRingShortLabel(RingType type)
-        {
-            return type switch
-            {
-                RingType.Standard => "STD",
-                RingType.Key => "KEY",
-                RingType.Mystery => "MYS",
-                RingType.Frozen => "FRZ",
-                RingType.Locked => "LCK",
-                RingType.Stone => "STN",
-                RingType.Glass => "GLS",
-                RingType.Rainbow => "RNB",
-                RingType.Bomb => "BMB",
-                RingType.Chain => "CHN",
-                RingType.Magnet => "MAG",
-                RingType.Paint => "PNT",
-                RingType.Ghost => "GHS",
-                _ => "???"
-            };
-        }
-
-        private static Color GetContrastColor(Color color)
-        {
-            float y = (color.r * 299 + color.g * 587 + color.b * 114) / 1000f;
-            return y >= 0.5f ? Color.black : Color.white;
-        }
-
-        private static void DrawRectBorder(Rect rect, Color color, int width)
-        {
-            EditorGUI.DrawRect(new Rect(rect.x, rect.y, rect.width, width), color);
-            EditorGUI.DrawRect(new Rect(rect.x, rect.yMax - width, rect.width, width), color);
-            EditorGUI.DrawRect(new Rect(rect.x, rect.y, width, rect.height), color);
-            EditorGUI.DrawRect(new Rect(rect.xMax - width, rect.y, width, rect.height), color);
         }
 
         private void ApplyGddCurveParams()
@@ -273,22 +209,16 @@ namespace RingFlow.Editor
                 $"Applied GDD curve: Poles={_poleCount}, Colors={_colorCount}, MaxCapacity={_maxCapacity}");
         }
 
-        public void GenerateFromDashboard()
-        {
-            Generate();
-        }
+        public void GenerateFromDashboard() { Generate(); }
 
-        public void GenerateFromDashboardAll()
-        {
-            GenerateAllLevels();
-        }
+        public void GenerateFromDashboardAll() { GenerateAllLevels(); }
 
         private void Generate()
         {
             if (_levelIndex < 1 || _levelIndex > WorldConfigSO.TotalLevels)
             {
                 NexusLog.Warn("RingFlowEditor", nameof(Generate), _levelIndex.ToString(),
-                    $"Level index out of bounds, adjusting.");
+                    "Level index out of bounds, adjusting.");
                 _levelIndex = Mathf.Clamp(_levelIndex, 1, WorldConfigSO.TotalLevels);
             }
             if (_poleCount < _colorCount + 1) _poleCount = _colorCount + 1;
@@ -306,7 +236,6 @@ namespace RingFlow.Editor
                 return;
             }
 
-            // Solver validation board'u raw data ile doldur (Paint/Rainbow dönüşümleri uygulanmaz)
             var board = new BoardState { PoleCount = _generatedLevel.Poles.Count };
             for (int p = 0; p < _generatedLevel.Poles.Count; p++)
             {
@@ -320,8 +249,6 @@ namespace RingFlow.Editor
                 }
                 board.SetRingCount(p, pole.Rings.Count);
             }
-            NexusLog.Info("RingFlowEditor", nameof(Generate), _levelIndex.ToString(),
-                $"Solver board built from raw data ({_generatedLevel.Poles.Count} poles, using direct state copy).");
 
             var solveResult = LevelSolver.Solve(board, _maxCapacity);
             if (solveResult.IsSolvable)
@@ -329,9 +256,7 @@ namespace RingFlow.Editor
                 _solveStatus = $"Solvable in {solveResult.MoveCount} moves.";
                 _solutionSteps.Clear();
                 foreach (var move in solveResult.Moves)
-                {
                     _solutionSteps.Add($"Move top ring from Pole {move.FromPoleId} to Pole {move.ToPoleId}");
-                }
             }
             else
             {
@@ -340,9 +265,7 @@ namespace RingFlow.Editor
             }
 
             if (_autoSave)
-            {
                 SaveLevelAsset(_generatedLevel);
-            }
         }
 
         private void GenerateAllLevels()
@@ -360,35 +283,48 @@ namespace RingFlow.Editor
             int originalColorCount = _colorCount;
             int originalMaxCapacity = _maxCapacity;
 
-            for (int level = 1; level <= total; level++)
+            try
             {
-                int poles = DifficultyCurve.PoleCountForLevel(level);
-                int colors = DifficultyCurve.ColorCountForLevel(level);
-                int maxCap = DifficultyCurve.MaxCapacityForLevel(level);
-                if (poles < colors + 1) poles = colors + 1;
-                if (poles > 12) poles = 12;
-
-                var levelData = LevelGenerator.GenerateLevel(level, 100 + level, poles, colors, maxCap);
-                if (levelData == null)
+                for (int level = 1; level <= total; level++)
                 {
-                    failed++;
-                    NexusLog.Warn("RingFlowEditor", nameof(GenerateAllLevels), level.ToString(),
-                        $"Level {level} could not be generated (exhausted seeds). Skipping.");
-                    continue;
-                }
+                    int poles = DifficultyCurve.PoleCountForLevel(level);
+                    int colors = DifficultyCurve.ColorCountForLevel(level);
+                    int maxCap = DifficultyCurve.MaxCapacityForLevel(level);
+                    if (poles < colors + 1) poles = colors + 1;
+                    if (poles > 12) poles = 12;
 
-                SaveLevelAssetSilent(levelData, folderPath);
-                okCount++;
+                    var levelData = LevelGenerator.GenerateLevel(level, 100 + level, poles, colors, maxCap);
+                    if (levelData == null)
+                    {
+                        failed++;
+                        NexusLog.Warn("RingFlowEditor", nameof(GenerateAllLevels), level.ToString(),
+                            $"Level {level} could not be generated (exhausted seeds). Skipping.");
+                    }
+                    else
+                    {
+                        SaveLevelAssetSilent(levelData, folderPath);
+                        okCount++;
+                    }
 
-                if (level % 100 == 0)
-                {
-                    NexusLog.Info("RingFlowEditor", nameof(GenerateAllLevels), "",
-                        $"Progress: {level}/{total} levels generated ({okCount} ok, {failed} failed).");
+                    if (level % 50 == 0)
+                    {
+                        EditorUtility.DisplayProgressBar("Generating All Levels",
+                            $"Processing level {level}/{total} ({okCount} ok, {failed} failed)...",
+                            (float)level / total);
+                    }
+                    if (level % 100 == 0)
+                    {
+                        NexusLog.Info("RingFlowEditor", nameof(GenerateAllLevels), "",
+                            $"Progress: {level}/{total} levels generated ({okCount} ok, {failed} failed).");
+                    }
                 }
             }
-
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
+            finally
+            {
+                EditorUtility.ClearProgressBar();
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+            }
 
             NexusLog.Info("RingFlowEditor", nameof(GenerateAllLevels), "",
                 $"Finished: {okCount}/{total} levels generated, {failed} failed.");
@@ -396,8 +332,7 @@ namespace RingFlow.Editor
             _generateInProgress = false;
 
             EditorUtility.DisplayDialog("Batch Generation Complete",
-                $"Generated {okCount}/{total} levels to {folderPath}\n{failed} failed.",
-                "OK");
+                $"Generated {okCount}/{total} levels to {folderPath}\n{failed} failed.", "OK");
 
             _poleCount = originalPoleCount;
             _colorCount = originalColorCount;
@@ -406,35 +341,25 @@ namespace RingFlow.Editor
 
         private static void EnsureLevelsFolder(string folderPath)
         {
-            if (!AssetDatabase.IsValidFolder("Assets/Resources"))
-            {
-                AssetDatabase.CreateFolder("Assets", "Resources");
-            }
+            RingFlowEditorUtils.EnsureAssetFolders("Assets/Resources");
             if (!AssetDatabase.IsValidFolder(folderPath))
-            {
                 AssetDatabase.CreateFolder("Assets/Resources", "Levels");
-            }
         }
 
         private static void SaveLevelAssetSilent(LevelData levelData, string folderPath)
         {
             string assetPath = $"{folderPath}/Level_{levelData.LevelIndex}.asset";
             LevelDataSO levelSO = AssetDatabase.LoadAssetAtPath<LevelDataSO>(assetPath);
-            bool isNew = false;
+
             if (levelSO == null)
             {
                 levelSO = ScriptableObject.CreateInstance<LevelDataSO>();
-                isNew = true;
-            }
-
-            levelSO.Data = CloneLevelData(levelData);
-
-            if (isNew)
-            {
+                levelSO.Data = CloneLevelData(levelData);
                 AssetDatabase.CreateAsset(levelSO, assetPath);
             }
             else
             {
+                levelSO.Data = CloneLevelData(levelData);
                 EditorUtility.SetDirty(levelSO);
             }
         }
@@ -444,42 +369,28 @@ namespace RingFlow.Editor
             if (levelData == null) return;
 
             string folderPath = "Assets/Resources/Levels";
-            if (!AssetDatabase.IsValidFolder("Assets/Resources"))
-            {
-                AssetDatabase.CreateFolder("Assets", "Resources");
-            }
-            if (!AssetDatabase.IsValidFolder(folderPath))
-            {
-                AssetDatabase.CreateFolder("Assets/Resources", "Levels");
-            }
+            EnsureLevelsFolder(folderPath);
 
             string assetPath = $"{folderPath}/Level_{levelData.LevelIndex}.asset";
-            
-            // Check if asset already exists
             LevelDataSO levelSO = AssetDatabase.LoadAssetAtPath<LevelDataSO>(assetPath);
-            bool isNew = false;
+
             if (levelSO == null)
             {
                 levelSO = ScriptableObject.CreateInstance<LevelDataSO>();
-                isNew = true;
-            }
-
-            // Clone data
-            levelSO.Data = CloneLevelData(levelData);
-
-            if (isNew)
-            {
+                levelSO.Data = CloneLevelData(levelData);
                 AssetDatabase.CreateAsset(levelSO, assetPath);
             }
             else
             {
+                levelSO.Data = CloneLevelData(levelData);
                 EditorUtility.SetDirty(levelSO);
             }
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            EditorUtility.DisplayDialog("Success", $"Level saved to asset: {assetPath}\nThis level will now load automatically at runtime!", "OK");
+            EditorUtility.DisplayDialog("Success",
+                $"Level saved to asset: {assetPath}\nThis level will now load automatically at runtime!", "OK");
         }
 
         private static LevelData CloneLevelData(LevelData source)
@@ -494,15 +405,9 @@ namespace RingFlow.Editor
 
             foreach (var p in source.Poles)
             {
-                var poleClone = new PoleData(p.MaxCapacity)
-                {
-                    IsLocked = p.IsLocked,
-                    Rings = new List<RingData>()
-                };
+                var poleClone = new PoleData(p.MaxCapacity) { IsLocked = p.IsLocked, Rings = new List<RingData>() };
                 foreach (var r in p.Rings)
-                {
                     poleClone.Rings.Add(new RingData(r.Color, r.Type, r.AdditionalData));
-                }
                 clone.Poles.Add(poleClone);
             }
 

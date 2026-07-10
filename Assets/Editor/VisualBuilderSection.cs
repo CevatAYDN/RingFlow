@@ -11,6 +11,9 @@ namespace RingFlow.Editor
     {
         private const float PoleSpacing = 2.5f;
 
+        private static Shader s_cachedShader;
+        private static Material s_cachedDefaultMaterial;
+
         private GeneratorSection _generator;
 
         public override string DisplayName => "Scene Visual Board Builder";
@@ -32,13 +35,10 @@ namespace RingFlow.Editor
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     if (GUILayout.Button("Build Board in Scene", GUILayout.Height(36)))
-                    {
                         BuildInScene();
-                    }
+
                     if (GUILayout.Button("Clear Scene Board", GUILayout.Height(36)))
-                    {
                         ClearScene();
-                    }
                 }
             }
         }
@@ -48,6 +48,17 @@ namespace RingFlow.Editor
             BuildInScene();
         }
 
+        private static Shader ResolveShader()
+        {
+            if (s_cachedShader != null) return s_cachedShader;
+            s_cachedShader = Shader.Find("Universal Render Pipeline/Lit")
+                          ?? Shader.Find("Universal Render Pipeline/Simple Lit")
+                          ?? Shader.Find("Standard");
+            return s_cachedShader;
+        }
+
+        private static Material GetDefaultMaterial() => s_cachedDefaultMaterial ??= new Material(ResolveShader());
+
         private void BuildInScene()
         {
             List<PoleState> polesToBuild = null;
@@ -56,9 +67,7 @@ namespace RingFlow.Editor
                 var context = NexusRuntime.CurrentContext;
                 var model = context?.TryResolve<GameplayModel>();
                 if (model != null && model.Poles.Count > 0)
-                {
                     polesToBuild = model.Poles;
-                }
             }
 
             if (polesToBuild == null && _generator.GeneratedLevel == null)
@@ -78,15 +87,13 @@ namespace RingFlow.Editor
 
             var torusModel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Torus.obj");
             if (torusModel == null)
-            {
                 NexusLog.Warn("RingFlowEditor", nameof(BuildInScene), "",
                     "Torus.obj not found in Assets/Resources. Using Cylinder disks as fallback rings.");
-            }
 
             for (int p = 0; p < poleCount; p++)
             {
-                bool isLocked = false;
-                List<RingData> rings = new();
+                bool isLocked;
+                List<RingData> rings;
 
                 if (polesToBuild != null)
                 {
@@ -110,7 +117,7 @@ namespace RingFlow.Editor
             NexusLog.Info("RingFlowEditor", nameof(BuildInScene), "", "Visual board built successfully.");
         }
 
-        private void CreatePole(Transform parent, int index, bool isLocked, List<RingData> rings, GameObject torusModel)
+        private static void CreatePole(Transform parent, int index, bool isLocked, List<RingData> rings, GameObject torusModel)
         {
             var poleObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             poleObj.name = $"Pole_{index}" + (isLocked ? " [LOCKED]" : "");
@@ -123,9 +130,8 @@ namespace RingFlow.Editor
 
             var capsule = poleObj.GetComponent<CapsuleCollider>();
             if (capsule != null)
-            {
                 Object.DestroyImmediate(capsule);
-            }
+
             var box = poleObj.AddComponent<BoxCollider>();
             box.size = new Vector3(3.0f, 2.0f, 3.0f);
 
@@ -134,21 +140,17 @@ namespace RingFlow.Editor
                 var renderer = poleObj.GetComponent<Renderer>();
                 if (renderer != null)
                 {
-                    var poleMat = new Material(Shader.Find("Universal Render Pipeline/Lit")
-                        ?? Shader.Find("Universal Render Pipeline/Simple Lit")
-                        ?? Shader.Find("Standard"));
-                    poleMat.color = Color.black;
+                    var poleMat = new Material(ResolveShader()) { color = Color.black };
                     renderer.sharedMaterial = poleMat;
                 }
             }
 
+            var shader = ResolveShader();
             for (int r = 0; r < rings.Count; r++)
-            {
-                CreateRing(poleObj.transform, r, rings[r], torusModel);
-            }
+                CreateRing(poleObj.transform, r, rings[r], torusModel, shader);
         }
 
-        private static void CreateRing(Transform parent, int index, RingData ringData, GameObject torusModel)
+        private static void CreateRing(Transform parent, int index, RingData ringData, GameObject torusModel, Shader shader)
         {
             GameObject ringObj;
             if (torusModel != null)
@@ -166,15 +168,13 @@ namespace RingFlow.Editor
                 ringObj.transform.localPosition = new Vector3(0f, -0.9f + (index * 0.4f), 0f);
                 ringObj.transform.localScale = new Vector3(4.0f, 0.08f, 4.0f);
             }
+
             ringObj.name = $"Ring_{index}_{ringData.Color}_{ringData.Type}";
 
             var ringRenderer = ringObj.GetComponentInChildren<Renderer>();
             if (ringRenderer != null)
             {
-                var mat = new Material(Shader.Find("Universal Render Pipeline/Lit")
-                    ?? Shader.Find("Universal Render Pipeline/Simple Lit")
-                    ?? Shader.Find("Standard"));
-                mat.color = RingPalette.Get(ringData.Color);
+                var mat = new Material(shader) { color = RingPalette.Get(ringData.Color) };
                 ringRenderer.sharedMaterial = mat;
             }
 

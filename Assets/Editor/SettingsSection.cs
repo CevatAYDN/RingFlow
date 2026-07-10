@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using RingFlow.Gameplay;
@@ -8,6 +10,15 @@ namespace RingFlow.Editor
 {
     public sealed class SettingsSection : EditorSection
     {
+        private static readonly Dictionary<int, string> SupportedLanguages = new()
+        {
+            { 0, "en" }, { 1, "tr" }, { 2, "id" }, { 3, "es" }, { 4, "fr" },
+            { 5, "de" }, { 6, "pt" }, { 7, "it" }, { 8, "ar" }, { 9, "hi" },
+            { 10, "ru" }, { 11, "ja" }, { 12, "zh" }, { 13, "ko" }, { 14, "vi" },
+        };
+
+        private static readonly string[] LanguageOptions = SupportedLanguages.Values.ToArray();
+
         public override string DisplayName => "Accessibility & Localizer Settings";
         public override string PrefKey => EditorPrefsKeys.FoldSettings;
 
@@ -54,9 +65,7 @@ namespace RingFlow.Editor
 
                 int blind = EditorGUILayout.IntSlider("Color Blind", settings.ColorBlindMode.Value, 0, 3);
                 if (blind != settings.ColorBlindMode.Value)
-                {
                     settings.ColorBlindMode.Value = blind;
-                }
 
                 LanguageRow(settings, localization);
             }
@@ -70,16 +79,16 @@ namespace RingFlow.Editor
 
         private static void LanguageRow(SettingsModel settings, ILocalizationService localization)
         {
-            string[] langs = { "en", "tr", "id", "es", "fr", "de", "pt", "it", "ar", "hi", "ru", "ja", "zh", "ko", "vi" };
-            int idx = System.Array.IndexOf(langs, settings.LanguageCode.Value);
+            string currentLang = settings.LanguageCode.Value;
+            int idx = System.Array.IndexOf(LanguageOptions, currentLang);
             if (idx == -1) idx = 0;
-            int newIdx = EditorGUILayout.Popup("Language", idx, langs);
-            if (newIdx != idx) settings.LanguageCode.Value = langs[newIdx];
+
+            int newIdx = EditorGUILayout.Popup("Language", idx, LanguageOptions);
+            if (newIdx != idx)
+                settings.LanguageCode.Value = LanguageOptions[newIdx];
 
             if (localization != null)
-            {
-                EditorGUILayout.LabelField($"Active: {localization.CurrentLanguage ?? "—"}");
-            }
+                EditorGUILayout.LabelField($"Active: {localization.CurrentLanguage ?? "\u2014"}");
         }
     }
 }

@@ -12,9 +12,8 @@ namespace RingFlow.Editor
     public class RingFlowEditorWindow : EditorWindow
     {
         private const float HeaderHeight = 40f;
-        private static readonly Color HeaderColor = new(0.15f, 0.15f, 0.18f);
-        private static readonly Color HeaderTextColor = new(0.2f, 0.8f, 1.0f);
-        private static Texture2D s_headerTex;
+        private const float ToolbarHeight = 28f;
+        private const float SectionSpacing = 4f;
 
         private GeneratorSection _generator;
         private VisualBuilderSection _visualBuilder;
@@ -30,7 +29,6 @@ namespace RingFlow.Editor
         private Vector2 _uiScroll;
         private ScreenType _uiSelectedScreen = ScreenType.Splash;
 
-        // Throttled scene validation cache
         private double _lastValidationUpdateTime;
         private const double ValidationUpdateInterval = 1.0;
         private string _cachedSceneName;
@@ -116,42 +114,39 @@ namespace RingFlow.Editor
             _generator.OnEnable();
             _selectedTab = Mathf.Clamp(EditorPrefs.GetInt(EditorPrefsKeys.SelectedTab, 0), 0, _tabs.Length - 1);
 
-            UnityEditor.SceneManagement.EditorSceneManager.sceneOpened += OnSceneChanged;
-            UnityEditor.SceneManagement.EditorSceneManager.sceneClosed += OnSceneChanged;
-            UnityEditor.SceneManagement.EditorSceneManager.newSceneCreated += OnSceneChanged3;
+            UnityEditor.SceneManagement.EditorSceneManager.sceneOpened += OnAnySceneChanged;
+            UnityEditor.SceneManagement.EditorSceneManager.sceneClosed += OnAnySceneClosed;
+            UnityEditor.SceneManagement.EditorSceneManager.newSceneCreated += OnNewSceneCreated;
         }
 
-        private void OnSceneChanged(UnityEngine.SceneManagement.Scene scene, UnityEditor.SceneManagement.OpenSceneMode mode)
-        {
-            InvalidateCaches();
-        }
+        private void OnAnySceneChanged(UnityEngine.SceneManagement.Scene scene, UnityEditor.SceneManagement.OpenSceneMode mode)
+            => InvalidateCaches();
 
-        private void OnSceneChanged(UnityEngine.SceneManagement.Scene scene)
-        {
-            InvalidateCaches();
-        }
+        private void OnAnySceneClosed(UnityEngine.SceneManagement.Scene scene)
+            => InvalidateCaches();
 
-        private void OnSceneChanged3(UnityEngine.SceneManagement.Scene scene,
+        private void OnNewSceneCreated(UnityEngine.SceneManagement.Scene scene,
             UnityEditor.SceneManagement.NewSceneSetup setup,
             UnityEditor.SceneManagement.NewSceneMode mode)
-        {
-            InvalidateCaches();
-        }
+            => InvalidateCaches();
 
         private void InvalidateCaches()
         {
             s_cachedUIRoot = null;
             _cachedSceneName = null;
             _lastValidationUpdateTime = 0;
+            _cachedHasRoot = false;
+            _cachedHasUIRoot = false;
+            _cachedHasEventSystem = false;
         }
 
         private void OnDisable()
         {
             _generator?.OnDisable();
             EditorPrefs.SetInt(EditorPrefsKeys.SelectedTab, _selectedTab);
-            UnityEditor.SceneManagement.EditorSceneManager.sceneOpened -= OnSceneChanged;
-            UnityEditor.SceneManagement.EditorSceneManager.sceneClosed -= OnSceneChanged;
-            UnityEditor.SceneManagement.EditorSceneManager.newSceneCreated -= OnSceneChanged3;
+            UnityEditor.SceneManagement.EditorSceneManager.sceneOpened -= OnAnySceneChanged;
+            UnityEditor.SceneManagement.EditorSceneManager.sceneClosed -= OnAnySceneClosed;
+            UnityEditor.SceneManagement.EditorSceneManager.newSceneCreated -= OnNewSceneCreated;
         }
 
         private void RefreshValidationCache()
@@ -190,32 +185,18 @@ namespace RingFlow.Editor
 
         private void DrawToolbar()
         {
-            var newTab = GUILayout.Toolbar(_selectedTab, _tabs, GUILayout.Height(28));
+            var newTab = GUILayout.Toolbar(_selectedTab, _tabs, GUILayout.Height(ToolbarHeight));
             if (newTab != _selectedTab)
             {
                 _selectedTab = newTab;
                 EditorPrefs.SetInt(EditorPrefsKeys.SelectedTab, _selectedTab);
             }
-            EditorGUILayout.Space(4f);
+            EditorGUILayout.Space(SectionSpacing);
         }
 
-        private void DrawHeader(string title)
+        private static void DrawHeader(string title)
         {
-            if (s_headerTex == null)
-            {
-                s_headerTex = new Texture2D(2, 2);
-                s_headerTex.SetPixels(new[] { HeaderColor, HeaderColor, HeaderColor, HeaderColor });
-                s_headerTex.Apply();
-            }
-
-            var style = new GUIStyle(GUI.skin.box)
-            {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = 13,
-                fontStyle = FontStyle.Bold,
-                normal = { background = s_headerTex, textColor = HeaderTextColor }
-            };
-            GUILayout.Box(title, style, GUILayout.ExpandWidth(true), GUILayout.Height(HeaderHeight));
+            GUILayout.Box(title, RingFlowEditorUtils.HeaderStyle, GUILayout.ExpandWidth(true), GUILayout.Height(HeaderHeight));
             EditorGUILayout.Space(2f);
         }
 
@@ -226,12 +207,8 @@ namespace RingFlow.Editor
         private void DrawStatusBar()
         {
             var scene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
-            string mode = Application.isPlaying
-                ? (EditorApplication.isPaused ? "PAUSED" : "PLAY")
-                : "EDIT";
-            Color modeColor = Application.isPlaying
-                ? (EditorApplication.isPaused ? new Color(1f, 0.8f, 0.2f) : new Color(0.3f, 0.85f, 0.3f))
-                : new Color(0.65f, 0.65f, 0.65f);
+            string mode = RingFlowEditorUtils.GetEditorModeLabel();
+            Color modeColor = RingFlowEditorUtils.GetEditorModeColor();
 
             EditorGUILayout.Space(2f);
             using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
@@ -277,9 +254,9 @@ namespace RingFlow.Editor
         private void DrawHomeTab()
         {
             DrawSceneSection();
-            EditorGUILayout.Space(4f);
+            EditorGUILayout.Space(SectionSpacing);
             DrawActionCards();
-            EditorGUILayout.Space(4f);
+            EditorGUILayout.Space(SectionSpacing);
             DrawLevelStatus();
         }
 
@@ -288,9 +265,7 @@ namespace RingFlow.Editor
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 var scene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
-                string mode = Application.isPlaying
-                    ? (EditorApplication.isPaused ? "PAUSED" : "PLAY")
-                    : "EDIT";
+                string mode = RingFlowEditorUtils.GetEditorModeLabel();
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
@@ -298,7 +273,7 @@ namespace RingFlow.Editor
                     EditorGUILayout.LabelField(scene.name + (scene.isDirty ? " *" : ""), GUILayout.MinWidth(150f));
 
                     var prevColor = GUI.color;
-                    GUI.color = Application.isPlaying ? new Color(0.3f, 0.85f, 0.3f) : new Color(0.65f, 0.65f, 0.65f);
+                    GUI.color = RingFlowEditorUtils.GetEditorModeColor();
                     EditorGUILayout.LabelField(mode, EditorStyles.miniLabel, GUILayout.Width(40f));
                     GUI.color = prevColor;
 
@@ -355,24 +330,16 @@ namespace RingFlow.Editor
             var defaultBg = GUI.backgroundColor;
             GUI.backgroundColor = accent;
 
-            var style = new GUIStyle(GUI.skin.button)
-            {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = 11,
-                fontStyle = FontStyle.Bold,
-                padding = new RectOffset(8, 8, 10, 10),
-                fixedHeight = 60,
-            };
-
-            bool clicked = GUILayout.Button(title, style, GUILayout.MinWidth(120f), GUILayout.ExpandWidth(true));
+            bool clicked = GUILayout.Button(title, RingFlowEditorUtils.CompactBoldButton,
+                GUILayout.MinWidth(120f), GUILayout.ExpandWidth(true));
             GUI.backgroundColor = defaultBg;
 
             var r = GUILayoutUtility.GetLastRect();
             r.x += 2; r.y += 2; r.width -= 4; r.height -= 4;
             EditorGUI.LabelField(
-                r,
-                subtitle,
-                new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.LowerCenter, fontSize = 9 });
+                r, subtitle,
+                new GUIStyle(RingFlowEditorUtils.CenteredMiniLabel)
+                    { alignment = TextAnchor.LowerCenter, fontSize = 9 });
 
             return clicked;
         }
@@ -420,11 +387,11 @@ namespace RingFlow.Editor
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 DrawUIStudioInitControls();
-                EditorGUILayout.Space(4f);
+                EditorGUILayout.Space(SectionSpacing);
                 DrawUIStudioScreenTree();
-                EditorGUILayout.Space(4f);
+                EditorGUILayout.Space(SectionSpacing);
                 DrawUIStudioSignalControls();
-                EditorGUILayout.Space(4f);
+                EditorGUILayout.Space(SectionSpacing);
                 DrawUIStudioPersistence();
             }
         }
@@ -440,7 +407,7 @@ namespace RingFlow.Editor
                 else if (GetUIRootCanvas(uiRoot) != null) status = "Initialized";
                 else status = "Pending Awake";
 
-                EditorGUILayout.LabelField($"UIRoot: {(uiRoot != null ? uiRoot.name : "—")}  [{status}]",
+                EditorGUILayout.LabelField($"UIRoot: {(uiRoot != null ? uiRoot.name : "\u2014")}  [{status}]",
                     EditorStyles.boldLabel, GUILayout.MinWidth(280f));
                 GUILayout.FlexibleSpace();
 
@@ -476,7 +443,7 @@ namespace RingFlow.Editor
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                EditorGUILayout.LabelField($"Active: {active ?? "—"}   Popups: {FormatStack(popupStack)}   " +
+                EditorGUILayout.LabelField($"Active: {active ?? "\u2014"}   Popups: {FormatStack(popupStack)}   " +
                     $"Subs: {subs?.Count ?? 0}{(Application.isPlaying ? "" : " (PlayMode)")}",
                     EditorStyles.miniLabel);
             }
@@ -618,8 +585,7 @@ namespace RingFlow.Editor
                 if (go == null) continue;
                 if (!first) sb.Append(",");
                 first = false;
-                sb.Append("{");
-                sb.Append("\"type\":\"").Append(key).Append("\",");
+                sb.Append("{\"type\":\"").Append(key).Append("\",");
                 sb.Append("\"active\":").Append(go.activeSelf ? "true" : "false");
                 sb.Append("}");
             }
@@ -794,18 +760,17 @@ namespace RingFlow.Editor
             s_uiRootType.GetField("_subscribed", s_privInst)?.SetValue(uiRoot, false);
         }
 
-        private static bool ManualSetScreenActive(UIRoot uiRoot, ScreenType screen, bool active)
+        private static void ManualSetScreenActive(UIRoot uiRoot, ScreenType screen, bool active)
         {
-            if (uiRoot == null) return false;
+            if (uiRoot == null) return;
             var screens = GetUIRootScreens(uiRoot);
-            if (screens == null || !screens.Contains(screen)) return false;
+            if (screens == null || !screens.Contains(screen)) return;
             var go = screens[screen] as GameObject;
-            if (go == null) return false;
+            if (go == null) return;
 
             go.SetActive(active);
             if (active)
                 s_uiRootType.GetField("_activeExclusiveScreen", s_privInst)?.SetValue(uiRoot, screen);
-            return true;
         }
 
         private static string FormatStack(System.Collections.ICollection stack)

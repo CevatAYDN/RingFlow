@@ -5,21 +5,43 @@ using RingFlow.Gameplay;
 
 namespace RingFlow.Editor
 {
-    /// <summary>
-    /// Advanced custom inspector for LevelDataSO asset files.
-    /// Provides a visual columnar preview of the level's poles and rings,
-    /// along with tools to validate, solve, and modify the level in real-time.
-    /// </summary>
     [CustomEditor(typeof(LevelDataSO))]
     public class LevelDataSOEditor : UnityEditor.Editor
     {
-        private bool _showRawData = false;
+        private bool _showRawData;
 
-        // Static brush states so they persist during editor selection changes
-        private static RingColor _brushColor = RingColor.Red;
-        private static RingType _brushType = RingType.Standard;
-        private static bool _eraserMode = false;
-        private static int _bombCounter = 3;
+        private static RingColor s_brushColor = RingColor.Red;
+        private static RingType s_brushType = RingType.Standard;
+        private static bool s_eraserMode;
+        private static int s_bombCounter = 3;
+
+        private static GUIStyle s_compactButtonStyle;
+        private static GUIStyle s_boldButtonStyle;
+        private static GUIStyle s_headerStyle;
+
+        private static GUIStyle CompactButton => s_compactButtonStyle ??= new GUIStyle(GUI.skin.button)
+            { fontSize = 9, fontStyle = FontStyle.Normal };
+
+        private static GUIStyle BoldCompactButton => s_boldButtonStyle ??= new GUIStyle(GUI.skin.button)
+            { fontSize = 8, fontStyle = FontStyle.Bold };
+
+        private static GUIStyle HeaderStyle
+        {
+            get
+            {
+                if (s_headerStyle == null)
+                {
+                    s_headerStyle = new GUIStyle(GUI.skin.box)
+                    {
+                        alignment = TextAnchor.MiddleCenter,
+                        fontSize = 11,
+                        fontStyle = FontStyle.Bold,
+                        normal = { textColor = new Color(0.2f, 0.8f, 1.0f) }
+                    };
+                }
+                return s_headerStyle;
+            }
+        }
 
         public override void OnInspectorGUI()
         {
@@ -32,33 +54,25 @@ namespace RingFlow.Editor
 
             serializedObject.Update();
 
-            // Premium header
             DrawHeader($"LEVEL {levelSO.Data.LevelIndex} CONFIGURATION");
 
-            // Meta fields
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 EditorGUILayout.LabelField("Level Settings", EditorStyles.boldLabel);
-                
+
                 EditorGUI.BeginChangeCheck();
                 levelSO.Data.LevelIndex = EditorGUILayout.IntField("Level Index", levelSO.Data.LevelIndex);
                 levelSO.Data.Seed = EditorGUILayout.IntField("Random Seed", levelSO.Data.Seed);
                 levelSO.Data.TargetMoves = EditorGUILayout.IntField("Target Moves", levelSO.Data.TargetMoves);
-                
+
                 if (EditorGUI.EndChangeCheck())
-                {
                     EditorUtility.SetDirty(levelSO);
-                }
             }
 
-            // Draw Paint Brush Toolbars
             DrawColorPalette();
             DrawTypePalette();
-
-            // Visual preview section (Interactive)
             DrawLevelVisualInteractive(levelSO.Data, levelSO);
 
-            // Tools section
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 EditorGUILayout.LabelField("Level Designer Tools", EditorStyles.boldLabel);
@@ -66,14 +80,10 @@ namespace RingFlow.Editor
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     if (GUILayout.Button("Verify & Solve Level", GUILayout.Height(30)))
-                    {
                         VerifyAndSolve(levelSO);
-                    }
 
                     if (GUILayout.Button("Re-Scramble Level", GUILayout.Height(30)))
-                    {
                         ReScramble(levelSO);
-                    }
                 }
 
                 EditorGUILayout.Space(2f);
@@ -100,19 +110,13 @@ namespace RingFlow.Editor
                 }
             }
 
-            // Raw data foldout
             EditorGUILayout.Space(5f);
             _showRawData = EditorGUILayout.Foldout(_showRawData, "Raw Serialized Data", true);
             if (_showRawData)
-            {
-                // Render default object inspector fields
                 DrawPropertiesExcluding(serializedObject, "m_Script");
-            }
 
             if (serializedObject.ApplyModifiedProperties() || GUI.changed)
-            {
                 EditorUtility.SetDirty(levelSO);
-            }
         }
 
         private void VerifyAndSolve(LevelDataSO levelSO)
@@ -122,9 +126,7 @@ namespace RingFlow.Editor
             {
                 var pole = levelSO.Data.Poles[p];
                 for (int r = 0; r < pole.Rings.Count; r++)
-                {
                     board.AddRing(p, pole.Rings[r]);
-                }
             }
 
             int maxCapacity = levelSO.Data.Poles.Count > 0 ? levelSO.Data.Poles[0].MaxCapacity : 4;
@@ -134,12 +136,12 @@ namespace RingFlow.Editor
             {
                 Undo.RecordObject(levelSO, "Update Target Moves");
                 levelSO.Data.TargetMoves = solveResult.MoveCount;
-                EditorUtility.DisplayDialog("Solver Results", 
+                EditorUtility.DisplayDialog("Solver Results",
                     $"The level is SOLVABLE!\nOptimal moves required: {solveResult.MoveCount} (TargetMoves has been updated).", "OK");
             }
             else
             {
-                EditorUtility.DisplayDialog("Solver Results", 
+                EditorUtility.DisplayDialog("Solver Results",
                     "The level is UNSOLVABLE!\nNo sequence of valid moves can solve this configuration.", "OK");
             }
             EditorUtility.SetDirty(levelSO);
@@ -148,38 +150,29 @@ namespace RingFlow.Editor
         private void ReScramble(LevelDataSO levelSO)
         {
             if (levelSO.Data.Poles.Count == 0) return;
-            
+
             int maxCap = levelSO.Data.Poles[0].MaxCapacity;
-            int colorCount = 0;
-            
-            // Gather unique colors
             var colorsList = new HashSet<RingColor>();
             foreach (var pole in levelSO.Data.Poles)
-            {
                 foreach (var ring in pole.Rings)
-                {
                     if (ring.Color != RingColor.None)
                         colorsList.Add(ring.Color);
-                }
-            }
 
-            colorCount = colorsList.Count;
+            int colorCount = colorsList.Count;
             if (colorCount == 0)
             {
                 EditorUtility.DisplayDialog("Re-Scramble Error", "No colored rings found in the level to scramble.", "OK");
                 return;
             }
 
-            if (EditorUtility.DisplayDialog("Re-Scramble", 
-                $"Re-generate and scramble this level index {levelSO.Data.LevelIndex} using seed {levelSO.Data.Seed}?", "Scramble", "Cancel"))
+            if (EditorUtility.DisplayDialog("Re-Scramble",
+                $"Regenerate level {levelSO.Data.LevelIndex} with seed {levelSO.Data.Seed}?\n\nWarning: All manual edits will be lost.",
+                "Scramble", "Cancel"))
             {
                 Undo.RecordObject(levelSO, "Re-Scramble Level");
                 var generated = LevelGenerator.GenerateLevel(
-                    levelSO.Data.LevelIndex, 
-                    levelSO.Data.Seed, 
-                    levelSO.Data.Poles.Count, 
-                    colorCount, 
-                    maxCap);
+                    levelSO.Data.LevelIndex, levelSO.Data.Seed,
+                    levelSO.Data.Poles.Count, colorCount, maxCap);
 
                 if (generated != null)
                 {
@@ -193,112 +186,97 @@ namespace RingFlow.Editor
             }
         }
 
-        private void DrawColorPalette()
+        private static void DrawColorPalette()
         {
             EditorGUILayout.LabelField("Select Color Brush:", EditorStyles.boldLabel);
-            
+
             var colors = (RingColor[])System.Enum.GetValues(typeof(RingColor));
             var prevColor = GUI.backgroundColor;
 
             using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
             {
-                // Eraser mode button
-                GUI.backgroundColor = _eraserMode ? Color.red : Color.gray;
+                GUI.backgroundColor = s_eraserMode ? Color.red : Color.gray;
                 var eraserStyle = new GUIStyle(GUI.skin.button)
                 {
-                    fontStyle = _eraserMode ? FontStyle.Bold : FontStyle.Normal,
-                    normal = { textColor = _eraserMode ? Color.white : Color.black }
+                    fontStyle = s_eraserMode ? FontStyle.Bold : FontStyle.Normal,
+                    normal = { textColor = s_eraserMode ? Color.white : Color.black }
                 };
                 if (GUILayout.Button("ERASER", eraserStyle, GUILayout.Width(70), GUILayout.Height(24)))
-                {
-                    _eraserMode = true;
-                }
+                    s_eraserMode = true;
                 GUI.backgroundColor = prevColor;
 
                 GUILayout.Space(8f);
 
-                for (int i = 1; i < colors.Length; i++) // skip None
+                for (int i = 1; i < colors.Length; i++)
                 {
                     var color = colors[i];
                     Color c = RingPalette.Get(color);
-                    
-                    bool isSelected = (!_eraserMode && _brushColor == color);
+
+                    bool isSelected = (!s_eraserMode && s_brushColor == color);
                     GUI.backgroundColor = c;
-                    
-                    string label = isSelected ? $"[{color.ToString().Substring(0, 3).ToUpper()}]" : color.ToString().Substring(0, 3).ToUpper();
-                    
-                    var style = new GUIStyle(GUI.skin.button)
+
+                    string label = isSelected
+                        ? $"[{color.ToString().Substring(0, 3).ToUpper()}]"
+                        : color.ToString().Substring(0, 3).ToUpper();
+
+                    var style = new GUIStyle(CompactButton)
                     {
                         fontStyle = isSelected ? FontStyle.Bold : FontStyle.Normal,
-                        fontSize = 9,
-                        normal = { textColor = GetContrastColor(c) }
+                        normal = { textColor = RingFlowEditorUtils.GetContrastColor(c) }
                     };
 
                     if (GUILayout.Button(label, style, GUILayout.Width(42), GUILayout.Height(24)))
                     {
-                        _brushColor = color;
-                        _eraserMode = false;
+                        s_brushColor = color;
+                        s_eraserMode = false;
                     }
                 }
                 GUI.backgroundColor = prevColor;
             }
         }
 
-        private void DrawTypePalette()
+        private static void DrawTypePalette()
         {
-            if (_eraserMode) return;
+            if (s_eraserMode) return;
 
             EditorGUILayout.Space(2f);
             EditorGUILayout.LabelField("Select Ring Type Brush:", EditorStyles.boldLabel);
 
             var types = (RingType[])System.Enum.GetValues(typeof(RingType));
             var prevBg = GUI.backgroundColor;
+            int typesPerRow = 5;
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                using (new EditorGUILayout.HorizontalScope())
+                for (int i = 0; i < types.Length; i += typesPerRow)
                 {
-                    for (int i = 0; i < types.Length; i++)
+                    using (new EditorGUILayout.HorizontalScope())
                     {
-                        var type = types[i];
-                        bool isSelected = _brushType == type;
-
-                        var style = new GUIStyle(GUI.skin.button)
+                        for (int j = i; j < i + typesPerRow && j < types.Length; j++)
                         {
-                            fontStyle = isSelected ? FontStyle.Bold : FontStyle.Normal,
-                            fontSize = 9
-                        };
+                            var type = types[j];
+                            bool isSelected = s_brushType == type;
 
-                        if (isSelected)
-                        {
-                            GUI.backgroundColor = new Color(0.2f, 0.8f, 1.0f);
-                            if (GUILayout.Button(type.ToString(), style, GUILayout.Height(20)))
+                            if (isSelected)
                             {
-                                _brushType = type;
+                                GUI.backgroundColor = new Color(0.2f, 0.8f, 1.0f);
+                                if (GUILayout.Button(type.ToString(), CompactButton, GUILayout.Height(20)))
+                                    s_brushType = type;
+                                GUI.backgroundColor = prevBg;
                             }
-                            GUI.backgroundColor = prevBg;
-                        }
-                        else
-                        {
-                            if (GUILayout.Button(type.ToString(), style, GUILayout.Height(20)))
+                            else
                             {
-                                _brushType = type;
+                                if (GUILayout.Button(type.ToString(), CompactButton, GUILayout.Height(20)))
+                                    s_brushType = type;
                             }
-                        }
-
-                        // Wrap after 5 elements
-                        if ((i + 1) % 5 == 0 && i < types.Length - 1)
-                        {
-                            EditorGUILayout.EndHorizontal();
-                            EditorGUILayout.BeginHorizontal();
                         }
                     }
                 }
 
-                if (_brushType == RingType.Bomb)
+                if (s_brushType == RingType.Bomb)
                 {
                     EditorGUILayout.Space(2f);
-                    _bombCounter = EditorGUILayout.IntSlider("Bomb Counter Value", _bombCounter, 1, 9);
+                    s_bombCounter = EditorGUILayout.IntSlider("Bomb Counter Value", s_bombCounter, 1, 9);
                 }
             }
         }
@@ -327,22 +305,18 @@ namespace RingFlow.Editor
 
                     using (new EditorGUILayout.VerticalScope(GUILayout.Width(poleWidth)))
                     {
-                        // Pole title
-                        var poleLabelStyle = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleCenter };
-                        EditorGUILayout.LabelField($"Pole {p}", poleLabelStyle, GUILayout.Width(poleWidth));
+                        EditorGUILayout.LabelField($"Pole {p}", RingFlowEditorUtils.CenteredMiniLabel, GUILayout.Width(poleWidth));
 
-                        // Column layout
                         int maxCapacity = pole.MaxCapacity;
                         float height = maxCapacity * (ringHeight + 2f) + 12f;
                         Rect rect = GUILayoutUtility.GetRect(poleWidth, height);
 
                         Color colBg = pole.IsLocked ? new Color(0.18f, 0.12f, 0.12f, 1f) : new Color(0.16f, 0.16f, 0.18f, 1f);
                         Color borderCol = pole.IsLocked ? new Color(0.8f, 0.2f, 0.2f) : new Color(0.35f, 0.35f, 0.38f);
-                        
-                        EditorGUI.DrawRect(rect, colBg);
-                        DrawRectBorder(rect, borderCol, 1);
 
-                        // Draw slots from bottom to top
+                        EditorGUI.DrawRect(rect, colBg);
+                        RingFlowEditorUtils.DrawRectBorder(rect, borderCol, 1);
+
                         for (int r = 0; r < maxCapacity; r++)
                         {
                             float ringY = rect.yMax - 6f - (r + 1) * (ringHeight + 2f);
@@ -357,47 +331,38 @@ namespace RingFlow.Editor
                                 Color ringColor = RingPalette.Get(ring.Color);
                                 GUI.backgroundColor = ringColor;
 
-                                string label = GetRingShortLabel(ring.Type);
+                                string label = RingFlowEditorUtils.GetRingShortLabel(ring.Type);
                                 if (ring.AdditionalData > 0 && ring.Type == RingType.Bomb)
-                                {
                                     label += ring.AdditionalData;
-                                }
 
-                                var style = new GUIStyle(GUI.skin.button)
+                                var style = new GUIStyle(BoldCompactButton)
                                 {
-                                    fontStyle = FontStyle.Bold,
-                                    fontSize = 8,
-                                    normal = { textColor = GetContrastColor(ringColor) }
+                                    normal = { textColor = RingFlowEditorUtils.GetContrastColor(ringColor) }
                                 };
 
                                 if (GUI.Button(ringRect, label, style))
                                 {
                                     Undo.RecordObject(levelSO, "Modify Ring");
-                                    if (_eraserMode)
-                                    {
+                                    if (s_eraserMode)
                                         pole.Rings.RemoveAt(r);
-                                    }
                                     else
-                                    {
-                                        pole.Rings[r] = new RingData(_brushColor, _brushType, _brushType == RingType.Bomb ? _bombCounter : 0);
-                                    }
+                                        pole.Rings[r] = new RingData(s_brushColor, s_brushType, s_brushType == RingType.Bomb ? s_bombCounter : 0);
                                     EditorUtility.SetDirty(levelSO);
                                 }
                             }
                             else if (isAddSlot)
                             {
                                 GUI.backgroundColor = new Color(0.3f, 0.3f, 0.3f, 0.5f);
-                                var style = new GUIStyle(GUI.skin.button)
+                                var style = new GUIStyle(BoldCompactButton)
                                 {
-                                    fontStyle = FontStyle.Normal,
                                     fontSize = 11,
                                     normal = { textColor = Color.white }
                                 };
 
-                                if (!_eraserMode && GUI.Button(ringRect, "+", style))
+                                if (!s_eraserMode && GUI.Button(ringRect, "+", style))
                                 {
                                     Undo.RecordObject(levelSO, "Add Ring");
-                                    pole.Rings.Add(new RingData(_brushColor, _brushType, _brushType == RingType.Bomb ? _bombCounter : 0));
+                                    pole.Rings.Add(new RingData(s_brushColor, s_brushType, s_brushType == RingType.Bomb ? s_bombCounter : 0));
                                     EditorUtility.SetDirty(levelSO);
                                 }
                             }
@@ -405,7 +370,7 @@ namespace RingFlow.Editor
                             {
                                 Rect emptyRect = new Rect(rect.x + 6f, ringY + 2f, poleWidth - 12f, ringHeight - 4f);
                                 EditorGUI.DrawRect(emptyRect, new Color(0.25f, 0.25f, 0.25f, 0.2f));
-                                DrawRectBorder(emptyRect, new Color(0.35f, 0.35f, 0.38f, 0.3f), 1);
+                                RingFlowEditorUtils.DrawRectBorder(emptyRect, new Color(0.35f, 0.35f, 0.38f, 0.3f), 1);
                             }
                         }
 
@@ -414,17 +379,13 @@ namespace RingFlow.Editor
                             Rect lockRect = new Rect(rect.x + 3f, rect.y + 4f, poleWidth - 6f, 13f);
                             EditorGUI.DrawRect(lockRect, new Color(0.8f, 0.1f, 0.1f, 0.9f));
                             var lockStyle = new GUIStyle(EditorStyles.miniBoldLabel)
-                            {
-                                alignment = TextAnchor.MiddleCenter,
-                                normal = { textColor = Color.white }
-                            };
+                                { alignment = TextAnchor.MiddleCenter, normal = { textColor = Color.white } };
                             GUI.Label(lockRect, "LOCKED", lockStyle);
                         }
 
                         GUI.backgroundColor = prevColor;
                         EditorGUILayout.Space(2f);
 
-                        // Settings below pole
                         EditorGUI.BeginChangeCheck();
                         bool isLockedNew = EditorGUILayout.Toggle("Locked", pole.IsLocked, GUILayout.Width(poleWidth));
                         if (EditorGUI.EndChangeCheck())
@@ -441,9 +402,7 @@ namespace RingFlow.Editor
                             Undo.RecordObject(levelSO, "Change Pole Capacity");
                             pole.MaxCapacity = Mathf.Clamp(capNew, 2, 8);
                             while (pole.Rings.Count > pole.MaxCapacity)
-                            {
                                 pole.Rings.RemoveAt(pole.Rings.Count - 1);
-                            }
                             EditorUtility.SetDirty(levelSO);
                         }
 
@@ -457,65 +416,19 @@ namespace RingFlow.Editor
                     }
 
                     if (p < levelData.Poles.Count - 1)
-                    {
                         GUILayout.Space(poleGap);
-                    }
                 }
                 GUI.backgroundColor = prevColor;
             }
             EditorGUILayout.Space(5f);
         }
 
-        private static string GetRingShortLabel(RingType type)
-        {
-            return type switch
-            {
-                RingType.Standard => "STD",
-                RingType.Key => "KEY",
-                RingType.Mystery => "MYS",
-                RingType.Frozen => "FRZ",
-                RingType.Locked => "LCK",
-                RingType.Stone => "STN",
-                RingType.Glass => "GLS",
-                RingType.Rainbow => "RNB",
-                RingType.Bomb => "BMB",
-                RingType.Chain => "CHN",
-                RingType.Magnet => "MAG",
-                RingType.Paint => "PNT",
-                RingType.Ghost => "GHS",
-                _ => "???"
-            };
-        }
-
-        private static Color GetContrastColor(Color color)
-        {
-            float y = (color.r * 299 + color.g * 587 + color.b * 114) / 1000f;
-            return y >= 0.5f ? Color.black : Color.white;
-        }
-
-        private static void DrawRectBorder(Rect rect, Color color, int width)
-        {
-            EditorGUI.DrawRect(new Rect(rect.x, rect.y, rect.width, width), color);
-            EditorGUI.DrawRect(new Rect(rect.x, rect.yMax - width, rect.width, width), color);
-            EditorGUI.DrawRect(new Rect(rect.x, rect.y, width, rect.height), color);
-            EditorGUI.DrawRect(new Rect(rect.xMax - width, rect.y, width, rect.height), color);
-        }
-
         private static void DrawHeader(string title)
         {
-            var style = new GUIStyle(GUI.skin.box)
-            {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = 11,
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.2f, 0.8f, 1.0f) }
-            };
-            
             var bg = GUI.backgroundColor;
             GUI.backgroundColor = new Color(0.12f, 0.12f, 0.15f);
-            GUILayout.Box(title, style, GUILayout.ExpandWidth(true), GUILayout.Height(24));
+            GUILayout.Box(title, HeaderStyle, GUILayout.ExpandWidth(true), GUILayout.Height(24));
             GUI.backgroundColor = bg;
-            
             EditorGUILayout.Space(2f);
         }
     }

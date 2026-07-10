@@ -121,6 +121,7 @@ namespace RingFlow.Gameplay
     {
         private const int CurrentSchemaVersion = 2;
         private const string KeySchemaVersion = "RF_SaveSchemaVersion";
+        private const string KeyChecksum = "RF_SaveChecksum";
 
         public static void Save(IPlayerPrefsService prefs, PlayerProgressModel m)
         {
@@ -145,6 +146,10 @@ namespace RingFlow.Gameplay
             SaveStringList(prefs, PlayerProgressModel.KeyThemes, m.OwnedThemes);
             SaveStringList(prefs, PlayerProgressModel.KeyAchieves, m.Achievements);
 
+            // P0 fix: write a checksum so we can detect corrupted saves on next load.
+            var checksum = ComputeProgressChecksum(prefs);
+            prefs.SetInt(KeyChecksum, checksum);
+
             prefs.Save();
         }
 
@@ -152,11 +157,28 @@ namespace RingFlow.Gameplay
         {
             int schemaVersion = prefs.GetInt(KeySchemaVersion, 1);
 
+            // Verify checksum before populating model fields. If mismatch is detected,
+            // log an error but continue loading — silently resetting all progress is
+            // worse than loading potentially-corrupted data. The player can manually
+            // reset from the settings menu if they encounter issues.
+            int storedChecksum = prefs.GetInt(KeyChecksum, 0);
+            if (storedChecksum != 0)
+            {
+                int computedChecksum = ComputeProgressChecksum(prefs);
+                if (computedChecksum != storedChecksum)
+                {
+                    NexusLog.Warn("PlayerProgress", nameof(Load), "",
+                        $"Save data checksum mismatch (stored={storedChecksum}, computed={computedChecksum}). " +
+                        "Data may be corrupted — loading anyway. Reset from Settings menu if issues occur.");
+                }
+            }
+
             m.Coins.Value = prefs.GetInt(PlayerProgressModel.KeyCoins, 0);
             m.Diamonds.Value = prefs.GetInt(PlayerProgressModel.KeyDiamonds, 0);
             m.Xp.Value = prefs.GetInt(PlayerProgressModel.KeyXp, 0);
             m.CurrentLevel.Value = prefs.GetInt(PlayerProgressModel.KeyCurrentLevel, 1);
             m.MaxUnlockedLevel.Value = prefs.GetInt(PlayerProgressModel.KeyMaxUnlocked, 1);
+
             if (m.CurrentLevel.Value < 1) m.CurrentLevel.Value = 1;
             if (m.MaxUnlockedLevel.Value < 1) m.MaxUnlockedLevel.Value = 1;
 
@@ -249,6 +271,47 @@ namespace RingFlow.Gameplay
             for (int i = 0; i < parts.Length; i++)
             {
                 list.Add(parts[i].Replace(Esc + "s", Sep).Replace(Esc + Esc, Esc));
+            }
+        }
+
+        // Deterministic variant of DJB2 hash for strings — must NOT use string.GetHashCode()
+        // as it is non-deterministic across process restarts (randomized in modern .NET).
+        private static int Djb2Hash(string s)
+        {
+            unchecked
+            {
+                int hash = 5381;
+                for (int i = 0; i < s.Length; i++)
+                    hash = (hash * 33) ^ s[i];
+                return hash;
+            }
+        }
+
+        private static int ComputeProgressChecksum(IPlayerPrefsService prefs)
+        {
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 31 + prefs.GetInt(KeySchemaVersion, 0);
+                hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyCoins, 0);
+                hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyDiamonds, 0);
+                hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyXp, 0);
+                hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyCurrentLevel, 0);
+                hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyMaxUnlocked, 0);
+                hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyPlayerLvl, 0);
+                hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyChestsBronze, 0);
+                hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyChestsSilver, 0);
+                hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyChestsGold, 0);
+                hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyChestsDiamond, 0);
+                hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyDailyDay, 0);
+                hash = hash * 31 + Djb2Hash(prefs.GetString(PlayerProgressModel.KeyDailyStamp, ""));
+                hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyUndoUsed, 0);
+                hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyHintCount, 0);
+                hash = hash * 31 + (prefs.GetBool(PlayerProgressModel.KeyRemoveAds, false) ? 1 : 0);
+                hash = hash * 31 + Djb2Hash(prefs.GetString(PlayerProgressModel.KeyWorlds, ""));
+                hash = hash * 31 + Djb2Hash(prefs.GetString(PlayerProgressModel.KeyThemes, ""));
+                hash = hash * 31 + Djb2Hash(prefs.GetString(PlayerProgressModel.KeyAchieves, ""));
+                return hash;
             }
         }
     }

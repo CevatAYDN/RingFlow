@@ -11,8 +11,16 @@ namespace RingFlow.Gameplay.UI
         {
             if (View == null) return;
             View.Localize(_loc);
-            View.ResumeButton.onClick.AddListener(() => SignalBus.Fire(new ResumeRequestedSignal()));
-            View.QuitButton.onClick.AddListener(() => SignalBus.Fire(new QuitToMenuRequestedSignal()));
+
+            if (View.ResumeButton != null)
+                View.ResumeButton.onClick.AddListener(() => SignalBus.Fire(new ResumeRequestedSignal()));
+            else
+                NexusLog.Warn("PauseMediator", nameof(OnBind), "", "ResumeButton is null — cannot bind.");
+
+            if (View.QuitButton != null)
+                View.QuitButton.onClick.AddListener(() => SignalBus.Fire(new QuitToMenuRequestedSignal()));
+            else
+                NexusLog.Warn("PauseMediator", nameof(OnBind), "", "QuitButton is null — cannot bind.");
         }
 
         protected override void OnUnbind()

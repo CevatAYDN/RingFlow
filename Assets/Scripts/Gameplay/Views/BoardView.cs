@@ -56,28 +56,36 @@ namespace RingFlow.Gameplay
             if (visualBoard != null)
                 Destroy(visualBoard);
 
-            ClearBoard();
-
-            // P0.1 fix: warm the pool BEFORE we start spawning rings so the very first
-            // scramble does not allocate. Idempotent — only runs once per session.
             EnsureRingPoolPrewarmed();
 
+            // P0 fix: incremental update — reuse existing pole/ring instances instead of
+            // full destroy+recreate. Reduces GC pressure from ~40 allocations per move to
+            // ~0 (only ring count changes cause allocation/deallocation).
             for (int p = 0; p < poles.Count; p++)
             {
                 var poleData = poles[p];
-                var poleObj = AcquirePole();
+                PoleView poleView;
+                GameObject poleObj;
 
-                poleObj.name = $"Pole_{p}" + (poleData.IsLocked ? " [LOCKED]" : "");
-                poleObj.transform.SetParent(transform, false);
-                poleObj.transform.localPosition = new Vector3(p * _poleSpacing, 2.0f, 0f);
-                poleObj.transform.localRotation = Quaternion.identity;
-                poleObj.transform.localScale = new Vector3(0.2f, 2.0f, 0.2f);
+                if (p < _spawnedPoles.Count && _spawnedPoles[p] != null)
+                {
+                    poleView = _spawnedPoles[p];
+                    poleObj = poleView.gameObject;
+                }
+                else
+                {
+                    poleObj = AcquirePole();
+                    poleView = poleObj.GetComponent<PoleView>();
+                    if (poleView == null)
+                        poleView = poleObj.AddComponent<PoleView>();
+                    poleObj.name = $"Pole_{p}" + (poleData.IsLocked ? " [LOCKED]" : "");
+                    poleObj.transform.SetParent(transform, false);
+                    poleObj.transform.localPosition = new Vector3(p * _poleSpacing, 2.0f, 0f);
+                    poleObj.transform.localRotation = Quaternion.identity;
+                    poleObj.transform.localScale = new Vector3(0.2f, 2.0f, 0.2f);
+                }
 
-                var poleView = poleObj.GetComponent<PoleView>();
-                if (poleView == null)
-                    poleView = poleObj.AddComponent<PoleView>();
                 poleObj.SetActive(true);
-
                 poleView.PoleId = p;
                 poleView.SetLocked(poleData.IsLocked);
 
@@ -86,25 +94,58 @@ namespace RingFlow.Gameplay
                     renderer.sharedMaterial = GetPoleMaterial(poleData.IsLocked);
                 poleView.SyncMaterial();
 
-                _spawnedPoles.Add(poleView);
+                // Ensure spawnedPoles list is large enough
+                while (_spawnedPoles.Count <= p)
+                    _spawnedPoles.Add(null);
+                _spawnedPoles[p] = poleView;
 
-                var ringList = new List<GameObject>();
-                for (int r = 0; r < poleData.Rings.Count; r++)
+                // Ensure spawnedRings list is large enough
+                while (_spawnedRings.Count <= p)
+                    _spawnedRings.Add(new List<GameObject>());
+
+                var ringList = _spawnedRings[p];
+                int existingRingCount = ringList.Count;
+                int neededRingCount = poleData.Rings.Count;
+
+                // Trim excess rings
+                while (ringList.Count > neededRingCount)
+                {
+                    int lastIdx = ringList.Count - 1;
+                    if (ringList[lastIdx] != null)
+                        RecycleRing(ringList[lastIdx]);
+                    ringList.RemoveAt(lastIdx);
+                }
+
+                // Add or update rings
+                for (int r = 0; r < neededRingCount; r++)
                 {
                     var ringData = poleData.Rings[r];
-                    GameObject ringObj = AcquireRing();
+                    GameObject ringObj;
+                    bool isNew = r >= existingRingCount || ringList[r] == null;
+
+                    if (isNew)
+                    {
+                        ringObj = AcquireRing();
+                        ringObj.transform.SetParent(poleObj.transform, false);
+                        if (r >= ringList.Count)
+                            ringList.Add(ringObj);
+                        else
+                            ringList[r] = ringObj;
+                    }
+                    else
+                    {
+                        ringObj = ringList[r];
+                        ringObj.SetActive(true);
+                    }
 
                     ringObj.name = $"Ring_{r}_{ringData.Color}_{ringData.Type}";
-                    ringObj.transform.SetParent(poleObj.transform, false);
 
                     float targetY = -0.9f + (r * 0.4f);
-                    if (p == _lastSelectedPoleId && r == poleData.Rings.Count - 1)
+                    if (p == _lastSelectedPoleId && r == neededRingCount - 1)
                     {
                         bool reduceMotion = _settingsModel != null && _settingsModel.ReduceMotion.Value;
                         if (!reduceMotion)
-                        {
                             targetY += 0.35f;
-                        }
                     }
 
                     ringObj.transform.localPosition = new Vector3(0f, targetY, 0f);
@@ -119,10 +160,23 @@ namespace RingFlow.Gameplay
                         ringRenderer.sharedMaterial = GetRingMaterial(ringData.Color, ringData.Type);
 
                     AddSpecialOverlay(ringObj, ringData);
-
-                    ringList.Add(ringObj);
                 }
-                _spawnedRings.Add(ringList);
+            }
+
+            // Trim excess poles
+            while (_spawnedPoles.Count > poles.Count)
+            {
+                int lastIdx = _spawnedPoles.Count - 1;
+                if (_spawnedPoles[lastIdx] != null)
+                    RecyclePole(_spawnedPoles[lastIdx].gameObject);
+                _spawnedPoles.RemoveAt(lastIdx);
+            }
+            while (_spawnedRings.Count > poles.Count)
+            {
+                int lastIdx = _spawnedRings.Count - 1;
+                foreach (var ring in _spawnedRings[lastIdx])
+                    if (ring != null) RecycleRing(ring);
+                _spawnedRings.RemoveAt(lastIdx);
             }
 
             ApplySelection();

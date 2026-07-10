@@ -1,19 +1,16 @@
 using UnityEditor;
 using UnityEngine;
 using RingFlow.Gameplay;
-using System.IO;
 
 namespace RingFlow.Editor
 {
     public sealed class DatabaseSection : EditorSection
     {
         public override string DisplayName => "Game Configuration Database";
-        public override string PrefKey => "RF_FoldDatabase";
+        public override string PrefKey => EditorPrefsKeys.FoldDatabase;
 
         private GameConfigDatabaseSO _database;
         private int _selectedWorldIndex = 0;
-        private Vector2 _bandsScroll;
-        private Vector2 _colorsScroll;
 
         public override void OnGUI()
         {
@@ -23,7 +20,7 @@ namespace RingFlow.Editor
             // Load or create database asset
             if (_database == null)
             {
-                _database = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+                _database = AssetDatabase.LoadAssetAtPath<GameConfigDatabaseSO>(DatabaseAssetPath);
             }
 
             if (_database == null)
@@ -172,24 +169,20 @@ namespace RingFlow.Editor
             }
         }
 
+        private const string DatabaseAssetPath = "Assets/Resources/GameConfigDatabase.asset";
+
         private void CreateDatabaseAsset()
         {
             var db = ScriptableObject.CreateInstance<GameConfigDatabaseSO>();
             db.InitializeDefaults();
 
-            const string parentDir = "Assets/Resources";
-            if (!Directory.Exists(parentDir))
-            {
-                Directory.CreateDirectory(parentDir);
-            }
-
-            const string assetPath = parentDir + "/GameConfigDatabase.asset";
-            AssetDatabase.CreateAsset(db, assetPath);
+            RingFlowEditorUtils.EnsureAssetFolders("Assets/Resources");
+            AssetDatabase.CreateAsset(db, DatabaseAssetPath);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
             _database = db;
-            EditorUtility.DisplayDialog("Success", $"GameConfigDatabase asset created successfully at {assetPath}!", "OK");
+            EditorUtility.DisplayDialog("Success", $"GameConfigDatabase asset created successfully at {DatabaseAssetPath}!", "OK");
         }
 
         private void SaveDatabase()

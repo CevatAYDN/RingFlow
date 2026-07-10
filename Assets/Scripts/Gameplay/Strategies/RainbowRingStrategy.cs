@@ -56,15 +56,18 @@ namespace RingFlow.Gameplay.Strategies
 
         private RingColor GetRandomColorForLevel(MoveContext context)
         {
-            // Similar to Mystery strategy, use deterministic approach
+            // P0 fix: derive seed from level + pole identity (deterministic), NOT from
+            // MovesCount. Same as MysteryRingStrategy — guarantees reproducible color
+            // for QA replay and undo consistency.
             var colorCount = GameConfigDatabaseSO.Instance.GetColorCountForLevel(
                 context.Progression?.CurrentLevel.Value ?? 1);
-            
-            int seed = (context.ToPoleId * 23) + (context.Model.MovesCount.Value * 47);
-            int colorIndex = 1 + (seed % colorCount);
-            
+
+            int level = context.Progression?.CurrentLevel.Value ?? 1;
+            int seed = unchecked((int)((long)level * 2654435761L) ^ (context.ToPoleId * 31));
+            int colorIndex = 1 + (System.Math.Abs(seed) % colorCount);
+
             if (colorIndex > 10) colorIndex = 3;
-            
+
             return (RingColor)colorIndex;
         }
     }

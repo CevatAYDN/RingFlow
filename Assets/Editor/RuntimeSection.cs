@@ -2,11 +2,11 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 using RingFlow.Gameplay;
+using RingFlow.Gameplay.UI;
 using RingFlow.Gameplay.Diagnostics;
 using Nexus.Core;
 using Nexus.Core.FSM;
 using Nexus.Core.Services;
-using DiagnosticsSeverity = RingFlow.Gameplay.Diagnostics.DiagnosticSeverity;
 
 namespace RingFlow.Editor
 {
@@ -40,15 +40,11 @@ namespace RingFlow.Editor
             if (GUILayout.Button("Setup Nexus Bootstrapper in Scene", GUILayout.Height(ButtonHeight)))
             {
                 var result = EditorBootstrapper.Bootstrap();
-                if (result.Success)
-                {
-                    EditorUtility.DisplayDialog("Setup",
-                        "Nexus Bootstrapper successfully added to the active scene! Press Play to run.", "OK");
-                }
-                else
-                {
-                    EditorUtility.DisplayDialog("Setup", result.Message, "OK");
-                }
+                EditorUtility.DisplayDialog(result.Success ? "Setup" : "Setup",
+                    result.Success
+                        ? "Nexus Bootstrapper successfully added to the active scene! Press Play to run."
+                        : result.Message,
+                    "OK");
             }
 
             EditorGUILayout.Space(10f);
@@ -69,52 +65,35 @@ namespace RingFlow.Editor
             var fsm = context.TryResolve<IGameStateMachine>();
             var model = context.TryResolve<GameplayModel>();
             var progress = context.TryResolve<PlayerProgressModel>();
-            var economy = context.TryResolve<Nexus.Core.Services.IEconomyService>();
+            var economy = context.TryResolve<IEconomyService>();
 
             if (fsm == null)
-            {
                 EditorGUILayout.HelpBox("IGameStateMachine is not resolved in the current context.", MessageType.Error);
-            }
             else
-            {
                 DrawFsmRow(fsm);
-            }
 
             if (model == null)
-            {
                 EditorGUILayout.HelpBox("GameplayModel is not resolved in the current context.", MessageType.Warning);
-            }
             else
-            {
                 DrawModelRow(model);
-            }
 
             if (progress == null)
-            {
                 EditorGUILayout.HelpBox("PlayerProgressModel is not resolved in the current context.", MessageType.Warning);
-            }
             if (economy == null)
-            {
                 EditorGUILayout.HelpBox("IEconomyService is not resolved in the current context.", MessageType.Warning);
-            }
 
             if (progress != null && economy != null)
-            {
                 DrawEconomyRow(progress, economy);
-            }
 
-            // Diagnostic Health Check
             EditorGUILayout.Space();
             if (GUILayout.Button("Run Diagnostic Health Check", GUILayout.Height(ButtonHeight)))
-            {
                 RunHealthCheck(context);
-            }
 
             EditorGUILayout.Space(10f);
             DrawResetButton();
         }
 
-        private void RunHealthCheck(IContext context)
+        private static void RunHealthCheck(IContext context)
         {
             var diag = context.TryResolve<RingFlow.Gameplay.Diagnostics.IGameDiagnostics>();
             if (diag == null)
@@ -125,57 +104,44 @@ namespace RingFlow.Editor
 
             diag.Log("HealthCheck", "=== HEALTH CHECK STARTED ===");
 
-            // 1. Check FSM
             var fsm = context.TryResolve<IGameStateMachine>();
             diag.Log("HealthCheck", $"FSM status: {(fsm != null ? (fsm.CurrentState != null ? fsm.CurrentState.GetType().Name : "No State Active") : "NULL")}",
-                fsm == null ? DiagnosticsSeverity.Critical : DiagnosticsSeverity.Info);
+                fsm == null ? DiagnosticSeverity.Critical : DiagnosticSeverity.Info);
 
-            // 2. Check Services
-            var economy = context.TryResolve<IEconomyService>();
-            diag.Log("HealthCheck", $"Service 'IEconomyService': {(economy != null ? "OK" : "MISSING")}",
-                economy == null ? DiagnosticsSeverity.Error : DiagnosticsSeverity.Info);
+            var serviceChecks = new (string Name, System.Func<object> Resolve)[]
+            {
+                ("IEconomyService",       () => context.TryResolve<IEconomyService>()),
+                ("IProgressionService",   () => context.TryResolve<IProgressionService>()),
+                ("IAudioService",         () => context.TryResolve<IAudioService>()),
+                ("ILocalizationService",  () => context.TryResolve<ILocalizationService>()),
+                ("IAdService",            () => context.TryResolve<IAdService>()),
+                ("ILoggerService",        () => context.TryResolve<ILoggerService>()),
+            };
 
-            var progression = context.TryResolve<IProgressionService>();
-            diag.Log("HealthCheck", $"Service 'IProgressionService': {(progression != null ? "OK" : "MISSING")}",
-                progression == null ? DiagnosticsSeverity.Error : DiagnosticsSeverity.Info);
+            foreach (var (name, resolve) in serviceChecks)
+            {
+                var svc = resolve();
+                diag.Log("HealthCheck", $"Service '{name}': {(svc != null ? "OK" : "MISSING")}",
+                    svc == null ? DiagnosticSeverity.Error : DiagnosticSeverity.Info);
+            }
 
-            var audio = context.TryResolve<IAudioService>();
-            diag.Log("HealthCheck", $"Service 'IAudioService': {(audio != null ? "OK" : "MISSING")}",
-                audio == null ? DiagnosticsSeverity.Error : DiagnosticsSeverity.Info);
-
-            var localization = context.TryResolve<ILocalizationService>();
-            diag.Log("HealthCheck", $"Service 'ILocalizationService': {(localization != null ? "OK" : "MISSING")}",
-                localization == null ? DiagnosticsSeverity.Error : DiagnosticsSeverity.Info);
-
-            var ads = context.TryResolve<IAdService>();
-            diag.Log("HealthCheck", $"Service 'IAdService': {(ads != null ? "OK" : "MISSING")}",
-                ads == null ? DiagnosticsSeverity.Error : DiagnosticsSeverity.Info);
-
-            var logger = context.TryResolve<ILoggerService>();
-            diag.Log("HealthCheck", $"Service 'ILoggerService': {(logger != null ? "OK" : "MISSING")}",
-                logger == null ? DiagnosticsSeverity.Error : DiagnosticsSeverity.Info);
-
-            var tracker = context.TryResolve<RingFlow.Gameplay.Diagnostics.IViewMediatorTracker>();
+            var tracker = context.TryResolve<IViewMediatorTracker>();
             diag.Log("HealthCheck", $"Service 'IViewMediatorTracker': {(tracker != null ? "OK" : "MISSING")}",
-                tracker == null ? DiagnosticsSeverity.Error : DiagnosticsSeverity.Info);
+                tracker == null ? DiagnosticSeverity.Error : DiagnosticSeverity.Info);
 
-            // 3. Find UIRoot
-            var uiRoot = Object.FindAnyObjectByType<RingFlow.Gameplay.UI.UIRoot>();
+            var uiRoot = Object.FindAnyObjectByType<UIRoot>();
             diag.Log("HealthCheck", $"UIRoot: {(uiRoot != null ? "FOUND" : "MISSING")}",
-                uiRoot == null ? DiagnosticsSeverity.Critical : DiagnosticsSeverity.Info);
+                uiRoot == null ? DiagnosticSeverity.Critical : DiagnosticSeverity.Info);
 
-            // 4. Trace Active Views in Scene
             var views = Object.FindObjectsByType<View>(FindObjectsInactive.Exclude);
             diag.Log("HealthCheck", $"Active Views count: {views.Length}");
             foreach (var v in views)
-            {
                 diag.Log("HealthCheck", $"  - View '{v.GetType().Name}' on GameObject '{v.gameObject.name}' (active: {v.gameObject.activeInHierarchy})");
-            }
 
             diag.Log("HealthCheck", "=== HEALTH CHECK COMPLETED ===");
         }
 
-        private void DrawFsmRow(IGameStateMachine fsm)
+        private static void DrawFsmRow(IGameStateMachine fsm)
         {
             if (fsm == null) return;
             EditorGUILayout.LabelField($"Active State: {fsm.CurrentState?.GetType().Name ?? "None"}", EditorStyles.boldLabel);
@@ -199,7 +165,7 @@ namespace RingFlow.Editor
             EditorGUILayout.LabelField($"Moves: {model.MovesCount.Value}  IsWon: {model.IsGameWon.Value}");
         }
 
-        private static void DrawEconomyRow(PlayerProgressModel progress, Nexus.Core.Services.IEconomyService economy)
+        private static void DrawEconomyRow(PlayerProgressModel progress, IEconomyService economy)
         {
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Player Economy:", EditorStyles.boldLabel);
@@ -214,14 +180,13 @@ namespace RingFlow.Editor
             if (GUILayout.Button("Unlock All Levels"))
             {
                 progress.MaxUnlockedLevel.Value = WorldConfigSO.TotalLevels;
-                for (int i = 0; i < progress.UnlockedWorlds.Count; i++)
-                {
+                int worldCount = progress.UnlockedWorlds?.Count ?? 0;
+                for (int i = 0; i < worldCount; i++)
                     progress.UnlockedWorlds[i] = true;
-                }
             }
         }
 
-        private void DrawResetButton()
+        private static void DrawResetButton()
         {
             Color originalColor = GUI.backgroundColor;
             GUI.backgroundColor = new Color(0.9f, 0.35f, 0.35f);
@@ -231,18 +196,15 @@ namespace RingFlow.Editor
                     "This will delete all saved level progress, coins, diamonds, and game settings on disk. This action cannot be undone.",
                     "Reset", "Cancel"))
                 {
-                    DeletePlayerDataDisk();
+                    ResetAllPlayerData();
 
                     if (Application.isPlaying)
                     {
                         var context = NexusRuntime.CurrentContext;
                         if (context != null)
                         {
-                            var progress = context.TryResolve<PlayerProgressModel>();
-                            progress?.Reset();
-
-                            var settings = context.TryResolve<SettingsModel>();
-                            settings?.Reset();
+                            context.TryResolve<PlayerProgressModel>()?.Reset();
+                            context.TryResolve<SettingsModel>()?.Reset();
                         }
                     }
 
@@ -252,9 +214,8 @@ namespace RingFlow.Editor
             GUI.backgroundColor = originalColor;
         }
 
-        private void DeletePlayerDataDisk()
+        private static void ResetAllPlayerData()
         {
-            // 1. Delete SecureData folder
             string secureFolder = Path.Combine(Application.persistentDataPath, "SecureData");
             if (Directory.Exists(secureFolder))
             {
@@ -269,7 +230,6 @@ namespace RingFlow.Editor
                 }
             }
 
-            // 2. Clear obfuscated seed and PlayerPrefs
             PlayerPrefs.DeleteKey("NT_StorageSeed");
             PlayerPrefs.DeleteAll();
             PlayerPrefs.Save();

@@ -1,0 +1,21 @@
+{
+    "name": "RingFlow.Tests.PlayMode",
+    "rootNamespace": "RingFlow.Tests",
+    "references": [
+        "RingFlow",
+        "com.nexus.core"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

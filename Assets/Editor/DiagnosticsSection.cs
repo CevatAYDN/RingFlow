@@ -14,7 +14,7 @@ namespace RingFlow.Editor
         private bool _autoScroll = true;
 
         public override string DisplayName => "Game Diagnostics & Trace Logs";
-        public override string PrefKey => "FoldDiagnostics";
+        public override string PrefKey => EditorPrefsKeys.FoldDiagnostics;
 
         public override void OnGUI()
         {

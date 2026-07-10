@@ -8,11 +8,6 @@ using Nexus.Core.Services;
 
 namespace RingFlow.Editor
 {
-    /// <summary>
-    /// Builds the runtime scene graph: NexusRoot + GameplayLifecycle + UIRoot + EventSystem.
-    /// Extracted from RingFlowEditorWindow so the window stays focused on UI rendering
-    /// and the bootstrapper can be invoked from CI or other tools.
-    /// </summary>
     public static class EditorBootstrapper
     {
         private const string ContextDataPath = "Assets/Settings/GameplayContextData.asset";
@@ -20,17 +15,14 @@ namespace RingFlow.Editor
         public static BootstrapResult Bootstrap()
         {
             if (Application.isPlaying)
-            {
                 return BootstrapResult.Fail("Cannot run setup during PlayMode.");
-            }
 
             if (Object.FindAnyObjectByType<Root>() != null)
-            {
                 return BootstrapResult.Fail("Nexus Bootstrapper already exists in the scene.");
-            }
 
             var contextData = EnsureContextData();
             var rootObj = CreateRootWithContext(contextData);
+            Undo.RegisterCreatedObjectUndo(rootObj, "Create Nexus Root");
             AttachComponents(rootObj);
             EnsureEventSystem();
             EnsureMainCamera();
@@ -59,9 +51,7 @@ namespace RingFlow.Editor
             if (existing != null) return existing;
 
             if (!AssetDatabase.IsValidFolder("Assets/Settings"))
-            {
                 AssetDatabase.CreateFolder("Assets", "Settings");
-            }
 
             var data = ScriptableObject.CreateInstance<ContextData>();
             data.AssemblyScopes = new[] { "RingFlow" };
@@ -90,11 +80,17 @@ namespace RingFlow.Editor
         private static void AttachComponents(GameObject rootObj)
         {
             var boardView = rootObj.AddComponent<BoardView>();
+            Undo.RegisterCreatedObjectUndo(boardView, "Attach BoardView");
+
             var torusPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Torus.obj");
             if (torusPrefab != null)
                 boardView.SetTorusPrefab(torusPrefab);
-            rootObj.AddComponent<GameplayLifecycle>();
-            rootObj.AddComponent<UIRoot>();
+
+            var lifecycle = rootObj.AddComponent<GameplayLifecycle>();
+            Undo.RegisterCreatedObjectUndo(lifecycle, "Attach GameplayLifecycle");
+
+            var uiRoot = rootObj.AddComponent<UIRoot>();
+            Undo.RegisterCreatedObjectUndo(uiRoot, "Attach UIRoot");
         }
 
         private static void EnsureEventSystem()
@@ -103,76 +99,100 @@ namespace RingFlow.Editor
             if (eventSystem == null)
             {
                 var esObj = new GameObject("EventSystem");
+                Undo.RegisterCreatedObjectUndo(esObj, "Create EventSystem");
                 eventSystem = esObj.AddComponent<EventSystem>();
             }
 
-            var inputModuleType = ResolveInputSystemUIInputModuleType() ?? typeof(StandaloneInputModule);
+            var inputModuleType = ResolveInputSystemUIInputModuleType();
+            if (inputModuleType == null)
+            {
+                inputModuleType = typeof(StandaloneInputModule);
+                NexusLog.Warn("EditorBootstrapper", nameof(EnsureEventSystem), "",
+                    "Input System package not detected. Falling back to StandaloneInputModule.");
+            }
 
             var existing = eventSystem.GetComponent<BaseInputModule>();
             if (existing != null && !inputModuleType.IsInstanceOfType(existing))
-            {
                 Undo.DestroyObjectImmediate(existing);
-            }
+
             if (eventSystem.GetComponent<BaseInputModule>() == null)
             {
                 var instance = eventSystem.gameObject.AddComponent(inputModuleType);
-                if (instance != null) Undo.RegisterCreatedObjectUndo(instance, "Attach Input System Module");
+                if (instance != null) Undo.RegisterCreatedObjectUndo(instance, "Attach Input Module");
             }
         }
 
         private static void EnsureMainCamera()
         {
-            var camObj = GameObject.Find("Main Camera");
-            Camera cam;
+            var camera = Camera.main ?? Object.FindAnyObjectByType<Camera>();
+            var camObj = camera != null ? camera.gameObject : null;
+            bool isNew = false;
+
             if (camObj == null)
             {
                 camObj = new GameObject("Main Camera");
-                cam = camObj.AddComponent<Camera>();
-            }
-            else
-            {
-                cam = camObj.GetComponent<Camera>();
-                if (cam == null) cam = camObj.AddComponent<Camera>();
+                Undo.RegisterCreatedObjectUndo(camObj, "Create Main Camera");
+                camera = camObj.AddComponent<Camera>();
+                isNew = true;
             }
 
-            cam.orthographic = true;
-            cam.orthographicSize = 8f;
-            cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.12f, 0.14f, 0.17f);
-            cam.nearClipPlane = 0.1f;
-            cam.farClipPlane = 100f;
-            cam.depth = -1;
+            camera.orthographic = true;
+            camera.orthographicSize = 8f;
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = new Color(0.12f, 0.14f, 0.17f);
+            camera.nearClipPlane = 0.1f;
+            camera.farClipPlane = 100f;
+            camera.depth = -1;
 
             var t = camObj.transform;
-            t.position = new Vector3(10f, 6f, -10f);
-            t.rotation = Quaternion.Euler(20f, 0f, 0f);
+            if (isNew)
+            {
+                t.position = new Vector3(10f, 6f, -10f);
+                t.rotation = Quaternion.Euler(20f, 0f, 0f);
+            }
 
             camObj.tag = "MainCamera";
         }
 
         private static void EnsureDirectionalLight()
         {
-            var lightObj = GameObject.Find("Directional Light");
-            Light light;
-            if (lightObj == null)
+            var existingLights = Object.FindObjectsByType<Light>(FindObjectsInactive.Include);
+            var dirLight = (Light)null;
+            foreach (var l in existingLights)
             {
-                lightObj = new GameObject("Directional Light");
-                light = lightObj.AddComponent<Light>();
+                if (l.type == LightType.Directional)
+                {
+                    dirLight = l;
+                    break;
+                }
+            }
+
+            GameObject lightObj;
+            bool isNew = false;
+
+            if (dirLight != null)
+            {
+                lightObj = dirLight.gameObject;
             }
             else
             {
-                light = lightObj.GetComponent<Light>();
-                if (light == null) light = lightObj.AddComponent<Light>();
+                lightObj = new GameObject("Directional Light");
+                Undo.RegisterCreatedObjectUndo(lightObj, "Create Directional Light");
+                dirLight = lightObj.AddComponent<Light>();
+                isNew = true;
             }
 
-            light.type = LightType.Directional;
-            light.intensity = 1f;
-            light.shadows = LightShadows.Soft;
-            light.color = new Color(1f, 0.96f, 0.90f);
+            dirLight.type = LightType.Directional;
+            dirLight.intensity = 1f;
+            dirLight.shadows = LightShadows.Soft;
+            dirLight.color = new Color(1f, 0.96f, 0.90f);
 
-            var t = lightObj.transform;
-            t.position = new Vector3(0f, 10f, 0f);
-            t.rotation = Quaternion.Euler(50f, -30f, 0f);
+            if (isNew)
+            {
+                var t = lightObj.transform;
+                t.position = new Vector3(0f, 10f, 0f);
+                t.rotation = Quaternion.Euler(50f, -30f, 0f);
+            }
         }
 
         private static void EnsureCameraRaycasters()
