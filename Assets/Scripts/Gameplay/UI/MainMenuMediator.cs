@@ -24,7 +24,7 @@ namespace RingFlow.Gameplay.UI
 
             if (View == null)
             {
-                NexusLog.Error("MainMenuMediator", nameof(OnBind), "", "MainMenuView not bound.");
+                NexusLog.Warn("MainMenuMediator", nameof(OnBind), "", "MainMenuView not bound.");
                 return;
             }
             View.Localize(_loc);

@@ -126,18 +126,17 @@ namespace RingFlow.Editor
         {
             var camera = Camera.main ?? Object.FindAnyObjectByType<Camera>();
             var camObj = camera != null ? camera.gameObject : null;
-            bool isNew = false;
 
             if (camObj == null)
             {
                 camObj = new GameObject("Main Camera");
                 Undo.RegisterCreatedObjectUndo(camObj, "Create Main Camera");
                 camera = camObj.AddComponent<Camera>();
-                isNew = true;
             }
 
+            var feel = Gameplay.GameFeelConfigSO.Instance;
             camera.orthographic = true;
-            camera.orthographicSize = 8f;
+            camera.orthographicSize = feel.CameraBaseOrtho;
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(0.12f, 0.14f, 0.17f);
             camera.nearClipPlane = 0.1f;
@@ -145,11 +144,8 @@ namespace RingFlow.Editor
             camera.depth = -1;
 
             var t = camObj.transform;
-            if (isNew)
-            {
-                t.position = new Vector3(10f, 6f, -10f);
-                t.rotation = Quaternion.Euler(20f, 0f, 0f);
-            }
+            t.position = feel.CameraPosition;
+            t.rotation = Quaternion.Euler(feel.CameraRotation);
 
             camObj.tag = "MainCamera";
         }

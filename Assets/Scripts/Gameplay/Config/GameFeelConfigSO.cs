@@ -1,0 +1,126 @@
+using UnityEngine;
+using Nexus.Core.Services;
+
+namespace RingFlow.Gameplay
+{
+    [CreateAssetMenu(fileName = "GameFeelConfig", menuName = "RingFlow/Game Feel Config", order = 51)]
+    public class GameFeelConfigSO : ScriptableObject
+    {
+        private static GameFeelConfigSO s_instance;
+
+        public static GameFeelConfigSO Instance
+        {
+            get
+            {
+                if (s_instance == null)
+                    s_instance = Resources.Load<GameFeelConfigSO>("GameFeelConfig");
+                if (s_instance == null)
+                {
+                    s_instance = CreateInstance<GameFeelConfigSO>();
+                    NexusLog.Warn("GameFeelConfigSO", nameof(Instance), "",
+                        "Asset not found in Resources. Using default instance. Create from Dashboard → Tools → Game Feel & Camera.");
+                }
+                return s_instance;
+            }
+        }
+
+        [Header("Board")]
+        [Tooltip("Pole spacing on X axis (units).")]
+        public float PoleSpacing = 3.5f;
+        [Tooltip("Pole Y position (height).")]
+        public float PoleYPosition = 2.0f;
+        [Tooltip("Pole visual scale.")]
+        public Vector3 PoleScale = new(0.4f, 2.5f, 0.4f);
+        [Tooltip("Collider width as fraction of pole spacing (0-1).")]
+        public float PoleColliderWidthFraction = 0.85f;
+
+        [Header("Rings")]
+        [Tooltip("Ring scale when Torus prefab is available.")]
+        public Vector3 RingScaleTorus = new(3.0f, 0.25f, 3.0f);
+        [Tooltip("Ring scale fallback (cylinder).")]
+        public Vector3 RingScaleFallback = new(3.0f, 0.12f, 3.0f);
+        [Tooltip("Vertical offset of the first (bottom) ring from pole top.")]
+        public float RingBaseYOffset = -0.9f;
+        [Tooltip("Vertical stacking distance between rings.")]
+        public float RingStackSpacing = 0.4f;
+        [Tooltip("Y lift for the selected top ring.")]
+        public float RingSelectionLift = 0.35f;
+
+        [Header("Animation — Move")]
+        [Tooltip("Base duration for ring move jump (seconds).")]
+        public float MoveDuration = 0.3f;
+        [Tooltip("Jump arc power.")]
+        public float MoveJumpPower = 0.8f;
+        [Tooltip("Scale-pop multiplier on ring placement (1 = off).")]
+        public float RingPlacePulseScale = 1.25f;
+        [Tooltip("Pulse return duration.")]
+        public float RingPlacePulseDuration = 0.2f;
+
+        [Header("Animation — Selection")]
+        [Tooltip("Duration for selection highlight lift.")]
+        public float SelectionLiftDuration = 0.15f;
+        [Tooltip("Slow-mode speed multiplier.")]
+        public float SlowModeMultiplier = 2.0f;
+
+        [Header("Camera")]
+        [Tooltip("Camera position (world).")]
+        public Vector3 CameraPosition = new(0f, 8f, -12f);
+        [Tooltip("Camera rotation (euler).")]
+        public Vector3 CameraRotation = new(30f, 0f, 0f);
+        [Tooltip("Base orthographic size for 4 poles.")]
+        public float CameraBaseOrtho = 10f;
+        [Tooltip("Max orthographic size for 10 poles.")]
+        public float CameraMaxOrtho = 16f;
+        [Tooltip("Reference pole count for base ortho.")]
+        public int CameraBasePoles = 4;
+        [Tooltip("Reference pole count for max ortho.")]
+        public int CameraMaxPoles = 10;
+
+        [Header("Camera Shake")]
+        [Tooltip("Shake intensity on error.")]
+        public float ShakeErrorIntensity = 0.12f;
+        [Tooltip("Shake duration on error.")]
+        public float ShakeErrorDuration = 0.2f;
+        [Tooltip("Shake intensity on bomb explosion.")]
+        public float ShakeExplosionIntensity = 0.25f;
+        [Tooltip("Shake duration on bomb explosion.")]
+        public float ShakeExplosionDuration = 0.35f;
+
+        [Header("Pole Colors")]
+        [Tooltip("Pole selection highlight color.")]
+        public Color SelectedTint = new(0.30f, 0.85f, 1.0f, 1.0f);
+        [Tooltip("Pole error flash color.")]
+        public Color ErrorTint = new(1.0f, 0.30f, 0.30f, 1.0f);
+        [Tooltip("Locked pole color.")]
+        public Color LockedTint = Color.black;
+        [Tooltip("Error flash duration.")]
+        public float ErrorFlashDuration = 0.35f;
+
+        [Header("Rainbow Cycle")]
+        [Tooltip("Hue rotation speed multiplier.")]
+        public float RainbowHueSpeed = 0.25f;
+        [Tooltip("Rainbow saturation.")]
+        public float RainbowSaturation = 0.8f;
+        [Tooltip("Rainbow value/brightness.")]
+        public float RainbowValue = 0.9f;
+
+        [Header("VFX")]
+        [Tooltip("RingPop particle count.")]
+        public int RingPopCount = 12;
+        [Tooltip("RingPop burst duration.")]
+        public float RingPopDuration = 0.5f;
+        [Tooltip("RingPop auto-despawn delay.")]
+        public float RingPopDespawnDelay = 0.55f;
+        [Tooltip("Confetti piece count.")]
+        public int ConfettiCount = 40;
+        [Tooltip("Confetti fall duration range.")]
+        public Vector2 ConfettiFallDuration = new(1.8f, 3.0f);
+        [Tooltip("Confetti despawn delay.")]
+        public float ConfettiDespawnDelay = 3.1f;
+
+        [Header("Pool Sizes")]
+        public int RingPoolSize = 100;
+        public int RingPopPoolSize = 50;
+        public int ConfettiPoolSize = 30;
+    }
+}

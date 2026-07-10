@@ -10,6 +10,7 @@ using Nexus.Core.Services;
 using RingFlow.Gameplay.Services;
 using UnityEngine;
 using UnityEngine.UI;
+using DG.Tweening;
 
 namespace RingFlow.Gameplay.UI
 {
@@ -45,6 +46,8 @@ namespace RingFlow.Gameplay.UI
         private ScreenType _activeExclusiveScreen = ScreenType.Splash;
         private readonly Stack<ScreenType> _popupStack = new();
         private readonly List<ISignalSubscription> _subscriptions = new();
+
+        private const float ScreenFadeDuration = 0.3f;
 
         private void Awake()
         {
@@ -499,7 +502,8 @@ namespace RingFlow.Gameplay.UI
 
             foreach (var kvp in _screens)
             {
-                kvp.Value.SetActive(kvp.Key == signal.Screen);
+                bool shouldShow = kvp.Key == signal.Screen;
+                TransitionScreen(kvp.Value, shouldShow);
             }
             _activeExclusiveScreen = signal.Screen;
             _popupStack.Clear();
@@ -523,7 +527,7 @@ namespace RingFlow.Gameplay.UI
             foreach (var kvp in _screens)
             {
                 if (OverlayScreens.Contains(kvp.Key)) continue;
-                kvp.Value.SetActive(kvp.Key == popup);
+                TransitionScreen(kvp.Value, kvp.Key == popup);
             }
             _activeExclusiveScreen = popup;
         }
@@ -531,17 +535,48 @@ namespace RingFlow.Gameplay.UI
         private void ClosePopup(ScreenType popup)
         {
             if (!_screens.TryGetValue(popup, out var go)) return;
-            go.SetActive(false);
+            FadeOutAndDeactivate(go);
 
             if (_popupStack.Count > 0)
             {
                 var restore = _popupStack.Pop();
                 _activeExclusiveScreen = restore;
                 if (_screens.TryGetValue(restore, out var restoreGo))
-                {
-                    restoreGo.SetActive(true);
-                }
+                    FadeInAndActivate(restoreGo);
             }
+        }
+
+        private static void TransitionScreen(GameObject go, bool show)
+        {
+            if (go == null) return;
+            if (show) FadeInAndActivate(go);
+            else FadeOutAndDeactivate(go);
+        }
+
+        private static void FadeInAndActivate(GameObject go)
+        {
+            var cg = EnsureCanvasGroup(go);
+            DOTween.Kill(cg);
+            go.SetActive(true);
+            cg.alpha = 0f;
+            DOTween.To(() => cg.alpha, v => cg.alpha = v, 1f, ScreenFadeDuration)
+                .SetEase(Ease.OutCubic).SetTarget(cg);
+        }
+
+        private static void FadeOutAndDeactivate(GameObject go)
+        {
+            var cg = EnsureCanvasGroup(go);
+            DOTween.Kill(cg);
+            DOTween.To(() => cg.alpha, v => cg.alpha = v, 0f, ScreenFadeDuration)
+                .SetEase(Ease.InCubic).SetTarget(cg)
+                .OnComplete(() => go.SetActive(false));
+        }
+
+        private static CanvasGroup EnsureCanvasGroup(GameObject go)
+        {
+            var cg = go.GetComponent<CanvasGroup>();
+            if (cg == null) cg = go.AddComponent<CanvasGroup>();
+            return cg;
         }
 
         private void CloseAllPopups()

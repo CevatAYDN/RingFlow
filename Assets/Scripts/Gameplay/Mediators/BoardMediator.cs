@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 using Nexus.Core;
 using Nexus.Core.Services;
 
@@ -90,6 +91,8 @@ namespace RingFlow.Gameplay
         {
             _logger?.Log($"[BoardMediator] Move blocked: {signal.FromPoleId}->{signal.ToPoleId} ({signal.Reason}).");
             View?.FlashPoleError(signal.ToPoleId);
+            var f = Gameplay.GameFeelConfigSO.Instance;
+            View?.ShakeCamera(f.ShakeErrorIntensity, f.ShakeErrorDuration);
         }
 
         private void ApplySelection(int poleId)
@@ -117,6 +120,8 @@ namespace RingFlow.Gameplay
         {
             _logger?.Log($"[BoardMediator] Bomb exploded on pole {signal.PoleId}.");
             RebuildBoard();
+            var f = Gameplay.GameFeelConfigSO.Instance;
+            View?.ShakeCamera(f.ShakeExplosionIntensity, f.ShakeExplosionDuration);
         }
 
         protected override void OnUnbind()
@@ -135,6 +140,7 @@ namespace RingFlow.Gameplay
         {
             _logger?.Log($"[BoardMediator] Level {signal.LevelIndex} loaded. Rebuilding visual board for {_model.Poles.Count} poles.");
             RebuildBoard();
+            View?.FitCameraToBoard(_model.Poles.Count);
         }
 
         private void RebuildBoard()

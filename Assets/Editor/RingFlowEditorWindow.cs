@@ -22,6 +22,7 @@ namespace RingFlow.Editor
         private AdTesterSection _adTester;
         private DiagnosticsSection _diagnostics;
         private DatabaseSection _databaseSection;
+        private GameFeelSection _gameFeel;
 
         private Vector2 _scroll;
         private int _selectedTab;
@@ -106,9 +107,10 @@ namespace RingFlow.Editor
             _adTester = new AdTesterSection();
             _diagnostics = new DiagnosticsSection();
             _databaseSection = new DatabaseSection();
+            _gameFeel = new GameFeelSection();
 
             foreach (var s in new EditorSection[]
-                { _generator, _visualBuilder, _runtime, _settings, _adTester, _diagnostics, _databaseSection })
+                { _generator, _visualBuilder, _runtime, _settings, _adTester, _diagnostics, _databaseSection, _gameFeel })
                 s.HideHeader = true;
 
             _generator.OnEnable();
@@ -551,6 +553,9 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(8f);
             EditorGUILayout.LabelField("Diagnostics & Signals", EditorStyles.boldLabel);
             _diagnostics.OnGUI();
+            EditorGUILayout.Space(8f);
+            EditorGUILayout.LabelField("Game Feel & Camera", EditorStyles.boldLabel);
+            _gameFeel.OnGUI();
             EditorGUILayout.Space(8f);
             EditorGUILayout.LabelField("Database Editor", EditorStyles.boldLabel);
             _databaseSection.OnGUI();

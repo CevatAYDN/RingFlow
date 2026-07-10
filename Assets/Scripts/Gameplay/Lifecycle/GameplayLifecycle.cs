@@ -299,10 +299,11 @@ namespace RingFlow.Gameplay
                 }
 
                 var pool = context.TryResolve<IObjectPoolService>();
+                var feelConfig = GameFeelConfigSO.Instance;
                 if (pool != null)
                 {
-                    pool.Prewarm(vfxRegistry.RingPopPrefab, 50);
-                    pool.Prewarm(vfxRegistry.ConfettiPrefab, 30);
+                    pool.Prewarm(vfxRegistry.RingPopPrefab, feelConfig?.RingPopPoolSize ?? 50);
+                    pool.Prewarm(vfxRegistry.ConfettiPrefab, feelConfig?.ConfettiPoolSize ?? 30);
                 }
             }
             else
@@ -345,14 +346,27 @@ namespace RingFlow.Gameplay
                 esObj.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
             }
 
-            var cameras = Camera.allCameras;
-            for (int i = 0; i < cameras.Length; i++)
+            // P0 fix: force camera to correct position/angle regardless of scene defaults.
+            var mainCam = Camera.main ?? Object.FindAnyObjectByType<Camera>(FindObjectsInactive.Include);
+            if (mainCam != null)
             {
-                var cam = cameras[i];
+                var feel = GameFeelConfigSO.Instance;
+                mainCam.gameObject.tag = "MainCamera";
+                mainCam.orthographic = true;
+                mainCam.orthographicSize = feel.CameraBaseOrtho;
+                mainCam.transform.position = feel.CameraPosition;
+                mainCam.transform.rotation = Quaternion.Euler(feel.CameraRotation);
+            }
+            else
+            {
+                NexusLog.Error("GameplayLifecycle", "EnsureInputSetup", "",
+                    "MainCamera not found — cannot configure camera.");
+            }
+
+            foreach (var cam in Camera.allCameras)
+            {
                 if (cam != null && cam.GetComponent<PhysicsRaycaster>() == null)
-                {
                     cam.gameObject.AddComponent<PhysicsRaycaster>();
-                }
             }
         }
 

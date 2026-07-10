@@ -17,7 +17,7 @@ namespace RingFlow.Gameplay.UI
             _diag?.Checkpoint("LevelSelectMediator.OnBind");
             if (View == null)
             {
-                NexusLog.Error("LevelSelectMediator", nameof(OnBind), "", "LevelSelectView not bound.");
+                NexusLog.Warn("LevelSelectMediator", nameof(OnBind), "", "LevelSelectView not bound.");
                 return;
             }
             _tracker?.TrackViewBound(View?.GetType(), GetType());
