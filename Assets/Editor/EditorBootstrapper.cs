@@ -33,6 +33,8 @@ namespace RingFlow.Editor
             var rootObj = CreateRootWithContext(contextData);
             AttachComponents(rootObj);
             EnsureEventSystem();
+            EnsureMainCamera();
+            EnsureDirectionalLight();
             EnsureCameraRaycasters();
             MarkSceneDirty();
 
@@ -116,6 +118,61 @@ namespace RingFlow.Editor
                 var instance = eventSystem.gameObject.AddComponent(inputModuleType);
                 if (instance != null) Undo.RegisterCreatedObjectUndo(instance, "Attach Input System Module");
             }
+        }
+
+        private static void EnsureMainCamera()
+        {
+            var camObj = GameObject.Find("Main Camera");
+            Camera cam;
+            if (camObj == null)
+            {
+                camObj = new GameObject("Main Camera");
+                cam = camObj.AddComponent<Camera>();
+            }
+            else
+            {
+                cam = camObj.GetComponent<Camera>();
+                if (cam == null) cam = camObj.AddComponent<Camera>();
+            }
+
+            cam.orthographic = true;
+            cam.orthographicSize = 8f;
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.12f, 0.14f, 0.17f);
+            cam.nearClipPlane = 0.1f;
+            cam.farClipPlane = 100f;
+            cam.depth = -1;
+
+            var t = camObj.transform;
+            t.position = new Vector3(10f, 6f, -10f);
+            t.rotation = Quaternion.Euler(20f, 0f, 0f);
+
+            camObj.tag = "MainCamera";
+        }
+
+        private static void EnsureDirectionalLight()
+        {
+            var lightObj = GameObject.Find("Directional Light");
+            Light light;
+            if (lightObj == null)
+            {
+                lightObj = new GameObject("Directional Light");
+                light = lightObj.AddComponent<Light>();
+            }
+            else
+            {
+                light = lightObj.GetComponent<Light>();
+                if (light == null) light = lightObj.AddComponent<Light>();
+            }
+
+            light.type = LightType.Directional;
+            light.intensity = 1f;
+            light.shadows = LightShadows.Soft;
+            light.color = new Color(1f, 0.96f, 0.90f);
+
+            var t = lightObj.transform;
+            t.position = new Vector3(0f, 10f, 0f);
+            t.rotation = Quaternion.Euler(50f, -30f, 0f);
         }
 
         private static void EnsureCameraRaycasters()

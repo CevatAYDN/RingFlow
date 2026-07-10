@@ -13,6 +13,8 @@ namespace RingFlow.Editor
         private int _poleCount = 4;
         private int _colorCount = 3;
         private int _maxCapacity = 4;
+        private bool _autoSave = true;
+        private bool _generateInProgress;
 
         [System.NonSerialized] private LevelData _generatedLevel;
         private string _solveStatus = "No level loaded / generated.";
@@ -78,13 +80,25 @@ namespace RingFlow.Editor
                     }
                 }
 
-                if (_generatedLevel != null)
+                _autoSave = EditorGUILayout.Toggle("Auto-save to Asset", _autoSave);
+
+                using (new EditorGUILayout.HorizontalScope())
                 {
-                    EditorGUILayout.Space(2f);
-                    if (GUILayout.Button("Save Generated Level as Asset", GUILayout.Height(ButtonHeight)))
+                    if (GUILayout.Button("Generate All 500 Levels", GUILayout.Height(ButtonHeight)))
+                    {
+                        GenerateAllLevels();
+                    }
+
+                    if (_generatedLevel != null && !_autoSave &&
+                        GUILayout.Button("Save Current to Asset", GUILayout.Height(ButtonHeight)))
                     {
                         SaveLevelAsset(_generatedLevel);
                     }
+                }
+
+                if (_generateInProgress)
+                {
+                    EditorGUILayout.HelpBox("Generating all levels... Check Console for progress.", MessageType.Info);
                 }
 
                 DrawGenerationResults();
@@ -264,6 +278,11 @@ namespace RingFlow.Editor
             Generate();
         }
 
+        public void GenerateFromDashboardAll()
+        {
+            GenerateAllLevels();
+        }
+
         private void Generate()
         {
             if (_levelIndex < 1 || _levelIndex > WorldConfigSO.TotalLevels)
@@ -319,6 +338,105 @@ namespace RingFlow.Editor
                 _solveStatus = "Unsolvable! Seed failed validation.";
                 _solutionSteps.Clear();
             }
+
+            if (_autoSave)
+            {
+                SaveLevelAsset(_generatedLevel);
+            }
+        }
+
+        private void GenerateAllLevels()
+        {
+            _generateInProgress = true;
+
+            string folderPath = "Assets/Resources/Levels";
+            EnsureLevelsFolder(folderPath);
+
+            int okCount = 0;
+            int failed = 0;
+            int total = WorldConfigSO.TotalLevels;
+
+            int originalPoleCount = _poleCount;
+            int originalColorCount = _colorCount;
+            int originalMaxCapacity = _maxCapacity;
+
+            for (int level = 1; level <= total; level++)
+            {
+                int poles = DifficultyCurve.PoleCountForLevel(level);
+                int colors = DifficultyCurve.ColorCountForLevel(level);
+                int maxCap = DifficultyCurve.MaxCapacityForLevel(level);
+                if (poles < colors + 1) poles = colors + 1;
+                if (poles > 12) poles = 12;
+
+                var levelData = LevelGenerator.GenerateLevel(level, 100 + level, poles, colors, maxCap);
+                if (levelData == null)
+                {
+                    failed++;
+                    NexusLog.Warn("RingFlowEditor", nameof(GenerateAllLevels), level.ToString(),
+                        $"Level {level} could not be generated (exhausted seeds). Skipping.");
+                    continue;
+                }
+
+                SaveLevelAssetSilent(levelData, folderPath);
+                okCount++;
+
+                if (level % 100 == 0)
+                {
+                    NexusLog.Info("RingFlowEditor", nameof(GenerateAllLevels), "",
+                        $"Progress: {level}/{total} levels generated ({okCount} ok, {failed} failed).");
+                }
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            NexusLog.Info("RingFlowEditor", nameof(GenerateAllLevels), "",
+                $"Finished: {okCount}/{total} levels generated, {failed} failed.");
+
+            _generateInProgress = false;
+
+            EditorUtility.DisplayDialog("Batch Generation Complete",
+                $"Generated {okCount}/{total} levels to {folderPath}\n{failed} failed.",
+                "OK");
+
+            _poleCount = originalPoleCount;
+            _colorCount = originalColorCount;
+            _maxCapacity = originalMaxCapacity;
+        }
+
+        private static void EnsureLevelsFolder(string folderPath)
+        {
+            if (!AssetDatabase.IsValidFolder("Assets/Resources"))
+            {
+                AssetDatabase.CreateFolder("Assets", "Resources");
+            }
+            if (!AssetDatabase.IsValidFolder(folderPath))
+            {
+                AssetDatabase.CreateFolder("Assets/Resources", "Levels");
+            }
+        }
+
+        private static void SaveLevelAssetSilent(LevelData levelData, string folderPath)
+        {
+            string assetPath = $"{folderPath}/Level_{levelData.LevelIndex}.asset";
+            LevelDataSO levelSO = AssetDatabase.LoadAssetAtPath<LevelDataSO>(assetPath);
+            bool isNew = false;
+            if (levelSO == null)
+            {
+                levelSO = ScriptableObject.CreateInstance<LevelDataSO>();
+                isNew = true;
+            }
+
+            levelSO.Data = CloneLevelData(levelData);
+
+            if (isNew)
+            {
+                AssetDatabase.CreateAsset(levelSO, assetPath);
+            }
+            else
+            {
+                EditorUtility.SetDirty(levelSO);
+            }
         }
 
         private void SaveLevelAsset(LevelData levelData)
@@ -364,7 +482,7 @@ namespace RingFlow.Editor
             EditorUtility.DisplayDialog("Success", $"Level saved to asset: {assetPath}\nThis level will now load automatically at runtime!", "OK");
         }
 
-        private LevelData CloneLevelData(LevelData source)
+        private static LevelData CloneLevelData(LevelData source)
         {
             var clone = new LevelData
             {
