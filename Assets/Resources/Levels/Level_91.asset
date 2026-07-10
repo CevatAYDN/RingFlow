@@ -14,57 +14,54 @@ MonoBehaviour:
   m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.LevelDataSO
   Data:
     LevelIndex: 91
-    Seed: 192
-    TargetMoves: 26
+    Seed: 191
+    TargetMoves: 18
     Poles:
     - MaxCapacity: 4
       Rings:
-      - Color: 1
-        Type: 0
-        AdditionalData: 0
-      - Color: 3
-        Type: 0
-        AdditionalData: 0
-      - Color: 5
-        Type: 0
-        AdditionalData: 0
-      IsLocked: 0
-    - MaxCapacity: 4
-      Rings:
-      - Color: 2
+      - Color: 4
         Type: 0
         AdditionalData: 0
       - Color: 1
         Type: 0
         AdditionalData: 0
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
-      IsLocked: 0
-    - MaxCapacity: 4
-      Rings:
-      - Color: 3
-        Type: 0
+      - Color: 4
+        Type: 2
         AdditionalData: 0
       - Color: 5
         Type: 2
         AdditionalData: 0
-      - Color: 3
-        Type: 0
-        AdditionalData: 0
+      IsLocked: 0
+    - MaxCapacity: 4
+      Rings: []
       IsLocked: 0
     - MaxCapacity: 4
       Rings:
-      - Color: 6
-        Type: 2
-        AdditionalData: 0
-      - Color: 4
+      - Color: 3
         Type: 0
         AdditionalData: 0
       - Color: 2
         Type: 0
         AdditionalData: 0
-      - Color: 6
+      - Color: 2
+        Type: 0
+        AdditionalData: 0
+      - Color: 2
+        Type: 0
+        AdditionalData: 0
+      IsLocked: 0
+    - MaxCapacity: 4
+      Rings:
+      - Color: 3
+        Type: 0
+        AdditionalData: 0
+      - Color: 2
+        Type: 0
+        AdditionalData: 0
+      - Color: 1
+        Type: 0
+        AdditionalData: 0
+      - Color: 3
         Type: 0
         AdditionalData: 0
       IsLocked: 0
@@ -79,18 +76,6 @@ MonoBehaviour:
       - Color: 4
         Type: 0
         AdditionalData: 0
-      IsLocked: 0
-    - MaxCapacity: 4
-      Rings:
-      - Color: 6
-        Type: 0
-        AdditionalData: 0
-      - Color: 6
-        Type: 0
-        AdditionalData: 0
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
       - Color: 4
         Type: 0
         AdditionalData: 0
@@ -100,7 +85,7 @@ MonoBehaviour:
       - Color: 1
         Type: 0
         AdditionalData: 0
-      - Color: 4
+      - Color: 5
         Type: 0
         AdditionalData: 0
       - Color: 1
@@ -109,4 +94,7 @@ MonoBehaviour:
       - Color: 3
         Type: 0
         AdditionalData: 0
+      IsLocked: 0
+    - MaxCapacity: 4
+      Rings: []
       IsLocked: 0

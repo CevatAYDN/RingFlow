@@ -26,7 +26,7 @@ namespace RingFlow.Editor
 
         private Vector2 _scroll;
         private int _selectedTab;
-        private readonly string[] _tabs = { "Home", "Levels", "UI Studio", "Tools" };
+        private readonly string[] _tabs = { "Ana Sayfa", "Seviyeler", "Arayüz Stüdyosu", "Ayarlar & Araçlar" };
         private Vector2 _uiScroll;
         private ScreenType _uiSelectedScreen = ScreenType.Splash;
 
@@ -169,7 +169,7 @@ namespace RingFlow.Editor
         private void OnGUI()
         {
             RefreshValidationCache();
-            DrawHeader("RING FLOW DASHBOARD");
+            DrawHeader("RING FLOW KONTROL PANELİ");
             DrawToolbar();
             _scroll = EditorGUILayout.BeginScrollView(_scroll);
 
@@ -221,9 +221,9 @@ namespace RingFlow.Editor
                 EditorGUILayout.LabelField(scene.name, GUILayout.MinWidth(120f));
 
                 if (_cachedHasRoot)
-                    EditorGUILayout.LabelField("Root: OK", GUILayout.Width(65f));
+                    EditorGUILayout.LabelField("Root: Tamam", GUILayout.Width(80f));
                 if (_cachedHasUIRoot)
-                    EditorGUILayout.LabelField("UI: OK", GUILayout.Width(50f));
+                    EditorGUILayout.LabelField("UI: Tamam", GUILayout.Width(65f));
 
                 GUILayout.FlexibleSpace();
 
@@ -232,19 +232,19 @@ namespace RingFlow.Editor
                 if (errCount > 0)
                 {
                     GUI.color = new Color(1f, 0.4f, 0.4f);
-                    EditorGUILayout.LabelField($"Errors: {errCount}", EditorStyles.boldLabel, GUILayout.Width(80f));
+                    EditorGUILayout.LabelField($"Hatalar: {errCount}", EditorStyles.boldLabel, GUILayout.Width(80f));
                     GUI.color = Color.white;
                 }
                 if (warnCount > 0)
                 {
                     GUI.color = new Color(1f, 0.85f, 0.3f);
-                    EditorGUILayout.LabelField($"Warnings: {warnCount}", GUILayout.Width(90f));
+                    EditorGUILayout.LabelField($"Uyarılar: {warnCount}", GUILayout.Width(90f));
                     GUI.color = Color.white;
                 }
 
-                if (GUILayout.Button("Console", EditorStyles.miniButton, GUILayout.Width(65f)))
+                if (GUILayout.Button("Konsol", EditorStyles.miniButton, GUILayout.Width(65f)))
                     EditorApplication.ExecuteMenuItem("Window/General/Console");
-                if (GUILayout.Button("Clear", EditorStyles.miniButton, GUILayout.Width(45f)))
+                if (GUILayout.Button("Temizle", EditorStyles.miniButton, GUILayout.Width(55f)))
                     LogMonitor.Reset();
             }
         }
@@ -271,7 +271,7 @@ namespace RingFlow.Editor
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    EditorGUILayout.LabelField("Scene", EditorStyles.boldLabel, GUILayout.Width(60f));
+                    EditorGUILayout.LabelField("Aktif Sahne", EditorStyles.boldLabel, GUILayout.Width(80f));
                     EditorGUILayout.LabelField(scene.name + (scene.isDirty ? " *" : ""), GUILayout.MinWidth(150f));
 
                     var prevColor = GUI.color;
@@ -280,26 +280,26 @@ namespace RingFlow.Editor
                     GUI.color = prevColor;
 
                     GUILayout.FlexibleSpace();
-                    if (GUILayout.Button("Create Scene", EditorStyles.miniButton, GUILayout.Width(100f)))
+                    if (GUILayout.Button("Sahne Oluştur", EditorStyles.miniButton, GUILayout.Width(100f)))
                         CreateWorkingScene();
-                    if (GUILayout.Button("Setup Bootstrapper", EditorStyles.miniButton, GUILayout.Width(130f)))
+                    if (GUILayout.Button("Kurulum Yap (Bootstrap)", EditorStyles.miniButton, GUILayout.Width(140f)))
                         BootstrapScene();
                 }
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     EditorGUILayout.LabelField(
-                        _cachedHasRoot ? "Root: OK" : "Root: MISSING",
+                        _cachedHasRoot ? "Root: Tamam" : "Root: EKSİK",
                         _cachedHasRoot ? EditorStyles.miniLabel : EditorStyles.miniBoldLabel,
-                        GUILayout.Width(80f));
-                    EditorGUILayout.LabelField(
-                        _cachedHasUIRoot ? "UIRoot: OK" : "UIRoot: MISSING",
-                        _cachedHasUIRoot ? EditorStyles.miniLabel : EditorStyles.miniBoldLabel,
                         GUILayout.Width(90f));
                     EditorGUILayout.LabelField(
-                        _cachedHasEventSystem ? "EventSystem: OK" : "EventSystem: MISSING",
+                        _cachedHasUIRoot ? "UIRoot: Tamam" : "UIRoot: EKSİK",
+                        _cachedHasUIRoot ? EditorStyles.miniLabel : EditorStyles.miniBoldLabel,
+                        GUILayout.Width(100f));
+                    EditorGUILayout.LabelField(
+                        _cachedHasEventSystem ? "EventSystem: Tamam" : "EventSystem: EKSİK",
                         _cachedHasEventSystem ? EditorStyles.miniLabel : EditorStyles.miniBoldLabel,
-                        GUILayout.Width(120f));
+                        GUILayout.Width(140f));
                 }
             }
         }
@@ -308,20 +308,20 @@ namespace RingFlow.Editor
         {
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                EditorGUILayout.LabelField("Quick Actions", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Hızlı İşlemler", EditorStyles.boldLabel);
                 EditorGUILayout.Space(2f);
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    if (ActionCard("Levels", "Generate &\nBuild", new Color(0.25f, 0.55f, 0.85f)))
+                    if (ActionCard("Seviyeler", "Üret & Kur", new Color(0.25f, 0.55f, 0.85f)))
                         _selectedTab = 1;
-                    if (ActionCard("UI Studio", "Screens &\nSignals", new Color(0.7f, 0.35f, 0.8f)))
+                    if (ActionCard("Arayüz", "Ekran & Sinyal", new Color(0.7f, 0.35f, 0.8f)))
                         _selectedTab = 2;
-                    if (ActionCard("Tools", "Runtime, Config\n& Diagnostics", new Color(0.4f, 0.7f, 0.4f)))
+                    if (ActionCard("Araçlar", "Çalışma & Ayar", new Color(0.4f, 0.7f, 0.4f)))
                         _selectedTab = 3;
-                    if (ActionCard("Generate", "Single\nLevel", new Color(0.85f, 0.5f, 0.2f)))
+                    if (ActionCard("Üret", "Tek Seviye", new Color(0.85f, 0.5f, 0.2f)))
                         _generator.GenerateFromDashboard();
-                    if (ActionCard("Build Board", "Scene\nBoard", new Color(0.85f, 0.3f, 0.3f)))
+                    if (ActionCard("Tahta Kur", "Sahnede Kur", new Color(0.85f, 0.3f, 0.3f)))
                         _visualBuilder.BuildFromDashboard();
                 }
             }
@@ -352,16 +352,16 @@ namespace RingFlow.Editor
             {
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    EditorGUILayout.LabelField("Level Asset", EditorStyles.boldLabel, GUILayout.Width(90f));
+                    EditorGUILayout.LabelField("Seviye Varlığı", EditorStyles.boldLabel, GUILayout.Width(90f));
                     if (_generator.GeneratedLevel != null)
-                        EditorGUILayout.LabelField($"Level {_generator.GeneratedLevel.LevelIndex} loaded", GUILayout.MinWidth(120f));
+                        EditorGUILayout.LabelField($"Seviye {_generator.GeneratedLevel.LevelIndex} yüklendi", GUILayout.MinWidth(120f));
                     else
-                        EditorGUILayout.LabelField("No level loaded", GUILayout.MinWidth(120f));
+                        EditorGUILayout.LabelField("Yüklü seviye yok", GUILayout.MinWidth(120f));
 
                     GUILayout.FlexibleSpace();
-                    if (GUILayout.Button("Generate", EditorStyles.miniButton, GUILayout.Width(80f)))
+                    if (GUILayout.Button("Üret", EditorStyles.miniButton, GUILayout.Width(80f)))
                         _generator.GenerateFromDashboard();
-                    if (GUILayout.Button("Generate All 500", EditorStyles.miniButton, GUILayout.Width(110f)))
+                    if (GUILayout.Button("Toplu Üret", EditorStyles.miniButton, GUILayout.Width(110f)))
                         _generator.GenerateFromDashboardAll();
                 }
             }
@@ -373,10 +373,10 @@ namespace RingFlow.Editor
 
         private void DrawLevelsTab()
         {
-            EditorGUILayout.LabelField("Level Generator & Solver", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Seviye Üretici & Çözücü Ayarları", EditorStyles.boldLabel);
             _generator.OnGUI();
             EditorGUILayout.Space(10f);
-            EditorGUILayout.LabelField("Scene Board Builder", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Sahne Tahtası Oluşturucu", EditorStyles.boldLabel);
             _visualBuilder.OnGUI();
         }
 
@@ -405,9 +405,9 @@ namespace RingFlow.Editor
             using (new EditorGUILayout.HorizontalScope())
             {
                 string status;
-                if (uiRoot == null) status = "MISSING";
-                else if (GetUIRootCanvas(uiRoot) != null) status = "Initialized";
-                else status = "Pending Awake";
+                if (uiRoot == null) status = "EKSİK";
+                else if (GetUIRootCanvas(uiRoot) != null) status = "Hazır";
+                else status = "Başlatma Bekliyor";
 
                 EditorGUILayout.LabelField($"UIRoot: {(uiRoot != null ? uiRoot.name : "\u2014")}  [{status}]",
                     EditorStyles.boldLabel, GUILayout.MinWidth(280f));
@@ -415,16 +415,16 @@ namespace RingFlow.Editor
 
                 using (new EditorGUI.DisabledScope(uiRoot == null))
                 {
-                    if (GUILayout.Button("Reset Canvas", GUILayout.Height(22)))
+                    if (GUILayout.Button("Tuvali Sıfırla (Reset)", GUILayout.Height(22)))
                     {
-                        if (EditorUtility.DisplayDialog("Reset UIRoot Canvas",
-                            "Destroy the runtime canvas and all loaded screen instances?", "Reset", "Cancel"))
+                        if (EditorUtility.DisplayDialog("UIRoot Tuvalini Sıfırla",
+                            "Tüm yüklenen ekran örneklerini yok etmek istediğinize emin misiniz?", "Sıfırla", "İptal"))
                             ResetUIRootCanvas(uiRoot);
                     }
-                    if (GUILayout.Button("Reload Screens", GUILayout.Height(22)))
+                    if (GUILayout.Button("Ekranları Yeniden Yükle", GUILayout.Height(22)))
                         ReloadPrefabScreens(uiRoot);
                 }
-                if (GUILayout.Button("Refresh", GUILayout.Width(70f), GUILayout.Height(22)))
+                if (GUILayout.Button("Yenile", GUILayout.Width(70f), GUILayout.Height(22)))
                     Repaint();
             }
         }
@@ -434,7 +434,7 @@ namespace RingFlow.Editor
             var uiRoot = GetCachedUIRoot();
             if (uiRoot == null)
             {
-                EditorGUILayout.HelpBox("UIRoot missing in scene. Run Setup Bootstrapper first.", MessageType.Warning);
+                EditorGUILayout.HelpBox("Sahnede UIRoot bulunamadı. Önce kurulumu yapın (Setup Bootstrapper).", MessageType.Warning);
                 return;
             }
 
@@ -445,14 +445,14 @@ namespace RingFlow.Editor
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                EditorGUILayout.LabelField($"Active: {active ?? "\u2014"}   Popups: {FormatStack(popupStack)}   " +
-                    $"Subs: {subs?.Count ?? 0}{(Application.isPlaying ? "" : " (PlayMode)")}",
+                EditorGUILayout.LabelField($"Aktif: {active ?? "\u2014"}   Popuplar: {FormatStack(popupStack)}   " +
+                    $"Abonelik: {subs?.Count ?? 0}{(Application.isPlaying ? "" : " (PlayMode)")}",
                     EditorStyles.miniLabel);
             }
 
             if (screens == null || screens.Count == 0)
             {
-                EditorGUILayout.HelpBox("No screens registered.", MessageType.Info);
+                EditorGUILayout.HelpBox("Kayıtlı ekran bulunamadı.", MessageType.Info);
                 return;
             }
 
@@ -471,21 +471,21 @@ namespace RingFlow.Editor
                 using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
                 {
                     string marker = isActiveScreen ? ">>" : "  ";
-                    string state = go == null ? "NULL" : (isActive ? "A" : "H");
+                    string state = go == null ? "YOK" : (isActive ? "Açık" : "Gizli");
                     var style = new GUIStyle(EditorStyles.label)
                         { fontStyle = isActiveScreen ? FontStyle.Bold : FontStyle.Normal };
-                    EditorGUILayout.LabelField($"{marker} {screen,-14} [{state}] {btnCount} btn", style,
+                    EditorGUILayout.LabelField($"{marker} {screen,-14} [{state}] {btnCount} Buton", style,
                         GUILayout.MinWidth(240f));
 
                     using (new EditorGUI.DisabledScope(go == null))
                     {
-                        if (GUILayout.Button("Show", GUILayout.Width(44f)))
+                        if (GUILayout.Button("Göster", GUILayout.Width(44f)))
                             ManualSetScreenActive(uiRoot, screen, true);
-                        if (GUILayout.Button("Hide", GUILayout.Width(44f)))
+                        if (GUILayout.Button("Gizle", GUILayout.Width(44f)))
                             ManualSetScreenActive(uiRoot, screen, false);
-                        if (GUILayout.Button("Signal", GUILayout.Width(50f)))
+                        if (GUILayout.Button("Sinyal", GUILayout.Width(50f)))
                             FireShowScreen(screen);
-                        if (GUILayout.Button("Open", GUILayout.Width(44f)))
+                        if (GUILayout.Button("Aç", GUILayout.Width(44f)))
                             OpenPrefabSourceForScreen(screen, go);
                     }
                 }
@@ -497,12 +497,12 @@ namespace RingFlow.Editor
         {
             using (new EditorGUILayout.HorizontalScope())
             {
-                EditorGUILayout.LabelField("Signal Tester (PlayMode required)", EditorStyles.miniBoldLabel,
-                    GUILayout.Width(200f));
+                EditorGUILayout.LabelField("Sinyal Test Edici (PlayMode gerekir)", EditorStyles.miniBoldLabel,
+                    GUILayout.Width(220f));
                 _uiSelectedScreen = (ScreenType)EditorGUILayout.EnumPopup(_uiSelectedScreen, GUILayout.Width(140f));
-                if (GUILayout.Button("Show Signal", GUILayout.Height(22)))
+                if (GUILayout.Button("Göster Sinyali", GUILayout.Height(22)))
                     FireShowScreen(_uiSelectedScreen);
-                if (GUILayout.Button("Hide Signal", GUILayout.Height(22)))
+                if (GUILayout.Button("Gizle Sinyali", GUILayout.Height(22)))
                     FireHideScreen(_uiSelectedScreen);
             }
         }
@@ -511,12 +511,12 @@ namespace RingFlow.Editor
         {
             using (new EditorGUILayout.HorizontalScope())
             {
-                if (GUILayout.Button("Save Scene", GUILayout.Height(24)))
+                if (GUILayout.Button("Sahneyi Kaydet", GUILayout.Height(24)))
                 {
                     UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
-                    Debug.Log("[RingFlow] Scene saved with current UI state.");
+                    Debug.Log("[RingFlow] Sahne mevcut durumla kaydedildi.");
                 }
-                if (GUILayout.Button("Reload Prefab Screens", GUILayout.Height(24)))
+                if (GUILayout.Button("Prefab Ekranlarını Yenile", GUILayout.Height(24)))
                 {
                     try
                     {
@@ -526,12 +526,12 @@ namespace RingFlow.Editor
                     catch (System.Exception ex)
                     {
                         Debug.LogException(ex);
-                        EditorUtility.DisplayDialog("Reload Prefab Screens", ex.Message, "OK");
+                        EditorUtility.DisplayDialog("Prefab Ekranlarını Yenile", ex.Message, "Tamam");
                     }
                 }
-                if (GUILayout.Button("Create Missing UI Screens", GUILayout.Height(24)))
+                if (GUILayout.Button("Eksik Ekranları Oluştur", GUILayout.Height(24)))
                     RingFlowEditorUiStudio.CreateMissingUIScreenPrefabs();
-                if (GUILayout.Button("Export UI (JSON)", GUILayout.Height(24)))
+                if (GUILayout.Button("UI Yapısını Dışa Aktar (JSON)", GUILayout.Height(24)))
                     ExportUIHierarchyAsJson();
             }
         }
@@ -542,22 +542,22 @@ namespace RingFlow.Editor
 
         private void DrawToolsTab()
         {
-            EditorGUILayout.LabelField("PlayMode Lifecycle", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("PlayMode Çalışma Modları", EditorStyles.boldLabel);
             _runtime.OnGUI();
             EditorGUILayout.Space(8f);
-            EditorGUILayout.LabelField("Ad & Reward Tester", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Reklam ve Ödüllendirme Test Cihazı", EditorStyles.boldLabel);
             _adTester.OnGUI();
             EditorGUILayout.Space(8f);
-            EditorGUILayout.LabelField("Settings", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Genel Ayarlar", EditorStyles.boldLabel);
             _settings.OnGUI();
             EditorGUILayout.Space(8f);
-            EditorGUILayout.LabelField("Diagnostics & Signals", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Analiz ve Sinyal İnceleyici", EditorStyles.boldLabel);
             _diagnostics.OnGUI();
             EditorGUILayout.Space(8f);
-            EditorGUILayout.LabelField("Game Feel & Camera", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Oyun Hissiyatı (Game Feel) & Kamera", EditorStyles.boldLabel);
             _gameFeel.OnGUI();
             EditorGUILayout.Space(8f);
-            EditorGUILayout.LabelField("Database Editor", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Veritabanı Düzenleyici", EditorStyles.boldLabel);
             _databaseSection.OnGUI();
         }
 

@@ -213,6 +213,7 @@ namespace RingFlow.Gameplay
         // Helper search methods
         public DifficultyBand GetBandForLevel(int level)
         {
+            if (level <= 3) return DifficultyBand.Tutorial;
             if (DifficultyBands == null || DifficultyBands.Count == 0) return DifficultyBand.Tutorial;
             foreach (var b in DifficultyBands)
             {
@@ -223,22 +224,32 @@ namespace RingFlow.Gameplay
 
         public int GetColorCountForLevel(int level)
         {
+            if (level == 1 || level == 2) return 2;
+            if (level == 3) return 3;
+
             if (ColorCurve == null || ColorCurve.Count == 0) return 3;
+            int count = ColorCurve[0].ColorCount;
             foreach (var pt in ColorCurve)
             {
-                if (level <= pt.LevelThreshold) return pt.ColorCount;
+                if (level >= pt.LevelThreshold)
+                    count = pt.ColorCount;
             }
-            return ColorCurve[^1].ColorCount;
+            return count;
         }
 
         public int GetPoleCountForLevel(int level)
         {
-            // Maps Tutorial(4), Easy(5), Medium(6), Hard(7), Expert(8), Master(9), Legend(10)
-            return 4 + (int)GetBandForLevel(level);
+            if (level == 1 || level == 2) return 3;
+            if (level == 3) return 4;
+
+            return GetColorCountForLevel(level) + GetMinEmptyPolesForLevel(level);
         }
 
         public int GetMinEmptyPolesForLevel(int level)
         {
+            if (level == 1 || level == 2) return 1;
+            if (level == 3) return 1;
+
             if (DifficultyBands == null || DifficultyBands.Count == 0) return 1;
             var band = GetBandForLevel(level);
             foreach (var b in DifficultyBands)
@@ -250,6 +261,9 @@ namespace RingFlow.Gameplay
 
         public int GetMaxCapacityForLevel(int level)
         {
+            if (level == 1 || level == 2) return 3;
+            if (level == 3) return 4;
+
             if (DifficultyBands == null || DifficultyBands.Count == 0) return 4;
             var band = GetBandForLevel(level);
             foreach (var b in DifficultyBands)

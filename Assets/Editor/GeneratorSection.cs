@@ -15,15 +15,16 @@ namespace RingFlow.Editor
         private int _maxCapacity = 4;
         private bool _autoSave = true;
         private bool _generateInProgress;
+        private int _batchLevelCount = 100;
 
         [System.NonSerialized] private LevelData _generatedLevel;
-        private string _solveStatus = "No level loaded / generated.";
+        private string _solveStatus = "Seviye yüklenmedi / üretilmedi.";
         private readonly List<string> _solutionSteps = new();
         private Vector2 _solutionScroll;
 
         public LevelData GeneratedLevel => _generatedLevel;
 
-        public override string DisplayName => "Level Generator & AI Solver";
+        public override string DisplayName => "Seviye Üretici & Yapay Zeka Çözücü";
         public override string PrefKey => EditorPrefsKeys.FoldGenerator;
 
         public void OnEnable()
@@ -33,6 +34,7 @@ namespace RingFlow.Editor
             _poleCount = EditorPrefs.GetInt(EditorPrefsKeys.Poles, 4);
             _colorCount = EditorPrefs.GetInt(EditorPrefsKeys.Colors, 3);
             _maxCapacity = EditorPrefs.GetInt(EditorPrefsKeys.MaxCap, 4);
+            _batchLevelCount = EditorPrefs.GetInt("RF_BatchLevelCount", 100);
         }
 
         public void OnDisable()
@@ -42,6 +44,7 @@ namespace RingFlow.Editor
             EditorPrefs.SetInt(EditorPrefsKeys.Poles, _poleCount);
             EditorPrefs.SetInt(EditorPrefsKeys.Colors, _colorCount);
             EditorPrefs.SetInt(EditorPrefsKeys.MaxCap, _maxCapacity);
+            EditorPrefs.SetInt("RF_BatchLevelCount", _batchLevelCount);
         }
 
         public override void OnGUI()
@@ -52,11 +55,11 @@ namespace RingFlow.Editor
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 EditorGUI.BeginChangeCheck();
-                _levelIndex  = EditorGUILayout.IntSlider("Level Index",   _levelIndex,  1, WorldConfigSO.TotalLevels);
-                _seed        = EditorGUILayout.IntField  ("Random Seed",   _seed);
-                _poleCount   = EditorGUILayout.IntSlider("Poles Count",   _poleCount,   3, 12);
-                _colorCount  = EditorGUILayout.IntSlider("Colors Count",  _colorCount,  2, 10);
-                _maxCapacity = EditorGUILayout.IntSlider("Max Ring Cap",  _maxCapacity, 3, 5);
+                _levelIndex  = EditorGUILayout.IntSlider("Seviye Endeksi",   _levelIndex,  1, WorldConfigSO.TotalLevels);
+                _seed        = EditorGUILayout.IntField  ("Rastgele Tohum (Seed)",   _seed);
+                _poleCount   = EditorGUILayout.IntSlider("Direk Sayısı",   _poleCount,   3, 12);
+                _colorCount  = EditorGUILayout.IntSlider("Renk Sayısı",  _colorCount,  2, 10);
+                _maxCapacity = EditorGUILayout.IntSlider("Maks. Halka Kapasitesi",  _maxCapacity, 3, 5);
                 if (EditorGUI.EndChangeCheck())
                 {
                     EditorPrefs.SetInt(EditorPrefsKeys.LevelIndex, _levelIndex);
@@ -70,27 +73,32 @@ namespace RingFlow.Editor
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    if (GUILayout.Button("Apply GDD Curve", GUILayout.Height(ButtonHeight)))
+                    if (GUILayout.Button("GDD Zorluk Eğrisini Uygula", GUILayout.Height(ButtonHeight)))
                         ApplyGddCurveParams();
 
-                    if (GUILayout.Button("Generate Level", GUILayout.Height(ButtonHeight)))
+                    if (GUILayout.Button("Tek Seviye Üret", GUILayout.Height(ButtonHeight)))
                         Generate();
                 }
 
-                _autoSave = EditorGUILayout.Toggle("Auto-save to Asset", _autoSave);
+                _autoSave = EditorGUILayout.Toggle("Otomatik Asset Olarak Kaydet", _autoSave);
 
-                using (new EditorGUILayout.HorizontalScope())
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("Toplu Seviye Üretim Ayarları", EditorStyles.boldLabel);
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
-                    if (GUILayout.Button("Generate All 500 Levels", GUILayout.Height(ButtonHeight)))
-                        GenerateAllLevels();
+                    _batchLevelCount = EditorGUILayout.IntField("Üretilecek Seviye Adedi", _batchLevelCount);
+                    _batchLevelCount = Mathf.Clamp(_batchLevelCount, 1, WorldConfigSO.TotalLevels);
 
-                    if (_generatedLevel != null && !_autoSave &&
-                        GUILayout.Button("Save Current to Asset", GUILayout.Height(ButtonHeight)))
-                        SaveLevelAsset(_generatedLevel);
+                    if (GUILayout.Button($"{_batchLevelCount} Seviyeyi Toplu Üret", GUILayout.Height(ButtonHeight)))
+                        GenerateAllLevels();
                 }
 
+                if (_generatedLevel != null && !_autoSave &&
+                    GUILayout.Button("Mevcut Seviyeyi Asset Olarak Kaydet", GUILayout.Height(ButtonHeight)))
+                    SaveLevelAsset(_generatedLevel);
+
                 if (_generateInProgress)
-                    EditorGUILayout.HelpBox("Generating all levels... Check Console for progress.", MessageType.Info);
+                    EditorGUILayout.HelpBox("Tüm seviyeler üretiliyor... İlerleme için Konsolu kontrol edin.", MessageType.Info);
 
                 DrawGenerationResults();
             }
@@ -101,15 +109,15 @@ namespace RingFlow.Editor
             if (_generatedLevel == null) return;
 
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Generated Level Info:", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField($"Level: {_generatedLevel.LevelIndex} | Poles: {_generatedLevel.Poles.Count}");
-            EditorGUILayout.LabelField($"Target Moves: {_generatedLevel.TargetMoves} (Solver Verified)");
+            EditorGUILayout.LabelField("Üretilen Seviye Bilgileri:", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField($"Seviye: {_generatedLevel.LevelIndex} | Direkler: {_generatedLevel.Poles.Count}");
+            EditorGUILayout.LabelField($"Hedef Hamle Sayısı: {_generatedLevel.TargetMoves} (Yapay Zeka Doğruladı)");
 
             DrawLevelVisual(_generatedLevel);
 
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("AI Solver Path:", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField($"Status: {_solveStatus}", EditorStyles.wordWrappedLabel);
+            EditorGUILayout.LabelField("Yapay Zeka Çözüm Yolu:", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField($"Durum: {_solveStatus}", EditorStyles.wordWrappedLabel);
 
             if (_solutionSteps.Count == 0) return;
             _solutionScroll = EditorGUILayout.BeginScrollView(_solutionScroll, GUILayout.Height(120));
@@ -122,17 +130,16 @@ namespace RingFlow.Editor
         {
             if (levelData == null || levelData.Poles == null || levelData.Poles.Count == 0)
             {
-                EditorGUILayout.HelpBox("No level data to display.", MessageType.Info);
+                EditorGUILayout.HelpBox("Gösterilecek seviye verisi yok.", MessageType.Info);
                 return;
             }
 
             EditorGUILayout.Space(5f);
-            EditorGUILayout.LabelField("Level Visual Preview:", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Seviye Önizleme Görseli:", EditorStyles.boldLabel);
 
             float poleWidth = 60f;
             float ringHeight = 18f;
             float poleGap = 8f;
-            int maxCapacity = levelData.Poles[0].MaxCapacity;
 
             using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
             {
@@ -143,7 +150,7 @@ namespace RingFlow.Editor
 
                     using (new EditorGUILayout.VerticalScope(GUILayout.Width(poleWidth)))
                     {
-                        EditorGUILayout.LabelField($"Pole {p}", RingFlowEditorUtils.CenteredMiniLabel, GUILayout.Width(poleWidth));
+                        EditorGUILayout.LabelField($"Direk {p}", RingFlowEditorUtils.CenteredMiniLabel, GUILayout.Width(poleWidth));
 
                         float height = poleMaxCap * (ringHeight + 2f) + 12f;
                         Rect rect = GUILayoutUtility.GetRect(poleWidth, height);
@@ -182,7 +189,7 @@ namespace RingFlow.Editor
                             EditorGUI.DrawRect(lockRect, new Color(0.8f, 0.1f, 0.1f, 0.9f));
                             var lockStyle = new GUIStyle(EditorStyles.miniBoldLabel)
                                 { alignment = TextAnchor.MiddleCenter, normal = { textColor = Color.white } };
-                            GUI.Label(lockRect, "LOCKED", lockStyle);
+                            GUI.Label(lockRect, "KİLİTLİ", lockStyle);
                         }
                     }
 
@@ -206,7 +213,7 @@ namespace RingFlow.Editor
             EditorPrefs.SetInt(EditorPrefsKeys.MaxCap, _maxCapacity);
 
             NexusLog.Info("RingFlowEditor", nameof(ApplyGddCurveParams), _levelIndex.ToString(),
-                $"Applied GDD curve: Poles={_poleCount}, Colors={_colorCount}, MaxCapacity={_maxCapacity}");
+                $"GDD eğrisi uygulandı: Direkler={_poleCount}, Renkler={_colorCount}, Kapasite={_maxCapacity}");
         }
 
         public void GenerateFromDashboard() { Generate(); }
@@ -218,20 +225,20 @@ namespace RingFlow.Editor
             if (_levelIndex < 1 || _levelIndex > WorldConfigSO.TotalLevels)
             {
                 NexusLog.Warn("RingFlowEditor", nameof(Generate), _levelIndex.ToString(),
-                    "Level index out of bounds, adjusting.");
+                    "Seviye endeksi sınırların dışında, düzeltiliyor.");
                 _levelIndex = Mathf.Clamp(_levelIndex, 1, WorldConfigSO.TotalLevels);
             }
             if (_poleCount < _colorCount + 1) _poleCount = _colorCount + 1;
             if (_poleCount > 12) _poleCount = 12;
 
             NexusLog.Info("RingFlowEditor", nameof(Generate), _levelIndex.ToString(),
-                $"Generating level {_levelIndex}: Seed={_seed}, Poles={_poleCount}, Colors={_colorCount}, Cap={_maxCapacity}");
+                $"Seviye {_levelIndex} üretiliyor: Seed={_seed}, Direkler={_poleCount}, Renkler={_colorCount}, Kapasite={_maxCapacity}");
 
             _generatedLevel = LevelGenerator.GenerateLevel(_levelIndex, _seed, _poleCount, _colorCount, _maxCapacity);
 
             if (_generatedLevel == null)
             {
-                _solveStatus = "Generation failed (exhausted 50 seeds).";
+                _solveStatus = "Üretim başarısız (50 tohum denendi ve tükendi).";
                 _solutionSteps.Clear();
                 return;
             }
@@ -251,16 +258,16 @@ namespace RingFlow.Editor
             }
 
             var solveResult = LevelSolver.Solve(board, _maxCapacity);
-            if (solveResult.IsSolvable)
+            if (solveResult.IsSolvable && solveResult.MoveCount > 0)
             {
-                _solveStatus = $"Solvable in {solveResult.MoveCount} moves.";
+                _solveStatus = $"Yapay zeka çözümü bulundu: {solveResult.MoveCount} hamle.";
                 _solutionSteps.Clear();
                 foreach (var move in solveResult.Moves)
-                    _solutionSteps.Add($"Move top ring from Pole {move.FromPoleId} to Pole {move.ToPoleId}");
+                    _solutionSteps.Add($"Halkayı Direk {move.FromPoleId}'den Direk {move.ToPoleId}'ye taşı.");
             }
             else
             {
-                _solveStatus = "Unsolvable! Seed failed validation.";
+                _solveStatus = "Çözülemez! Tohum doğrulamayı geçemedi.";
                 _solutionSteps.Clear();
             }
 
@@ -277,7 +284,7 @@ namespace RingFlow.Editor
 
             int okCount = 0;
             int failed = 0;
-            int total = WorldConfigSO.TotalLevels;
+            int total = _batchLevelCount;
 
             int originalPoleCount = _poleCount;
             int originalColorCount = _colorCount;
@@ -298,7 +305,7 @@ namespace RingFlow.Editor
                     {
                         failed++;
                         NexusLog.Warn("RingFlowEditor", nameof(GenerateAllLevels), level.ToString(),
-                            $"Level {level} could not be generated (exhausted seeds). Skipping.");
+                            $"Level {level} üretilemedi (tohumlar tükendi). Atlanıyor.");
                     }
                     else
                     {
@@ -306,16 +313,11 @@ namespace RingFlow.Editor
                         okCount++;
                     }
 
-                    if (level % 50 == 0)
+                    if (level % 10 == 0 || level == total)
                     {
-                        EditorUtility.DisplayProgressBar("Generating All Levels",
-                            $"Processing level {level}/{total} ({okCount} ok, {failed} failed)...",
+                        EditorUtility.DisplayProgressBar("Toplu Seviye Üretiliyor",
+                            $"Seviye işleniyor: {level}/{total} ({okCount} başarılı, {failed} başarısız)...",
                             (float)level / total);
-                    }
-                    if (level % 100 == 0)
-                    {
-                        NexusLog.Info("RingFlowEditor", nameof(GenerateAllLevels), "",
-                            $"Progress: {level}/{total} levels generated ({okCount} ok, {failed} failed).");
                     }
                 }
             }
@@ -327,12 +329,12 @@ namespace RingFlow.Editor
             }
 
             NexusLog.Info("RingFlowEditor", nameof(GenerateAllLevels), "",
-                $"Finished: {okCount}/{total} levels generated, {failed} failed.");
+                $"Tamamlandı: {okCount}/{total} seviye başarıyla üretildi, {failed} başarısız.");
 
             _generateInProgress = false;
 
-            EditorUtility.DisplayDialog("Batch Generation Complete",
-                $"Generated {okCount}/{total} levels to {folderPath}\n{failed} failed.", "OK");
+            EditorUtility.DisplayDialog("Toplu Üretim Tamamlandı",
+                $"{okCount}/{total} seviye şuraya kaydedildi: {folderPath}\n{failed} başarısız.", "Tamam");
 
             _poleCount = originalPoleCount;
             _colorCount = originalColorCount;
@@ -389,8 +391,8 @@ namespace RingFlow.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            EditorUtility.DisplayDialog("Success",
-                $"Level saved to asset: {assetPath}\nThis level will now load automatically at runtime!", "OK");
+            EditorUtility.DisplayDialog("Başarılı",
+                $"Seviye kaydedildi: {assetPath}\nBu seviye artık runtime'da otomatik olarak yüklenecektir!", "Tamam");
         }
 
         private static LevelData CloneLevelData(LevelData source)

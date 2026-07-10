@@ -14,48 +14,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.LevelDataSO
   Data:
     LevelIndex: 48
-    Seed: 149
-    TargetMoves: 20
+    Seed: 148
+    TargetMoves: 16
     Poles:
     - MaxCapacity: 4
       Rings:
+      - Color: 1
+        Type: 0
+        AdditionalData: 0
       - Color: 2
-        Type: 0
-        AdditionalData: 0
-      - Color: 1
-        Type: 0
-        AdditionalData: 0
-      IsLocked: 0
-    - MaxCapacity: 4
-      Rings:
-      - Color: 5
-        Type: 0
-        AdditionalData: 0
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
-      - Color: 1
-        Type: 0
-        AdditionalData: 0
-      IsLocked: 0
-    - MaxCapacity: 4
-      Rings:
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
-      - Color: 5
-        Type: 0
-        AdditionalData: 0
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
-      IsLocked: 0
-    - MaxCapacity: 4
-      Rings:
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
-      - Color: 1
         Type: 0
         AdditionalData: 0
       - Color: 2
@@ -64,19 +31,37 @@ MonoBehaviour:
       - Color: 4
         Type: 0
         AdditionalData: 0
+      IsLocked: 0
+    - MaxCapacity: 4
+      Rings: []
       IsLocked: 0
     - MaxCapacity: 4
       Rings:
       - Color: 3
         Type: 0
         AdditionalData: 0
+      - Color: 4
+        Type: 0
+        AdditionalData: 0
+      - Color: 4
+        Type: 0
+        AdditionalData: 0
+      - Color: 4
+        Type: 0
+        AdditionalData: 0
+      IsLocked: 0
+    - MaxCapacity: 4
+      Rings:
+      - Color: 1
+        Type: 0
+        AdditionalData: 0
+      - Color: 2
+        Type: 0
+        AdditionalData: 0
+      - Color: 1
+        Type: 0
+        AdditionalData: 0
       - Color: 3
-        Type: 0
-        AdditionalData: 0
-      - Color: 5
-        Type: 0
-        AdditionalData: 0
-      - Color: 5
         Type: 0
         AdditionalData: 0
       IsLocked: 0
@@ -88,10 +73,13 @@ MonoBehaviour:
       - Color: 3
         Type: 0
         AdditionalData: 0
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
       - Color: 3
         Type: 0
         AdditionalData: 0
+      - Color: 2
+        Type: 0
+        AdditionalData: 0
+      IsLocked: 0
+    - MaxCapacity: 4
+      Rings: []
       IsLocked: 0

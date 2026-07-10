@@ -15,32 +15,14 @@ MonoBehaviour:
   Data:
     LevelIndex: 5
     Seed: 105
-    TargetMoves: 7
+    TargetMoves: 12
     Poles:
     - MaxCapacity: 4
-      Rings:
-      - Color: 1
-        Type: 0
-        AdditionalData: 0
-      - Color: 3
-        Type: 0
-        AdditionalData: 0
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
+      Rings: []
       IsLocked: 0
     - MaxCapacity: 4
       Rings:
       - Color: 1
-        Type: 0
-        AdditionalData: 0
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
-      IsLocked: 0
-    - MaxCapacity: 4
-      Rings:
-      - Color: 3
         Type: 0
         AdditionalData: 0
       - Color: 3
@@ -49,34 +31,40 @@ MonoBehaviour:
       - Color: 1
         Type: 0
         AdditionalData: 0
+      - Color: 3
+        Type: 0
+        AdditionalData: 0
+      IsLocked: 0
+    - MaxCapacity: 4
+      Rings:
+      - Color: 3
+        Type: 0
+        AdditionalData: 0
+      - Color: 1
+        Type: 0
+        AdditionalData: 0
+      - Color: 2
+        Type: 0
+        AdditionalData: 0
+      - Color: 2
+        Type: 0
+        AdditionalData: 0
+      IsLocked: 0
+    - MaxCapacity: 4
+      Rings:
+      - Color: 3
+        Type: 0
+        AdditionalData: 0
+      - Color: 2
+        Type: 0
+        AdditionalData: 0
+      - Color: 2
+        Type: 0
+        AdditionalData: 0
       - Color: 1
         Type: 0
         AdditionalData: 0
       IsLocked: 0
     - MaxCapacity: 4
-      Rings:
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
-      IsLocked: 0
-    - MaxCapacity: 4
-      Rings:
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
-      - Color: 3
-        Type: 0
-        AdditionalData: 0
+      Rings: []
       IsLocked: 0

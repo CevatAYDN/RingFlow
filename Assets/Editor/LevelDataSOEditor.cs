@@ -54,16 +54,16 @@ namespace RingFlow.Editor
 
             serializedObject.Update();
 
-            DrawHeader($"LEVEL {levelSO.Data.LevelIndex} CONFIGURATION");
+            DrawHeader($"SEVİYE {levelSO.Data.LevelIndex} YAPILANDIRMASI");
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                EditorGUILayout.LabelField("Level Settings", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Seviye Ayarları", EditorStyles.boldLabel);
 
                 EditorGUI.BeginChangeCheck();
-                levelSO.Data.LevelIndex = EditorGUILayout.IntField("Level Index", levelSO.Data.LevelIndex);
-                levelSO.Data.Seed = EditorGUILayout.IntField("Random Seed", levelSO.Data.Seed);
-                levelSO.Data.TargetMoves = EditorGUILayout.IntField("Target Moves", levelSO.Data.TargetMoves);
+                levelSO.Data.LevelIndex = EditorGUILayout.IntField("Seviye Endeksi", levelSO.Data.LevelIndex);
+                levelSO.Data.Seed = EditorGUILayout.IntField("Rastgele Tohum (Seed)", levelSO.Data.Seed);
+                levelSO.Data.TargetMoves = EditorGUILayout.IntField("Hedef Hamle", levelSO.Data.TargetMoves);
 
                 if (EditorGUI.EndChangeCheck())
                     EditorUtility.SetDirty(levelSO);
@@ -75,14 +75,14 @@ namespace RingFlow.Editor
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                EditorGUILayout.LabelField("Level Designer Tools", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Seviye Tasarımcı Araçları", EditorStyles.boldLabel);
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    if (GUILayout.Button("Verify & Solve Level", GUILayout.Height(30)))
+                    if (GUILayout.Button("Seviyeyi Doğrula & Çöz", GUILayout.Height(30)))
                         VerifyAndSolve(levelSO);
 
-                    if (GUILayout.Button("Re-Scramble Level", GUILayout.Height(30)))
+                    if (GUILayout.Button("Seviyeyi Yeniden Karıştır", GUILayout.Height(30)))
                         ReScramble(levelSO);
                 }
 
@@ -90,19 +90,19 @@ namespace RingFlow.Editor
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    if (GUILayout.Button("Add Empty Pole", GUILayout.Height(24)))
+                    if (GUILayout.Button("Boş Direk Ekle", GUILayout.Height(24)))
                     {
                         int maxCap = levelSO.Data.Poles.Count > 0 ? levelSO.Data.Poles[0].MaxCapacity : 4;
-                        Undo.RecordObject(levelSO, "Add Pole");
+                        Undo.RecordObject(levelSO, "Direk Ekle");
                         levelSO.Data.Poles.Add(new PoleData(maxCap));
                         EditorUtility.SetDirty(levelSO);
                     }
 
-                    if (levelSO.Data.Poles.Count > 0 && GUILayout.Button("Remove Last Pole", GUILayout.Height(24)))
+                    if (levelSO.Data.Poles.Count > 0 && GUILayout.Button("Son Direği Kaldır", GUILayout.Height(24)))
                     {
-                        if (EditorUtility.DisplayDialog("Remove Pole", "Remove last pole from this level configuration?", "Remove", "Cancel"))
+                        if (EditorUtility.DisplayDialog("Direği Kaldır", "Son direği bu seviye yapılandırmasından kaldırmak istediğinize emin misiniz?", "Kaldır", "İptal"))
                         {
-                            Undo.RecordObject(levelSO, "Remove Pole");
+                            Undo.RecordObject(levelSO, "Direk Kaldır");
                             levelSO.Data.Poles.RemoveAt(levelSO.Data.Poles.Count - 1);
                             EditorUtility.SetDirty(levelSO);
                         }
@@ -111,7 +111,7 @@ namespace RingFlow.Editor
             }
 
             EditorGUILayout.Space(5f);
-            _showRawData = EditorGUILayout.Foldout(_showRawData, "Raw Serialized Data", true);
+            _showRawData = EditorGUILayout.Foldout(_showRawData, "Ham Serileştirilmiş Veri", true);
             if (_showRawData)
                 DrawPropertiesExcluding(serializedObject, "m_Script");
 
@@ -134,15 +134,15 @@ namespace RingFlow.Editor
 
             if (solveResult.IsSolvable)
             {
-                Undo.RecordObject(levelSO, "Update Target Moves");
+                Undo.RecordObject(levelSO, "Hedef Hamleleri Güncelle");
                 levelSO.Data.TargetMoves = solveResult.MoveCount;
-                EditorUtility.DisplayDialog("Solver Results",
-                    $"The level is SOLVABLE!\nOptimal moves required: {solveResult.MoveCount} (TargetMoves has been updated).", "OK");
+                EditorUtility.DisplayDialog("Çözücü Sonuçları",
+                    $"Seviye ÇÖZÜLEBİLİR!\nOptimal gereken hamle sayısı: {solveResult.MoveCount} (Hedef Hamle güncellendi).", "Tamam");
             }
             else
             {
-                EditorUtility.DisplayDialog("Solver Results",
-                    "The level is UNSOLVABLE!\nNo sequence of valid moves can solve this configuration.", "OK");
+                EditorUtility.DisplayDialog("Çözücü Sonuçları",
+                    "Seviye ÇÖZÜLEMEZ!\nBu yapılandırmayı çözebilecek geçerli bir hamle sırası bulunamadı.", "Tamam");
             }
             EditorUtility.SetDirty(levelSO);
         }
@@ -161,15 +161,15 @@ namespace RingFlow.Editor
             int colorCount = colorsList.Count;
             if (colorCount == 0)
             {
-                EditorUtility.DisplayDialog("Re-Scramble Error", "No colored rings found in the level to scramble.", "OK");
+                EditorUtility.DisplayDialog("Yeniden Karıştırma Hatası", "Karıştırmak için seviyede renkli halka bulunamadı.", "Tamam");
                 return;
             }
 
-            if (EditorUtility.DisplayDialog("Re-Scramble",
-                $"Regenerate level {levelSO.Data.LevelIndex} with seed {levelSO.Data.Seed}?\n\nWarning: All manual edits will be lost.",
-                "Scramble", "Cancel"))
+            if (EditorUtility.DisplayDialog("Yeniden Karıştır",
+                $"Seviye {levelSO.Data.LevelIndex}, {levelSO.Data.Seed} tohumu ile yeniden üretilsin mi?\n\nUyarı: Yapılan tüm manuel düzenlemeler kaybolacaktır.",
+                "Karıştır", "İptal"))
             {
-                Undo.RecordObject(levelSO, "Re-Scramble Level");
+                Undo.RecordObject(levelSO, "Seviyeyi Yeniden Karıştır");
                 var generated = LevelGenerator.GenerateLevel(
                     levelSO.Data.LevelIndex, levelSO.Data.Seed,
                     levelSO.Data.Poles.Count, colorCount, maxCap);
@@ -177,18 +177,18 @@ namespace RingFlow.Editor
                 if (generated != null)
                 {
                     levelSO.Data = generated;
-                    EditorUtility.DisplayDialog("Re-Scramble", "Level generated and scrambled successfully!", "OK");
+                    EditorUtility.DisplayDialog("Yeniden Karıştır", "Seviye başarıyla üretildi ve karıştırıldı!", "Tamam");
                 }
                 else
                 {
-                    EditorUtility.DisplayDialog("Re-Scramble Failed", "Unable to generate a solvable configuration with these parameters.", "OK");
+                    EditorUtility.DisplayDialog("Yeniden Karıştırma Başarısız", "Bu parametrelerle çözülebilir bir seviye üretilemedi.", "Tamam");
                 }
             }
         }
 
         private static void DrawColorPalette()
         {
-            EditorGUILayout.LabelField("Select Color Brush:", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Renk Fırçası Seçin:", EditorStyles.boldLabel);
 
             var colors = (RingColor[])System.Enum.GetValues(typeof(RingColor));
             var prevColor = GUI.backgroundColor;
@@ -201,7 +201,7 @@ namespace RingFlow.Editor
                     fontStyle = s_eraserMode ? FontStyle.Bold : FontStyle.Normal,
                     normal = { textColor = s_eraserMode ? Color.white : Color.black }
                 };
-                if (GUILayout.Button("ERASER", eraserStyle, GUILayout.Width(70), GUILayout.Height(24)))
+                if (GUILayout.Button("SİLGİ", eraserStyle, GUILayout.Width(70), GUILayout.Height(24)))
                     s_eraserMode = true;
                 GUI.backgroundColor = prevColor;
 
@@ -240,7 +240,7 @@ namespace RingFlow.Editor
             if (s_eraserMode) return;
 
             EditorGUILayout.Space(2f);
-            EditorGUILayout.LabelField("Select Ring Type Brush:", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Halka Tipi Fırçası Seçin:", EditorStyles.boldLabel);
 
             var types = (RingType[])System.Enum.GetValues(typeof(RingType));
             var prevBg = GUI.backgroundColor;
@@ -276,7 +276,7 @@ namespace RingFlow.Editor
                 if (s_brushType == RingType.Bomb)
                 {
                     EditorGUILayout.Space(2f);
-                    s_bombCounter = EditorGUILayout.IntSlider("Bomb Counter Value", s_bombCounter, 1, 9);
+                    s_bombCounter = EditorGUILayout.IntSlider("Bomba Sayaç Değeri", s_bombCounter, 1, 9);
                 }
             }
         }
@@ -285,12 +285,12 @@ namespace RingFlow.Editor
         {
             if (levelData == null || levelData.Poles == null || levelData.Poles.Count == 0)
             {
-                EditorGUILayout.HelpBox("No level data to display.", MessageType.Info);
+                EditorGUILayout.HelpBox("Gösterilecek seviye verisi yok.", MessageType.Info);
                 return;
             }
 
             EditorGUILayout.Space(5f);
-            EditorGUILayout.LabelField("Visual Board Designer (Click to Draw / Edit):", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Görsel Seviye Tasarımcısı (Düzenlemek için Tıklayın):", EditorStyles.boldLabel);
 
             float poleWidth = 70f;
             float ringHeight = 20f;
@@ -305,7 +305,7 @@ namespace RingFlow.Editor
 
                     using (new EditorGUILayout.VerticalScope(GUILayout.Width(poleWidth)))
                     {
-                        EditorGUILayout.LabelField($"Pole {p}", RingFlowEditorUtils.CenteredMiniLabel, GUILayout.Width(poleWidth));
+                        EditorGUILayout.LabelField($"Direk {p}", RingFlowEditorUtils.CenteredMiniLabel, GUILayout.Width(poleWidth));
 
                         int maxCapacity = pole.MaxCapacity;
                         float height = maxCapacity * (ringHeight + 2f) + 12f;
@@ -342,7 +342,7 @@ namespace RingFlow.Editor
 
                                 if (GUI.Button(ringRect, label, style))
                                 {
-                                    Undo.RecordObject(levelSO, "Modify Ring");
+                                    Undo.RecordObject(levelSO, "Halka Değiştir");
                                     if (s_eraserMode)
                                         pole.Rings.RemoveAt(r);
                                     else
@@ -361,7 +361,7 @@ namespace RingFlow.Editor
 
                                 if (!s_eraserMode && GUI.Button(ringRect, "+", style))
                                 {
-                                    Undo.RecordObject(levelSO, "Add Ring");
+                                    Undo.RecordObject(levelSO, "Halka Ekle");
                                     pole.Rings.Add(new RingData(s_brushColor, s_brushType, s_brushType == RingType.Bomb ? s_bombCounter : 0));
                                     EditorUtility.SetDirty(levelSO);
                                 }
@@ -380,26 +380,26 @@ namespace RingFlow.Editor
                             EditorGUI.DrawRect(lockRect, new Color(0.8f, 0.1f, 0.1f, 0.9f));
                             var lockStyle = new GUIStyle(EditorStyles.miniBoldLabel)
                                 { alignment = TextAnchor.MiddleCenter, normal = { textColor = Color.white } };
-                            GUI.Label(lockRect, "LOCKED", lockStyle);
+                            GUI.Label(lockRect, "KİLİTLİ", lockStyle);
                         }
 
                         GUI.backgroundColor = prevColor;
                         EditorGUILayout.Space(2f);
 
                         EditorGUI.BeginChangeCheck();
-                        bool isLockedNew = EditorGUILayout.Toggle("Locked", pole.IsLocked, GUILayout.Width(poleWidth));
+                        bool isLockedNew = EditorGUILayout.Toggle("Kilitli", pole.IsLocked, GUILayout.Width(poleWidth));
                         if (EditorGUI.EndChangeCheck())
                         {
-                            Undo.RecordObject(levelSO, "Toggle Locked Pole");
+                            Undo.RecordObject(levelSO, "Kilitli Direk Değiştir");
                             pole.IsLocked = isLockedNew;
                             EditorUtility.SetDirty(levelSO);
                         }
 
                         EditorGUI.BeginChangeCheck();
-                        int capNew = EditorGUILayout.IntField("Cap", pole.MaxCapacity, GUILayout.Width(poleWidth));
+                        int capNew = EditorGUILayout.IntField("Kapasite", pole.MaxCapacity, GUILayout.Width(poleWidth));
                         if (EditorGUI.EndChangeCheck())
                         {
-                            Undo.RecordObject(levelSO, "Change Pole Capacity");
+                            Undo.RecordObject(levelSO, "Direk Kapasitesi Değiştir");
                             pole.MaxCapacity = Mathf.Clamp(capNew, 2, 8);
                             while (pole.Rings.Count > pole.MaxCapacity)
                                 pole.Rings.RemoveAt(pole.Rings.Count - 1);
@@ -407,9 +407,9 @@ namespace RingFlow.Editor
                         }
 
                         EditorGUILayout.Space(2f);
-                        if (GUILayout.Button("Clear", GUILayout.Width(poleWidth), GUILayout.Height(18)))
+                        if (GUILayout.Button("Temizle", GUILayout.Width(poleWidth), GUILayout.Height(18)))
                         {
-                            Undo.RecordObject(levelSO, "Clear Pole");
+                            Undo.RecordObject(levelSO, "Direği Temizle");
                             pole.Rings.Clear();
                             EditorUtility.SetDirty(levelSO);
                         }

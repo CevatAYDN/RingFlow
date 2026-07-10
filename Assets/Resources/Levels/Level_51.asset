@@ -15,43 +15,40 @@ MonoBehaviour:
   Data:
     LevelIndex: 51
     Seed: 151
-    TargetMoves: 17
+    TargetMoves: 13
     Poles:
     - MaxCapacity: 4
       Rings:
-      - Color: 1
+      - Color: 3
         Type: 0
         AdditionalData: 0
-      - Color: 1
+      - Color: 4
         Type: 2
         AdditionalData: 0
-      - Color: 5
+      - Color: 1
         Type: 0
         AdditionalData: 0
-      - Color: 3
+      - Color: 4
         Type: 0
         AdditionalData: 0
       IsLocked: 0
     - MaxCapacity: 4
       Rings:
-      - Color: 5
+      - Color: 2
         Type: 0
         AdditionalData: 0
-      - Color: 5
+      - Color: 2
         Type: 2
         AdditionalData: 0
-      - Color: 3
+      - Color: 4
         Type: 0
         AdditionalData: 0
-      - Color: 4
+      - Color: 1
         Type: 0
         AdditionalData: 0
       IsLocked: 0
     - MaxCapacity: 4
-      Rings:
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
+      Rings: []
       IsLocked: 0
     - MaxCapacity: 4
       Rings:
@@ -61,21 +58,21 @@ MonoBehaviour:
       - Color: 2
         Type: 0
         AdditionalData: 0
-      - Color: 5
+      - Color: 4
+        Type: 0
+        AdditionalData: 0
+      - Color: 3
+        Type: 0
+        AdditionalData: 0
+      IsLocked: 0
+    - MaxCapacity: 4
+      Rings:
+      - Color: 3
         Type: 0
         AdditionalData: 0
       - Color: 1
         Type: 0
         AdditionalData: 0
-      IsLocked: 0
-    - MaxCapacity: 4
-      Rings:
-      - Color: 3
-        Type: 0
-        AdditionalData: 0
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
       - Color: 2
         Type: 0
         AdditionalData: 0
@@ -84,14 +81,5 @@ MonoBehaviour:
         AdditionalData: 0
       IsLocked: 0
     - MaxCapacity: 4
-      Rings:
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
+      Rings: []
       IsLocked: 0

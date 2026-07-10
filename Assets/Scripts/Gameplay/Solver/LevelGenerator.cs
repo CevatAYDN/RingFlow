@@ -16,6 +16,20 @@ namespace RingFlow.Gameplay
 
         public static LevelData GenerateLevel(int levelIndex, int seed, int poleCount, int colorCount, int maxCapacity)
         {
+            // Level 1-3 Tutorial Overrides
+            if (levelIndex == 1 || levelIndex == 2)
+            {
+                poleCount = 3;
+                colorCount = 2;
+                maxCapacity = 3;
+            }
+            else if (levelIndex == 3)
+            {
+                poleCount = 4;
+                colorCount = 3;
+                maxCapacity = 4;
+            }
+
             int currentSeed = seed;
             int attempts = 0;
 
@@ -44,17 +58,23 @@ namespace RingFlow.Gameplay
                     }
                 }
 
+                int minEmptyPoles = DifficultyCurve.MinEmptyPolesForLevel(levelIndex);
+                int untouchedPoles = System.Math.Max(0, minEmptyPoles - 1);
+                int scramblePoleCount = poleCount - untouchedPoles;
+                if (scramblePoleCount < colorCount + 1) scramblePoleCount = colorCount + 1;
+                if (scramblePoleCount > poleCount) scramblePoleCount = poleCount;
+
                 int validScrambleMoves = 0;
                 int scrambleTarget = 150 + rand.Next(80);
                 const int maxScrambleAttempts = 1500;
                 int lastFrom = -1;
-                int[] validSources = new int[poleCount];
-                int[] validTargets = new int[poleCount];
+                int[] validSources = new int[scramblePoleCount];
+                int[] validTargets = new int[scramblePoleCount];
 
                 for (int attempt = 0; attempt < maxScrambleAttempts && validScrambleMoves < scrambleTarget; attempt++)
                 {
                     int sourceCount = 0;
-                    for (int p = 0; p < poleCount; p++)
+                    for (int p = 0; p < scramblePoleCount; p++)
                     {
                         if (board.IsEmpty(p)) continue;
                         if (p == lastFrom) continue;
@@ -62,7 +82,7 @@ namespace RingFlow.Gameplay
                     }
                     if (sourceCount == 0)
                     {
-                        for (int p = 0; p < poleCount; p++)
+                        for (int p = 0; p < scramblePoleCount; p++)
                         {
                             if (!board.IsEmpty(p)) validSources[sourceCount++] = p;
                         }
@@ -73,7 +93,7 @@ namespace RingFlow.Gameplay
                     var fromRing = board.GetTopRing(from);
 
                     int validTargetCount = 0;
-                    for (int p = 0; p < poleCount; p++)
+                    for (int p = 0; p < scramblePoleCount; p++)
                     {
                         if (p == from) continue;
                         if (board.GetRingCount(p) >= maxCapacity) continue;
@@ -88,10 +108,25 @@ namespace RingFlow.Gameplay
                     lastFrom = to;
                 }
 
+                // GDD §5 Enforce MinEmptyPoles by compacting least occupied poles if needed
+                EnforceEmptyPolesFloor(ref board, minEmptyPoles, maxCapacity);
+
                 // GDD §4 & §5 Kuralları uyarınca özel halka mekaniklerini enjekte et
                 InjectSpecialMechanics(ref board, levelIndex, rand);
 
                 var scrambledState = board;
+
+                // Enforce that we successfully reached the minEmptyPoles count
+                int finalEmptyCount = 0;
+                for (int p = 0; p < scrambledState.PoleCount; p++)
+                    if (scrambledState.IsEmpty(p)) finalEmptyCount++;
+
+                if (finalEmptyCount < minEmptyPoles)
+                {
+                    currentSeed++;
+                    attempts++;
+                    continue;
+                }
 
                 // 3. Çözülebilirliği ve optimal hamle sayısını test et
                 var solveResult = LevelSolver.Solve(scrambledState, maxCapacity, maxStatesLimit: 5000);
@@ -434,6 +469,80 @@ namespace RingFlow.Gameplay
                             board.SetRingType(p, r, RingType.Standard);
                         }
                     }
+                }
+            }
+        }
+
+        private static void EnforceEmptyPolesFloor(ref BoardState board, int minEmptyPoles, int maxCapacity)
+        {
+            int currentEmptyCount = 0;
+            for (int p = 0; p < board.PoleCount; p++)
+                if (board.IsEmpty(p)) currentEmptyCount++;
+
+            int attemptsToEmpty = 0;
+            while (currentEmptyCount < minEmptyPoles && attemptsToEmpty < 10)
+            {
+                attemptsToEmpty++;
+                int bestPoleToEmpty = -1;
+                int minRings = 999;
+                for (int p = 0; p < board.PoleCount; p++)
+                {
+                    if (board.IsEmpty(p) || board.IsPoleLocked(p)) continue;
+                    int rc = board.GetRingCount(p);
+                    if (rc < minRings)
+                    {
+                        minRings = rc;
+                        bestPoleToEmpty = p;
+                    }
+                }
+
+                if (bestPoleToEmpty == -1) break;
+
+                bool success = true;
+                var ringsBackup = new List<RingData>();
+                int rcToMove = board.GetRingCount(bestPoleToEmpty);
+                for (int r = rcToMove - 1; r >= 0; r--)
+                {
+                    ringsBackup.Add(new RingData(
+                        board.GetRingColor(bestPoleToEmpty, r),
+                        board.GetRingType(bestPoleToEmpty, r),
+                        board.GetRingAdditional(bestPoleToEmpty, r)));
+                }
+
+                board.SetRingCount(bestPoleToEmpty, 0);
+
+                foreach (var ring in ringsBackup)
+                {
+                    bool placed = false;
+                    for (int p = 0; p < board.PoleCount; p++)
+                    {
+                        if (p == bestPoleToEmpty || board.IsPoleLocked(p) || board.IsEmpty(p)) continue;
+                        if (board.GetRingCount(p) < maxCapacity)
+                        {
+                            board.AddRingSimple(p, ring);
+                            placed = true;
+                            break;
+                        }
+                    }
+                    if (!placed)
+                    {
+                        success = false;
+                        break;
+                    }
+                }
+
+                if (success)
+                {
+                    currentEmptyCount++;
+                }
+                else
+                {
+                    board.SetRingCount(bestPoleToEmpty, 0);
+                    for (int r = ringsBackup.Count - 1; r >= 0; r--)
+                    {
+                        board.AddRingSimple(bestPoleToEmpty, ringsBackup[r]);
+                    }
+                    break;
                 }
             }
         }
