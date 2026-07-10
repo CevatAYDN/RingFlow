@@ -41,7 +41,7 @@ namespace RingFlow.Gameplay.UI
             else View.PauseButton.onClick.AddListener(() => SignalBus.Fire(new PauseRequestedSignal()));
 
             if (View.HintButton == null) NexusLog.Warn("HUDMediator", nameof(OnBind), "", "HintButton missing.");
-            else View.HintButton.onClick.AddListener(() => SignalBus.Fire(new HintRequestedSignal()));
+            else View.HintButton.onClick.AddListener(() => SignalBus.FireAsyncAndForget(new HintRequestedSignal()));
 
             if (_model != null)
             {

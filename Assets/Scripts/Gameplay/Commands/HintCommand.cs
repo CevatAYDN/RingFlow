@@ -1,9 +1,11 @@
+using System.Threading;
+using System.Threading.Tasks;
 using Nexus.Core;
 using Nexus.Core.Services;
 
 namespace RingFlow.Gameplay
 {
-    public class HintCommand : ICommand<HintRequestedSignal>
+    public class HintCommand : IAsyncCommand<HintRequestedSignal>
     {
         public const long HintCostCoins = 50;
 
@@ -13,11 +15,11 @@ namespace RingFlow.Gameplay
         [Inject] private ISignalBus _signalBus;
         [Inject] private IProgressionService _progressionService;
 
-        public void Execute(HintRequestedSignal signal)
+        public async ValueTask ExecuteAsync(HintRequestedSignal signal, CancellationToken ct)
         {
             if (_model == null)
             {
-                NexusLog.Warn("HintCommand", nameof(Execute), "", "Model not bound; hint request ignored.");
+                NexusLog.Warn("HintCommand", nameof(ExecuteAsync), "", "Model not bound; hint request ignored.");
                 _signalBus?.Fire(HintResolvedSignal.Empty);
                 return;
             }
@@ -29,7 +31,7 @@ namespace RingFlow.Gameplay
 
             if (_model.Poles.Count == 0)
             {
-                NexusLog.Warn("HintCommand", nameof(Execute), _model.MovesCount.Value.ToString(),
+                NexusLog.Warn("HintCommand", nameof(ExecuteAsync), _model.MovesCount.Value.ToString(),
                     "Pole list empty; level not loaded yet.");
                 _signalBus?.Fire(HintResolvedSignal.Empty);
                 return;
@@ -39,11 +41,23 @@ namespace RingFlow.Gameplay
             // This prevents the ad-race problem where a user watches a rewarded ad
             // but the solver cannot find a valid move, leaving the user unrewarded.
             var (current, maxCapacity) = BuildBoardStateFromModel(_model);
-            var firstMove = TryFindFirstMove(current, maxCapacity);
+
+            Move firstMove;
+            try
+            {
+                firstMove = await TryFindFirstMoveAsync(current, maxCapacity, ct);
+            }
+            catch (System.OperationCanceledException)
+            {
+                NexusLog.Info("HintCommand", nameof(ExecuteAsync), "",
+                    "Hint solver cancelled (likely scene change). Dropping to Empty.");
+                _signalBus?.Fire(HintResolvedSignal.Empty);
+                return;
+            }
 
             if (firstMove.From == -1 || firstMove.To == -1)
             {
-                NexusLog.Warn("HintCommand", nameof(Execute), _model.MovesCount.Value.ToString(),
+                NexusLog.Warn("HintCommand", nameof(ExecuteAsync), _model.MovesCount.Value.ToString(),
                     "Solver could not find a first move — level may be unsolvable from current state. Hint request denied before any payment.");
                 _signalBus?.Fire(HintResolvedSignal.Empty);
                 return;
@@ -51,7 +65,7 @@ namespace RingFlow.Gameplay
 
             if (_economy == null)
             {
-                NexusLog.Warn("HintCommand", nameof(Execute), "",
+                NexusLog.Warn("HintCommand", nameof(ExecuteAsync), "",
                     "EconomyService not bound. Hint flow will fall back to ad path only.");
             }
 
@@ -69,7 +83,6 @@ namespace RingFlow.Gameplay
 
             if (_ads != null && _ads.IsRewardedAvailable("Hint"))
             {
-                // Use struct-based callback to prevent memory leak (Nexus 0-GC pattern)
                 var callback = new HintRewardCallback
                 {
                     FirstMove = firstMove,
@@ -80,7 +93,7 @@ namespace RingFlow.Gameplay
                 return;
             }
 
-            NexusLog.Info("HintCommand", nameof(Execute), "",
+            NexusLog.Info("HintCommand", nameof(ExecuteAsync), "",
                 "No usable payment channel (Hint, Coins, Ad) — dropping to Empty.");
             _signalBus?.Fire(HintResolvedSignal.Empty);
         }
@@ -161,9 +174,9 @@ namespace RingFlow.Gameplay
             return (board, maxCapacity);
         }
 
-        private static Move TryFindFirstMove(BoardState initial, int maxCapacity)
+        private static async ValueTask<Move> TryFindFirstMoveAsync(BoardState initial, int maxCapacity, CancellationToken ct)
         {
-            var result = LevelSolver.Solve(initial, maxCapacity);
+            var result = await LevelSolver.SolveAsync(initial, maxCapacity, cancellationToken: ct);
             if (!result.IsSolvable || result.MoveCount <= 0 || result.Moves == null)
             {
                 return new Move(-1, -1);

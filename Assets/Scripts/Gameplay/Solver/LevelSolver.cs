@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Nexus.Core;
 
 namespace RingFlow.Gameplay
@@ -310,6 +312,24 @@ namespace RingFlow.Gameplay
                 }
             }
             return exploded;
+        }
+
+        /// <summary>
+        /// Background-thread wrapper around <see cref="Solve"/>. Forwards the same
+        /// IDA* search onto the thread-pool so the Unity main thread never blocks.
+        /// Cancellation propagates through the supplied token as
+        /// <see cref="OperationCanceledException"/>; callers should let Nexus'
+        /// async-command recovery handle retries/aborts.
+        /// </summary>
+        public static ValueTask<SolverResult> SolveAsync(
+            BoardState initialState,
+            int maxCapacity,
+            int maxStatesLimit = 100000,
+            CancellationToken cancellationToken = default)
+        {
+            return new ValueTask<SolverResult>(Task.Run(
+                () => Solve(initialState, maxCapacity, maxStatesLimit),
+                cancellationToken));
         }
     }
 }

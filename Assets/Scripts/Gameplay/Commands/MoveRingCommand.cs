@@ -16,22 +16,36 @@ namespace RingFlow.Gameplay
 
         public void Execute(MoveRingSignal signal)
         {
+            if (!TryValidateMove(signal, out var context)) return;
+            if (!TryPreMoveValidate(ref context)) return;
+
+            ExecuteCoreMove(ref context);
+            var mainRecord = BuildMoveRecord(context);
+            ExecuteSubMoves(ref context, mainRecord);
+
+            CompleteMove(context, mainRecord);
+        }
+
+        private bool TryValidateMove(MoveRingSignal signal, out MoveContext context)
+        {
+            context = default;
+
             var fromPole = _model.Poles.GetPoleById(signal.FromPoleId);
             var toPole = _model.Poles.GetPoleById(signal.ToPoleId);
 
             if (fromPole == null || toPole == null || !fromPole.CanPopRing())
             {
-                NexusLog.Warn("MoveRingCommand", "Execute", $"{signal.FromPoleId}->{signal.ToPoleId}",
+                NexusLog.Warn("MoveRingCommand", "TryValidateMove", $"{signal.FromPoleId}->{signal.ToPoleId}",
                     $"Blocked. fromPoleNull={fromPole == null}, toPoleNull={toPole == null}, canPop={fromPole?.CanPopRing()}");
-                return;
+                return false;
             }
 
             var ring = fromPole.TopRing;
 
-            if (!TryReserveChainCapacity(ref ring, fromPole, toPole)) return;
-            if (!toPole.CanAddRing(ring)) return;
+            if (!TryReserveChainCapacity(ref ring, fromPole, toPole)) return false;
+            if (!toPole.CanAddRing(ring)) return false;
 
-            var context = new MoveContext
+            context = new MoveContext
             {
                 FromPoleId = signal.FromPoleId,
                 ToPoleId = signal.ToPoleId,
@@ -42,13 +56,25 @@ namespace RingFlow.Gameplay
                 SignalBus = _signalBus,
                 Progression = _progression
             };
+            return true;
+        }
 
-            if (!_strategyManager.ExecutePreMoveValidation(ring.Type, ref context))
+        private bool TryPreMoveValidate(ref MoveContext context)
+        {
+            if (!_strategyManager.ExecutePreMoveValidation(context.MovingRing.Type, ref context))
             {
-                NexusLog.Info("MoveRingCommand", "Execute", $"{signal.FromPoleId}->{signal.ToPoleId}",
+                NexusLog.Info("MoveRingCommand", "TryPreMoveValidate", $"{context.FromPoleId}->{context.ToPoleId}",
                     "Move blocked by strategy validation.");
-                return;
+                return false;
             }
+            return true;
+        }
+
+        private void ExecuteCoreMove(ref MoveContext context)
+        {
+            var fromPole = context.FromPole;
+            var toPole = context.ToPole;
+            var ring = context.MovingRing;
 
             fromPole.PopRing();
 
@@ -56,7 +82,7 @@ namespace RingFlow.Gameplay
             {
                 toPole.IsLocked = false;
                 context.WasPoleUnlocked = true;
-                _signalBus.Fire(new UnlockPoleSignal(signal.ToPoleId));
+                _signalBus.Fire(new UnlockPoleSignal(context.ToPoleId));
             }
 
             toPole.AddRing(ring);
@@ -76,21 +102,25 @@ namespace RingFlow.Gameplay
             {
                 _strategyManager.ExecutePostMoveExecution(RingType.Mystery, ref context);
             }
+        }
 
-            var mainRecord = BuildMoveRecord(context);
-
+        private void ExecuteSubMoves(ref MoveContext context, MoveRecord mainRecord)
+        {
             ApplyChainSubMove(ref context, mainRecord);
             ApplyMagnetPull(ref context, mainRecord);
             TryBreakIceOnTarget(ref context, mainRecord);
+        }
 
+        private void CompleteMove(MoveContext context, MoveRecord mainRecord)
+        {
             SnapshotBombCounters(mainRecord);
 
             _model.MovesCount.Value++;
 
-            NexusLog.Info("MoveRingCommand", "Execute", $"{signal.FromPoleId}->{signal.ToPoleId}",
-                $"Move {signal.FromPoleId}->{signal.ToPoleId} OK. Total moves={_model.MovesCount.Value}. Subs={mainRecord.SubMoves?.Count ?? 0}.");
+            NexusLog.Info("MoveRingCommand", "CompleteMove", $"{context.FromPoleId}->{context.ToPoleId}",
+                $"Move {context.FromPoleId}->{context.ToPoleId} OK. Total moves={_model.MovesCount.Value}. Subs={mainRecord.SubMoves?.Count ?? 0}.");
 
-            _signalBus.Fire(new RingMovedSignal(signal.FromPoleId, signal.ToPoleId));
+            _signalBus.Fire(new RingMovedSignal(context.FromPoleId, context.ToPoleId));
 
             TickAllBombsAndCapture(mainRecord);
             bool bombExploded = mainRecord.BombExplodedRings.Count > 0;
@@ -98,7 +128,7 @@ namespace RingFlow.Gameplay
 
             if (bombExploded)
             {
-                NexusLog.Warn("MoveRingCommand", "Execute", $"{signal.FromPoleId}->{signal.ToPoleId}",
+                NexusLog.Warn("MoveRingCommand", "CompleteMove", $"{context.FromPoleId}->{context.ToPoleId}",
                     "Bomb exploded during classic-mode move. Continuing level per GDD §3 — only Challenge mode ends the run.");
             }
 
@@ -161,7 +191,6 @@ namespace RingFlow.Gameplay
 
             if (anyBroken)
             {
-                mainRecord.IceBrokenRingIndices.Sort();
                 context.WasIceBroken = true;
                 context.IceBrokenRingIndices = mainRecord.IceBrokenRingIndices;
                 _signalBus.Fire(new BreakIceSignal(context.ToPoleId));
@@ -221,21 +250,7 @@ namespace RingFlow.Gameplay
 
         private void TickAllBombsAndCapture(MoveRecord mainRecord)
         {
-            bool hasBombs = false;
-            for (int p = 0; p < _model.Poles.Count; p++)
-            {
-                var pole = _model.Poles[p];
-                for (int r = 0; r < pole.Rings.Count; r++)
-                {
-                    if (pole.Rings[r].Type == RingType.Bomb)
-                    {
-                        hasBombs = true;
-                        break;
-                    }
-                    if (hasBombs) break;
-                }
-            }
-            if (!hasBombs) return;
+            if (!AnyPoleHasBomb()) return;
 
             for (int p = 0; p < _model.Poles.Count; p++)
             {
@@ -270,6 +285,19 @@ namespace RingFlow.Gameplay
                     }
                 }
             }
+        }
+
+        private bool AnyPoleHasBomb()
+        {
+            for (int p = 0; p < _model.Poles.Count; p++)
+            {
+                var pole = _model.Poles[p];
+                for (int r = 0; r < pole.Rings.Count; r++)
+                {
+                    if (pole.Rings[r].Type == RingType.Bomb) return true;
+                }
+            }
+            return false;
         }
 
         private void SnapshotBombCounters(MoveRecord mainRecord)

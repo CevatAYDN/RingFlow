@@ -57,7 +57,7 @@ MonoBehaviour:
     ColorCount: 8
   - LevelThreshold: 800
     ColorCount: 9
-  - LevelThreshold: 2000
+  - LevelThreshold: 1200
     ColorCount: 10
   Worlds:
   - WorldIndex: 0
@@ -260,3 +260,17 @@ MonoBehaviour:
     UnlockedByWorldIndex: 38
     IsEventWorld: 1
     MechanicType: 14
+  BalanceConfig:
+    FreeUndosPerSession: 5
+    UndoCoinCost: 5
+    NormalCoinReward: 50
+    BossCoinReward: 500
+    NormalXpReward: 10
+    BossXpReward: 50
+    LevelUpCoinReward: 100
+    ThreeStarTargetRatioPercent: 100
+    TwoStarTargetRatioPercent: 130
+    SilverChestChance: 0.4
+    GoldChestChance: 0.1
+    DiamondChestChance: 0.01
+    InterstitialAdInterval: 3

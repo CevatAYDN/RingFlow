@@ -104,7 +104,8 @@ namespace RingFlow.Gameplay
             builder.BindCommand<UndoRequestedSignal, UndoRequestedCommand>();
             builder.BindCommand<CheckWinSignal, CheckWinCommand>();
             builder.BindCommand<LevelWonSignal, LevelWonCommand>();
-            builder.BindCommand<HintRequestedSignal, HintCommand>();
+            // HintCommand runs solver off-thread via LevelSolver.SolveAsync, hence async binding.
+            builder.BindAsyncCommand<HintRequestedSignal, HintCommand>();
             builder.BindCommand<ChestClaimAllSignal, ChestClaimCommand>();
             builder.BindCommand<DailyRewardClaimSignal, DailyRewardClaimCommand>();
         }

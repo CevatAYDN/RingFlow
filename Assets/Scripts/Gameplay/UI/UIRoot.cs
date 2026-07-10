@@ -2,9 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Nexus.Core;
 using Nexus.Core.FSM;
 using Nexus.Core.Services;
+using RingFlow.Gameplay.Services;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -76,11 +79,21 @@ namespace RingFlow.Gameplay.UI
             }
         }
 
+        private CancellationTokenSource _lifecycleCts;
+
         private void Start()
         {
             NexusLog.Info("UIRoot", nameof(Start), "",
                 $"Starting. subscribed={_subscribed}, screens={_screens.Count}");
             TrySubscribeNow();
+
+            if (_screens.Count == 0)
+            {
+                _lifecycleCts?.Cancel();
+                _lifecycleCts?.Dispose();
+                _lifecycleCts = new CancellationTokenSource();
+                _ = LoadPrefabScreensAsync(_lifecycleCts.Token);
+            }
         }
 
         private void TrySubscribeNow()
@@ -180,6 +193,10 @@ namespace RingFlow.Gameplay.UI
                 sub?.Dispose();
             }
             _subscriptions.Clear();
+
+            _lifecycleCts?.Cancel();
+            _lifecycleCts?.Dispose();
+            _lifecycleCts = null;
         }
 
         private void EnsureCanvasExists()
@@ -227,52 +244,135 @@ namespace RingFlow.Gameplay.UI
             ScreenType.ParentalGate,
         };
 
-        public void LoadPrefabScreensFromResources()
+    public void LoadPrefabScreensFromResources()
+    {
+        EnsureCanvasExists();
+        if (_canvas == null)
         {
-            EnsureCanvasExists();
-            if (_canvas == null)
-            {
-                NexusLog.Error("UIRoot", nameof(LoadPrefabScreensFromResources), "", "Canvas could not be created.");
-                return;
-            }
-
-            var missingScreens = new List<ScreenType>();
-
-            foreach (var screen in s_allScreens)
-            {
-                if (_screens.TryGetValue(screen, out var existing) && existing != null)
-                {
-                    DestroyScreenInstance(existing);
-                }
-
-                var loaded = LoadScreenPrefab(screen);
-                if (loaded == null)
-                {
-                    missingScreens.Add(screen);
-                    NexusLog.Warn("UIRoot", nameof(LoadPrefabScreensFromResources), "",
-                        $"Missing UI prefab for {screen}. Expected Assets/Resources/UI/{screen}.prefab");
-                    continue;
-                }
-
-                var instance = UnityEngine.Object.Instantiate(loaded, _canvas.transform);
-                instance.name = screen.ToString();
-                instance.SetActive(false);
-                _screens[screen] = instance;
-            }
-
-            ApplyGameplayOverlayStyle();
-
-            if (_screens.Count == 0)
-            {
-                NexusLog.Error("UIRoot", nameof(LoadPrefabScreensFromResources), "",
-                    $"No UI screens were loaded. Missing prefabs: {string.Join(", ", missingScreens)}");
-            }
-            else if (missingScreens.Count > 0)
-            {
-                NexusLog.Warn("UIRoot", nameof(LoadPrefabScreensFromResources), "",
-                    $"Loaded {_screens.Count} screen(s). Missing prefabs: {string.Join(", ", missingScreens)}");
-            }
+            NexusLog.Error("UIRoot", nameof(LoadPrefabScreensFromResources), "", "Canvas could not be created.");
+            return;
         }
+
+        var missingScreens = new List<ScreenType>();
+
+        foreach (var screen in s_allScreens)
+        {
+            if (_screens.TryGetValue(screen, out var existing) && existing != null)
+            {
+                DestroyScreenInstance(existing);
+            }
+
+            var loaded = LoadScreenPrefab(screen);
+            if (loaded == null)
+            {
+                missingScreens.Add(screen);
+                NexusLog.Warn("UIRoot", nameof(LoadPrefabScreensFromResources), "",
+                    $"Missing UI prefab for {screen}. Expected Assets/Resources/UI/{screen}.prefab");
+                continue;
+            }
+
+            var instance = UnityEngine.Object.Instantiate(loaded, _canvas.transform);
+            instance.name = screen.ToString();
+            instance.SetActive(false);
+            _screens[screen] = instance;
+        }
+
+        ApplyGameplayOverlayStyle();
+
+        if (_screens.Count == 0)
+        {
+            NexusLog.Error("UIRoot", nameof(LoadPrefabScreensFromResources), "",
+                $"No UI screens were loaded. Missing prefabs: {string.Join(", ", missingScreens)}");
+        }
+        else if (missingScreens.Count > 0)
+        {
+            NexusLog.Warn("UIRoot", nameof(LoadPrefabScreensFromResources), "",
+                $"Loaded {_screens.Count} screen(s). Missing prefabs: {string.Join(", ", missingScreens)}");
+        }
+    }
+
+    /// <summary>
+    /// Async variant of <see cref="LoadPrefabScreensFromResources"/>. Cancels on
+    /// scene teardown so the awaited Task doesn't replay work against a destroyed
+    /// canvas. Lazy <see cref="TryShowScreen(string)"/> requests still use the sync
+    /// fallback to honor same-frame expectations.
+    /// </summary>
+    public async Task LoadPrefabScreensAsync(CancellationToken ct = default)
+    {
+        EnsureCanvasExists();
+        if (_canvas == null)
+        {
+            NexusLog.Error("UIRoot", nameof(LoadPrefabScreensAsync), "", "Canvas could not be created.");
+            return;
+        }
+
+        var assets = ResolveAssetService();
+        var missingScreens = new List<ScreenType>();
+
+        foreach (var screen in s_allScreens)
+        {
+            if (ct.IsCancellationRequested) return;
+
+            if (_screens.TryGetValue(screen, out var existing) && existing != null)
+            {
+                DestroyScreenInstance(existing);
+            }
+
+            GameObject loaded = null;
+            if (assets != null)
+            {
+                try
+                {
+                    loaded = await assets.LoadAssetAsync<GameObject>($"UI/{screen}").ConfigureAwait(true);
+                }
+                catch (System.Exception ex)
+                {
+                    NexusLog.Warn("UIRoot", nameof(LoadPrefabScreensAsync), screen.ToString(),
+                        $"AssetService load threw: {ex.Message}. Falling back to sync path.");
+                }
+            }
+            if (loaded == null)
+            {
+                loaded = LoadScreenPrefab(screen);
+            }
+            if (loaded == null)
+            {
+                missingScreens.Add(screen);
+                NexusLog.Warn("UIRoot", nameof(LoadPrefabScreensAsync), "",
+                    $"Missing UI prefab for {screen}. Expected Assets/Resources/UI/{screen}.prefab");
+                continue;
+            }
+
+            var instance = UnityEngine.Object.Instantiate(loaded, _canvas.transform);
+            instance.name = screen.ToString();
+            instance.SetActive(false);
+            _screens[screen] = instance;
+
+            await Task.Yield();
+        }
+
+        ApplyGameplayOverlayStyle();
+
+        if (_screens.Count == 0)
+        {
+            NexusLog.Error("UIRoot", nameof(LoadPrefabScreensAsync), "",
+                $"No UI screens were loaded. Missing prefabs: {string.Join(", ", missingScreens)}");
+        }
+        else if (missingScreens.Count > 0)
+        {
+            NexusLog.Warn("UIRoot", nameof(LoadPrefabScreensAsync), "",
+                $"Loaded {_screens.Count} screen(s). Missing prefabs: {string.Join(", ", missingScreens)}");
+        }
+    }
+
+    private IAssetService ResolveAssetService()
+    {
+        if (_root != null && _root.Context != null)
+        {
+            return _root.Context.TryResolve<IAssetService>();
+        }
+        return null;
+    }
 
         public void BindExistingScreens()
         {
