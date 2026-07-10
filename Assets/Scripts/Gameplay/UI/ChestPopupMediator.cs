@@ -1,5 +1,6 @@
 using Nexus.Core;
 using Nexus.Core.Services;
+using RingFlow.Gameplay.Diagnostics;
 
 namespace RingFlow.Gameplay.UI
 {
@@ -11,9 +12,18 @@ namespace RingFlow.Gameplay.UI
     {
         [Inject] private PlayerProgressModel _progress;
         [Inject] private ILocalizationService _loc;
+        [Inject] private IGameDiagnostics _diag;
+        [Inject] private IViewMediatorTracker _tracker;
 
         protected override void OnBind()
         {
+            _diag?.Checkpoint("ChestPopupMediator.OnBind");
+            if (View == null)
+            {
+                NexusLog.Error("ChestPopupMediator", nameof(OnBind), "", "ChestPopupView not bound.");
+                return;
+            }
+            _tracker?.TrackViewBound(View?.GetType(), GetType());
             View.Localize(_loc);
             if (View.ClaimButton != null) View.ClaimButton.onClick.AddListener(OnClaimClicked);
             if (View.CloseButton != null) View.CloseButton.onClick.AddListener(OnCloseClicked);
@@ -22,6 +32,7 @@ namespace RingFlow.Gameplay.UI
             Subscribe<ChestAwardedSignal>(_ => OnCloseClicked());
 
             RefreshDisplay();
+            _diag?.Log("ChestPopupMediator", $"Bound. Chests: B={_progress?.ChestBronze.Value} S={_progress?.ChestSilver.Value} G={_progress?.ChestGold.Value} D={_progress?.ChestDiamond.Value}.");
         }
 
         private void RefreshDisplay()
@@ -36,16 +47,19 @@ namespace RingFlow.Gameplay.UI
 
         private void OnClaimClicked()
         {
+            _diag?.Log("ChestPopupMediator", "Claim clicked.");
             SignalBus.Fire(new ChestClaimAllSignal());
         }
 
         private void OnCloseClicked()
         {
+            _diag?.Log("ChestPopupMediator", "Close clicked.");
             SignalBus.Fire(new HideScreenSignal(ScreenType.ChestPopup));
         }
 
         protected override void OnUnbind()
         {
+            _tracker?.TrackViewUnbound(View?.GetType());
             if (View.ClaimButton != null) View.ClaimButton.onClick.RemoveAllListeners();
             if (View.CloseButton != null) View.CloseButton.onClick.RemoveAllListeners();
         }

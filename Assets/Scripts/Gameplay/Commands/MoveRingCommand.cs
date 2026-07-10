@@ -83,6 +83,8 @@ namespace RingFlow.Gameplay
                 toPole.IsLocked = false;
                 context.WasPoleUnlocked = true;
                 _signalBus.Fire(new UnlockPoleSignal(context.ToPoleId));
+                NexusLog.Info("MoveRingCommand", "ExecuteCoreMove", context.ToPoleId.ToString(),
+                    $"Locked pole {context.ToPoleId} unlocked with Key ring.");
             }
 
             toPole.AddRing(ring);
@@ -163,7 +165,12 @@ namespace RingFlow.Gameplay
                 var topR = pole.TopRing;
                 if (topR.Type == RingType.Chain && topR.AdditionalData == ring.AdditionalData)
                 {
-                    if (toPole.Rings.Count + 2 > toPole.MaxCapacity) return false;
+                    if (toPole.Rings.Count + 2 > toPole.MaxCapacity)
+                    {
+                        NexusLog.Warn("MoveRingCommand", "TryReserveChainCapacity", $"{fromPole.Id}->{toPole.Id}",
+                            $"Chain move blocked — target pole {toPole.Id} full (need 2 slots, have {toPole.MaxCapacity - toPole.Rings.Count} free).");
+                        return false;
+                    }
                     break;
                 }
             }
@@ -194,6 +201,8 @@ namespace RingFlow.Gameplay
                 context.WasIceBroken = true;
                 context.IceBrokenRingIndices = mainRecord.IceBrokenRingIndices;
                 _signalBus.Fire(new BreakIceSignal(context.ToPoleId));
+                NexusLog.Info("MoveRingCommand", "TryBreakIceOnTarget", context.ToPoleId.ToString(),
+                    $"Ice broken on pole {context.ToPoleId}: {mainRecord.IceBrokenRingIndices.Count} rings melted at indices [{string.Join(",", mainRecord.IceBrokenRingIndices)}].");
             }
         }
 
@@ -215,6 +224,9 @@ namespace RingFlow.Gameplay
                 subRecord.ToPoleId = context.ToPoleId;
                 subRecord.Ring = topR;
                 mainRecord.SubMoves.Add(subRecord);
+
+                NexusLog.Info("MoveRingCommand", "ApplyChainSubMove", context.ToPoleId.ToString(),
+                    $"Chain sub-move: partner from pole {pole.Id} → {context.ToPoleId}, color={topR.Color}.");
                 return;
             }
         }
@@ -228,6 +240,7 @@ namespace RingFlow.Gameplay
                 ? new[] { toIdx - 1, toIdx + 1 }
                 : new[] { toIdx - 1, toIdx + 1 };
 
+            int pullCount = 0;
             for (int i = 0; i < candidateIdx.Length; i++)
             {
                 int p = candidateIdx[i];
@@ -245,6 +258,13 @@ namespace RingFlow.Gameplay
                 subRecord.ToPoleId = context.ToPoleId;
                 subRecord.Ring = pulled;
                 mainRecord.SubMoves.Add(subRecord);
+                pullCount++;
+            }
+
+            if (pullCount > 0)
+            {
+                NexusLog.Info("MoveRingCommand", "ApplyMagnetPull", context.ToPoleId.ToString(),
+                    $"Magnet pulled {pullCount} matching ring(s) from adjacent poles to pole {context.ToPoleId}, color={context.MovingRing.Color}.");
             }
         }
 

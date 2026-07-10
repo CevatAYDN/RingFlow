@@ -1,46 +1,31 @@
 using Nexus.Core;
+using Nexus.Core.Services;
 
 namespace RingFlow.Gameplay.Strategies
 {
-    /// <summary>
-    /// Strategy for Mystery ring mechanics (GDD §4).
-    /// Mystery rings reveal their true color when the ring above them is moved.
-    /// This strategy handles the reveal logic and signal firing.
-    /// </summary>
     public sealed class MysteryRingStrategy : IRingMoveStrategy
     {
-        public bool CanHandle(RingType ringType)
-        {
-            return ringType == RingType.Mystery;
-        }
+        public bool CanHandle(RingType ringType) => ringType == RingType.Mystery;
 
-        public bool PreMoveValidation(ref MoveContext context)
-        {
-            // Mystery rings don't block moves
-            return true;
-        }
+        public bool PreMoveValidation(ref MoveContext context) => true;
 
         public void PostMoveExecution(ref MoveContext context)
         {
-            // Check if the ring below the moved ring (now on top) is Mystery
             if (context.FromPole.Rings.Count > 0)
             {
                 var topRing = context.FromPole.TopRing;
                 if (topRing.Type == RingType.Mystery)
                 {
-                    // Reveal the mystery ring
                     var revealedColor = DetermineMysteryColor(context);
                     topRing = new RingData(revealedColor, RingType.Standard);
-                    
-                    // Update the pole state
                     context.FromPole.Rings[^1] = topRing;
-                    
                     context.WasMysteryRevealed = true;
-                    
-                    // Fire signal for UI feedback
                     context.SignalBus?.Fire(new RevealMysterySignal(context.FromPoleId, topRing));
-                    
-                    UnityEngine.Debug.Log($"[MysteryRingStrategy] Mystery ring revealed as {revealedColor}");
+
+                    int level = context.Progression?.CurrentLevel.Value ?? 1;
+                    int seed = unchecked((int)((long)level * 2654435761L) ^ (context.FromPoleId * 31));
+                    NexusLog.Info("MysteryRingStrategy", nameof(PostMoveExecution), context.FromPoleId.ToString(),
+                        $"Mystery revealed as {revealedColor}. Level={level}, FromPole={context.FromPoleId}, Seed={seed}.");
                 }
             }
         }

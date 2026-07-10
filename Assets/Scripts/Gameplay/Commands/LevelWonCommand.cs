@@ -54,13 +54,6 @@ namespace RingFlow.Gameplay
             int newLevel = _progressionService != null ? _progressionService.CurrentLevel.Value : prevLevel;
 
             int newWorldIndex = WorldConfigSO.WorldFromAbsoluteLevel(newLevel);
-            if (_progress != null &&
-                newWorldIndex >= 0 &&
-                newWorldIndex < _progress.UnlockedWorlds.Count)
-            {
-                _progress.UnlockedWorlds[newWorldIndex] = true;
-            }
-
             bool isBoss = WorldConfigSO.IsBossLevel(prevLevel);
             int coinReward = isBoss ? Cfg.BossCoinReward : Cfg.NormalCoinReward + (prevLevel % 11) * 10;
             _economyService?.Earn("Coins", coinReward, isBoss ? "Boss Win Reward" : "Level Win Reward");
@@ -73,9 +66,12 @@ namespace RingFlow.Gameplay
                 int xpRequired = _progress.XpToNextLevel(_progress.PlayerLevel.Value);
                 while (_progress.Xp.Value >= xpRequired)
                 {
+                    int oldLevel = _progress.PlayerLevel.Value;
                     _progress.Xp.Value -= xpRequired;
                     _progress.PlayerLevel.Value++;
                     _economyService?.Earn("Coins", Cfg.LevelUpCoinReward, "Player Level Up Reward");
+                    NexusLog.Info("LevelWonCommand", "Execute", "",
+                        $"Player leveled up: {oldLevel} → {_progress.PlayerLevel.Value}. XP remaining={_progress.Xp.Value}.");
                     xpRequired = _progress.XpToNextLevel(_progress.PlayerLevel.Value);
                 }
             }
@@ -93,7 +89,24 @@ namespace RingFlow.Gameplay
                 if (UnityEngine.Random.value < Cfg.SilverChestChance) _progress.ChestSilver.Value++;
                 if (stars >= 3 && UnityEngine.Random.value < Cfg.GoldChestChance) _progress.ChestGold.Value++;
                 if (stars >= 3 && UnityEngine.Random.value < Cfg.DiamondChestChance) _progress.ChestDiamond.Value++;
+
+                NexusLog.Info("LevelWonCommand", "Execute", "",
+                    $"Chests awarded: Bronze+1={_progress.ChestBronze.Value}, Silver={_progress.ChestSilver.Value}, Gold={_progress.ChestGold.Value}, Diamond={_progress.ChestDiamond.Value}.");
             }
+
+            if (_progress != null && newWorldIndex >= 0 && newWorldIndex < _progress.UnlockedWorlds.Count)
+            {
+                bool wasUnlocked = _progress.UnlockedWorlds[newWorldIndex];
+                if (!wasUnlocked)
+                {
+                    _progress.UnlockedWorlds[newWorldIndex] = true;
+                    NexusLog.Info("LevelWonCommand", "Execute", "",
+                        $"World {newWorldIndex} unlocked (level {prevLevel} → {newLevel}).");
+                }
+            }
+
+            // Move the world-unlock actual mutation AFTER the log so we don't double-set.
+            // The first set (original) is removed — the logic above covers it.
 
             if (_progress != null && _ads != null && !_progress.RemoveAds.Value)
             {

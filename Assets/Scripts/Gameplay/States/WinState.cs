@@ -15,6 +15,8 @@ namespace RingFlow.Gameplay
 
         public ValueTask OnEnterAsync(object args, CancellationToken ct)
         {
+            NexusLog.Info("WinState", nameof(OnEnterAsync), "",
+                "Entered WinState.");
             _signalBus?.Fire(new ShowScreenSignal(ScreenType.Win));
 
             // Play win sound procedurally

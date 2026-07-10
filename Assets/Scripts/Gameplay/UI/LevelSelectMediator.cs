@@ -1,6 +1,7 @@
 using Nexus.Core;
 using Nexus.Core.Services;
 using UnityEngine.UI;
+using RingFlow.Gameplay.Diagnostics;
 
 namespace RingFlow.Gameplay.UI
 {
@@ -8,10 +9,18 @@ namespace RingFlow.Gameplay.UI
     {
         [Inject] private IProgressionService _progression;
         [Inject] private ILocalizationService _loc;
+        [Inject] private IGameDiagnostics _diag;
+        [Inject] private IViewMediatorTracker _tracker;
 
         protected override void OnBind()
         {
-            if (View == null) return;
+            _diag?.Checkpoint("LevelSelectMediator.OnBind");
+            if (View == null)
+            {
+                NexusLog.Error("LevelSelectMediator", nameof(OnBind), "", "LevelSelectView not bound.");
+                return;
+            }
+            _tracker?.TrackViewBound(View?.GetType(), GetType());
             View.Localize(_loc);
             // Lock buttons beyond MaxUnlockedLevel so the player can't select them
             int maxUnlocked = _progression?.MaxUnlockedLevel.Value ?? 1;
@@ -55,6 +64,7 @@ namespace RingFlow.Gameplay.UI
 
         protected override void OnUnbind()
         {
+            _tracker?.TrackViewUnbound(View?.GetType());
             if (View?.LevelButtons != null)
             {
                 foreach (var btn in View.LevelButtons)

@@ -49,6 +49,9 @@ namespace RingFlow.Gameplay
             {
                 MaxUnlockedLevel.Value = levelIndex;
             }
+
+            NexusLog.Info("ProgressionService", nameof(SetLevel), levelIndex.ToString(),
+                $"Level set to {levelIndex}. MaxUnlocked={MaxUnlockedLevel.Value}.");
         }
 
         public long CalculateUpgradeCost(long baseCost, int level, float multiplier = 1.15f, CurveType curveType = CurveType.Exponential)

@@ -1,6 +1,7 @@
 using System;
 using Nexus.Core;
 using Nexus.Core.Services;
+using RingFlow.Gameplay.Diagnostics;
 
 namespace RingFlow.Gameplay.UI
 {
@@ -10,13 +11,22 @@ namespace RingFlow.Gameplay.UI
         [Inject] private PlayerProgressModel _progress;
         [Inject] private DailyRewardService _dailyReward;
         [Inject] private ILocalizationService _loc;
+        [Inject] private IGameDiagnostics _diag;
+        [Inject] private IViewMediatorTracker _tracker;
 
         private Action<int, int> _coinsHandler;
         private Action<int, int> _diamondsHandler;
 
         protected override void OnBind()
         {
-            if (View == null) return;
+            _diag?.Checkpoint("MainMenuMediator.OnBind");
+            _tracker?.TrackViewBound(View?.GetType(), GetType());
+
+            if (View == null)
+            {
+                NexusLog.Error("MainMenuMediator", nameof(OnBind), "", "MainMenuView not bound.");
+                return;
+            }
             View.Localize(_loc);
             View.ContinueButton.onClick.AddListener(ContinueGame);
             View.PlayButton.onClick.AddListener(QuickPlay);
@@ -36,6 +46,8 @@ namespace RingFlow.Gameplay.UI
                 _progress.Diamonds.OnChanged(_diamondsHandler);
                 View.UpdateDiamonds(_progress.Diamonds.Value);
             }
+
+            _diag?.Log("MainMenuMediator", $"Bound. DailyRewardAvailable={canClaim}.");
         }
 
         private void ContinueGame()
@@ -67,6 +79,7 @@ namespace RingFlow.Gameplay.UI
 
         protected override void OnUnbind()
         {
+            _tracker?.TrackViewUnbound(View?.GetType());
             if (View != null)
             {
                 View.ContinueButton?.onClick.RemoveAllListeners();

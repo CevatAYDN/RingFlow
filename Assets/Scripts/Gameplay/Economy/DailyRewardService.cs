@@ -118,6 +118,9 @@ namespace RingFlow.Gameplay
             _progress.DailyDayIndex.Value = nextIndex % DailyRewardTable.CycleLength;
             _progress.DailyLastClaimUtcTicks.Value = DateTime.UtcNow.Ticks;
 
+            NexusLog.Info("DailyRewardService", nameof(Claim), nextIndex.ToString(),
+                $"Daily reward claimed — day {nextIndex % DailyRewardTable.CycleLength}, reward: {reward.CurrencyId} x{reward.Amount}.");
+
             return reward;
         }
     }

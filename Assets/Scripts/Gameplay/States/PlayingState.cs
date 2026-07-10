@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Nexus.Core;
 using Nexus.Core.FSM;
 using Nexus.Core.Services;
+using RingFlow.Gameplay.Diagnostics;
 
 namespace RingFlow.Gameplay
 {
@@ -11,19 +12,23 @@ namespace RingFlow.Gameplay
         [Inject] private ISignalBus _signalBus;
         [Inject] private IAudioService _audio;
         [Inject] private IProgressionService _progression;
+        [Inject] private IGameDiagnostics _diag;
 
         public ValueTask OnEnterAsync(object args, CancellationToken ct)
         {
-            // Show Gameplay HUD
+            _diag?.Checkpoint("PlayingState.OnEnterAsync");
             _signalBus?.Fire(new ShowScreenSignal(ScreenType.Gameplay));
 
+            bool isResume = false;
             int targetLevel = -1;
 
             if (args is PlayingStateArgs playingArgs)
             {
-                if (playingArgs.IsResume)
+                isResume = playingArgs.IsResume;
+                if (isResume)
                 {
-                    // Just resuming from pause — restore BGM volume and do NOT re-initialize the level!
+                    NexusLog.Info("PlayingState", nameof(OnEnterAsync), "",
+                        "Resuming from pause — restoring BGM, skipping InitLevel.");
                     if (_audio != null)
                     {
                         int currentLevel = _progression?.CurrentLevel.Value ?? 1;
@@ -60,6 +65,7 @@ namespace RingFlow.Gameplay
             }
 
             // Start level initialization
+            _diag?.Log("PlayingState", $"Starting level {targetLevel} (resume={isResume}, boss={WorldConfigSO.IsBossLevel(targetLevel)}).");
             _signalBus?.Fire(new InitLevelSignal(targetLevel));
 
             return default;

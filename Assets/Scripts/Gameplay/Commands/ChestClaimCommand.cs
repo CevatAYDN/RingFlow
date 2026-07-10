@@ -56,9 +56,12 @@ namespace RingFlow.Gameplay
             int xpRequired = _progress.XpToNextLevel(_progress.PlayerLevel.Value);
             while (_progress.Xp.Value >= xpRequired)
             {
+                int oldLevel = _progress.PlayerLevel.Value;
                 _progress.Xp.Value -= xpRequired;
                 _progress.PlayerLevel.Value++;
                 _economy?.Earn("Coins", 100, "Player Level Up Reward (Chest)");
+                NexusLog.Info("ChestClaimCommand", "Execute", "",
+                    $"Player leveled up: {oldLevel} → {_progress.PlayerLevel.Value} (from chests). XP remaining={_progress.Xp.Value}.");
                 xpRequired = _progress.XpToNextLevel(_progress.PlayerLevel.Value);
             }
 
