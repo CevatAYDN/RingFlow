@@ -97,6 +97,7 @@ poetry.lock
 *.-p
 *.codegraph
 *.commandcode
+*.commandcode/taste/taste.md
 
 # AI/LLM-specific names/directories (case-insensitive blocks)
 *[Oo]pen[Aa]i*
@@ -116,4 +117,4 @@ poetry.lock
 *[Ww]hisper*
 *[Pp]y[Tt]orch*
 *[Tt]ensor[Ff]low*
-.commandcode/taste/taste.md
+

@@ -16,7 +16,7 @@ MonoBehaviour:
   PoleYPosition: 2
   PoleScale: {x: 0.2, y: 2, z: 0.2}
   PoleColliderWidthFraction: 0.85
-  RingScaleTorus: {x: 3.5, y: 0.2, z: 3.5}
+  RingScaleTorus: {x: 3.6, y: 0.22, z: 3.6}
   RingScaleFallback: {x: 4, y: 0.08, z: 4}
   RingBaseYOffset: -0.9
   RingStackSpacing: 0.4
@@ -27,8 +27,10 @@ MonoBehaviour:
   RingPlacePulseDuration: 0.2
   SelectionLiftDuration: 0.15
   SlowModeMultiplier: 2
-  CameraBaseOrtho: 8
-  CameraMaxOrtho: 12
+  CameraPosition: {x: 0, y: 7.5, z: -12}
+  CameraRotation: {x: 25, y: 0, z: 0}
+  CameraBaseOrtho: 6
+  CameraMaxOrtho: 9
   CameraBasePoles: 4
   CameraMaxPoles: 10
   ShakeErrorIntensity: 0.12

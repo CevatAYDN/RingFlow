@@ -374,17 +374,23 @@ namespace RingFlow.Gameplay
             {
                 if (_lockedPoleMaterial == null)
                 {
-                    _lockedPoleMaterial = new Material(GetDefaultShader()) { color = Color.black, name = "PoleMat_Locked" };
-                    _lockedPoleMaterial.SetFloat("_Metallic", 0.3f);
-                    _lockedPoleMaterial.SetFloat("_Smoothness", 0.4f);
+                    var darkColor = new Color(0.12f, 0.12f, 0.14f);
+                    _lockedPoleMaterial = new Material(GetDefaultShader()) { color = darkColor, name = "PoleMat_Locked" };
+                    if (_lockedPoleMaterial.HasProperty("_BaseColor"))
+                        _lockedPoleMaterial.SetColor("_BaseColor", darkColor);
+                    _lockedPoleMaterial.SetFloat("_Metallic", 0.9f);
+                    _lockedPoleMaterial.SetFloat("_Smoothness", 0.9f);
                 }
                 return _lockedPoleMaterial;
             }
             if (_openPoleMaterial == null)
             {
-                _openPoleMaterial = new Material(GetDefaultShader()) { color = Color.white, name = "PoleMat_Open" };
-                _openPoleMaterial.SetFloat("_Metallic", 0.3f);
-                _openPoleMaterial.SetFloat("_Smoothness", 0.4f);
+                var slateColor = new Color(0.20f, 0.22f, 0.25f);
+                _openPoleMaterial = new Material(GetDefaultShader()) { color = slateColor, name = "PoleMat_Open" };
+                if (_openPoleMaterial.HasProperty("_BaseColor"))
+                    _openPoleMaterial.SetColor("_BaseColor", slateColor);
+                _openPoleMaterial.SetFloat("_Metallic", 0.8f);
+                _openPoleMaterial.SetFloat("_Smoothness", 0.8f);
             }
             return _openPoleMaterial;
         }
@@ -396,8 +402,10 @@ namespace RingFlow.Gameplay
             var mat = new Material(GetDefaultShader());
             Color baseColor = RingPalette.Get(color);
             mat.color = baseColor;
-            mat.SetFloat("_Metallic", 0.6f);
-            mat.SetFloat("_Smoothness", 0.7f);
+            if (mat.HasProperty("_BaseColor"))
+                mat.SetColor("_BaseColor", baseColor);
+            mat.SetFloat("_Metallic", 0.1f);
+            mat.SetFloat("_Smoothness", 0.85f);
             ApplySpecialRingMaterial(mat, baseColor, type);
             mat.name = "RingMat_" + color + "_" + type;
             _ringMaterialCache[key] = mat;
@@ -442,6 +450,8 @@ namespace RingFlow.Gameplay
                     mat.SetFloat("_Metallic", 0.4f); mat.SetFloat("_Smoothness", 0.6f);
                     mat.EnableKeyword("_EMISSION"); mat.SetColor("_EmissionColor", new Color(0.2f, 0.2f, 0.2f, 1f)); break;
             }
+            if (mat.HasProperty("_BaseColor"))
+                mat.SetColor("_BaseColor", mat.color);
         }
 
         private static void SetFadeMode(Material mat)
@@ -538,12 +548,17 @@ namespace RingFlow.Gameplay
 
         public void FitCameraToBoard(int poleCount)
         {
-            if (!TryGetMainCamera(out var cam) || !cam.orthographic) return;
+            if (!TryGetMainCamera(out var cam)) return;
+            cam.orthographic = true;
             var t = cam.transform;
             t.position = F.CameraPosition;
             t.rotation = Quaternion.Euler(F.CameraRotation);
-            float t2 = Mathf.InverseLerp(F.CameraBasePoles, F.CameraMaxPoles, poleCount);
-            cam.orthographicSize = Mathf.Lerp(F.CameraBaseOrtho, F.CameraMaxOrtho, t2);
+            
+            float spacing = F.PoleSpacing;
+            float boardWidth = (poleCount - 1) * spacing;
+            float desiredHalfWidth = (boardWidth * 0.5f) + 1.5f;
+            float desiredOrthoSize = desiredHalfWidth / cam.aspect;
+            cam.orthographicSize = Mathf.Max(desiredOrthoSize, 5.5f);
         }
     }
 

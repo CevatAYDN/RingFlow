@@ -27,31 +27,60 @@ namespace RingFlow.Gameplay
             var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
             quad.name = "GradientBackground";
             quad.transform.SetParent(transform, false);
-            quad.transform.localPosition = new Vector3(10f, 5f, 1f);
-            quad.transform.localScale = new Vector3(30f, 15f, 1f);
+            quad.transform.localPosition = new Vector3(0f, 0f, 35f);
+            quad.transform.localScale = new Vector3(80f, 80f, 1f);
 
             var renderer = quad.GetComponent<MeshRenderer>();
             renderer.sharedMaterial = CreateGradientMaterial();
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderer.receiveShadows = false;
+
+            var col = quad.GetComponent<Collider>();
+            if (col != null) Destroy(col);
+        }
+
+        private Texture2D CreateGradientTexture(Color top, Color bottom)
+        {
+            var tex = new Texture2D(1, 32);
+            tex.wrapMode = TextureWrapMode.Clamp;
+            tex.filterMode = FilterMode.Bilinear;
+            for (int y = 0; y < 32; y++)
+            {
+                float t = y / 31f;
+                tex.SetPixel(0, y, Color.Lerp(bottom, top, t));
+            }
+            tex.Apply();
+            return tex;
         }
 
         private Material CreateGradientMaterial()
         {
-            var mat = new Material(Shader.Find("Universal Render Pipeline/Unlit")
-                ?? Shader.Find("Unlit/Color")
-                ?? Shader.Find("Standard"));
-            mat.color = _topColor;
+            var shader = Shader.Find("Universal Render Pipeline/Unlit")
+                ?? Shader.Find("Unlit/Texture")
+                ?? Shader.Find("Standard");
+            var mat = new Material(shader);
+            var texture = CreateGradientTexture(_topColor, _bottomColor);
+            
+            if (shader.name.Contains("Universal Render Pipeline"))
+            {
+                mat.SetTexture("_BaseMap", texture);
+                mat.SetColor("_BaseColor", Color.white);
+            }
+            else
+            {
+                mat.mainTexture = texture;
+                mat.color = Color.white;
+            }
             return mat;
         }
 
         private void BuildParticles()
         {
             int count = Feel?.ConfettiPoolSize ?? 30;
-            float sizeMin = 0.02f;
-            float sizeMax = 0.06f;
-            float spawnW = 20f;
-            float spawnH = 15f;
+            float sizeMin = 0.08f;
+            float sizeMax = 0.22f;
+            float spawnW = 36f;
+            float spawnH = 24f;
             float twinkleMin = 0.5f;
             float twinkleMax = 2.0f;
             Color pColor = new(0.15f, 0.25f, 0.40f, 0.3f);
@@ -69,7 +98,8 @@ namespace RingFlow.Gameplay
 
                 float x = Random.Range(-spawnW * 0.5f, spawnW * 0.5f);
                 float y = Random.Range(-spawnH * 0.5f, spawnH * 0.5f);
-                go.transform.localPosition = new Vector3(x + 10f, y + 5f, 0.5f);
+                float z = Random.Range(30f, 34f);
+                go.transform.localPosition = new Vector3(x, y, z);
 
                 float size = Random.Range(sizeMin, sizeMax);
                 go.transform.localScale = Vector3.one * size;
@@ -94,6 +124,10 @@ namespace RingFlow.Gameplay
                 ?? Shader.Find("Unlit/Color")
                 ?? Shader.Find("Standard"));
             mat.color = baseColor;
+            if (mat.HasProperty("_BaseColor"))
+                mat.SetColor("_BaseColor", baseColor);
+            
+            // Set rendering mode to transparent/additive
             mat.SetFloat("_Mode", 3);
             mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
             mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
@@ -108,7 +142,7 @@ namespace RingFlow.Gameplay
             if (_particles == null) return;
 
             float driftMin = 0.05f;
-            float driftMax = 0.2f;
+            float driftMax = 0.25f;
 
             for (int i = 0; i < _particles.Length; i++)
             {
@@ -119,12 +153,14 @@ namespace RingFlow.Gameplay
                     (Mathf.Sin(_twinklePhases[i] + Time.time * 0.3f) + 1f) * 0.5f);
                 Vector3 pos = go.transform.localPosition;
                 pos.y += driftSpeed * Time.deltaTime;
-                if (pos.y > 12.5f) pos.y = -2.5f;
+                if (pos.y > 12f) pos.y = -12f;
                 go.transform.localPosition = pos;
 
                 float alpha = (Mathf.Sin(Time.time * _twinkleSpeeds[i] + _twinklePhases[i]) + 0.5f) * 0.5f;
                 _renderers[i].GetPropertyBlock(_propBlock);
-                _propBlock.SetColor("_Color", new Color(0.15f, 0.25f, 0.40f, alpha * 0.3f));
+                var c = new Color(0.15f, 0.25f, 0.40f, alpha * 0.3f);
+                _propBlock.SetColor("_Color", c);
+                _propBlock.SetColor("_BaseColor", c);
                 _renderers[i].SetPropertyBlock(_propBlock);
             }
         }

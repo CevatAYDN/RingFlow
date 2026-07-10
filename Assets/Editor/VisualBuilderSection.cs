@@ -90,6 +90,11 @@ namespace RingFlow.Editor
                 NexusLog.Warn("RingFlowEditor", nameof(BuildInScene), "",
                     "Torus.obj not found in Assets/Resources. Using Cylinder disks as fallback rings.");
 
+            var f = GameFeelConfigSO.Instance;
+            float spacing = f != null ? f.PoleSpacing : 2.5f;
+            float boardWidth = (poleCount - 1) * spacing;
+            float startX = -boardWidth * 0.5f;
+
             for (int p = 0; p < poleCount; p++)
             {
                 bool isLocked;
@@ -106,7 +111,7 @@ namespace RingFlow.Editor
                     rings = _generator.GeneratedLevel.Poles[p].Rings;
                 }
 
-                CreatePole(boardRoot.transform, p, isLocked, rings, torusModel);
+                CreatePole(boardRoot.transform, p, startX, spacing, isLocked, rings, torusModel, f);
             }
 
             EditorApplication.delayCall += () =>
@@ -117,13 +122,14 @@ namespace RingFlow.Editor
             NexusLog.Info("RingFlowEditor", nameof(BuildInScene), "", "Visual board built successfully.");
         }
 
-        private static void CreatePole(Transform parent, int index, bool isLocked, List<RingData> rings, GameObject torusModel)
+        private static void CreatePole(Transform parent, int index, float startX, float spacing, bool isLocked, List<RingData> rings, GameObject torusModel, GameFeelConfigSO f)
         {
             var poleObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             poleObj.name = $"Pole_{index}" + (isLocked ? " [LOCKED]" : "");
             poleObj.transform.SetParent(parent);
-            poleObj.transform.position = new Vector3(index * PoleSpacing, 2.0f, 0f);
-            poleObj.transform.localScale = new Vector3(0.2f, 2.0f, 0.2f);
+            float poleY = f != null ? f.PoleYPosition : 2.0f;
+            poleObj.transform.position = new Vector3(startX + index * spacing, poleY, 0f);
+            poleObj.transform.localScale = f != null ? f.PoleScale : new Vector3(0.2f, 2.0f, 0.2f);
 
             var poleView = poleObj.AddComponent<PoleView>();
             poleView.PoleId = index;
@@ -133,40 +139,60 @@ namespace RingFlow.Editor
                 Object.DestroyImmediate(capsule);
 
             var box = poleObj.AddComponent<BoxCollider>();
-            box.size = new Vector3(3.0f, 2.0f, 3.0f);
+            float colWidth = f != null ? (spacing * f.PoleColliderWidthFraction) : 2.125f;
+            box.size = new Vector3(colWidth, 3.0f, 2.0f);
 
-            if (isLocked)
+            var renderer = poleObj.GetComponent<Renderer>();
+            if (renderer != null)
             {
-                var renderer = poleObj.GetComponent<Renderer>();
-                if (renderer != null)
+                var shader = ResolveShader();
+                Material poleMat;
+                if (isLocked)
                 {
-                    var poleMat = new Material(ResolveShader()) { color = Color.black };
-                    renderer.sharedMaterial = poleMat;
+                    var darkColor = new Color(0.12f, 0.12f, 0.14f);
+                    poleMat = new Material(shader) { color = darkColor, name = "PoleMat_Locked" };
+                    if (poleMat.HasProperty("_BaseColor"))
+                        poleMat.SetColor("_BaseColor", darkColor);
+                    poleMat.SetFloat("_Metallic", 0.9f);
+                    poleMat.SetFloat("_Smoothness", 0.9f);
                 }
+                else
+                {
+                    var slateColor = new Color(0.20f, 0.22f, 0.25f);
+                    poleMat = new Material(shader) { color = slateColor, name = "PoleMat_Open" };
+                    if (poleMat.HasProperty("_BaseColor"))
+                        poleMat.SetColor("_BaseColor", slateColor);
+                    poleMat.SetFloat("_Metallic", 0.8f);
+                    poleMat.SetFloat("_Smoothness", 0.8f);
+                }
+                renderer.sharedMaterial = poleMat;
             }
 
-            var shader = ResolveShader();
+            var shaderForRings = ResolveShader();
             for (int r = 0; r < rings.Count; r++)
-                CreateRing(poleObj.transform, r, rings[r], torusModel, shader);
+                CreateRing(poleObj.transform, r, rings[r], torusModel, shaderForRings, f);
         }
 
-        private static void CreateRing(Transform parent, int index, RingData ringData, GameObject torusModel, Shader shader)
+        private static void CreateRing(Transform parent, int index, RingData ringData, GameObject torusModel, Shader shader, GameFeelConfigSO f)
         {
             GameObject ringObj;
+            float ringBaseY = f != null ? f.RingBaseYOffset : -0.9f;
+            float ringSpacing = f != null ? f.RingStackSpacing : 0.4f;
+
             if (torusModel != null)
             {
                 ringObj = Object.Instantiate(torusModel);
                 ringObj.transform.SetParent(parent);
-                ringObj.transform.localPosition = new Vector3(0f, -0.9f + (index * 0.4f), 0f);
+                ringObj.transform.localPosition = new Vector3(0f, ringBaseY + (index * ringSpacing), 0f);
                 ringObj.transform.localRotation = Quaternion.identity;
-                ringObj.transform.localScale = new Vector3(3.5f, 0.2f, 3.5f);
+                ringObj.transform.localScale = f != null ? f.RingScaleTorus : new Vector3(3.5f, 0.2f, 3.5f);
             }
             else
             {
                 ringObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
                 ringObj.transform.SetParent(parent);
-                ringObj.transform.localPosition = new Vector3(0f, -0.9f + (index * 0.4f), 0f);
-                ringObj.transform.localScale = new Vector3(4.0f, 0.08f, 4.0f);
+                ringObj.transform.localPosition = new Vector3(0f, ringBaseY + (index * ringSpacing), 0f);
+                ringObj.transform.localScale = f != null ? f.RingScaleFallback : new Vector3(4.0f, 0.08f, 4.0f);
             }
 
             ringObj.name = $"Ring_{index}_{ringData.Color}_{ringData.Type}";
@@ -174,7 +200,35 @@ namespace RingFlow.Editor
             var ringRenderer = ringObj.GetComponentInChildren<Renderer>();
             if (ringRenderer != null)
             {
-                var mat = new Material(shader) { color = RingPalette.Get(ringData.Color) };
+                var mat = new Material(shader);
+                Color baseColor = RingPalette.Get(ringData.Color);
+                mat.color = baseColor;
+                if (mat.HasProperty("_BaseColor"))
+                    mat.SetColor("_BaseColor", baseColor);
+                mat.SetFloat("_Metallic", 0.1f);
+                mat.SetFloat("_Smoothness", 0.85f);
+                
+                switch (ringData.Type)
+                {
+                    case RingType.Frozen:
+                        mat.color = Color.Lerp(baseColor, Color.cyan, 0.5f);
+                        mat.SetFloat("_Metallic", 0.1f); mat.SetFloat("_Smoothness", 0.9f); break;
+                    case RingType.Key: case RingType.Locked:
+                        mat.color = new Color(1f, 0.84f, 0f);
+                        mat.SetFloat("_Metallic", 0.8f); mat.SetFloat("_Smoothness", 0.6f); break;
+                    case RingType.Stone:
+                        mat.color = new Color(0.4f, 0.38f, 0.35f);
+                        mat.SetFloat("_Metallic", 0f); mat.SetFloat("_Smoothness", 0.1f); break;
+                    case RingType.Glass:
+                        mat.color = new Color(1f, 1f, 1f, 0.25f);
+                        mat.SetFloat("_Metallic", 0f); mat.SetFloat("_Smoothness", 0.95f); break;
+                    case RingType.Ghost:
+                        mat.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0.15f);
+                        mat.SetFloat("_Metallic", 0.3f); mat.SetFloat("_Smoothness", 0.3f); break;
+                }
+                if (mat.HasProperty("_BaseColor"))
+                    mat.SetColor("_BaseColor", mat.color);
+
                 ringRenderer.sharedMaterial = mat;
             }
 
