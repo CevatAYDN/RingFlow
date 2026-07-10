@@ -1,0 +1,13 @@
+Ring Rules
+Pole Rules
+Move Validation
+Win Rules
+Lose Rules
+Hint Rules
+Undo Rules
+Boss Rules
+Difficulty Rules
+Solver Rules
+Generator Rules
+Random Rules
+Puzzle Invariants

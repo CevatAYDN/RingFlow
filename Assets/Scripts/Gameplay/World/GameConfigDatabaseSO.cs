@@ -66,6 +66,7 @@ namespace RingFlow.Gameplay
         public int MaxLevel;
         public int MinEmptyPoles;
         public int MaxCapacity;
+        public List<WorldMechanicType> AllowedMechanics;
     }
 
     [System.Serializable]
