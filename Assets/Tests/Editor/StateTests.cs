@@ -58,6 +58,19 @@ namespace RingFlow.Tests
         }
 
         [Test]
+        public async Task SplashState_OnEnter_FiresImmediately_WhenSignalBusAvailable()
+        {
+            var state = new SplashState();
+            InjectField(state, "_signalBus", _signalBus);
+
+            var enterTask = state.OnEnterAsync(null, CancellationToken.None).AsTask();
+
+            Assert.IsTrue(enterTask.IsCompleted, "Splash state should not wait for extra frames before showing the splash screen.");
+            await enterTask;
+            Assert.IsTrue(_signalBus.HasFiredShowScreenSplash);
+        }
+
+        [Test]
         public async Task SplashState_OnEnter_DoesNotThrow_WhenSignalBusNull()
         {
             UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;

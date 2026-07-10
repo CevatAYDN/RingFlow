@@ -102,9 +102,16 @@ namespace RingFlow.Editor
                 return;
             }
 
+            // Automatically load screen prefabs as proper Prefab Links!
+            var uiRoot = result.Root.GetComponent<UIRoot>();
+            if (uiRoot != null)
+            {
+                ReloadPrefabScreens(uiRoot, showDialog: false);
+            }
+
             UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene, scenePath);
             EditorUtility.DisplayDialog("Scene Created",
-                $"Working scene saved to {scenePath}.", "OK");
+                $"Working scene saved to {scenePath} with all UI screens instantiated as Prefab Links.", "OK");
         }
 
         public static void BootstrapScene()
@@ -112,8 +119,15 @@ namespace RingFlow.Editor
             var result = EditorBootstrapper.Bootstrap();
             if (result.Success)
             {
+                // Automatically load screen prefabs as proper Prefab Links!
+                var uiRoot = result.Root.GetComponent<UIRoot>();
+                if (uiRoot != null)
+                {
+                    ReloadPrefabScreens(uiRoot, showDialog: false);
+                }
+
                 EditorUtility.DisplayDialog("Setup",
-                    "Nexus Bootstrapper successfully added to the active scene! Press Play to run.", "OK");
+                    "Nexus Bootstrapper successfully added to the active scene, and UI screens populated as Prefab Links! Press Play to run.", "OK");
             }
             else
             {
@@ -931,32 +945,84 @@ namespace RingFlow.Editor
             }
         }
 
-        private static void ReloadPrefabScreens(UIRoot uiRoot)
+        private static void ReloadPrefabScreens(UIRoot uiRoot, bool showDialog = true)
         {
             if (uiRoot == null)
             {
-                EditorUtility.DisplayDialog("Reload Prefab Screens", "UIRoot missing. Run Setup Bootstrapper first.", "OK");
+                if (showDialog)
+                    EditorUtility.DisplayDialog("Reload Prefab Screens", "UIRoot missing. Run Setup Bootstrapper first.", "OK");
                 return;
             }
 
-            uiRoot.RebindFromSceneForEditor();
+            var canvas = GetUIRootCanvas(uiRoot);
+            if (canvas == null)
+            {
+                if (showDialog)
+                    EditorUtility.DisplayDialog("Reload Prefab Screens", "UIRoot Canvas is missing. Run Setup Bootstrapper first.", "OK");
+                return;
+            }
 
             var screens = GetUIRootScreens(uiRoot);
-            if (screens == null || screens.Count == 0)
+            if (screens == null) return;
+
+            // Destroy existing screen instances in the editor safely
+            var toDestroy = new List<GameObject>();
+            foreach (var key in screens.Keys)
             {
-                uiRoot.LoadPrefabScreensFromResources();
-                screens = GetUIRootScreens(uiRoot);
+                if (screens[key] is GameObject go && go != null) toDestroy.Add(go);
+            }
+            screens.Clear();
+            foreach (var go in toDestroy) Object.DestroyImmediate(go);
+
+            // Re-instantiate from prefabs as proper Prefab Instances
+            var missingScreens = new List<string>();
+            var allScreens = System.Enum.GetValues(typeof(ScreenType));
+            foreach (ScreenType screen in allScreens)
+            {
+                var path = RingFlowEditorUiStudio.GetPrefabPathForScreen(screen);
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (prefab == null)
+                {
+                    prefab = Resources.Load<GameObject>($"UI/{screen}");
+                }
+
+                if (prefab == null)
+                {
+                    missingScreens.Add(screen.ToString());
+                    continue;
+                }
+
+                // Instantiate as Prefab Link to preserve prefab hierarchy edits
+                var instance = PrefabUtility.InstantiatePrefab(prefab, canvas.transform) as GameObject;
+                if (instance != null)
+                {
+                    instance.name = screen.ToString();
+                    // Keep Splash active, others inactive by default
+                    instance.SetActive(screen == ScreenType.Splash);
+                    screens[screen] = instance;
+                }
             }
 
-            if (screens == null || screens.Count == 0)
-            {
-                EditorUtility.DisplayDialog("Reload Prefab Screens",
-                    "No screen objects were found in the UICanvas and no matching prefabs exist in Assets/Resources/UI.",
-                    "OK");
-                return;
-            }
+            // Sync UIRoot active exclusive screen
+            s_uiRootType.GetField("_activeExclusiveScreen", s_privInst)?.SetValue(uiRoot, ScreenType.Splash);
 
-            EditorUtility.DisplayDialog("Reload Prefab Screens", $"Loaded {screens.Count} screen object(s) into UIRoot.", "OK");
+            // Mark modified assets and scene dirty
+            EditorUtility.SetDirty(uiRoot);
+            EditorUtility.SetDirty(canvas.gameObject);
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
+
+            string msg = $"Successfully loaded {screens.Count} screen(s) as Prefab Links.";
+            if (missingScreens.Count > 0)
+            {
+                msg += $"\nMissing prefabs: {string.Join(", ", missingScreens)}";
+            }
+            
+            Debug.Log($"[RingFlow] ReloadPrefabScreens: {screens.Count} screens loaded as Prefab Links. Missing: {missingScreens.Count}");
+
+            if (showDialog)
+            {
+                EditorUtility.DisplayDialog("Reload Prefab Screens", msg, "OK");
+            }
         }
 
         private static void OpenPrefabSourceForScreen(ScreenType screen, GameObject go)

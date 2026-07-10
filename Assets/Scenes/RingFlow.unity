@@ -11423,6 +11423,7 @@ GameObject:
   - component: {fileID: 1811569582}
   - component: {fileID: 1811569584}
   - component: {fileID: 1811569583}
+  - component: {fileID: 1811569585}
   m_Layer: 0
   m_Name: Splash
   m_TagString: Untagged
@@ -11489,6 +11490,18 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1811569581}
   m_CullTransparentMesh: 1
+--- !u!114 &1811569585
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1811569581}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f78679fd8fd0b8842b9f58d418c699e7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.UI.SplashView
 --- !u!1 &1843592395
 GameObject:
   m_ObjectHideFlags: 0

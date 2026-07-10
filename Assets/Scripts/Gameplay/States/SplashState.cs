@@ -13,14 +13,10 @@ namespace RingFlow.Gameplay
 
         [Inject] private Diagnostics.IGameDiagnostics _diag;
 
-        public async ValueTask OnEnterAsync(object args, CancellationToken ct)
+        public ValueTask OnEnterAsync(object args, CancellationToken ct)
         {
             _diag?.Checkpoint("SplashState");
             _diag?.Log("FSM", "SplashState.OnEnterAsync started");
-
-            // Wait 2 frames so UIRoot and other subscribers are fully initialized
-            await Awaitable.NextFrameAsync();
-            await Awaitable.NextFrameAsync();
 
             if (_signalBus != null)
             {
@@ -32,6 +28,8 @@ namespace RingFlow.Gameplay
                 NexusLog.Error("SplashState", nameof(OnEnterAsync), "",
                     "ISignalBus unbound; ShowScreenSignal cannot be fired.");
             }
+
+            return default;
         }
 
         public ValueTask OnExitAsync(CancellationToken ct) => default;

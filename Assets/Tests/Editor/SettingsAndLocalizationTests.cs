@@ -299,6 +299,9 @@ namespace RingFlow.Tests
         public void SetBool(string key, bool value) => _db[key] = value;
         public bool GetBool(string key, bool defaultValue = false) => _db.TryGetValue(key, out var v) ? (bool)v : defaultValue;
 
+        public void SetLong(string key, long value) => _db[key] = value;
+        public long GetLong(string key, long defaultValue = 0L) => _db.TryGetValue(key, out var v) ? (long)v : defaultValue;
+
         public void Save() {}
 
         public ValueTask InitializeAsync(System.Threading.CancellationToken ct) => default;

@@ -14,7 +14,14 @@ namespace RingFlow.Gameplay.UI
 
         private void Awake()
         {
+            Debug.Log("[SplashView] Awake called");
             BindReferencesFromChildren();
+        }
+
+        protected override void OnEnable()
+        {
+            Debug.Log("[SplashView] OnEnable called");
+            base.OnEnable();
         }
 
         public void Localize(ILocalizationService loc)
