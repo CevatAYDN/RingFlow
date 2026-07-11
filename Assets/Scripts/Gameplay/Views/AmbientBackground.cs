@@ -6,8 +6,8 @@ namespace RingFlow.Gameplay
     {
         private GameFeelConfigSO Feel => GameFeelConfigSO.Instance;
 
-        [SerializeField] private Color _topColor = new(0.08f, 0.10f, 0.14f);
-        [SerializeField] private Color _bottomColor = new(0.04f, 0.06f, 0.10f);
+        [SerializeField] private Color _topColor = new(0.96f, 0.98f, 1.0f);
+        [SerializeField] private Color _bottomColor = new(0.88f, 0.92f, 0.97f);
 
         private GameObject[] _particles;
         private float[] _twinklePhases;
@@ -83,7 +83,7 @@ namespace RingFlow.Gameplay
             float spawnH = 24f;
             float twinkleMin = 0.5f;
             float twinkleMax = 2.0f;
-            Color pColor = new(0.15f, 0.25f, 0.40f, 0.3f);
+            Color pColor = new(1.0f, 1.0f, 1.0f, 0.15f);
 
             _particles = new GameObject[count];
             _twinklePhases = new float[count];
@@ -158,7 +158,7 @@ namespace RingFlow.Gameplay
 
                 float alpha = (Mathf.Sin(Time.time * _twinkleSpeeds[i] + _twinklePhases[i]) + 0.5f) * 0.5f;
                 _renderers[i].GetPropertyBlock(_propBlock);
-                var c = new Color(0.15f, 0.25f, 0.40f, alpha * 0.3f);
+                var c = new Color(1.0f, 1.0f, 1.0f, alpha * 0.15f);
                 _propBlock.SetColor("_Color", c);
                 _propBlock.SetColor("_BaseColor", c);
                 _renderers[i].SetPropertyBlock(_propBlock);

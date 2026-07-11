@@ -126,6 +126,14 @@ namespace RingFlow.Gameplay
             diag?.Checkpoint("GameplayLifecycle.OnInitializeAsync");
             diag?.Log("Lifecycle", "GameplayLifecycle.OnInitializeAsync started");
 
+            // Load and bind the configured RingColorPaletteSO ScriptableObject
+            var palette = Resources.Load<RingColorPaletteSO>("RingColorPalette");
+            if (palette != null)
+            {
+                RingPalette.Bind(palette);
+                diag?.Log("Lifecycle", "RingColorPalette bound successfully.");
+            }
+
             var settings = context.TryResolve<SettingsModel>();
             var audio = context.TryResolve<IAudioService>();
             var haptics = context.TryResolve<IHapticService>();
@@ -400,6 +408,7 @@ namespace RingFlow.Gameplay
 
             // Auto-flush save on dispose — ensure no loss when player quits to main menu.
             var context = NexusRuntime.CurrentContext;
+            if (context == null) return;
             var prefs = context.TryResolve<IPlayerPrefsService>();
             if (prefs != null)
             {

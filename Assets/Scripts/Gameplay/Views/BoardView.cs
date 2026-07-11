@@ -34,6 +34,8 @@ namespace RingFlow.Gameplay
         private int _lastSelectedPoleId = -1;
         private int _animatingTargetPoleId = -1;
         private bool _ringPrewarmed;
+        private Mesh _proceduralTorusMesh;
+        private GameObject _floorPlane;
 
         public void EnsureRingPoolPrewarmed()
         {
@@ -52,6 +54,7 @@ namespace RingFlow.Gameplay
             if (visualBoard != null) Destroy(visualBoard);
 
             EnsureRingPoolPrewarmed();
+            EnsureFloorPlaneCreated();
 
             float spacing = F.PoleSpacing;
             float boardWidth = (poles.Count - 1) * spacing;
@@ -84,9 +87,12 @@ namespace RingFlow.Gameplay
                 poleObj.transform.localRotation = Quaternion.identity;
                 poleObj.transform.localScale = F.PoleScale;
 
-                var renderer = poleObj.GetComponent<Renderer>();
-                if (renderer != null)
-                    renderer.sharedMaterial = GetPoleMaterial(poleData.IsLocked);
+                var renderers = poleObj.GetComponentsInChildren<Renderer>(true);
+                var poleMat = GetPoleMaterial(poleData.IsLocked);
+                foreach (var r in renderers)
+                {
+                    r.sharedMaterial = poleMat;
+                }
                 poleView.SyncMaterial();
 
                 while (_spawnedPoles.Count <= p) _spawnedPoles.Add(null);
@@ -131,7 +137,15 @@ namespace RingFlow.Gameplay
 
                     ringObj.transform.localPosition = new Vector3(0f, targetY, 0f);
                     ringObj.transform.localRotation = Quaternion.identity;
-                    ringObj.transform.localScale = _torusPrefab != null ? F.RingScaleTorus : F.RingScaleFallback;
+
+                    // Uniform World Scale Compensation (1.5f width, 0.44f height)
+                    float targetWidth = 1.5f;
+                    float targetHeight = 0.44f;
+                    float meshHeight = 0.26f;
+                    float localX = targetWidth / F.PoleScale.x;
+                    float localY = (targetHeight / meshHeight) / F.PoleScale.y;
+                    float localZ = targetWidth / F.PoleScale.z;
+                    ringObj.transform.localScale = new Vector3(localX, localY, localZ);
 
                     var ringRenderer = ringObj.GetComponentInChildren<Renderer>();
                     if (ringRenderer != null)
@@ -261,6 +275,47 @@ namespace RingFlow.Gameplay
                         topRing.transform.localPosition = new Vector3(0f, targetY, 0f);
                     else
                         topRing.transform.DOLocalMoveY(targetY, duration).SetEase(Ease.OutQuad);
+
+                    // --- Warm Selection Glow ---
+                    var lightChildTransform = topRing.transform.Find("SelectionGlowLight");
+                    var ringRenderer = topRing.GetComponentInChildren<Renderer>();
+                    var propBlock = new MaterialPropertyBlock();
+
+                    if (isSelected)
+                    {
+                        if (lightChildTransform == null)
+                        {
+                            var lightGo = new GameObject("SelectionGlowLight");
+                            lightGo.transform.SetParent(topRing.transform, false);
+                            lightGo.transform.localPosition = Vector3.zero;
+
+                            var light = lightGo.AddComponent<Light>();
+                            light.type = LightType.Point;
+                            light.color = F.SelectionGlowColor;
+                            light.range = F.SelectionGlowRange;
+                            light.intensity = F.SelectionGlowIntensity;
+                            light.shadows = LightShadows.None;
+                        }
+                        if (ringRenderer != null)
+                        {
+                            ringRenderer.GetPropertyBlock(propBlock);
+                            propBlock.SetColor("_EmissionColor", F.SelectionEmissionColor);
+                            ringRenderer.SetPropertyBlock(propBlock);
+                        }
+                    }
+                    else
+                    {
+                        if (lightChildTransform != null) 
+                        {
+                            Destroy(lightChildTransform.gameObject);
+                        }
+                        if (ringRenderer != null)
+                        {
+                            ringRenderer.GetPropertyBlock(propBlock);
+                            propBlock.SetColor("_EmissionColor", Color.black);
+                            ringRenderer.SetPropertyBlock(propBlock);
+                        }
+                    }
                 }
             }
         }
@@ -289,16 +344,30 @@ namespace RingFlow.Gameplay
         private void EnsurePolePrefabCreated()
         {
             if (_polePrefab != null) return;
-            _polePrefab = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            _polePrefab.name = "Pole_Template";
-            var capsule = _polePrefab.GetComponent<CapsuleCollider>();
-            if (capsule != null) DestroyImmediate(capsule);
-            var box = _polePrefab.GetComponent<BoxCollider>();
-            if (box == null)
-            {
-                box = _polePrefab.AddComponent<BoxCollider>();
-                box.size = new Vector3(F.PoleSpacing * F.PoleColliderWidthFraction, 3.0f, 2.0f);
-            }
+            
+            _polePrefab = new GameObject("Pole_Template");
+            
+            var body = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            body.name = "Body";
+            body.transform.SetParent(_polePrefab.transform, false);
+            body.transform.localPosition = new Vector3(0f, 0f, 0f);
+            body.transform.localScale = new Vector3(1f, 1f, 1f);
+            var bodyCol = body.GetComponent<Collider>();
+            if (bodyCol != null) DestroyImmediate(bodyCol);
+            
+            var cap = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            cap.name = "Cap";
+            cap.transform.SetParent(_polePrefab.transform, false);
+            cap.transform.localPosition = new Vector3(0f, 1.0f, 0f);
+            
+            float capYScale = F.PoleScale.x / F.PoleScale.y;
+            cap.transform.localScale = new Vector3(1f, capYScale, 1f);
+            var capCol = cap.GetComponent<Collider>();
+            if (capCol != null) DestroyImmediate(capCol);
+
+            var box = _polePrefab.AddComponent<BoxCollider>();
+            box.size = new Vector3(F.PoleSpacing * F.PoleColliderWidthFraction, 3.0f, 2.0f);
+            
             _polePrefab.SetActive(false);
             _polePrefab.transform.SetParent(transform, false);
         }
@@ -319,40 +388,47 @@ namespace RingFlow.Gameplay
 
         private GameObject AcquireRing()
         {
+            GameObject ringObj = null;
             if (_torusPrefab == null) _torusPrefab = Resources.Load<GameObject>("Torus");
             if (_torusPrefab != null && _objectPoolService != null)
             {
-                var ringObj = _objectPoolService.Spawn(_torusPrefab, Vector3.zero, Quaternion.identity);
-                if (ringObj != null)
-                {
-                    ringObj.name = "Ring_Torus";
-                    var col = ringObj.GetComponent<Collider>();
-                    if (col != null) Destroy(col);
-                    ringObj.SetActive(true);
-                    KillTweens(ringObj);
-                    return ringObj;
-                }
+                ringObj = _objectPoolService.Spawn(_torusPrefab, Vector3.zero, Quaternion.identity);
             }
-            if (_torusPrefab != null)
+            else if (_torusPrefab != null)
             {
-                var ringObj = Instantiate(_torusPrefab);
-                ringObj.name = "Ring_Torus";
+                ringObj = Instantiate(_torusPrefab);
+            }
+            
+            if (ringObj == null)
+            {
+                ringObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                var fbCol = ringObj.GetComponent<Collider>();
+                if (fbCol != null) Destroy(fbCol);
+            }
+            else
+            {
                 var col = ringObj.GetComponent<Collider>();
                 if (col != null) Destroy(col);
                 ringObj.SetActive(true);
                 KillTweens(ringObj);
-                return ringObj;
             }
-            var fallback = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            fallback.name = "Ring_Fallback";
-            var fbCol = fallback.GetComponent<Collider>();
-            if (fbCol != null) Destroy(fbCol);
-            return fallback;
+
+            ringObj.name = "Ring_Torus";
+            var meshFilter = ringObj.GetComponentInChildren<MeshFilter>();
+            if (meshFilter != null)
+            {
+                meshFilter.sharedMesh = GetProceduralTorusMesh();
+            }
+            return ringObj;
         }
 
         private void RecycleRing(GameObject ring)
         {
             KillTweens(ring);
+            
+            var lightChild = ring.transform.Find("SelectionGlowLight");
+            if (lightChild != null) Destroy(lightChild.gameObject);
+            
             for (int i = ring.transform.childCount - 1; i >= 0; i--)
             {
                 var child = ring.transform.GetChild(i);
@@ -370,27 +446,28 @@ namespace RingFlow.Gameplay
 
         private static Material GetPoleMaterial(bool locked)
         {
+            var feel = GameFeelConfigSO.Instance;
             if (locked)
             {
                 if (_lockedPoleMaterial == null)
                 {
-                    var darkColor = new Color(0.12f, 0.12f, 0.14f);
+                    var darkColor = feel.PoleColorLocked;
                     _lockedPoleMaterial = new Material(GetDefaultShader()) { color = darkColor, name = "PoleMat_Locked" };
                     if (_lockedPoleMaterial.HasProperty("_BaseColor"))
                         _lockedPoleMaterial.SetColor("_BaseColor", darkColor);
-                    _lockedPoleMaterial.SetFloat("_Metallic", 0.9f);
-                    _lockedPoleMaterial.SetFloat("_Smoothness", 0.9f);
+                    _lockedPoleMaterial.SetFloat("_Metallic", feel.PoleMetallic);
+                    _lockedPoleMaterial.SetFloat("_Smoothness", feel.PoleSmoothness);
                 }
                 return _lockedPoleMaterial;
             }
             if (_openPoleMaterial == null)
             {
-                var slateColor = new Color(0.20f, 0.22f, 0.25f);
-                _openPoleMaterial = new Material(GetDefaultShader()) { color = slateColor, name = "PoleMat_Open" };
+                var openColor = feel.PoleColorOpen;
+                _openPoleMaterial = new Material(GetDefaultShader()) { color = openColor, name = "PoleMat_Open" };
                 if (_openPoleMaterial.HasProperty("_BaseColor"))
-                    _openPoleMaterial.SetColor("_BaseColor", slateColor);
-                _openPoleMaterial.SetFloat("_Metallic", 0.8f);
-                _openPoleMaterial.SetFloat("_Smoothness", 0.8f);
+                    _openPoleMaterial.SetColor("_BaseColor", openColor);
+                _openPoleMaterial.SetFloat("_Metallic", feel.PoleMetallic);
+                _openPoleMaterial.SetFloat("_Smoothness", feel.PoleSmoothness);
             }
             return _openPoleMaterial;
         }
@@ -404,8 +481,10 @@ namespace RingFlow.Gameplay
             mat.color = baseColor;
             if (mat.HasProperty("_BaseColor"))
                 mat.SetColor("_BaseColor", baseColor);
-            mat.SetFloat("_Metallic", 0.1f);
-            mat.SetFloat("_Smoothness", 0.85f);
+            mat.SetFloat("_Metallic", F.RingMetallic);
+            mat.SetFloat("_Smoothness", F.RingSmoothness);
+            mat.EnableKeyword("_EMISSION");
+            mat.SetColor("_EmissionColor", Color.black);
             ApplySpecialRingMaterial(mat, baseColor, type);
             mat.name = "RingMat_" + color + "_" + type;
             _ringMaterialCache[key] = mat;
@@ -559,6 +638,106 @@ namespace RingFlow.Gameplay
             float desiredHalfWidth = (boardWidth * 0.5f) + 1.5f;
             float desiredOrthoSize = desiredHalfWidth / cam.aspect;
             cam.orthographicSize = Mathf.Max(desiredOrthoSize, 5.5f);
+        }
+
+        private void EnsureFloorPlaneCreated()
+        {
+            if (_floorPlane != null) return;
+            _floorPlane = GameObject.Find("ShadowFloorPlane");
+            if (_floorPlane != null) return;
+
+            _floorPlane = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            _floorPlane.name = "ShadowFloorPlane";
+            _floorPlane.transform.position = new Vector3(0f, -0.51f, 0f);
+            _floorPlane.transform.localScale = new Vector3(10f, 1f, 10f); // 100x100 units
+            
+            var col = _floorPlane.GetComponent<Collider>();
+            if (col != null) Destroy(col);
+            
+            var renderer = _floorPlane.GetComponent<MeshRenderer>();
+            renderer.receiveShadows = true;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            
+            var mat = new Material(GetDefaultShader());
+            Color floorColor = new Color(0.88f, 0.92f, 0.97f); // matches bottom background gradient
+            mat.color = floorColor;
+            if (mat.HasProperty("_BaseColor"))
+                mat.SetColor("_BaseColor", floorColor);
+            mat.SetFloat("_Metallic", 0f);
+            mat.SetFloat("_Smoothness", 0.1f);
+            renderer.sharedMaterial = mat;
+        }
+
+        private Mesh GetProceduralTorusMesh()
+        {
+            if (_proceduralTorusMesh == null)
+            {
+                _proceduralTorusMesh = CreateProceduralTorusMesh(0.37f, 0.13f, 32, 24);
+            }
+            return _proceduralTorusMesh;
+        }
+
+        private Mesh CreateProceduralTorusMesh(float majorRadius, float minorRadius, int radialSegments, int tubularSegments)
+        {
+            Mesh mesh = new Mesh();
+            mesh.name = "ProceduralTorus";
+
+            int numVertices = (radialSegments + 1) * (tubularSegments + 1);
+            Vector3[] vertices = new Vector3[numVertices];
+            Vector3[] normals = new Vector3[numVertices];
+            Vector2[] uv = new Vector2[numVertices];
+            int[] triangles = new int[radialSegments * tubularSegments * 6];
+
+            int vIdx = 0;
+            for (int radial = 0; radial <= radialSegments; radial++)
+            {
+                float u = (float)radial / radialSegments * Mathf.PI * 2f;
+                float cosU = Mathf.Cos(u);
+                float sinU = Mathf.Sin(u);
+
+                for (int tubular = 0; tubular <= tubularSegments; tubular++)
+                {
+                    float v = (float)tubular / tubularSegments * Mathf.PI * 2f;
+                    float cosV = Mathf.Cos(v);
+                    float sinV = Mathf.Sin(v);
+
+                    float x = (majorRadius + minorRadius * cosV) * cosU;
+                    float y = minorRadius * sinV;
+                    float z = (majorRadius + minorRadius * cosV) * sinU;
+                    vertices[vIdx] = new Vector3(x, y, z);
+
+                    normals[vIdx] = new Vector3(cosV * cosU, sinV, cosV * sinU).normalized;
+                    uv[vIdx] = new Vector2((float)radial / radialSegments, (float)tubular / tubularSegments);
+
+                    vIdx++;
+                }
+            }
+
+            int tIdx = 0;
+            for (int radial = 0; radial < radialSegments; radial++)
+            {
+                for (int tubular = 0; tubular < tubularSegments; tubular++)
+                {
+                    int current = radial * (tubularSegments + 1) + tubular;
+                    int next = (radial + 1) * (tubularSegments + 1) + tubular;
+
+                    triangles[tIdx++] = current;
+                    triangles[tIdx++] = next + 1;
+                    triangles[tIdx++] = next;
+
+                    triangles[tIdx++] = current;
+                    triangles[tIdx++] = current + 1;
+                    triangles[tIdx++] = next + 1;
+                }
+            }
+
+            mesh.vertices = vertices;
+            mesh.normals = normals;
+            mesh.uv = uv;
+            mesh.triangles = triangles;
+            mesh.RecalculateBounds();
+
+            return mesh;
         }
     }
 

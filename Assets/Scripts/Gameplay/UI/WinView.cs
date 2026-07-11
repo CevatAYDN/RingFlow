@@ -19,7 +19,7 @@ namespace RingFlow.Gameplay.UI
         private void Awake()
         {
             var overlay = GetComponent<Image>();
-            if (overlay != null)
+            if (overlay != null && overlay.color == Color.white)
             {
                 overlay.color = new Color(0, 0, 0, 0.70f);
             }
@@ -40,18 +40,13 @@ namespace RingFlow.Gameplay.UI
                 GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.2f, 0.66f, 0.8f, 0.76f);
             }
 
-            if (TitleText != null)
-            {
-                TitleText.fontStyle = FontStyle.Bold;
-            }
-
             var card = transform.Find("Card")?.gameObject;
             if (card == null)
             {
                 card = GameUIResources.CreatePanel("Card", transform);
                 GameUIResources.SetAnchors(card.GetComponent<RectTransform>(), 0.16f, 0.20f, 0.84f, 0.80f);
+                card.GetComponent<Image>().color = GameUIResources.PanelColor;
             }
-            card.GetComponent<Image>().color = GameUIResources.PanelColor;
 
             var starRow = new GameObject("Stars", typeof(RectTransform), typeof(HorizontalLayoutGroup));
             starRow.transform.SetParent(transform, false);

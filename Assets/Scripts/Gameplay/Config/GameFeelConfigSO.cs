@@ -95,6 +95,30 @@ namespace RingFlow.Gameplay
         public Color LockedTint = Color.black;
         [Tooltip("Error flash duration.")]
         public float ErrorFlashDuration = 0.35f;
+        [Tooltip("Open pole standard color.")]
+        public Color PoleColorOpen = new Color(0.20f, 0.22f, 0.25f);
+        [Tooltip("Locked pole standard color.")]
+        public Color PoleColorLocked = new Color(0.12f, 0.12f, 0.14f);
+        [Tooltip("Pole material metallic value.")]
+        public float PoleMetallic = 0.8f;
+        [Tooltip("Pole material smoothness value.")]
+        public float PoleSmoothness = 0.8f;
+
+        [Header("Ring Materials")]
+        [Tooltip("Ring material metallic value.")]
+        public float RingMetallic = 0.1f;
+        [Tooltip("Ring material smoothness value.")]
+        public float RingSmoothness = 0.85f;
+
+        [Header("Selection Glow")]
+        [Tooltip("Glow point light color.")]
+        public Color SelectionGlowColor = new Color(1f, 0.85f, 0.5f);
+        [Tooltip("Glow point light intensity.")]
+        public float SelectionGlowIntensity = 2f;
+        [Tooltip("Glow point light range.")]
+        public float SelectionGlowRange = 2.5f;
+        [Tooltip("Selected ring emission color.")]
+        public Color SelectionEmissionColor = new Color(0.4f, 0.3f, 0.1f);
 
         [Header("Rainbow Cycle")]
         [Tooltip("Hue rotation speed multiplier.")]

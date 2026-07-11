@@ -12,13 +12,13 @@ namespace RingFlow.Gameplay.UI
     {
         // ── Color tokens (Material Design-inspired dark theme) ────────────
         public static Color PrimaryColor    => new Color(0.22f, 0.51f, 0.91f); // #387AE8
-        public static Color PrimaryPressed  => new Color(0.18f, 0.42f, 0.78f);
+        public static Color PrimaryPressed  => new Color(0.16f, 0.40f, 0.75f);
         public static Color AccentColor     => new Color(1.00f, 0.76f, 0.03f); // #FFC208
-        public static Color BgColor         => new Color(0.08f, 0.08f, 0.12f); // #14141F
-        public static Color SurfaceColor    => new Color(0.12f, 0.13f, 0.18f);
-        public static Color PanelColor      => new Color(0.14f, 0.14f, 0.20f); // #242433
-        public static Color TextColor       => Color.white;
-        public static Color MutedText       => new Color(0.60f, 0.60f, 0.65f);
+        public static Color BgColor         => new Color(0.96f, 0.98f, 1.0f);  // Light white-blue background
+        public static Color SurfaceColor    => new Color(0.90f, 0.93f, 0.97f); // Light blue-grey surface
+        public static Color PanelColor      => new Color(0.88f, 0.92f, 0.96f); // Soft light blue-grey panel
+        public static Color TextColor       => new Color(0.15f, 0.20f, 0.28f); // Clean dark grey/blue text
+        public static Color MutedText       => new Color(0.40f, 0.45f, 0.52f); // Slate-grey muted text
         public static Color DangerColor     => new Color(0.78f, 0.20f, 0.20f);
         public static Color SuccessColor    => new Color(0.27f, 0.74f, 0.40f);
 
@@ -86,7 +86,7 @@ namespace RingFlow.Gameplay.UI
             text.font = GetFont();
             text.fontSize = 22;
             text.alignment = TextAnchor.MiddleCenter;
-            text.color = TextColor;
+            text.color = Color.white; // Primary button has white text for contrast
             text.text = label;
             text.fontStyle = FontStyle.Bold;
 
@@ -120,18 +120,21 @@ namespace RingFlow.Gameplay.UI
             var button = btn.GetComponent<Button>();
             var colors = button.colors;
             colors.normalColor = SurfaceColor;
-            colors.highlightedColor = new Color(0.20f, 0.22f, 0.28f);
-            colors.pressedColor = new Color(0.10f, 0.11f, 0.14f);
-            colors.disabledColor = new Color(0.18f, 0.18f, 0.22f);
+            colors.highlightedColor = new Color(0.80f, 0.84f, 0.90f);
+            colors.pressedColor = new Color(0.70f, 0.74f, 0.80f);
+            colors.disabledColor = new Color(0.85f, 0.87f, 0.90f);
             button.colors = colors;
+
+            var text = btn.GetComponentInChildren<Text>();
+            if (text != null) text.color = TextColor;
         }
 
         public static void ApplyIconStyle(Button button)
         {
             var colors = button.colors;
             colors.normalColor = PanelColor;
-            colors.highlightedColor = new Color(0.20f, 0.22f, 0.28f);
-            colors.pressedColor = new Color(0.10f, 0.11f, 0.14f);
+            colors.highlightedColor = new Color(0.80f, 0.84f, 0.90f);
+            colors.pressedColor = new Color(0.70f, 0.74f, 0.80f);
             button.colors = colors;
         }
 
@@ -145,6 +148,9 @@ namespace RingFlow.Gameplay.UI
             colors.highlightedColor = new Color(0.30f, 0.62f, 1.00f);
             colors.pressedColor = PrimaryPressed;
             button.colors = colors;
+
+            var text = btn.GetComponentInChildren<Text>();
+            if (text != null) text.color = Color.white;
         }
 
         public static void ApplyDangerStyle(GameObject btn)
@@ -157,6 +163,9 @@ namespace RingFlow.Gameplay.UI
             colors.highlightedColor = new Color(0.88f, 0.32f, 0.32f);
             colors.pressedColor = new Color(0.60f, 0.15f, 0.15f);
             button.colors = colors;
+
+            var text = btn.GetComponentInChildren<Text>();
+            if (text != null) text.color = Color.white;
         }
 
         public static void ApplySecondaryStyle(GameObject btn)
@@ -166,9 +175,27 @@ namespace RingFlow.Gameplay.UI
             var button = btn.GetComponent<Button>();
             var colors = button.colors;
             colors.normalColor = SurfaceColor;
-            colors.highlightedColor = new Color(0.20f, 0.22f, 0.28f);
-            colors.pressedColor = new Color(0.10f, 0.11f, 0.14f);
+            colors.highlightedColor = new Color(0.80f, 0.84f, 0.90f);
+            colors.pressedColor = new Color(0.70f, 0.74f, 0.80f);
             button.colors = colors;
+
+            var text = btn.GetComponentInChildren<Text>();
+            if (text != null) text.color = TextColor;
+        }
+
+        public static void ApplyTextButtonStyle(GameObject btn)
+        {
+            var image = btn.GetComponent<Image>();
+            if (image != null) image.color = Color.clear;
+            var button = btn.GetComponent<Button>();
+            var colors = button.colors;
+            colors.normalColor = Color.clear;
+            colors.highlightedColor = new Color(0.15f, 0.20f, 0.28f, 0.08f);
+            colors.pressedColor = new Color(0.15f, 0.20f, 0.28f, 0.15f);
+            button.colors = colors;
+
+            var text = btn.GetComponentInChildren<Text>();
+            if (text != null) text.color = TextColor;
         }
 
         // ── Localization helpers ─────────────────────────────────────────

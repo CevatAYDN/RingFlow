@@ -24,7 +24,7 @@ namespace RingFlow.Gameplay
         private static Color GetErrorTint() => GameFeelConfigSO.Instance?.ErrorTint ?? new Color(1f, 0.30f, 0.30f, 1f);
         private static Color GetLockedTint() => GameFeelConfigSO.Instance?.LockedTint ?? Color.black;
 
-        private Renderer _renderer;
+        private Renderer[] _renderers;
         private Color _baseColor = Color.white;
         private Coroutine _flashRoutine;
         private bool _isSelected;
@@ -72,21 +72,50 @@ namespace RingFlow.Gameplay
 
         private void SetColor(Color c)
         {
-            if (_renderer == null) _renderer = GetComponent<Renderer>();
-            if (_renderer == null) return;
+            if (_renderers == null || _renderers.Length == 0)
+            {
+                var childRenderers = GetComponentsInChildren<Renderer>(true);
+                var list = new System.Collections.Generic.List<Renderer>();
+                foreach (var r in childRenderers)
+                {
+                    if (r.name == "Body" || r.name == "Cap" || r.gameObject == gameObject)
+                    {
+                        list.Add(r);
+                    }
+                }
+                _renderers = list.ToArray();
+            }
+            if (_renderers == null || _renderers.Length == 0) return;
             if (_propBlock == null) _propBlock = new MaterialPropertyBlock();
-            _renderer.GetPropertyBlock(_propBlock);
-            _propBlock.SetColor("_Color", c);
-            _propBlock.SetColor("_BaseColor", c);
-            _renderer.SetPropertyBlock(_propBlock);
+            
+            foreach (var r in _renderers)
+            {
+                if (r == null) continue;
+                r.GetPropertyBlock(_propBlock);
+                _propBlock.SetColor("_Color", c);
+                _propBlock.SetColor("_BaseColor", c);
+                r.SetPropertyBlock(_propBlock);
+            }
         }
 
         private void EnsureMaterialAccess()
         {
-            if (_renderer == null) _renderer = GetComponent<Renderer>();
-            if (_renderer != null && _renderer.sharedMaterial != null)
+            if (_renderers == null || _renderers.Length == 0)
             {
-                _baseColor = _renderer.sharedMaterial.color;
+                var childRenderers = GetComponentsInChildren<Renderer>(true);
+                var list = new System.Collections.Generic.List<Renderer>();
+                foreach (var r in childRenderers)
+                {
+                    if (r.name == "Body" || r.name == "Cap" || r.gameObject == gameObject)
+                    {
+                        list.Add(r);
+                    }
+                }
+                _renderers = list.ToArray();
+            }
+            if (_renderers != null && _renderers.Length > 0 && _renderers[0] != null && _renderers[0].sharedMaterial != null)
+            {
+                _baseColor = _renderers[0].sharedMaterial.color;
             }
         }
 
@@ -96,10 +125,20 @@ namespace RingFlow.Gameplay
         /// </summary>
         public void SyncMaterial()
         {
-            if (_renderer == null) _renderer = GetComponent<Renderer>();
-            if (_renderer != null && _renderer.sharedMaterial != null)
+            var childRenderers = GetComponentsInChildren<Renderer>(true);
+            var list = new System.Collections.Generic.List<Renderer>();
+            foreach (var r in childRenderers)
             {
-                _baseColor = _renderer.sharedMaterial.color;
+                if (r.name == "Body" || r.name == "Cap" || r.gameObject == gameObject)
+                {
+                    list.Add(r);
+                }
+            }
+            _renderers = list.ToArray();
+
+            if (_renderers != null && _renderers.Length > 0 && _renderers[0] != null && _renderers[0].sharedMaterial != null)
+            {
+                _baseColor = _renderers[0].sharedMaterial.color;
             }
         }
 
