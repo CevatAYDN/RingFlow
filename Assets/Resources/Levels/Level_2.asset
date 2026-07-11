@@ -15,9 +15,9 @@ MonoBehaviour:
   Data:
     LevelIndex: 2
     Seed: 102
-    TargetMoves: 7
+    TargetMoves: 8
     Poles:
-    - MaxCapacity: 3
+    - RingCapacity: 3
       Rings:
       - Color: 1
         Type: 0
@@ -29,9 +29,7 @@ MonoBehaviour:
         Type: 0
         AdditionalData: 0
       IsLocked: 0
-      CapacityLabel: 3
-      RingTargetCount: 3
-    - MaxCapacity: 3
+    - RingCapacity: 3
       Rings:
       - Color: 2
         Type: 0
@@ -43,14 +41,10 @@ MonoBehaviour:
         Type: 0
         AdditionalData: 0
       IsLocked: 0
-      CapacityLabel: 3
-      RingTargetCount: 3
-    - MaxCapacity: 3
+    - RingCapacity: 3
       Rings: []
       IsLocked: 0
-      CapacityLabel: 3
-      RingTargetCount: 3
-    - MaxCapacity: 3
+    - RingCapacity: 3
       Rings:
       - Color: 1
         Type: 0
@@ -62,5 +56,3 @@ MonoBehaviour:
         Type: 0
         AdditionalData: 0
       IsLocked: 0
-      CapacityLabel: 3
-      RingTargetCount: 3
