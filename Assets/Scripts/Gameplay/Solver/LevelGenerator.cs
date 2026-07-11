@@ -288,13 +288,38 @@ namespace RingFlow.Gameplay
             var mechanic = GameConfigDatabaseSO.Instance.GetMechanicForWorld(worldIndex);
             int intensity = GameConfigDatabaseSO.Instance.GetMechanicIntensityForLevel(levelIndex);
 
+            // ── Transition Sieve ──
+            // Smooth out difficulty spikes in the first 10 levels of a new difficulty band
+            var band = GameConfigDatabaseSO.Instance.GetBandForLevel(levelIndex);
+            if (band != DifficultyBand.Tutorial)
+            {
+                int bandStartLevel = 1;
+                foreach (var b in GameConfigDatabaseSO.Instance.DifficultyBands)
+                {
+                    if (b.Band == band)
+                    {
+                        int prevMax = 0;
+                        foreach (var prevB in GameConfigDatabaseSO.Instance.DifficultyBands)
+                        {
+                            if (prevB.MaxLevel < b.MaxLevel && prevB.MaxLevel > prevMax)
+                            {
+                                prevMax = prevB.MaxLevel;
+                            }
+                        }
+                        bandStartLevel = prevMax + 1;
+                        break;
+                    }
+                }
+
+                int levelInBand = levelIndex - bandStartLevel;
+                if (levelInBand >= 0 && levelInBand < 10)
+                {
+                    intensity = Math.Max(1, intensity - 1);
+                }
+            }
+
             if (mechanic == WorldMechanicType.None) return;
 
-            // FIX P1.EmptyPoles — GDD §5 sets MinEmptyPoles per band. Validate that the
-            // generated layout keeps that floor so the player always has at least the
-            // breathing-room the design promises. The LevelGenerator itself pads poleCount
-            // to colourCount + 1; here we only warn if the chosen build drifts below the band
-            // minimum. Engineers can alter poleCount from the Editor Dashboard to reconcile.
             int minEmptyPoles = DifficultyCurve.MinEmptyPolesForLevel(levelIndex);
             int occupiedPoles = 0;
             for (int p = 0; p < board.PoleCount; p++)
@@ -371,6 +396,7 @@ namespace RingFlow.Gameplay
             }
 
             EnforceMaxMechanicsLimit(ref board);
+            EnforceMechanicCompatibility(ref board);
         }
 
         private static void InjectSingleType(ref BoardState board, RingType type, int maxCount, Random rand)
@@ -571,6 +597,26 @@ namespace RingFlow.Gameplay
                     if (t != RingType.Standard && !allowed.Contains(t))
                     {
                         board.SetRingType(p, r, RingType.Standard);
+                    }
+                }
+            }
+        }
+
+        private static void EnforceMechanicCompatibility(ref BoardState board)
+        {
+            for (int p = 0; p < board.PoleCount; p++)
+            {
+                if (board.IsPoleLocked(p))
+                {
+                    // Locked poles must not contain Stone or Bomb rings
+                    int count = board.GetRingCount(p);
+                    for (int r = 0; r < count; r++)
+                    {
+                        var t = board.GetRingType(p, r);
+                        if (t == RingType.Stone || t == RingType.Bomb)
+                        {
+                            board.SetRingType(p, r, RingType.Standard);
+                        }
                     }
                 }
             }

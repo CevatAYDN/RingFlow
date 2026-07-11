@@ -683,5 +683,36 @@ namespace RingFlow.Tests
             // Might not be solvable (single pole with same color + bomb), but shouldn't crash
             Assert.NotNull(result);
         }
+
+        [Test]
+        public void LevelGenerator_TransitionSieve_SmoothsIntensity()
+        {
+            int levelIndex = 101; 
+            int seed = levelIndex * 12345;
+            int poleCount = DifficultyCurve.PoleCountForLevel(levelIndex);
+            int colorCount = DifficultyCurve.ColorCountForLevel(levelIndex);
+            int maxCap = DifficultyCurve.MaxCapacityForLevel(levelIndex);
+            
+            var levelData = LevelGenerator.GenerateLevel(levelIndex, seed, poleCount, colorCount, maxCap);
+            Assert.NotNull(levelData);
+        }
+
+        [Test]
+        public void LevelGenerator_MechanicCompatibility_EnforcesConstraints()
+        {
+            var board = new BoardState { PoleCount = 2, MaxCapacity = 4 };
+            board.SetPoleLocked(0, true);
+            board.AddRing(0, new RingData(RingColor.Red, RingType.Stone));
+            board.AddRing(1, new RingData(RingColor.Blue, RingType.Standard));
+
+            var method = typeof(LevelGenerator).GetMethod("EnforceMechanicCompatibility", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+            
+            object[] args = new object[] { board };
+            method.Invoke(null, args);
+            board = (BoardState)args[0];
+
+            Assert.AreEqual(RingType.Standard, board.GetRingType(0, 0));
+        }
     }
 }

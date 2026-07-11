@@ -19,6 +19,12 @@ namespace RingFlow.Editor
         public override string DisplayName => "Scene Visual Board Builder";
         public override string PrefKey => EditorPrefsKeys.FoldBuilder;
 
+        private List<MoveRecord> _previewMoves = new();
+        private int _currentPreviewIndex = -1;
+        private BoardState _initialPreviewBoard;
+        private bool _solvedSuccessfully;
+        private string _solveStatusMsg = "";
+
         public VisualBuilderSection(GeneratorSection generator) { _generator = generator; }
 
         public override void OnGUI()
@@ -38,7 +44,105 @@ namespace RingFlow.Editor
                         BuildInScene();
 
                     if (GUILayout.Button("Clear Scene Board", GUILayout.Height(36)))
+                    {
                         ClearScene();
+                        _previewMoves.Clear();
+                        _currentPreviewIndex = -1;
+                        _solveStatusMsg = "";
+                    }
+                }
+            }
+
+            EditorGUILayout.Space(6f);
+
+            // ── Edit-Mode Solver Step Preview ──
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                EditorGUILayout.LabelField("Edit-Mode Solver Step Preview", EditorStyles.boldLabel);
+                EditorGUILayout.Space(2f);
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("Solve Scene Board", GUILayout.Height(26)))
+                    {
+                        var board = ReadBoardFromScene();
+                        if (board.PoleCount == 0)
+                        {
+                            _solveStatusMsg = "Scene Board not found! Build it first.";
+                            _solvedSuccessfully = false;
+                        }
+                        else
+                        {
+                            var result = LevelSolver.Solve(board, board.MaxCapacity);
+                            _solvedSuccessfully = result.IsSolvable;
+                            if (result.IsSolvable && result.Moves != null && result.Moves.Count > 0)
+                            {
+                                _initialPreviewBoard = board;
+                                _previewMoves = result.Moves;
+                                _currentPreviewIndex = -1;
+                                _solveStatusMsg = $"Solvable! moves: {result.MoveCount}";
+                            }
+                            else
+                            {
+                                _previewMoves.Clear();
+                                _currentPreviewIndex = -1;
+                                _solveStatusMsg = result.IsSolvable ? "Solved state already!" : "Unsolvable board!";
+                            }
+                        }
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(_solveStatusMsg))
+                {
+                    var style = new GUIStyle(EditorStyles.label)
+                    {
+                        normal = { textColor = _solvedSuccessfully ? new Color(0.2f, 0.7f, 0.2f) : new Color(0.9f, 0.3f, 0.3f) },
+                        fontStyle = FontStyle.Bold
+                    };
+                    EditorGUILayout.LabelField(_solveStatusMsg, style);
+                }
+
+                if (_previewMoves.Count > 0)
+                {
+                    EditorGUILayout.Space(4f);
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        using (new EditorGUI.DisabledScope(_currentPreviewIndex < 0))
+                        {
+                            if (GUILayout.Button("<< Prev Move", GUILayout.Height(24)))
+                            {
+                                _currentPreviewIndex--;
+                                RebuildPreviewStep();
+                            }
+                        }
+
+                        EditorGUILayout.LabelField($"Step: {_currentPreviewIndex + 1} / {_previewMoves.Count}", EditorStyles.centeredGreyMiniLabel, GUILayout.Width(100f));
+
+                        using (new EditorGUI.DisabledScope(_currentPreviewIndex >= _previewMoves.Count - 1))
+                        {
+                            if (GUILayout.Button("Next Move >>", GUILayout.Height(24)))
+                            {
+                                _currentPreviewIndex++;
+                                RebuildPreviewStep();
+                            }
+                        }
+                    }
+
+                    if (_currentPreviewIndex >= 0 && _currentPreviewIndex < _previewMoves.Count)
+                    {
+                        var currentMove = _previewMoves[_currentPreviewIndex];
+                        EditorGUILayout.HelpBox($"Current Step: Move from Pole {currentMove.FromPoleId} to Pole {currentMove.ToPoleId}", MessageType.Info);
+                    }
+                    else if (_currentPreviewIndex == -1)
+                    {
+                        EditorGUILayout.HelpBox("Initial board state. Click 'Next Move >>' to begin.", MessageType.None);
+                    }
+
+                    if (GUILayout.Button("Reset Preview", GUILayout.Height(20)))
+                    {
+                        _currentPreviewIndex = -1;
+                        RebuildPreviewStep();
+                    }
                 }
             }
         }
@@ -80,26 +184,11 @@ namespace RingFlow.Editor
             int poleCount = polesToBuild != null ? polesToBuild.Count : _generator.GeneratedLevel.Poles.Count;
             NexusLog.Info("RingFlowEditor", nameof(BuildInScene), "", $"Building visual board with {poleCount} poles.");
 
-            ClearScene();
-
-            var boardRoot = new GameObject("RingFlow_VisualBoard");
-            Undo.RegisterCreatedObjectUndo(boardRoot, "Build Visual Board");
-
-            var torusModel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Torus.obj");
-            if (torusModel == null)
-                NexusLog.Warn("RingFlowEditor", nameof(BuildInScene), "",
-                    "Torus.obj not found in Assets/Resources. Using Cylinder disks as fallback rings.");
-
-            var f = GameFeelConfigSO.Instance;
-            float spacing = f != null ? f.PoleSpacing : 2.5f;
-            float boardWidth = (poleCount - 1) * spacing;
-            float startX = -boardWidth * 0.5f;
-
+            var board = new BoardState { PoleCount = poleCount, MaxCapacity = 4 };
             for (int p = 0; p < poleCount; p++)
             {
                 bool isLocked;
                 List<RingData> rings;
-
                 if (polesToBuild != null)
                 {
                     isLocked = polesToBuild[p].IsLocked;
@@ -110,16 +199,141 @@ namespace RingFlow.Editor
                     isLocked = _generator.GeneratedLevel.Poles[p].IsLocked;
                     rings = _generator.GeneratedLevel.Poles[p].Rings;
                 }
+                board.SetPoleLocked(p, isLocked);
+                board.SetRingCount(p, rings.Count);
+                for (int r = 0; r < rings.Count; r++)
+                {
+                    board.SetRingColor(p, r, rings[r].Color);
+                    board.SetRingType(p, r, rings[r].Type);
+                    board.SetRingAdditional(p, r, rings[r].AdditionalData);
+                }
+            }
+
+            BuildBoardStateInScene(board);
+
+            var boardRoot = GameObject.Find("RingFlow_VisualBoard");
+            if (boardRoot != null)
+            {
+                EditorApplication.delayCall += () =>
+                {
+                    Selection.activeGameObject = boardRoot;
+                    SceneView.FrameLastActiveSceneView();
+                };
+            }
+            NexusLog.Info("RingFlowEditor", nameof(BuildInScene), "", "Visual board built successfully.");
+        }
+
+        private void RebuildPreviewStep()
+        {
+            if (_previewMoves.Count == 0) return;
+            var currentBoard = _initialPreviewBoard;
+
+            for (int i = 0; i <= _currentPreviewIndex; i++)
+            {
+                var mv = _previewMoves[i];
+                if (currentBoard.CanPopRing(mv.FromPoleId) && currentBoard.GetRingCount(mv.ToPoleId) < currentBoard.MaxCapacity)
+                {
+                    var ring = currentBoard.PopRing(mv.FromPoleId);
+                    currentBoard.AddRing(mv.ToPoleId, ring);
+                }
+            }
+
+            BuildBoardStateInScene(currentBoard);
+        }
+
+        private BoardState ReadBoardFromScene()
+        {
+            var boardRoot = GameObject.Find("RingFlow_VisualBoard");
+            if (boardRoot == null) return default;
+
+            var f = GameFeelConfigSO.Instance;
+            var polesList = new List<Transform>();
+            for (int i = 0; i < 12; i++)
+            {
+                var pTrans = boardRoot.transform.Find($"Pole_{i}") ?? boardRoot.transform.Find($"Pole_{i} [LOCKED]");
+                if (pTrans != null)
+                {
+                    polesList.Add(pTrans);
+                }
+            }
+
+            var board = new BoardState { PoleCount = polesList.Count, MaxCapacity = 4 };
+
+            for (int p = 0; p < polesList.Count; p++)
+            {
+                var pTrans = polesList[p];
+                bool isLocked = pTrans.name.Contains("[LOCKED]");
+                board.SetPoleLocked(p, isLocked);
+
+                var ringsList = new List<Transform>();
+                for (int r = 0; r < 10; r++)
+                {
+                    foreach (Transform child in pTrans)
+                    {
+                        if (child.name.StartsWith($"Ring_{r}_"))
+                        {
+                            ringsList.Add(child);
+                            break;
+                        }
+                    }
+                }
+
+                board.SetRingCount(p, ringsList.Count);
+                for (int r = 0; r < ringsList.Count; r++)
+                {
+                    var rTrans = ringsList[r];
+                    string[] parts = rTrans.name.Split('_');
+                    RingColor color = RingColor.None;
+                    RingType type = RingType.Standard;
+
+                    if (parts.Length >= 4)
+                    {
+                        System.Enum.TryParse(parts[2], out color);
+                        System.Enum.TryParse(parts[3], out type);
+                    }
+                    board.SetRingColor(p, r, color);
+                    board.SetRingType(p, r, type);
+                }
+
+                if (ringsList.Count > 0)
+                {
+                    var topRingType = board.GetRingType(p, ringsList.Count - 1);
+                    board.SetTopRingFrozen(p, topRingType == RingType.Frozen);
+                }
+            }
+
+            return board;
+        }
+
+        private void BuildBoardStateInScene(BoardState board)
+        {
+            ClearScene();
+
+            var boardRoot = new GameObject("RingFlow_VisualBoard");
+            Undo.RegisterCreatedObjectUndo(boardRoot, "Build Visual Board");
+
+            var torusModel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Torus.obj");
+            var f = GameFeelConfigSO.Instance;
+            float spacing = f != null ? f.PoleSpacing : 2.5f;
+            float boardWidth = (board.PoleCount - 1) * spacing;
+            float startX = -boardWidth * 0.5f;
+
+            for (int p = 0; p < board.PoleCount; p++)
+            {
+                bool isLocked = board.IsPoleLocked(p);
+                var rings = new List<RingData>();
+                int count = board.GetRingCount(p);
+                for (int r = 0; r < count; r++)
+                {
+                    rings.Add(new RingData(
+                        board.GetRingColor(p, r),
+                        board.GetRingType(p, r),
+                        board.GetRingAdditional(p, r)
+                    ));
+                }
 
                 CreatePole(boardRoot.transform, p, startX, spacing, isLocked, rings, torusModel, f);
             }
-
-            EditorApplication.delayCall += () =>
-            {
-                Selection.activeGameObject = boardRoot;
-                SceneView.FrameLastActiveSceneView();
-            };
-            NexusLog.Info("RingFlowEditor", nameof(BuildInScene), "", "Visual board built successfully.");
         }
 
         private static void CreatePole(Transform parent, int index, float startX, float spacing, bool isLocked, List<RingData> rings, GameObject torusModel, GameFeelConfigSO f)
