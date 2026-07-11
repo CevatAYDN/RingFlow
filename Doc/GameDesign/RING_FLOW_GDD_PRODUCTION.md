@@ -1,169 +1,764 @@
 # RING FLOW — GDD (Production Ready v1.0)
 
-**Studio:** FeCe Studios  •  **Engine:** Unity 6 LTS  •  **Platform:** Android 10+ / iOS 16+
-**Genre:** Hibrit Casual Bulmaca  •  **Orientation:** Portrait 9:16 only
-**Sahibi:** Cevat Aydın  •  **Durum:** Üretime Hazır
+████████████████████████████████████████████████████████████████████████████
+
+                            FeCe Studios
+
+████████████████████████████████████████████████████████████████████████████
+
+██████╗ ██╗███╗   ██╗ ██████╗     ███████╗██╗      ██████╗ ██╗    ██╗
+██╔══██╗██║████╗  ██║██╔════╝     ██╔════╝██║     ██╔═══██╗██║    ██║
+██████╔╝██║██╔██╗ ██║██║  ███╗    █████╗  ██║     ██║   ██║██║ █╗ ██║
+██╔══██╗██║██║╚██╗██║██║   ██║    ██╔══╝  ██║     ██║   ██║██║███╗██║
+██║  ██║██║██║ ╚████║╚██████╔╝    ██║     ███████╗╚██████╔╝╚███╔███╔╝
+╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝ ╚═════╝     ╚═╝     ╚══════╝ ╚═════╝  ╚══╝╚══╝
+OYUN TASARIM BELGESİ
+
+Sürüm : 1.0
+Durum : Üretime Hazır
+Tür : Hibrit Casual Bulmaca
+Platform : Android / iOS
+Oyun Motoru : Unity 6
+Hazırlayan : Cevat Aydın
+Stüdyo : FeCe Studios
+
+Gizli: Bu belge, FeCe Studios'a ait gizli bilgiler içermektedir. İzinsiz dağıtılması yasaktır.
+Telif Hakkı © FeCe Studios. Tüm Hakları Saklıdır.
+
+████████████████████████████████████████████████████████████████████████████
+
+## BÖLÜM 1: GİRİŞ VE VİZYON
+
+### 1. ÖZET
+Ring Flow, rahatlatıcı ancak stratejik oynanışa odaklanan, yüksek kaliteli bir Hibrit Gündelik Bulmaca oyunudur.
+Oyuncular, renkli halkaları dikey direklere yerleştirerek giderek karmaşıklaşan bulmacaları çözerler; her direk yalnızca tek bir renkten oluşuncaya kadar bu işlem devam eder.
+
+Oyun şunları birleştirir:
+* Öğrenmesi kolay oynanış
+* Derinlemesine bulmaca çözme
+* Güzel animasyonlar
+* Son derece tatmin edici etkileşimler
+* Uzun vadeli ilerleme
+* Binlerce el yapımı ve prosedürel olarak oluşturulmuş seviye
+
+Deneyim temiz, yüksek kaliteli ve rahatlatıcı olmalıdır. Her animasyon, ses ve etkileşim tatmin yaratmalıdır. Oyuncu, oynanışı beş saniyeden kısa sürede anlamalıdır.
 
 ---
 
-## 1. One-liner
-Water Sort'un evrimi. Renkli halkaları dikey direklere yerleştir, her direği tek renge tamamla. Yeni mekanikler + premium görsel kalite + uzun vadeli ilerleme.
+### 2. OYUN VİZYONU
+Ring Flow, mobil mağazalardaki en kaliteli bulmaca oyunlarından biri olmayı hedefliyor.
+Ring Flow, Water Sort'u olduğu gibi kopyalamak yerine; yeni mekanikler, geliştirilmiş görsel kalite ve uzun vadeli bir ilerleme sistemiyle bu türü bir adım öteye taşıyor.
 
-## 2. Tasarım Direktifleri (5 kural)
-1. **Öğrenmesi kolay, ustalaşması zor** — 5 sn'de anlaşılır
-2. **Stressiz** — ceza yok, sınırsız undo (ilk 5 ücretsiz), restart her an
-3. **Tatmin edici feedback** — her dokunuş juicy: ses + animasyon + parçacık
-4. **Uzun vadeli ilerleme** — 2000 level, 11 özel mekanik, 15 dil
-5. **Adil zorluk** — şans yok, her level çözülebilir (QA + solver doğrular)
+Temel hedefler:
+* Anında anlaşılabilirlik
+* Rahatlatıcı bir deneyim
+* Artan stratejik derinlik
+* Sonsuz içerik
+* Yüksek tekrar oynanabilirlik
+* Son derece özenli geri bildirimler (Juiciness)
+* Adil zorluk dengesi
+* Tatmin edici ilerleme
 
-## 3. Core Gameplay
-- **Input:** Yalnızca tap (drag/swipe yok)
-- **Pole kapasitesi:** 4 ring (event mod'da 5-6)
-- **Hareket:** yalnız en üstteki ring seçilebilir, aynı anda tek ring hareket eder
-- **Geçerli hamle:** hedef pole boş VEYA hedef pole dolu değil + üst ring aynı renk
-- **Animasyon:** select 0.15s, move 0.30s (lift → arc → drop → bounce)
-- **Win:** tüm ringler ayrılmış + her dolu pole tek renk
-- **Lose:** yalnız Challenge Mode'da (hamle/süre limiti)
+---
 
-## 4. Özel Halka Tipleri (11 adet)
-| # | Tip | İlk Görünme | Kural |
-|---|---|---|---|
-| 1 | Mystery | W2-L51 | Üzerindeki tüm ringler kaldırılınca rengi açığa çıkar |
-| 2 | Frozen | W3-L101 | Buz kırılana kadar taşınamaz |
-| 3 | Locked Pole | W4-L151 | Golden Key Ring ile açılır |
-| 4 | Stone | W5-L201 | Asla taşınamaz, strateji engeli |
-| 5 | Glass | W6-L251 | Şeffaf, görsel yanıltma |
-| 6 | Rainbow | W7-L301 | İlk yerleştiği rengi alır, sabitlenir |
-| 7 | Bomb | W8-L351 | Sayaçlı (5→0), süre biterse patlar |
-| 8 | Chain | W9-L401 | İki ring birlikte hareket eder |
-| 9 | Magnet | W10-L451 | 1 pole mesafeden aynı rengi çeker |
-| 10 | Paint | W11-L501 | Altındaki ilk ringi boyar, tek kullanımlık |
-| 11 | Ghost | W12-L551 | Seçilene kadar görünmez |
+### 3. GÜÇLÜ KONSEPT
+"Water Sort Puzzle" oyununu hayal edin. Sıvıların yerine birinci sınıf, parlak halkalar koyun. Şişelerin yerine zarif ahşap çubuklar yerleştirin. Benzersiz mekanikler ekleyin. Görsel kaliteyi artırın. İlerleme derinliğini geliştirin. Gizemli halkalar ekleyin. Boss seviyeleri dahil edin. Sezonluk etkinlikler ekleyin. Üst düzey bir deneyim yaratın. İşte Ring Flow.
 
-**Kural:** Aynı level'da max 4 özel mekanik. Yeni mekanik önce tek başına 20+ level öğretilir.
+---
 
-## 5. World / Level Yapısı
-- **40 World × 50 Level = 2000 level** (tam sürüm)
-- Her 50 level'da **Boss Level**
-- **MVP scope:** ilk 4 World = 200 level + 5 özel mekanik
+### 4. TASARIM İLKELERİ
+Gelecekte eklenecek her özellik bu ilkelere uygun olmalıdır:
+* **İLKE 01 - Öğrenmesi Kolay**: Oyuncu, oynanışı anında kavramalıdır. Herhangi bir açıklamaya gerek duyulmamalıdır.
+* **İLKE 02 - Ustalaşması Zor**: Basit kurallar, derinlemesine strateji oluşturmalıdır.
+* **İLKE 03 - Tatmin Edici Geri Bildirim**: Her eylem ödüllendirici hissettirmelidir. Akıcı animasyonlar, parçacık efektleri, esneme/sıçrama (Squash & Stretch/Bounce) hissi, sesler, konfetiler, altınlar.
+* **İLKE 04 - Stressiz**: Ceza yok, normal modda zamanlayıcı yok, sınırsız deneme hakkı, geri alma (Undo) imkanı, istenildiği an yeniden başlatma.
+* **İLKE 05 - Uzun Vadeli İlerleme**: Binlerce seviye, günlük görevler, haftalık etkinlikler, kilidi açılabilir temalar, her dünyada yeni mekanikler.
 
-| World | Tema | Yeni Mekanik | Level |
-|---|---|---|---|
-| 1 | Grass Valley | — | 1-50 |
-| 2 | Sunny Beach | Mystery | 51-100 |
-| 3 | Snow Mountain | Frozen | 101-150 |
-| 4 | Ancient Temple | Locked Pole | 151-200 |
-| 5+ | Çeşitli | 6 yeni mekanik + kombinasyonlar | 201-2000 |
+---
 
-**Difficulty curve:** Tutorial(1-20) → Easy(21-100) → Medium(101-350) → Hard(351-600) → Expert(601-1000) → Master(1001-1500) → Legend(1501-2000)
+### 5. HEDEF KİTLE
+* **Yaş:** 8+
+* **Ana Kitle:** 18-45 (Cinsiyet: Evrensel)
+* **Kategori:** Bulmaca severler, rahatlatıcı sıradan oyuncular, hibrit casual oyuncular, Water Sort/Ball Sort oyuncuları, çevrimdışı oynayanlar.
 
-**Color progression:** 3(1) → 4(20) → 5(80) → 6(150) → 7(300) → 8(500) → 9(800) → 10(1200+)
-**Empty pole:** Easy 2 / Medium 1 / Hard 1+kasıt dizilim (asla 0 değil)
-**Pole count:** 4(tutorial) → 10(legend)
+---
 
-## 6. Teknik Mimari (Nexus)
+### 6. PAZAR ANALİZİ
+* **Başlıca Rakipler:** Water Sort Puzzle, Hoop Sort Puzzle, Ball Sort Puzzle, Goods Sort, Hexa Sort, Screw Jam, Nut Sort.
+* **Rakiplerin Güçlü Yönleri:** Basit oynanış, rahatlatıcı yapı, yüksek kullanıcıyı elde tutma oranı.
+* **Rakiplerin Zayıf Yönleri:** Sınırlı mekanikler, tekrarlayan oynanış, az sayıda sürpriz unsuru.
+* **Ring Flow İyileştirmeleri:** Gizemli Halkalar (Mystery Rings), Boss Seviyeleri, üst düzey 3D görseller, zengin ilerleme yapısı, squash/stretch animasyonları, toplanabilir öğeler, günlük görevler ve canlı etkinlikler.
+
+---
+
+### 7. ÖZGÜN SATIŞ NOKTALARI (USP)
+* **USP 01 - Gizemli Halkalar**: Bazı halkalar, açığa çıkarılana kadar renklerini gizler.
+* **USP 02 - Üstün Animasyon Kalitesi**: Her bir halka, eylemsizlik fizik prensipleriyle (esneme, sıçrama, bükülme) tatmin edici bir şekilde hareket eder.
+* **USP 03 - Dinamik İlerleme**: Sürekli olarak yeni mekanikler ortaya çıkar.
+* **USP 04 - Harika Temalar**: Orman (Grass Valley), Plaj (Sunny Beach), Tapınak (Ancient Temple), Buz (Snow Mountain), Kristal Mağarası (Crystal Cave), Şekerleme (Candy Land), Sihirli Orman (Magic Forest), Yanardağ (Volcano), Gökyüzü Krallığı (Sky Kingdom), Siber Şehir (Cyber City), Boya Fabrikası (Paint Factory), Hayalet Şato (Ghost Castle), Portal İstasyonu (Portal Station), Saat Kulesi (Clock Tower), Galaksi (Galaxy), Japonya, Lüks, Minimal vb.
+* **USP 05 - Sonsuz Seviyeler**: 2000'den fazla el yapımı/prosedürel seviye ve sonsuz mod.
+
+---
+
+### 8. TEMEL OYNANIŞ
+* **Amaç:** Tüm halkaları renklerine göre ayırın. Her çubukta yalnızca tek bir renk bulunmalıdır.
+* **Kurallar:**
+  1. Yalnızca en üstteki halkayı hareket ettirin.
+  2. Aynı anda sadece tek bir halka hareket ettirilebilir.
+  3. Halkayı yalnızca boş bir çubuğa VEYA üstünde aynı renkli halka bulunan dolu olmayan bir çubuğa taşıyabilirsiniz.
+  4. Her çubukta yalnızca tek bir renk olduğunda bölüm başarıyla tamamlanır.
+
+---
+
+### 9. TEMEL DÖNGÜ
+```mermaid
+graph TD
+    A[Bölüme Başla] --> B[Bulmacayı İncele]
+    B --> C[Hamleleri Analiz Et]
+    C --> D[Çubuk Seç]
+    D --> E[Hedef Seç]
+    E --> F[Halkayı Taşı]
+    F --> G{Tüm Direkler Renklerine Ayrıldı mı?}
+    G -- Hayır --> B
+    G -- Evet --> H[Zafer ve Ödülleri Al]
+    H --> I[Sonraki Bölüm]
+```
+
+---
+
+### 10. OYUN HİSSİ
+Oyun şu hisleri vermelidir: Rahatlatıcı, Üst Düzey (Premium), Hızlı tepki veren, Sade, Minimalist, Canlı ve Tatmin Edici (Juicy). Her dokunuş bir geri bildirim sağlamalıdır. Her hareket kaliteli ve özenli görünmelidir. Tamamlanan her direk (completed pole) görkemli bir görsel şölen sunmalıdır.
+
+---
+
+## BÖLÜM 2: OYNANIŞ MEKANİKLERİ VE TEMEL SİSTEMLER
+
+### 11. GAMEPLAY RULES
+Ring Flow tamamen kurallara dayalı deterministik bir puzzle oyunudur.
+* Oyuncunun amacı; tüm halkaları renklerine göre ayırarak her çubuğun yalnızca tek renkten oluşmasını sağlamaktır.
+* Oyuncu herhangi bir süre baskısı altında değildir (Challenge Modu hariç).
+* Her level çözülebilir olmak zorundadır. Softlock oluşturacak level tasarımlarına izin verilmez. Tüm seviyeler otomatik BFS/IDA* çözücüler ve QA tarafından doğrulanır.
+
+---
+
+### 12. POLE SYSTEM
+Pole (Çubuk) oyunun temel taşıyıcı objesidir.
+* Maksimum 4 Ring taşır (Normal modda). Minimum 0 Ring içerir. Dikey konumlandırılır. Aynı anda yalnızca en üstteki Ring seçilebilir.
+* **Direk Durumları (Pole States):**
+  * `EMPTY`: Çubuk tamamen boştur.
+  * `PARTIAL`: 1-3 Ring içerir.
+  * `FULL`: 4 Ring içerir.
+  * `COMPLETED`: 4 Ring aynı renktedir (ve kilitlenir).
+  * `LOCKED`: Bir kilit mekanizması ile kapatılmıştır.
+  * `PORTAL`: Başka bir Pole'a bağlıdır.
+  * `MOVING`: Yer değiştirme veya dönüş animasyonu oynamaktadır.
+
+---
+
+### 13. RING SYSTEM
+Ring oyunun ana objesidir. Her Ring aşağıdaki verilere sahiptir:
+* Kimlik (ID), Renk (Color), Mevcut Direk (PoleId), Mevcut İndeks (Index), Kilitli (Locked), Donmuş (Frozen), Gizem (Mystery), Gökkuşağı (Rainbow), Sayaçlı Bomba (Bomb), Cam (Glass), Zincir (Chain), Boyama (Paint), Hayalet (Ghost), Seçilebilirlik ve Görünürlük Durumu.
+* Her Ring yalnızca tek Pole üzerinde bulunabilir. Aynı anda yalnızca tek Ring hareket eder.
+
+---
+
+### 14. RING CAPACITY
+Standart oyun boyunca **Pole Capacity = 4** olarak kalacaktır. Oyunu tamamlamak için her seviyede en az 1 boş pole gereklidir (çözüm algoritması için).
+* **Pole A:** Kırmızı, Kırmızı, Kırmızı, Kırmızı → **Completed**
+* **Pole B:** Mavi, Mavi, Mavi → **Partial**
+* **Pole C:** Boş.
+
+---
+
+### 15. OYUNCU GİRİŞİ
+Oyuncu yalnızca tek dokunuş (Tap) girişi kullanacaktır. Sürükleme veya kaydırma yoktur.
+```
+Kutup'a Dokun (Sadece tek tık kolay kullanım)
+   ↓
+Top Ring Seçilir & Glow Efekti
+   ↓
+Ring Yukarı Kalkar (Seçim konumu)
+   ↓
+Hedef Kutup Seçilir
+   ↓
+Hamle Doğrulama (Move Validation)
+   ↓
+[Geçerli] Animasyon (Lift → Arc → Drop → Bounce) & Yerleşme
+   ↓
+Bölüm Kazanma/Durum Kontrolü
+```
+
+---
+
+### 16. RING SELECTION
+Oyuncu Pole'a dokunduğunda üstteki Ring; hafif büyür, yukarı kalkar, glow efekti alır, gölgesi güçlenir ve dikey olarak hafifçe sallanır (bobbing). Seçim kalkış animasyonu süresi **0.15 saniye**dir.
+
+---
+
+### 17. VALID MOVE
+Bir hareket yalnızca aşağıdaki şartlarda gerçekleşebilir:
+* Hedef Pole boş VEYA hedef Pole dolu değil + en üstteki Ring rengi taşınan halka ile aynı renk.
+* Hedef Pole kilitli (LOCKED) değil.
+* Taşınacak halka donmuş (FROZEN) veya kilitli (LOCKED) değil ve stack'in en üstünde yer alıyor.
+
+---
+
+### 18. INVALID MOVE
+Aşağıdaki durumlarda hareket reddedilir:
+* Hedef Pole dolu.
+* Hedef Pole'un en üstündeki halka farklı renkte.
+* Hedef Pole kilitli (Locked Pole).
+* Seçilen halka ile hedef çubuk aynı çubuk.
+* Halka zaten animasyonda iken yeni bir seçim yapılması.
+* *Reddedildiğinde:* Ring eski yerine geri döner, küçük bir hata titreşimi (shake) ve ses efekti oynatılır, kutup kırmızı renkte yanıp söner.
+
+---
+
+### 19. MOVE ANIMATION
+* **Süre:** 0.30 saniye.
+* **Akış:** Lift (Kalkış) → Arc (Parabolik uçuş) → Drop (İniş) → Bounce (Sıçrama) → Idle.
+* Ring hiçbir zaman düz çizgide gitmez, her zaman parabolik hafif bir yay çizer. Uçuş sırasında dikey eksende `1.35x` esner (stretch), inişte ise `0.6x` yassılaşır (squash).
+
+---
+
+### 20. COMPLETED POLE
+Bir Pole içerisinde 4 adet aynı renkli halka bulunduğunda **Completed** olur:
+* Çubuk parlar, kilitlenir (isteğe bağlı ayar), üzerinde yıldız/konfeti efekti oluşur ve artık oyuncu tarafından yanlışlıkla seçilemez hale gelir.
+* Tamamlanan pole'un halkaları dipten yukarıya doğru staggered (0.04s aralıklarla) sıçrayarak squash/stretch dalga efekti oluşturur ve özel bir başarı tınısı çalar.
+
+---
+
+### 21. WIN CONDITION
+* Tüm Ringler renklerine göre ayrılmış olmalıdır.
+* Her dolu Pole tek renkten oluşmalıdır, çubuklarda karışık renkli hiçbir halka bulunmamalıdır.
+* *Kazanıldığında:* Konfeti patlaması, Coin/Altın ödülü, XP artışı, sandık ilerleme puanı ve bir sonraki bölüme geçiş ekranı sunulur.
+
+---
+
+### 22. LOSE CONDITION
+* Normal modda **Lose Screen (Kaybetme Ekranı) yoktur.** Oyuncu istediği kadar düşünebilir, Restart yapabilir and Undo kullanabilir.
+* Yalnızca **Meydan Okuma (Challenge) Modunda** hamle limiti veya süre limiti aşılırsa oyun başarısız olur ve kaybetme ekranı açılır.
+
+---
+
+### 23. UNDO SYSTEM
+Geri alma (Undo) son yapılan hamleyi tam fizik ve animasyon verileriyle geri yükler.
+* Maksimum Undo: Sınırsız.
+* **Ücretlendirme:** Bölüm başına ilk 5 adet ücretsizdir. Sonrasındaki her geri alma coin (5 coin) veya Rewarded Video izleme gerektirir.
+
+---
+
+### 24. RESTART
+Yeniden başlatma yapıldığında; level tamamen başlangıç dizilimine sıfırlanır, hamle sayacı ve zamanlayıcı sıfırlanır, geri alma (undo) geçmişi tamamen temizlenir.
+
+---
+
+### 25. HINT SYSTEM
+İpucu butonu oyuncuya doğrudan çözümü göstermez; sadece **bir sonraki en optimal hamleyi** gösterir.
+* **Gösterim:** Seçilecek Ring parlar (Glow) → Hedef Pole parlar → Havada yönlendirici bir ok animasyonu çizilir.
+* **Maliyet:** 50 Coin veya 1 adet Rewarded Ad izleme.
+
+---
+
+### 26. OYUN DURUMLARI (STATE MACHINE)
+```
+BOOT (Başlatma)
+  ↓
+MAIN_MENU (Ana Menü)
+  ↓
+LEVEL_SELECT (Bölüm Seçimi)
+  ↓
+PLAYING (Oyun Sürüyor) ⇄ PAUSED (Duraklatıldı)
+  ↓
+WIN (Kazanma) → REWARD (Ödül) → NEXT_LEVEL (Sonraki Seviye)
+```
+
+---
+
+### 27. KAYIT SİSTEMİ
+* **Kaydedilen Veriler:** Oyuncu Seviyesi, Para (Coins), Elmas (Diamonds), Açılan Dünyalar, Açılan Temalar, Günlük İlerleme, Mevcut Seviye, Tamamlanan Seviye Yıldızları, Başarımlar, Ses/Müzik/Haptic Ayarları, Reklam Kaldırma (No-Ads) Durumu.
+* **Güvenlik:** Hassas veriler PlayerPrefs yerine yerel olarak şifrelenmiş JSON dosyasında tutulur.
+
+---
+
+## BÖLÜM 3: ÖZEL MEKANİKLER VE OYNANIŞ
+
+### 28. GAMEPLAY PHILOSOPHY
+Ring Flow hiçbir zaman yalnızca renk ayırma oyunu olmayacaktır. Oyuncu her yeni World'de yeni bir mekanik öğrenecektir. Her yeni mekanik daha önce öğrenilen mekanikleri bozmadan onların üzerine inşa edilir. Seviye geçişlerinde zorluk duvarları oluşmasını engellemek amacıyla bir **Transition Sieve (Geçiş Eleği)** uygulanır; yeni bir dünyaya ait ilk 10 seviyede mekanik yoğunluğu 1 birim azaltılarak oyuncunun adaptasyonu kolaylaştırılır.
+
+---
+
+### 29. SPECIAL RING SYSTEM
+* Her özel halka normal halka gibi hareket eder ve taşınma kurallarına tabidir.
+* Her halkada yalnızca 1 adet özel özellik bulunabilir.
+* Aynı seviyede birden fazla özel mekanik bulunabilir (Maksimum 4 adet).
+* Seviye üreticisi (Generator), kilitli çubuklar (Locked Pole) içerisine taşınamaz veya patlayıcı özellikleri olan halkaların (Stone, Bomb) gelmesini engelleyen **Mechanic Compatibility (Mekanik Uyumluluk)** filtresine sahiptir.
+
+---
+
+### 30. MYSTERY RING (GİZEMLİ HALKA)
+* **İlk Görünme:** World 2, Level 51.
+* **Görünüm:** Üzerinde `?` işareti bulunan koyu gri halka.
+* **Kural:** Oyuncu gerçek rengi göremez. Üzerindeki tüm halkalar kaldırıldığında gerçek renk parlayarak ortaya çıkar ve küçük bir sıçrama oynatır.
+
+---
+
+### 31. FROZEN RING (DONMUŞ HALKA)
+* **İlk Görünme:** World 3, Level 101.
+* **Görünüm:** Buz kütlesi içine alınmış halka.
+* **Kural:** Donmuş halka doğrudan taşınamaz. Kilidinin açılması için üzerindeki tüm halkaların kaldırılması gerekir. Kaldırıldığında buz çatırtısı efektiyle normal halkaya dönüşür.
+
+---
+
+### 32. LOCKED POLE (KİLİTLİ ÇUBUK)
+* **İlk Görünme:** World 4, Level 151.
+* **Görünüm:** Pole tabanında büyük bir altın kilit.
+* **Kural:** Kilit açılmadan çubuğa/çubuktan hiçbir halka taşınamaz. Kilidi açmak için seviyedeki **Golden Key Ring (Altın Anahtar Halka)** bu çubuğun üzerine getirilmelidir.
+
+---
+
+### 33. STONE RING (TAŞ HALKA)
+* **İlk Görünme:** World 5, Level 201.
+* **Görünüm:** Kaya/Tuğla dokulu ağır halka.
+* **Kural:** Taş halkadır. Asla hareket ettirilemez. Oyuncu diğer halkaları onun etrafından dolaştırarak bulmacayı çözmek zorundadır.
+
+---
+
+### 34. GLASS RING (CAM HALKA)
+* **İlk Görünme:** World 6, Level 251.
+* **Görünüm:** Yarı saydam parlak cam halka.
+* **Kural:** Altındaki halkaların rengi içinden görünür. Oyuncunun görsel algısını karıştırarak yanıltma yaratır.
+
+---
+
+### 35. RAINBOW RING (GÖKKUŞAĞI HALKA)
+* **İlk Görünme:** World 7, Level 301.
+* **Görünüm:** Spektrum renklerinde parlayan halka.
+* **Kural:** Rainbow Ring her renk ile eşleşebilir. Boş veya dolu bir çubuğa yerleştirildiğinde temas ettiği ilk halkanın rengine dönüşür ve o renkte sabitlenir.
+
+---
+
+### 36. BOMB RING (BOMBA HALKA)
+* **İlk Görünme:** World 8, Level 351.
+* **Görünüm:** Üzerinde rakamsal sayaç bulunan (5) kırmızı dinamit görünümü.
+* **Kural:** Oyuncu her hamle yaptığında sayaç 1 azalır. Sayaç 0'a ulaşmadan önce bomba halka kendi rengindeki bir direğe taşınarak pasifleştirilmelidir. Patlarsa seviye başarısız olur.
+
+---
+
+### 37. CHAIN RING (ZİNCİRLİ HALKA)
+* **İlk Görünme:** World 9, Level 401.
+* **Görünüm:** İki halkayı birbirine bağlayan kalın metal zincir.
+* **Kural:** Bu iki halka tek başına hareket edemez. Birlikte taşınırlar. Hedef çubukta ikisinin de sığabileceği kadar yer yoksa hareket engellenir.
+
+---
+
+### 38. MAGNET RING (MIKNATIS HALKA)
+* **İlk Görünme:** World 10, Level 451.
+* **Görünüm:** Uçları manyetik olarak parlayan at nalı halkası.
+* **Kural:** Komşu çubuklardaki aynı renkteki halkaları kendine doğru çeker. Çekim mesafesi 1 çubuktur. Yerleştirildiğinde elektrik kıvılcımı ile halkayı üzerine çeker.
+
+---
+
+### 39. PAINT RING (BOYA HALKASI)
+* **İlk Görünme:** World 11, Level 501.
+* **Görünüm:** Boya damlacığı formunda halka.
+* **Kural:** Yerleştirildiği çubuktaki altındaki ilk halkayı kendi rengine boyar. Tek kullanımlıktır, boyama gerçekleştikten sonra normal bir halkaya dönüşür.
+
+---
+
+### 40. GHOST RING (HAYALET HALKA)
+* **İlk Görünme:** World 12, Level 551.
+* **Görünüm:** Tamamen görünmez veya hafif saydam silüet.
+* **Kural:** Seviye tahtasında görünmezdir. Yalnızca seçildiğinde veya üzerine başka bir halka geldiğinde geçici olarak görünür olur. Oyuncunun hafızasını test eder.
+
+---
+
+### 41. PORTAL POLE (PORTAL ÇUBUĞU)
+* **İlk Görünme:** World 13, Level 601.
+* **Görünüm:** Çubukların tabanında parlayan portal girdapları.
+* **Kural:** İki çubuk portal ağıyla birbirine bağlıdır. Halka bir portallı çubuğa bırakıldığında ışınlanarak diğer çubuğun üstüne çıkar.
+
+---
+
+### 42. MOVING POLE (HAREKETLİ ÇUBUK)
+* **İlk Görünme:** World 14, Level 651.
+* **Görünüm:** Raylar üzerinde sağa sola kayan çubuk mekanizması.
+* **Kural:** Çubuk belirli aralıklarla veya her hamleden sonra yer değiştirir. Oyuncu yerleşim stratejisini çubukların sırasına göre yapmalıdır.
+
+---
+
+### 43. ROTATING POLE (DÖNER ÇUBUK)
+* **İlk Görünme:** World 15, Level 701.
+* **Görünüm:** Döner bir platform üzerinde konumlandırılmış çubuk grubu.
+* **Kural:** Çubuklar kendi ekseninde dönerek sadece ön yüze gelenler aktif ve seçilebilir olur.
+
+---
+
+### 44. GOLDEN RING (ALTIN HALKA)
+* Seviyelerde çok nadir ortaya çıkan kozmetik parıltılı halkadır. Çözüldüğünde seviye sonunda oyuncuya ekstra **+100 Coin** kazandırır.
+
+---
+
+### 45. DIAMOND RING (ELMAS HALKA)
+* Sadece etkinliklerde ve Boss seviyelerinde bulunan premium halkadır. Çözüldüğünde premium elmas para birimi kazandırır.
+
+---
+
+### 46. BOSS LEVELS
+Her 50 level sonunda (Seviye 50, 100, 150, 200...) Boss seviyesi gelir.
+* **Özellikler:** Daha büyük bulmaca tahtası, daha fazla çubuk (8+), birden fazla özel mekaniğin birleşimi, özel epik müzik, devasa altın ödülü ve nadir tema/skin parçaları içeren boss sandığı.
+
+---
+
+### 47. DESIGN RULE
+Hiçbir seviyede aynı anda 4'ten fazla özel mekanik bir arada kullanılmayacaktır. Seviyelerin amacı oyuncuyu boğmak değil, stratejik düşünmesini sağlamaktır. Her yeni mekanik önce tek başına tanıtılır, ardından kombinasyonlara dahil edilir.
+
+---
+
+## BÖLÜM 4: LEVEL PROGRESSION & WORLD DESIGN
+
+### 48. LEVEL DESIGN PHILOSOPHY
+Her seviye oyuncuya yeni bir düşünme biçimi kazandırmalıdır. Oyuncu "Bu level imkansız veya çok zor" demek yerine "Bunu çözmek için hangi akıllı kombinasyonu uygulamalıyım?" diye sormalıdır. Zorluk seviyesi çok fazla renk kullanarak değil, akıllı dizilimler ve özel mekanik kombinasyonlarıyla ayarlanacaktır.
+
+---
+
+### 49. LEVEL STRUCTURE
+Her seviye şu veri alanlarından oluşur:
+`LevelId`, `WorldId`, `Difficulty`, `PoleCount`, `RingCapacity`, `ColorCount`, `EmptyPoleCount`, `SpecialMechanics[]`, `TargetMoves`, `PerfectMoves`, `EstimatedSolveTime`, `Rewards`.
+
+---
+
+### 50. RING CAPACITY
+Standart oyun boyunca çubukların kapasitesi **4** olarak kalacaktır. Bu sayede oyuncu tüm oyun boyunca kurallarda tutarlılık hisseder. Event modlarında 5 veya 6 slotlu çubuklar kullanılabilir.
+
+---
+
+### 51. WORLD SYSTEM
+Ring Flow toplam **40 World** ve her dünyada **50 Level** olmak üzere toplam **2000 Seviye** olarak planlanmıştır. Her dünya tamamlandığında yeni tema, yeni mekanik, yeni müzikler ve boss savaşı ödülleri açılır.
+
+---
+
+### 52. WORLD LIST
+| World | Tema / Görsel | Yeni Mekanik | Seviye Aralığı | Boss Level |
+|---|---|---|---|---|
+| **W1** | Grass Valley (Doğa/Orman) | Normal Ring | 1-50 | Level 50 |
+| **W2** | Sunny Beach (Plaj/Deniz) | Mystery Ring | 51-100 | Level 100 |
+| **W3** | Snow Mountain (Kış/Buz) | Frozen Ring | 101-150 | Level 150 |
+| **W4** | Ancient Temple (Eski Tapınak) | Locked Pole | 151-200 | Level 200 |
+| **W5** | Crystal Cave (Kristal Mağara) | Stone Ring | 201-250 | Level 250 |
+| **W6** | Candy Land (Şeker Dünyası) | Glass Ring | 251-300 | Level 300 |
+| **W7** | Magic Forest (Sihirli Orman) | Rainbow Ring | 301-350 | Level 350 |
+| **W8** | Volcano (Aktif Volkan) | Bomb Ring | 351-400 | Level 400 |
+| **W9** | Sky Kingdom (Gökyüzü Krallığı) | Chain Ring | 401-450 | Level 450 |
+| **W10**| Cyber City (Siber Şehir) | Magnet Ring | 451-500 | Level 500 |
+| **W11**| Paint Factory (Boya Fabrikası) | Paint Ring | 501-550 | Level 550 |
+| **W12**| Ghost Castle (Hayalet Şato) | Ghost Ring | 551-600 | Level 600 |
+| **W13**| Portal Station (Portal İstasyonu) | Portal Pole | 601-650 | Level 650 |
+| **W14**| Clock Tower (Saat Kulesi) | Moving Pole | 651-700 | Level 700 |
+| **W15**| Galaxy (Uzay Boşluğu) | Rotating Pole | 701-750 | Level 750 |
+| **W16-40** | Çeşitli Temalar | Karma Kombinasyonlar | 751-2000 | Her 50. Seviye |
+
+---
+
+### 53. DIFFICULTY CURVE
+* **Level 1-20:** Tutorial (Öğretici Seviyeler)
+* **Level 21-50:** Easy (Kolay)
+* **Level 51-100:** Easy+ (Giriş Üstü)
+* **Level 101-200:** Medium (Orta)
+* **Level 201-350:** Medium+ (Orta Üstü)
+* **Level 351-600:** Hard (Zor)
+* **Level 601-1000:** Expert (Uzman)
+* **Level 1001-1500:** Master (Usta)
+* **Level 1501-2000:** Legend (Efsane)
+
+---
+
+### 54. COLOR PROGRESSION
+* **Level 1:** 3 Renk
+* **Level 20:** 4 Renk
+* **Level 80:** 5 Renk
+* **Level 150:** 6 Renk
+* **Level 300:** 7 Renk
+* **Level 500:** 8 Renk
+* **Level 800:** 9 Renk
+* **Level 1200+:** 10 Renk
+
+---
+
+### 55. POLE COUNT
+* **Tutorial:** 4 Çubuk
+* **Easy:** 5 Çubuk
+* **Medium:** 6 Çubuk
+* **Hard:** 7 Çubuk
+* **Expert:** 8 Çubuk
+* **Legend:** 9-10 Çubuk
+
+---
+
+### 56. EMPTY POLE BALANCE
+* **Kolay Seviyelerde:** 2 Boş Çubuk
+* **Orta Seviyelerde:** 1 Boş Çubuk
+* **Zor Seviyelerde:** 1 Boş Çubuk + karmaşık başlangıç dizilimi.
+* *Kural:* Hiçbir seviye **0 Boş Çubuk** ile başlatılamaz.
+
+---
+
+### 57. TARGET SOLUTION METADATA
+Her seviye için otomatik solver yazılımı şu değerleri hesaplar ve JSON çıktısına yazar:
+* `Minimum Move` (Optimal çözüm hamlesi)
+* `Recommended Move` (Önerilen hamle)
+* `Average Move` (Ortalama oyuncu hamlesi)
+* `Average Solve Time` (Çözüm süresi tahmini)
+* `3 Star Threshold` (3 Yıldız eşik hamle sayısı)
+
+---
+
+### 58. STAR SYSTEM (YILDIZ SİSTEMİ)
+Seviye tamamlandığında hamle sayısına göre yıldız verilir:
+* **3 Yıldız (★★★):** Optimal/Perfect hamle sayısıyla çözüldü.
+* **2 Yıldız (★★):** Optimal hamleden %30 daha fazla hamleyle çözüldü.
+* **1 Yıldız (★):** Seviye başarıyla tamamlandı.
+* *Etki:* Yıldızlar sandık açma ilerlemesini doğrudan etkiler.
+
+---
+
+### 59. CHEST PROGRESSION (SANDIK İLERLEMESİ)
+Kazanılan yıldızlar Sandık XP puanına dönüşür:
+* **Bronze Chest:** 100 XP
+* **Silver Chest:** 250 XP
+* **Gold Chest:** 500 XP
+* **Diamond Chest:** 1000 XP
+* *Sandık İçeriği:* Altın, İpucu, Geri Alma Bileti, Halka Kaplamaları (Skin), Tema parçaları veya Elmas.
+
+---
+
+### 60. PLAYER PROGRESSION (OYUNCU İLERLEMESİ)
+Oyuncu seviye tamamladıkça XP kazanır. Oyuncu seviyesi arttıkça (Level Up) altın, özel avatar çerçeveleri, yeni arka plan temaları ve başarı rozetleri kazanır.
+
+---
+
+### 61. SEVİYE ÖDÜLÜ
+* **Normal Seviye:** 50-150 Altın
+* **Boss Seviyesi:** 500 Altın + Sandık
+* **Meydan Okuma (Challenge):** 300 Altın
+* **Günlük Bulmaca (Daily):** Premium Elmas
+
+---
+
+### 62. WORLD COMPLETE (DÜNYA TAMAMLAMA)
+Bir dünya tamamlandığında; yeni oyun arka planı, yeni müzik parçası, yükleme ekranı teması, başarımlar ve Boss Madalyası oyuncu profiline eklenir.
+
+---
+
+## BÖLÜM 5: ARAYÜZ, EKONOMİ VE TEKNİK ALTYAPI
+
+### 63. ANA MENÜ ARAYÜZÜ
+* Oyna Butonu (Mevcut Seviye)
+* Günlük Meydan Okuma (Daily Challenge) Girişi
+* Kozmetik Mağazası (Store)
+* Ayarlar Menüsü (Settings)
+* Canlı Etkinlikler (Events) Paneli
+* Oyuncu Profili ve İlerleme Çubuğu
+* Altın ve Elmas Göstergesi
+
+---
+
+### 64. OYUN EKRANI ARAYÜZÜ
+* **Üst Alan:** Seviye Numarası, Altın/Elmas Miktarı, Ayarlar Butonu.
+* **Orta Alan:** Bulmaca Tahtası (Poles & Rings).
+* **Alt Alan:** Geri Al (Undo) Butonu, İpucu (Hint) Butonu, Yeniden Başlat (Restart) Butonu.
+
+---
+
+### 65. KAZANMA EKRANI (VICTORY SCREEN)
+* Bölüm Tamamlandı Başlığı
+* Kazanılan Yıldız Sayısı (Animasyonlu)
+* Kazanılan Altın ve XP Miktarı
+* Sandık İlerleme Çubuğu (XP animasyonu)
+* Çifte Ödül Butonu (Rewarded Video reklamı izleme seçeneği)
+* Devam Et (Next Level) Butonu
+
+---
+
+### 66. AYARLAR MENÜSÜ
+* Müzik Aç/Kapat ve Ses Barı
+* Ses Efektleri (SFX) Aç/Kapat
+* Dokunsal Geri Bildirim (Haptics) Aç/Kapat ve Yoğunluk Ayarı
+* Dil Seçeneği (15 dil desteği)
+* Gizlilik Politikası ve Kullanım Koşulları Linkleri
+* Satın Alımları Geri Yükle (Restore Purchases) Butonu
+
+---
+
+### 67. MAĞAZA İÇERİĞİ
+* Altın Paketleri (IAP)
+* Elmas Paketleri (IAP)
+* Reklamları Kaldır (No-Ads) Teklifi
+* Özel Tema Paketleri (Halka ve Çubuk tasarımları)
+* Günlük Ücretsiz Teklifler
+
+---
+
+### 68. PARA BİRİMLERİ
+* **Altın (Coins):** Oyundaki ana para birimidir. İpuçları, geri alma biletleri ve standart temaların açılmasında kullanılır.
+* **Elmas (Diamonds):** Premium para birimidir. IAP ile satın alınır. Sınırlı süreli özel etkinlik temalarını doğrudan açmak için kullanılır.
+
+---
+
+### 69. ALTIN KAYNAKLARI
+Seviye tamamlama, Boss seviyesi galibiyetleri, başarımların tamamlanması, günlük görev ödülleri, etkinlikler ve ödüllü reklam izleme teklifleri.
+
+---
+
+### 70. ALTIN KULLANIMI
+Bulmaca esnasında ipucu alma (50 altın), geri alma hakkı satın alma (5 altın) ve mağazadan tema paketleri edinme.
+
+---
+
+### 71. GÜNLÜK ÖDÜLLER (DAILY REWARDS)
+* **1. Gün:** 100 Altın
+* **2. Gün:** 150 Altın
+* **3. Gün:** 200 Altın
+* **4. Gün:** 1 Adet İpucu
+* **5. Gün:** 300 Altın
+* **6. Gün:** 1 Adet Özel Tema Parçası
+* **7. Gün:** 10 Elmas
+
+---
+
+### 72. BAŞARIMLAR (ACHIEVEMENTS)
+* 10 / 100 / 500 / 1000 Seviye Tamamla
+* 100 Kez İpucu Kullan
+* Seviyeleri İpucu Kullanmadan Çöz
+* Boss Seviyelerini Tamamla
+
+---
+
+### 73. TEKNİK MOTOR VE PLATFORM
+* **Oyun Motoru:** Unity 6 LTS
+* **Platform:** Android 10+ / iOS 16+
+* **Ekran Yönü:** Sadece Portre (Portrait 9:16)
+* **Hedef Performans:** Sabit 60 FPS (Frame Time < 14ms)
+
+---
+
+### 74. TEKNİK MİMARİ (NEXUS FRAMEWORK)
+Ring Flow, zayıf bağlı (decoupled) modüler Nexus mimarisini kullanır:
 ```
 GameContainer
-└─ Nexus Core (ModuleManager, ServiceLocator, EventBus, StateMachine, Lifecycle)
-   ├─ Bootstrap → Save → Economy → Level → Gameplay
-   ├─ UI → Audio → Ads → IAP → Analytics → LiveOps → Notification
+ └─ Nexus Core (ModuleManager, ServiceLocator, EventBus, StateMachine, Lifecycle)
+     ├─ BootstrapState → SaveService → EconomyService → LevelService → GameplayState
+     ├─ UI (UIRoot) → AudioService → AdsService → IAPService → AnalyticsService
 ```
+* **Veri Yönetimi:** Tüm dinamik oyun verileri (seviyeler, temalar, sesler) ScriptableObject'ler üzerinden yönetilir.
+* **Command Pattern:** Tüm oyun içi hamleler ve mekanik etkileşimleri geri alınabilir (undoable) komut sınıfları (`MoveRingCommand`, `RevealMysteryCommand`, `BreakIceCommand`) üzerinden çalışır.
+* **Object Pooling:** Çöp toplama (GC Alloc) sıfıra indirgenmiştir. Halkalar, çubuklar, konfetiler ve patlama efektleri oyun havuzlama sisteminden (`IObjectPoolService`) çekilir.
+  * *Halka Havuzu (Ring Pool):* 100 adet
+  * *Çubuk Havuzu (Pole Pool):* 30 adet
+  * *Parçacık Havuzu (Particle Pool):* 50 adet
+  * *Konfeti Havuzu (Confetti Pool):* 30 adet
 
-- **ScriptableObject her şey** (level, tema, ring tipi, ödül, ses)
-- **EventBus:** modüller arası iletişim (loose coupling)
-- **Command Pattern:** MoveRing, RevealMystery, BreakIce, UnlockPole, ExplodeBomb (Undo stack)
-- **State Machine:** BOOT → MAIN_MENU → LEVEL_SELECT → PLAYING → PAUSED/WIN
-- **Addressables:** Core 5MB (start), Tema 10-12MB (lazy), Music streaming
-- **Object Pool:** Ring 100, Pole 30, Particle 50, Confetti 30
-- **Async/await:** IO ve level yüklemede zorunlu
+---
 
-## 7. Performans Bütçesi (Hedef / Üst Sınır)
-| Metrik | Hedef | Üst Sınır |
+### 75. PERFORMANS BÜTÇESİ VE SINIRLARI
+| Metrik | Hedef Değer | Üst Sınır (Kritik Eşik) |
 |---|---|---|
-| Frame time | <14ms | 16.67ms (60 FPS) |
-| Draw calls | <80 | 120 |
-| SetPass calls | <40 | 60 |
-| Triangles | <100k | 150k |
-| GC alloc/frame | <1KB | 4KB |
-| RAM | <150MB | 220MB |
-| APK/IPA | <80MB | 120MB |
-| İlk açılış | <3.5s | 5s |
-| Level yükleme | <0.5s | 1s |
+| **Kare Süresi (Frame Time)** | < 14.0 ms | 16.6 ms (60 FPS) |
+| **Draw Calls (Batch Sayısı)** | < 80 | 120 |
+| **SetPass Calls** | < 40 | 60 |
+| **Poligon Sayısı (Triangles)**| < 100,000 | 150,000 |
+| **GC Alloc (Kare Başına Bellek)**| < 1.0 KB | 4.0 KB |
+| **RAM Kullanımı** | < 150 MB | 220 MB |
+| **APK / IPA Boyutu** | < 80 MB | 120 MB |
+| **Soğuk Başlangıç Süresi** | < 3.0 saniye | 5.0 saniye |
+| **Level Yükleme Süresi** | < 0.3 saniye | 0.8 saniye |
 
-## 8. Seviye Sistemi
-- **Format:** JSON (seed + initialState + solution metadata)
-- **Generator:** Reverse-from-solution + softlock detection (5 seed retry)
-- **Solver:** BFS (≤4p/4c) / IDA* (5-7p/5-6c) / Beam Search (8+p/7+c) + heuristic
-- **Heuristic:** Σ(yanlış pozisyondaki ring) + (incomplete pole × 2)
-- **Difficulty Score:** `poleCount×2.5 + colorCount×3.0 + minMoves×0.8 + emptyPolePenalty×5.0 + specialCount×4.0 + branchFactor×1.5 − symmetry×2.0`
-- **Yıldız:** 3★ = optimal, 2★ = +30%, 1★ = tamamlandı
-- **Sandıklar:** Bronze 100 / Silver 250 / Gold 500 / Diamond 1000 XP
-- **Kural:** Aynı seed aynı leveli üretmeli (reproducibility)
+---
 
-## 9. Ekonomi
-| Kaynak | Elde Etme | Kullanım |
-|---|---|---|
-| **Coin** | Level(50-150), Boss(500), Daily, Ad, Achievement | Hint(50), Undo(5+), Tema |
-| **Diamond** | IAP, Event, Achievement | Premium tema, Remove Ads |
-| **XP** | Level completion, Star, Boss | Player Level Up, Sandık progress |
+### 76. SEVİYE SİSTEMİ VE SOLVER ALGORİTMASI
+* Seviyeler JSON formatında saklanır; çubukların başlangıç indeksleri, renk kodları ve özel mekanik kilitleri yer alır.
+* **Solver Teknolojisi:** Seviye karmaşıkalığına göre 3 farklı arama algoritması kullanılır:
+  * **BFS (Breadth-First Search):** 4 çubuk ve 4 renkli basit seviyeler için.
+  * **IDA* (Iterative Deepening A*):** 5-7 çubuklu orta seviyeler için.
+  * **Beam Search (Genişlik Kısıtlı Arama):** 8+ çubuklu ve yoğun özel mekanikli Legend seviyeler için.
+* **Heuristic Formülü:** `H(n) = Yanlış konumdaki halkaların toplamı + (Tamamlanmamış çubuk sayısı * 2)`
+* **Zorluk Puanı (Difficulty Score) Formülü:**
+  `Score = (PoleCount * 2.5) + (ColorCount * 3.0) + (MinMoves * 0.8) + (EmptyPoleCount * -4.0) + (SpecialMechanicCount * 5.0) - (SymmetryFactor * 2.0)`
 
-- **Hint:** 50 coin VEYA rewarded ad → bir sonraki doğru hamleyi gösterir (çözümü vermez)
-- **Undo:** ilk 5 ücretsiz, sonrası 5 coin/ad
-- **Daily:** 100→150→200→Hint→300→Tema→Diamond
-- **Remove Ads:** IAP Tier 4
-- **Restore Purchases:** zorunlu
+---
 
-## 10. Monetizasyon
-- **Soft launch pazarları:** TR, BR, ID
-- **AdMob + Unity Ads:**
-  - Rewarded: hint, undo, double reward, daily bonus
-  - Interstitial: her 3 level
-  - Banner: sadece ana menü
-- **IAP:** Coin paketleri, Diamond paketleri, Tema paketleri, Remove Ads
-- **Hedef metrikler:** D1 retention ≥%45, D7 ≥%15, ARPDAU $0.05-0.10
+### 77. MONETİZASYON VE REKLAM STRATEJİSİ
+* **AdMob + Unity Ads:**
+  * **Rewarded Video:** İpucu alma, ekstra geri alma hakkı, bölüm sonu altınını ikiye katlama.
+  * **Interstitial:** Her 3 normal seviye tamamlandığında bir kez gösterilir (Satın alma yapanlar hariç).
+  * **Banner:** Yalnızca ana menü ekranının alt kısmında gösterilir.
+* **ARPDAU Hedefi:** $0.05 - $0.10 arası.
 
-## 11. UI/UX Özeti
-- **Navigation:** Splash → Main Menu → Level Select → Playing → Pause/Win → Reward
-- **Onboarding:** 30 sn, sadece yeni cihaz / restore sonrası
-- **Localization:** 15 dil (en master), CSV tabanlı, NotoSans font, RTL/LTR otomatik
-- **Accessibility:** renk körlüğü 3 mod, büyük buton (min 60dp), reduce motion, slow mode (%50), ekran okuyucu
-- **Safe area:** notch + gesture bar desteği, board 280-400dp, pole spacing sabit
-- **Empty/Loading/Error:** skeleton + spinner, retry CTA, PII yok
+---
 
-## 12. Audio
-- **Müzik:** world başına farklı stil, BPM 70-130, adaptive 4 layer (base/drum/melody/intensity)
-- **Mix:** menü %70 / oyun %40 / pause %20 / boss %80
-- **SFX:** max 32 voice, priority-based (UI > Gameplay > Ambient)
-- **Pitch varyasyon:** aynı ses art arda max 3 (random ±2 yarı ton)
-- **Format:** .ogg, 44.1kHz müzik(streaming) / 22.05kHz SFX(preload)
+### 78. UI / UX STANDARTLARI VE KULLANILABİLİRLİK
+* **Çentik Desteği (Safe Area):** Cihaz notch ve işletim sistemi alt barları otomatik hesaplanarak oyun tahtası `280-400dp` aralığına sıkıştırılır.
+* **Erişilebilirlik (Accessibility):** Protanopi, Döteranopi ve Tritanopi renk körlüğü filtreleri (renk paleti dönüşümleri), animasyon azaltma (reduce motion) seçeneği ve haptikleri devre dışı bırakabilme modu sunulur.
 
-## 13. Veri & Kayıt
-- **Local:** JSON dosyası (şifreli, PlayerPrefs değil)
-- **Cloud:** Firebase Cloud Save (post-MVP)
-- **Kaydedilen:** level, coin, diamond, XP, açılan dünya/tema, günlük ilerleme, başarımlar, ayarlar
-- **Analytics events:** level_start, level_complete, hint_use, undo_use, restart_use, rewarded_ad, session_length, retention
+---
 
-## 14. Güvenlik & Uyum
-- **Anti-cheat:** local validation + server-side IAP receipt doğrulama
-- **KVKK / GDPR / COPPA:** 8+ yaş, parental gate, 15 dilde ToS + Privacy
-- **PII maskeleme:** log'larda zorunlu, release'te sadece error
-- **Crash reporting:** Firebase Crashlytics
+### 79. AUDIO TASARIM KURALLARI
+* **Dinamik Müzik:** Dünya temasına göre değişen, BPM 70-130 arası enstrümantal arka plan müzikleri. Seviye çözüldükçe veya hamleler hızlandıkça adaptif katmanlar (Drum/Melody) devreye girer.
+* **SFX Pitch Varyasyonu:** Aynı ses efekti (örn: halka vurma sesi) arka arkaya tetiklendiğinde kulak tırmalamaması için random olarak `±2 yarım ton` pitch değişimi uygulanır.
 
-## 15. Release Planı
-| Faz | Süre | İçerik |
-|---|---|---|
-| **Vertical Slice** | 2 hf | 4 pole, 4 renk, tap, undo, win — Antigravity ile kod iskeleti |
-| **MVP** | 8 hf | 200 level, 5 mekanik, AdMob, IAP, 5 dil, Closed Beta |
-| **Soft Launch** | 4 hf | TR/BR/ID, 500 level, 10 mekanik, full LiveOps |
-| **Global Launch** | 4 hf | 2000 level, 40 world, 15 dil, marketing push |
+---
 
-## 16. Açık Sorular (Karar Ver)
-1. **Backend:** Firebase mi, kendi sunucu mu? → MVP için Firebase önerilir
-2. **Art pipeline:** 2D (Spine/PSD) mi, 3D mi? → 2D önerilir (performans + maliyet)
-3. **Ses kaynağı:** Custom composer vs Epidemic Sound lisansı → MVP için lisans
-4. **Çocuk güvenliği:** 8+ rating, family policy detayları netleştirilmeli
-5. **Multiplayer/Leaderboard:** GDD'de yok, social retention için 2. fazda eklenebilir
+### 80. ANALİTİK VE TAKİP ETKİNLİKLERİ
+Aşağıdaki SDK olayları Firebase ve GameAnalytics üzerinden raporlanır:
+* `level_start` (seviye dizin ve başlama zamanı)
+* `level_complete` (harcanan süre ve hamle sayısı)
+* `hint_use` (ipucu talep edilen durum)
+* `undo_use` (geri alma hamlesi)
+* `restart_use` (seviye sıfırlama sıklığı)
+* `rewarded_ad_watched` (reklam verimliliği)
+* `session_length` ve `retention` (kullanıcıyı elde tutma oranları)
 
+---
 
+### 81. MVP İÇERİĞİ (MINIMUM VIABLE PRODUCT)
+* Toplam 200 Seviye
+* 10 Farklı Görsel Tema
+* İlk 5 Özel Mekanik (Mystery, Frozen, Locked Pole, Stone, Glass)
+* Günlük Görevler ve Ödüllü Reklam Entegrasyonu
 
-**Versiyon:** 1.0  •  **Son güncelleme:** 2026-07-07  •  **Hedef MVP:** 2026-Q4
+---
+
+### 82. YUMUŞAK PİYASAYA SÜRÜM (SOFT LAUNCH)
+* **Hedef Bölgeler:** Türkiye, Brezilya, Endonezya.
+* **Amaç:** Teknik stabiliteyi test etmek, bulmaca zorluk dengesini ayarlamak ve kullanıcı tutma oranlarını ölçümlemek.
+
+---
+
+### 83. KÜRESEL ÇIKIŞ (GLOBAL LAUNCH)
+* Google Play Store (Android) ve Apple App Store (iOS) platformlarında eş zamanlı lansman.
+
+---
+
+### 84. GELECEKTEKİ GÜNCELLEMELER (POST-LAUNCH ROADMAP)
+* Sezonluk tematik etkinlikler, yeni halka mekanikleri (Seviye 2000+ sonrası), sosyal liderlik tabloları ve takımlar arası yardımlaşma özellikleri.
+
+---
+
+### 85. GELİŞTİRME EKİBİ
+* **Stüdyo:** FeCe Studios
+* **Baş Oyun Tasarımcısı / Yapımcı:** Cevat Aydın
+* **Üretim Yeri:** FeCe Studios Lab
+
+---
+
+### 86. PROJE DURUMU
+* **Durum:** Geliştirmeye ve üretime hazır durumdadır. Tüm core mimari standartları belirlenmiştir.
+
+████████████████████████████████████████████████████████████████████████████
+
+                         OYUN TASARIM BELGESİ SONU
+                               Ring Flow
+                              Sürüm 1.0
+                       Tüm Hakları Saklıdır.
+
+████████████████████████████████████████████████████████████████████████████
