@@ -26,6 +26,8 @@ namespace RingFlow.Gameplay
         [SerializeField] private GameObject _ringPopPrefab;
         [UnityEngine.Scripting.Preserve]
         [SerializeField] private GameObject _confettiPrefab;
+        [UnityEngine.Scripting.Preserve]
+        [SerializeField] private GameObject _mergeEffectPrefab;
         
         private static float s_sessionStartTime;
         private static bool s_sessionEndTracked;
@@ -39,7 +41,8 @@ namespace RingFlow.Gameplay
             var vfxRegistry = new VfxPrefabRegistry
             {
                 RingPopPrefab = _ringPopPrefab,
-                ConfettiPrefab = _confettiPrefab
+                ConfettiPrefab = _confettiPrefab,
+                MergeEffectPrefab = _mergeEffectPrefab
             };
             builder.BindInstance<VfxPrefabRegistry>(vfxRegistry);
             
@@ -292,6 +295,9 @@ namespace RingFlow.Gameplay
 
         private static void InitializeVfxAndPools(IContext context)
         {
+            // Initialize VfxMeshCache (generates shared meshes once)
+            VfxMeshCache.Initialize();
+
             var vfxRegistry = context.TryResolve<VfxPrefabRegistry>();
             if (vfxRegistry != null)
             {
@@ -309,6 +315,12 @@ namespace RingFlow.Gameplay
                     Object.DontDestroyOnLoad(confettiObj);
                     vfxRegistry.ConfettiPrefab = confettiObj;
                 }
+                if (vfxRegistry.MergeEffectPrefab == null)
+                {
+                    var mergeObj = new GameObject("MergeEffectVfxPrefab", typeof(MergeEffectVfx));
+                    Object.DontDestroyOnLoad(mergeObj);
+                    vfxRegistry.MergeEffectPrefab = mergeObj;
+                }
 
                 var pool = context.TryResolve<IObjectPoolService>();
                 var feelConfig = GameFeelConfigSO.Instance;
@@ -316,6 +328,7 @@ namespace RingFlow.Gameplay
                 {
                     pool.Prewarm(vfxRegistry.RingPopPrefab, feelConfig?.RingPopPoolSize ?? 50);
                     pool.Prewarm(vfxRegistry.ConfettiPrefab, feelConfig?.ConfettiPoolSize ?? 30);
+                    pool.Prewarm(vfxRegistry.MergeEffectPrefab, feelConfig?.MergeEffectPoolSize ?? 20);
                 }
             }
             else

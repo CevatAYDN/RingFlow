@@ -24,6 +24,7 @@ namespace RingFlow.Gameplay
         [Inject] private IAudioService _audioService;
         [Inject] private IHapticService _hapticService;
         [Inject] private SettingsModel _settingsModel;
+        [Inject] private GameplayModel _model;
 
         private Camera _mainCamera;
         private GameFeelConfigSO F => GameFeelConfigSO.Instance;
@@ -39,6 +40,9 @@ namespace RingFlow.Gameplay
         private Mesh _proceduralConeMesh;
         private GameObject _floorPlane;
         private GameObject _tutorialArrowGo;
+
+        private BloomPulseController _bloomPulseController;
+        private bool _bloomPulseSearched;
 
         public void EnsureRingPoolPrewarmed()
         {
@@ -291,23 +295,49 @@ namespace RingFlow.Gameplay
             var pv = GetPoleView(poleId);
             if (pv == null) return;
 
-            // 1. Flash the pole gold
-            pv.FlashSuccess(0.8f);
+            // Determine ring count on this pole for intensity scaling
+            int ringCount = 0;
+            if (_model != null && poleId >= 0 && poleId < _model.Poles.Count)
+                ringCount = _model.Poles[poleId].Rings.Count;
 
-            // 2. Play ascending success chime
+            // --- 3-Tier Feedback System ---
+            int completedCount = _model?.CompletedPoles.Count ?? 0;
+            bool isFinalPole = _model != null && completedCount >= _model.Poles.Count - 1;
+            int tier = isFinalPole ? 2 : (completedCount >= F.MediumTierThreshold ? 1 : 0);
+
+            // ----- Tier 0/1: Flash pole with success color -----
+            float flashDuration = isFinalPole ? F.PoleSuccessFlashDuration * 1.5f : F.PoleSuccessFlashDuration;
+            // Use colorblind-safe success color (gold → warm amber that works for all vision types)
+            Color successColor = F.PoleSuccessFlashColor;
+            if (_settingsModel != null && _settingsModel.ColorBlindMode.Value > 0)
+                successColor = Color.Lerp(successColor, Color.cyan, 0.4f);
+            pv.FlashSuccess(flashDuration, successColor);
+
+            // ----- Tier 0/1/2: Haptic feedback -----
+            HapticType hapticType = isFinalPole ? HapticType.Success : HapticType.Medium;
+            _hapticService?.Vibrate(hapticType);
+
+            // ----- Tier 0/1: Audio feedback -----
             if (_audioService != null)
-                _audioService.PlaySfx(ProceduralAudio.GetOrCreatePoleCompleteClip(), 1.0f);
+            {
+                if (isFinalPole)
+                    _audioService.PlaySfx(ProceduralAudio.GetOrCreateFinalPoleClip(), 1.0f);
+                else
+                    _audioService.PlaySfx(ProceduralAudio.GetOrCreateRichPoleCompleteClip(ringCount), 1.0f);
+            }
 
-            // 3. Staggered vertical ring wave animation
+            // ----- Tier 0/1: Camera micro-shake -----
+            float shakeIntensity = isFinalPole ? F.CompleteShakeIntensity * 2f : F.CompleteShakeIntensity;
+            float shakeDuration = isFinalPole ? F.CompleteShakeDuration * 2f : F.CompleteShakeDuration;
+            ShakeCamera(shakeIntensity, shakeDuration);
+
+            // ----- Tier 0/1: Staggered ring bounce animation -----
             var ringsList = new List<Transform>();
             foreach (Transform child in pv.transform)
             {
                 if (child.name.StartsWith("Ring_"))
-                {
                     ringsList.Add(child);
-                }
             }
-
             ringsList.Sort((a, b) => a.localPosition.y.CompareTo(b.localPosition.y));
 
             for (int i = 0; i < ringsList.Count; i++)
@@ -316,7 +346,7 @@ namespace RingFlow.Gameplay
                 float originalY = ringTrans.localPosition.y;
                 float originalScaleY = ringTrans.localScale.y;
 
-                ringTrans.DOLocalMoveY(originalY + 0.35f, 0.15f)
+                ringTrans.DOLocalMoveY(originalY + (isFinalPole ? 0.5f : 0.35f), 0.15f)
                          .SetEase(Ease.OutQuad)
                          .SetDelay(i * 0.04f)
                          .OnComplete(() =>
@@ -336,22 +366,107 @@ namespace RingFlow.Gameplay
                          });
             }
 
-            // 4. Burst multiple overlapping colorful particle bursts at the top of the pole
-            if (_vfxRegistry != null && _objectPoolService != null)
+            // ----- Tier 0/1: Merge effect (replaces legacy RingPop burst) -----
+            Vector3 poleTopPos = pv.transform.position + Vector3.up * 1.5f;
+            Color mergeColor = isFinalPole ? RingPalette.Get(RingColor.Yellow) : Color.white;
+            SpawnMergeEffect(poleTopPos, mergeColor, ringCount, isFinalPole);
+
+            // ----- Tier 1: Extra sparkle for medium-tier completions -----
+            if (tier >= 1)
             {
-                var prefab = _vfxRegistry.GetRingPopPrefab();
-                if (prefab != null)
+                SpawnConfettiBurst(poleTopPos + Vector3.up * 0.3f, 8);
+            }
+
+            // ----- Tier 2 (Final Pole): Full-screen celebration -----
+            if (isFinalPole)
+            {
+                // Large confetti burst
+                SpawnConfettiBurst(poleTopPos + Vector3.up * 1f, 24);
+
+                // Reward particles across the board
+                if (_vfxRegistry != null && _objectPoolService != null)
                 {
-                    float poleTopY = pv.transform.position.y + 1.5f;
-                    Vector3 spawnPos = new Vector3(pv.transform.position.x, poleTopY, pv.transform.position.z);
-                    for (int k = 0; k < 3; k++)
+                    var mergePrefab = _vfxRegistry.GetMergeEffectPrefab();
+                    if (mergePrefab != null)
                     {
-                        var popInstance = _objectPoolService.Spawn(prefab, spawnPos + new Vector3(Random.Range(-0.1f, 0.1f), 0, Random.Range(-0.1f, 0.1f)), Quaternion.identity);
-                        Color completeColor = k == 0 ? new Color(1f, 0.84f, 0f) : k == 1 ? Color.green : Color.magenta;
-                        popInstance?.GetComponent<RingPopVfx>()?.Initialize(completeColor);
+                        for (int i = 0; i < _spawnedPoles.Count; i++)
+                        {
+                            if (i == poleId) continue;
+                            var otherPv = GetPoleView(i);
+                            if (otherPv != null)
+                            {
+                                var dp = otherPv.transform.position + Vector3.up * 2f;
+                                var mergeInstance = _objectPoolService.Spawn(mergePrefab, dp, Quaternion.identity);
+                                mergeInstance?.GetComponent<MergeEffectVfx>()?.InitializeBurstOnly(dp, Color.Lerp(mergeColor, Color.white, 0.3f));
+                            }
+                        }
                     }
                 }
             }
+
+            // ----- Bloom pulse -----
+            var bloom = GetOrFindBloomPulseController();
+            if (bloom != null)
+            {
+                float bloomMultiplier = isFinalPole ? F.FinalBloomIntensityMultiplier : F.BloomIntensityMultiplier;
+                float bloomDuration = isFinalPole ? F.FinalBloomPulseDuration : F.BloomPulseDuration;
+                bloom.Pulse(bloomMultiplier, bloomDuration, isFinalPole);
+            }
+        }
+
+        private void SpawnMergeEffect(Vector3 position, Color color, int ringCount, bool isFinalPole)
+        {
+            if (_vfxRegistry == null || _objectPoolService == null) return;
+            var prefab = _vfxRegistry.GetMergeEffectPrefab();
+            if (prefab == null)
+            {
+                // Fallback to legacy RingPop if MergeEffect not available
+                var popPrefab = _vfxRegistry.GetRingPopPrefab();
+                if (popPrefab != null)
+                {
+                    var popInstance = _objectPoolService.Spawn(popPrefab, position, Quaternion.identity);
+                    popInstance?.GetComponent<RingPopVfx>()?.Initialize(color);
+                }
+                return;
+            }
+            var mergeInstance = _objectPoolService.Spawn(prefab, position, Quaternion.identity);
+            mergeInstance?.GetComponent<MergeEffectVfx>()?.Initialize(position, color, ringCount, isFinalPole);
+        }
+
+        private void SpawnConfettiBurst(Vector3 position, int count)
+        {
+            if (_vfxRegistry == null || _objectPoolService == null) return;
+            var prefab = _vfxRegistry.GetConfettiPrefab();
+            if (prefab == null) return;
+
+            // Spawn multiple confetti bursts for a larger effect
+            int bursts = Mathf.Max(1, count / 8);
+            for (int i = 0; i < bursts; i++)
+            {
+                Vector3 offset = new Vector3(
+                    UnityEngine.Random.Range(-0.5f, 0.5f),
+                    UnityEngine.Random.Range(0f, 0.3f),
+                    UnityEngine.Random.Range(-0.5f, 0.5f)
+                );
+                var confettiInstance = _objectPoolService.Spawn(prefab, position + offset, Quaternion.identity);
+                confettiInstance?.GetComponent<ConfettiVfx>()?.Initialize();
+            }
+        }
+
+        private BloomPulseController GetOrFindBloomPulseController()
+        {
+            if (_bloomPulseController != null && _bloomPulseController.isActiveAndEnabled)
+                return _bloomPulseController;
+            if (_bloomPulseSearched) return null;
+            _bloomPulseSearched = true;
+            _bloomPulseController = FindAnyObjectByType<BloomPulseController>(FindObjectsInactive.Include);
+            if (_bloomPulseController == null)
+            {
+                var go = new GameObject("BloomPulseController", typeof(BloomPulseController));
+                go.hideFlags = HideFlags.HideAndDontSave;
+                _bloomPulseController = go.GetComponent<BloomPulseController>();
+            }
+            return _bloomPulseController;
         }
 
         private void ApplySelection()

@@ -65,13 +65,18 @@ namespace RingFlow.Gameplay
 
         public void FlashSuccess(float duration = 0.8f)
         {
-            if (_flashRoutine != null) StopCoroutine(_flashRoutine);
-            _flashRoutine = StartCoroutine(FlashSuccessRoutine(duration));
+            FlashSuccess(duration, new Color(1f, 0.82f, 0f, 1f));
         }
 
-        private IEnumerator FlashSuccessRoutine(float duration)
+        public void FlashSuccess(float duration, Color color)
         {
-            SetColor(new Color(1f, 0.82f, 0f, 1f));
+            if (_flashRoutine != null) StopCoroutine(_flashRoutine);
+            _flashRoutine = StartCoroutine(FlashSuccessRoutine(duration, color));
+        }
+
+        private IEnumerator FlashSuccessRoutine(float duration, Color color)
+        {
+            SetColor(color);
             yield return new WaitForSeconds(duration);
             ApplyTint();
             _flashRoutine = null;

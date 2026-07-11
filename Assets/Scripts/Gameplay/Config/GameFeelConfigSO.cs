@@ -147,6 +147,16 @@ namespace RingFlow.Gameplay
         public float RingPopDuration = 0.5f;
         [Tooltip("RingPop auto-despawn delay.")]
         public float RingPopDespawnDelay = 0.55f;
+
+        [Header("Merge Effect VFX")]
+        [Tooltip("Merge burst particle count.")]
+        public int MergeBurstCount = 16;
+        [Tooltip("Merge burst duration.")]
+        public float MergeBurstDuration = 0.4f;
+        [Tooltip("Merge glow orb scale.")]
+        public float MergeGlowOrbScale = 0.5f;
+
+        [Header("Confetti VFX")]
         [Tooltip("Confetti piece count.")]
         public int ConfettiCount = 40;
         [Tooltip("Confetti fall duration range.")]
@@ -154,9 +164,30 @@ namespace RingFlow.Gameplay
         [Tooltip("Confetti despawn delay.")]
         public float ConfettiDespawnDelay = 3.1f;
 
+        [Header("Pole Completion Feedback")]
+        [Tooltip("Duration of the pole success flash.")]
+        public float PoleSuccessFlashDuration = 0.3f;
+        [Tooltip("Pole success flash color (colorblind-safe: gold, not green).")]
+        public Color PoleSuccessFlashColor = new Color(1f, 0.82f, 0f);
+        [Tooltip("Bloom intensity multiplier on pole complete (1 = no change).")]
+        public float BloomIntensityMultiplier = 2.5f;
+        [Tooltip("Bloom pulse duration on pole complete.")]
+        public float BloomPulseDuration = 0.6f;
+        [Tooltip("Bloom intensity multiplier for final pole.")]
+        public float FinalBloomIntensityMultiplier = 5f;
+        [Tooltip("Bloom pulse duration for final pole.")]
+        public float FinalBloomPulseDuration = 1.2f;
+        [Tooltip("Number of completed poles threshold for medium-tier celebration.")]
+        public int MediumTierThreshold = 3;
+        [Tooltip("Camera micro-shake intensity on pole complete.")]
+        public float CompleteShakeIntensity = 0.06f;
+        [Tooltip("Camera micro-shake duration on pole complete.")]
+        public float CompleteShakeDuration = 0.15f;
+
         [Header("Pool Sizes")]
         public int RingPoolSize = 100;
         public int RingPopPoolSize = 50;
         public int ConfettiPoolSize = 30;
+        public int MergeEffectPoolSize = 20;
     }
 }
