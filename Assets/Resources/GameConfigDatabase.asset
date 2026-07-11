@@ -12,36 +12,43 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f132cd875a226c447bb35db28e54b6f1, type: 3}
   m_Name: GameConfigDatabase
   m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.GameConfigDatabaseSO
-  TotalLevels: 2000
+  TotalLevels: 50
   DifficultyBands:
   - Band: 0
     MaxLevel: 20
     MinEmptyPoles: 2
     MaxCapacity: 4
+    AllowedMechanics: 0000000001000000
   - Band: 1
     MaxLevel: 100
     MinEmptyPoles: 2
     MaxCapacity: 4
+    AllowedMechanics: 000000000100000002000000
   - Band: 2
     MaxLevel: 350
     MinEmptyPoles: 1
     MaxCapacity: 4
+    AllowedMechanics: 0000000001000000020000000300000004000000
   - Band: 3
     MaxLevel: 600
     MinEmptyPoles: 1
     MaxCapacity: 4
+    AllowedMechanics: 00000000010000000200000003000000040000000500000006000000
   - Band: 4
     MaxLevel: 1000
     MinEmptyPoles: 1
     MaxCapacity: 4
+    AllowedMechanics: 000000000100000002000000030000000400000005000000060000000700000008000000
   - Band: 5
     MaxLevel: 1500
     MinEmptyPoles: 1
     MaxCapacity: 4
+    AllowedMechanics: 00000000010000000200000003000000040000000500000006000000070000000800000009000000
   - Band: 6
     MaxLevel: 2000
     MinEmptyPoles: 1
     MaxCapacity: 4
+    AllowedMechanics: 000000000100000002000000030000000400000005000000060000000700000008000000090000000a0000000b0000000c0000000d0000000e000000
   ColorCurve:
   - LevelThreshold: 1
     ColorCount: 3

@@ -49,6 +49,31 @@ namespace RingFlow.Editor
                 _database.TotalLevels = EditorGUILayout.IntField("Total Levels", _database.TotalLevels);
 
                 EditorGUILayout.Space(10f);
+                DrawDifficultyOverview();
+
+                EditorGUILayout.Space(10f);
+                // --- 1. DIFFICULTY BANDS ---
+                EditorGUILayout.LabelField("Difficulty Bands Config", EditorStyles.boldLabel);
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                {
+                    for (int i = 0; i < _database.DifficultyBands.Count; i++)
+                    {
+                        var bandData = _database.DifficultyBands[i];
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            EditorGUILayout.LabelField(bandData.Band.ToString(), GUILayout.Width(80f));
+                            
+                            int maxLvl = EditorGUILayout.IntField("Max Lvl", bandData.MaxLevel, GUILayout.Width(110f));
+                            int minEmpty = EditorGUILayout.IntField("Empty Poles", bandData.MinEmptyPoles, GUILayout.Width(110f));
+                            int maxCap = EditorGUILayout.IntField("Cap", bandData.MaxCapacity, GUILayout.Width(90f));
+
+                            bandData.MaxLevel = maxLvl;
+                            bandData.MinEmptyPoles = minEmpty;
+                            bandData.MaxCapacity = maxCap;
+                            _database.DifficultyBands[i] = bandData;
+                        }
+                    }
+                }
 
                 // --- 1. DIFFICULTY BANDS ---
                 EditorGUILayout.LabelField("Difficulty Bands Config", EditorStyles.boldLabel);
@@ -170,6 +195,22 @@ namespace RingFlow.Editor
         }
 
         private const string DatabaseAssetPath = "Assets/Resources/GameConfigDatabase.asset";
+
+        private void DrawDifficultyOverview()
+        {
+            if (_database == null) return;
+
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                EditorGUILayout.LabelField("Difficulty Overview", EditorStyles.boldLabel);
+                for (int i = 0; i < _database.DifficultyBands.Count; i++)
+                {
+                    var band = _database.DifficultyBands[i];
+                    EditorGUILayout.LabelField(
+                        $"{band.Band}: Lvl≤{band.MaxLevel} | Empty={band.MinEmptyPoles} | Cap={band.MaxCapacity} | Mechanics={band.AllowedMechanics?.Count ?? 0}");
+                }
+            }
+        }
 
         private void CreateDatabaseAsset()
         {

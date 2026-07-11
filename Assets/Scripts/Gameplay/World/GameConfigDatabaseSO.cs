@@ -150,13 +150,127 @@ namespace RingFlow.Gameplay
             // Default Difficulty Bands (GDD §5)
             DifficultyBands = new List<DifficultyBandData>
             {
-                new() { Band = DifficultyBand.Tutorial, MaxLevel = 20, MinEmptyPoles = 2, MaxCapacity = 4 },
-                new() { Band = DifficultyBand.Easy, MaxLevel = 100, MinEmptyPoles = 2, MaxCapacity = 4 },
-                new() { Band = DifficultyBand.Medium, MaxLevel = 350, MinEmptyPoles = 1, MaxCapacity = 4 },
-                new() { Band = DifficultyBand.Hard, MaxLevel = 600, MinEmptyPoles = 1, MaxCapacity = 4 },
-                new() { Band = DifficultyBand.Expert, MaxLevel = 1000, MinEmptyPoles = 1, MaxCapacity = 4 },
-                new() { Band = DifficultyBand.Master, MaxLevel = 1500, MinEmptyPoles = 1, MaxCapacity = 4 },
-                new() { Band = DifficultyBand.Legend, MaxLevel = 2000, MinEmptyPoles = 1, MaxCapacity = 4 }
+                new()
+                {
+                    Band = DifficultyBand.Tutorial,
+                    MaxLevel = 20,
+                    MinEmptyPoles = 2,
+                    MaxCapacity = 4,
+                    AllowedMechanics = new List<WorldMechanicType>
+                    {
+                        WorldMechanicType.None,
+                        WorldMechanicType.Mystery
+                    }
+                },
+                new()
+                {
+                    Band = DifficultyBand.Easy,
+                    MaxLevel = 100,
+                    MinEmptyPoles = 2,
+                    MaxCapacity = 4,
+                    AllowedMechanics = new List<WorldMechanicType>
+                    {
+                        WorldMechanicType.None,
+                        WorldMechanicType.Mystery,
+                        WorldMechanicType.Frozen
+                    }
+                },
+                new()
+                {
+                    Band = DifficultyBand.Medium,
+                    MaxLevel = 350,
+                    MinEmptyPoles = 1,
+                    MaxCapacity = 4,
+                    AllowedMechanics = new List<WorldMechanicType>
+                    {
+                        WorldMechanicType.None,
+                        WorldMechanicType.Mystery,
+                        WorldMechanicType.Frozen,
+                        WorldMechanicType.LockedPole,
+                        WorldMechanicType.Stone
+                    }
+                },
+                new()
+                {
+                    Band = DifficultyBand.Hard,
+                    MaxLevel = 600,
+                    MinEmptyPoles = 1,
+                    MaxCapacity = 4,
+                    AllowedMechanics = new List<WorldMechanicType>
+                    {
+                        WorldMechanicType.None,
+                        WorldMechanicType.Mystery,
+                        WorldMechanicType.Frozen,
+                        WorldMechanicType.LockedPole,
+                        WorldMechanicType.Stone,
+                        WorldMechanicType.Glass,
+                        WorldMechanicType.Rainbow
+                    }
+                },
+                new()
+                {
+                    Band = DifficultyBand.Expert,
+                    MaxLevel = 1000,
+                    MinEmptyPoles = 1,
+                    MaxCapacity = 4,
+                    AllowedMechanics = new List<WorldMechanicType>
+                    {
+                        WorldMechanicType.None,
+                        WorldMechanicType.Mystery,
+                        WorldMechanicType.Frozen,
+                        WorldMechanicType.LockedPole,
+                        WorldMechanicType.Stone,
+                        WorldMechanicType.Glass,
+                        WorldMechanicType.Rainbow,
+                        WorldMechanicType.Bomb,
+                        WorldMechanicType.Chain
+                    }
+                },
+                new()
+                {
+                    Band = DifficultyBand.Master,
+                    MaxLevel = 1500,
+                    MinEmptyPoles = 1,
+                    MaxCapacity = 4,
+                    AllowedMechanics = new List<WorldMechanicType>
+                    {
+                        WorldMechanicType.None,
+                        WorldMechanicType.Mystery,
+                        WorldMechanicType.Frozen,
+                        WorldMechanicType.LockedPole,
+                        WorldMechanicType.Stone,
+                        WorldMechanicType.Glass,
+                        WorldMechanicType.Rainbow,
+                        WorldMechanicType.Bomb,
+                        WorldMechanicType.Chain,
+                        WorldMechanicType.Magnet
+                    }
+                },
+                new()
+                {
+                    Band = DifficultyBand.Legend,
+                    MaxLevel = 2000,
+                    MinEmptyPoles = 1,
+                    MaxCapacity = 4,
+                    AllowedMechanics = new List<WorldMechanicType>
+                    {
+                        WorldMechanicType.None,
+                        WorldMechanicType.Mystery,
+                        WorldMechanicType.Frozen,
+                        WorldMechanicType.LockedPole,
+                        WorldMechanicType.Stone,
+                        WorldMechanicType.Glass,
+                        WorldMechanicType.Rainbow,
+                        WorldMechanicType.Bomb,
+                        WorldMechanicType.Chain,
+                        WorldMechanicType.Magnet,
+                        WorldMechanicType.Paint,
+                        WorldMechanicType.Ghost,
+                        WorldMechanicType.RandomPool1,
+                        WorldMechanicType.RandomPool2,
+                        WorldMechanicType.RandomPool3
+                    }
+                }
             };
 
             // Default Color Curve Points (GDD §5)
@@ -271,6 +385,64 @@ namespace RingFlow.Gameplay
             {
                 if (b.Band == band) return b.MaxCapacity;
             }
+            return 4;
+        }
+
+        public List<WorldMechanicType> GetAllowedMechanicsForLevel(int level)
+        {
+            var band = GetBandForLevel(level);
+
+            if (DifficultyBands != null && DifficultyBands.Count > 0)
+            {
+                foreach (var b in DifficultyBands)
+                {
+                    if (b.Band == band)
+                    {
+                        if (b.AllowedMechanics != null && b.AllowedMechanics.Count > 0)
+                        {
+                            return b.AllowedMechanics;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // Asset'te AllowedMechanics boşsa Band'a göre default döndür
+            return GetDefaultAllowedMechanicsForBand(band);
+        }
+
+        private static List<WorldMechanicType> GetDefaultAllowedMechanicsForBand(DifficultyBand band)
+        {
+            switch (band)
+            {
+                case DifficultyBand.Tutorial:
+                    return new List<WorldMechanicType> { WorldMechanicType.None, WorldMechanicType.Mystery };
+                case DifficultyBand.Easy:
+                    return new List<WorldMechanicType> { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen };
+                case DifficultyBand.Medium:
+                    return new List<WorldMechanicType> { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen, WorldMechanicType.LockedPole, WorldMechanicType.Stone };
+                case DifficultyBand.Hard:
+                    return new List<WorldMechanicType> { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen, WorldMechanicType.LockedPole, WorldMechanicType.Stone, WorldMechanicType.Glass, WorldMechanicType.Rainbow };
+                case DifficultyBand.Expert:
+                    return new List<WorldMechanicType> { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen, WorldMechanicType.LockedPole, WorldMechanicType.Stone, WorldMechanicType.Glass, WorldMechanicType.Rainbow, WorldMechanicType.Bomb, WorldMechanicType.Chain };
+                case DifficultyBand.Master:
+                    return new List<WorldMechanicType> { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen, WorldMechanicType.LockedPole, WorldMechanicType.Stone, WorldMechanicType.Glass, WorldMechanicType.Rainbow, WorldMechanicType.Bomb, WorldMechanicType.Chain, WorldMechanicType.Magnet };
+                case DifficultyBand.Legend:
+                    return new List<WorldMechanicType> { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen, WorldMechanicType.LockedPole, WorldMechanicType.Stone, WorldMechanicType.Glass, WorldMechanicType.Rainbow, WorldMechanicType.Bomb, WorldMechanicType.Chain, WorldMechanicType.Magnet, WorldMechanicType.Paint, WorldMechanicType.Ghost, WorldMechanicType.RandomPool1, WorldMechanicType.RandomPool2, WorldMechanicType.RandomPool3 };
+                default:
+                    return new List<WorldMechanicType> { WorldMechanicType.None };
+            }
+        }
+
+        public int GetMechanicIntensityForLevel(int level)
+        {
+            var band = GetBandForLevel(level);
+            if (band == DifficultyBand.Tutorial) return 1;
+            if (band == DifficultyBand.Easy) return 1;
+            if (band == DifficultyBand.Medium) return 2;
+            if (band == DifficultyBand.Hard) return 2;
+            if (band == DifficultyBand.Expert) return 3;
+            if (band == DifficultyBand.Master) return 3;
             return 4;
         }
 

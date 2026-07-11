@@ -71,6 +71,7 @@ namespace RingFlow.Editor
 
             DrawColorPalette();
             DrawTypePalette();
+            DrawDifficultyAndMechanicPreview(levelSO.Data);
             DrawLevelVisualInteractive(levelSO.Data, levelSO);
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
@@ -130,6 +131,12 @@ namespace RingFlow.Editor
             }
 
             int maxCapacity = levelSO.Data.Poles.Count > 0 ? levelSO.Data.Poles[0].MaxCapacity : 4;
+            var database = GameConfigDatabaseSO.Instance;
+            int levelIndex = levelSO.Data.LevelIndex;
+            var band = database.GetBandForLevel(levelIndex);
+            var allowedMechanics = database.GetAllowedMechanicsForLevel(levelIndex);
+            int intensity = database.GetMechanicIntensityForLevel(levelIndex);
+
             var solveResult = LevelSolver.Solve(board, maxCapacity);
 
             if (solveResult.IsSolvable)
@@ -137,12 +144,12 @@ namespace RingFlow.Editor
                 Undo.RecordObject(levelSO, "Hedef Hamleleri Güncelle");
                 levelSO.Data.TargetMoves = solveResult.MoveCount;
                 EditorUtility.DisplayDialog("Çözücü Sonuçları",
-                    $"Seviye ÇÖZÜLEBİLİR!\nOptimal gereken hamle sayısı: {solveResult.MoveCount} (Hedef Hamle güncellendi).", "Tamam");
+                    $"Seviye ÇÖZÜLEBİLİR!\nBand: {band}\nMekanik Yoğunluğu: {intensity}\nOptimal gereken hamle sayısı: {solveResult.MoveCount} (Hedef Hamle güncellendi).", "Tamam");
             }
             else
             {
                 EditorUtility.DisplayDialog("Çözücü Sonuçları",
-                    "Seviye ÇÖZÜLEMEZ!\nBu yapılandırmayı çözebilecek geçerli bir hamle sırası bulunamadı.", "Tamam");
+                    $"Seviye ÇÖZÜLEMEZ!\nBand: {band}\nAçık Mekanikler: {string.Join(", ", allowedMechanics)}\nBu yapılandırmayı çözebilecek geçerli bir hamle sırası bulunamadı.", "Tamam");
             }
             EditorUtility.SetDirty(levelSO);
         }
@@ -165,8 +172,14 @@ namespace RingFlow.Editor
                 return;
             }
 
+            var database = GameConfigDatabaseSO.Instance;
+            int levelIndex = levelSO.Data.LevelIndex;
+            var band = database.GetBandForLevel(levelIndex);
+            int intensity = database.GetMechanicIntensityForLevel(levelIndex);
+            var allowedMechanics = database.GetAllowedMechanicsForLevel(levelIndex);
+
             if (EditorUtility.DisplayDialog("Yeniden Karıştır",
-                $"Seviye {levelSO.Data.LevelIndex}, {levelSO.Data.Seed} tohumu ile yeniden üretilsin mi?\n\nUyarı: Yapılan tüm manuel düzenlemeler kaybolacaktır.",
+                $"Seviye {levelIndex}, {levelSO.Data.Seed} tohumu ile yeniden üretilsin mi?\nBand: {band}\nMekanik Yoğunluğu: {intensity}\nAçık Mekanikler: {string.Join(", ", allowedMechanics)}\n\nUyarı: Yapılan tüm manuel düzenlemeler kaybolacaktır.",
                 "Karıştır", "İptal"))
             {
                 Undo.RecordObject(levelSO, "Seviyeyi Yeniden Karıştır");
@@ -183,6 +196,36 @@ namespace RingFlow.Editor
                 {
                     EditorUtility.DisplayDialog("Yeniden Karıştırma Başarısız", "Bu parametrelerle çözülebilir bir seviye üretilemedi.", "Tamam");
                 }
+            }
+        }
+
+        private static void DrawDifficultyAndMechanicPreview(LevelData levelData)
+        {
+            if (levelData == null)
+            {
+                return;
+            }
+
+            var database = GameConfigDatabaseSO.Instance;
+            int levelIndex = levelData.LevelIndex;
+            var band = database.GetBandForLevel(levelIndex);
+            var allowed = database.GetAllowedMechanicsForLevel(levelIndex);
+            int intensity = database.GetMechanicIntensityForLevel(levelIndex);
+            int minEmptyPoles = database.GetMinEmptyPolesForLevel(levelIndex);
+            int poleCount = database.GetPoleCountForLevel(levelIndex);
+            int colorCount = database.GetColorCountForLevel(levelIndex);
+            int maxCapacity = database.GetMaxCapacityForLevel(levelIndex);
+
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                EditorGUILayout.LabelField("Zorluk ve Mekanik Önizleme", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Band", band.ToString());
+                EditorGUILayout.LabelField("Renk Sayısı", colorCount.ToString());
+                EditorGUILayout.LabelField("Direk Sayısı", poleCount.ToString());
+                EditorGUILayout.LabelField("Kapasite", maxCapacity.ToString());
+                EditorGUILayout.LabelField("Boş Direk", minEmptyPoles.ToString());
+                EditorGUILayout.LabelField("Mekanik Yoğunluğu", intensity.ToString());
+                EditorGUILayout.LabelField("Açık Mekanikler", string.Join(", ", allowed));
             }
         }
 

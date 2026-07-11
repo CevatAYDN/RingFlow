@@ -376,6 +376,9 @@ namespace RingFlow.Editor
             EditorGUILayout.LabelField("Seviye Üretici & Çözücü Ayarları", EditorStyles.boldLabel);
             _generator.OnGUI();
             EditorGUILayout.Space(10f);
+            EditorGUILayout.LabelField("Seviye Denetleyici", EditorStyles.boldLabel);
+            _databaseSection.OnGUI();
+            EditorGUILayout.Space(10f);
             EditorGUILayout.LabelField("Sahne Tahtası Oluşturucu", EditorStyles.boldLabel);
             _visualBuilder.OnGUI();
         }

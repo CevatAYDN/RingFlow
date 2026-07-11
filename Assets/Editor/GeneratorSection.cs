@@ -60,6 +60,7 @@ namespace RingFlow.Editor
                 _poleCount   = EditorGUILayout.IntSlider("Direk Sayısı",   _poleCount,   3, 12);
                 _colorCount  = EditorGUILayout.IntSlider("Renk Sayısı",  _colorCount,  2, 10);
                 _maxCapacity = EditorGUILayout.IntSlider("Maks. Halka Kapasitesi",  _maxCapacity, 3, 5);
+                DrawDifficultyPreview(_levelIndex);
                 if (EditorGUI.EndChangeCheck())
                 {
                     EditorPrefs.SetInt(EditorPrefsKeys.LevelIndex, _levelIndex);
@@ -104,13 +105,55 @@ namespace RingFlow.Editor
             }
         }
 
+        private void DrawDifficultyPreview(int levelIndex)
+        {
+            var db = GameConfigDatabaseSO.Instance;
+            var band = db.GetBandForLevel(levelIndex);
+            int intensity = db.GetMechanicIntensityForLevel(levelIndex);
+            var allowed = db.GetAllowedMechanicsForLevel(levelIndex);
+            int worldIndex = db.GetWorldForLevel(levelIndex);
+            var worldMechanic = db.GetMechanicForWorld(worldIndex);
+
+            EditorGUILayout.Space(4f);
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                EditorGUILayout.LabelField("Zorluk Önizleme", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField($"Band: {band}");
+                EditorGUILayout.LabelField($"World {worldIndex + 1}: {(worldMechanic == WorldMechanicType.None ? "Yok" : worldMechanic.ToString())}");
+                EditorGUILayout.LabelField($"Mekanik Yoğunluğu: {intensity}");
+                EditorGUILayout.LabelField($"Band-İzinli Mekanikler: {string.Join(", ", allowed)}");
+
+                // Uyarı: World'ün mekanik tipi band tarafından desteklenmiyorsa bilgilendir
+                if (worldMechanic != WorldMechanicType.None
+                    && worldMechanic != WorldMechanicType.RandomPool1
+                    && worldMechanic != WorldMechanicType.RandomPool2
+                    && worldMechanic != WorldMechanicType.RandomPool3)
+                {
+                    if (!allowed.Contains(worldMechanic))
+                    {
+                        EditorGUILayout.HelpBox(
+                            $"World {worldIndex + 1}, {worldMechanic} mekaniğini öğretiyor, ancak band {band} bu mekaniği AllowedMechanics listesinde içermiyor. " +
+                            $"LevelGenerator, world'ün birincil mekaniğini yine de enjekte edecek, fakat ileride karışıklık olmaması için {worldMechanic}'i band {band}'e eklemeniz önerilir.",
+                            MessageType.Warning);
+                    }
+                }
+            }
+        }
+
         private void DrawGenerationResults()
         {
             if (_generatedLevel == null) return;
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Üretilen Seviye Bilgileri:", EditorStyles.boldLabel);
+            var db = GameConfigDatabaseSO.Instance;
+            int level = _generatedLevel.LevelIndex;
+            var band = db.GetBandForLevel(level);
+            int intensity = db.GetMechanicIntensityForLevel(level);
+            var allowed = db.GetAllowedMechanicsForLevel(level);
             EditorGUILayout.LabelField($"Seviye: {_generatedLevel.LevelIndex} | Direkler: {_generatedLevel.Poles.Count}");
+            EditorGUILayout.LabelField($"Band: {band} | Yoğunluk: {intensity}");
+            EditorGUILayout.LabelField($"Açık Mekanikler: {string.Join(", ", allowed)}");
             EditorGUILayout.LabelField($"Hedef Hamle Sayısı: {_generatedLevel.TargetMoves} (Yapay Zeka Doğruladı)");
 
             DrawLevelVisual(_generatedLevel);

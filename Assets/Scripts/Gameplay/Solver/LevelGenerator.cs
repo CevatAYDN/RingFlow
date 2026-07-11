@@ -33,7 +33,7 @@ namespace RingFlow.Gameplay
             int currentSeed = seed;
             int attempts = 0;
 
-            while (attempts < 50) // GDD: En fazla 50 tohum deneme limiti (softlock koruması)
+            while (attempts < 50) // GDD: Up to 50 seed retry limit for softlock protection
             {
                 var rand = new Random(currentSeed);
                 var board = new BoardState { PoleCount = poleCount, MaxCapacity = maxCapacity };
@@ -46,6 +46,16 @@ namespace RingFlow.Gameplay
                 for (int i = 1; i <= colorCount && i < colors.Length; i++)
                 {
                     selectedColors.Add(colors[i]);
+                }
+
+                // Renk sayısı yeterli değilse fallback
+                if (selectedColors.Count < colorCount)
+                {
+                    for (int i = selectedColors.Count; i < colorCount && i < colors.Length; i++)
+                    {
+                        selectedColors.Add(colors[i]);
+                    }
+                    colorCount = selectedColors.Count;
                 }
 
                 // Direkleri doldur
@@ -129,7 +139,10 @@ namespace RingFlow.Gameplay
                 }
 
                 // 3. Çözülebilirliği ve optimal hamle sayısını test et
-                var solveResult = LevelSolver.Solve(scrambledState, maxCapacity, maxStatesLimit: 5000);
+                // Solver limit scales down with complexity to keep editor iteration fast:
+                // fewer colors → bigger budget (fast solve), 10 colors → tighter budget
+                int solverLimit = colorCount <= 3 ? 20000 : colorCount <= 5 ? 15000 : colorCount <= 7 ? 12000 : colorCount <= 9 ? 8000 : 6000;
+                var solveResult = LevelSolver.Solve(scrambledState, maxCapacity, maxStatesLimit: solverLimit);
 
                 if (solveResult.IsSolvable && solveResult.MoveCount > 0)
                 {
@@ -190,6 +203,76 @@ namespace RingFlow.Gameplay
             NexusLog.Warn("LevelGenerator", nameof(GenerateLevel), levelIndex.ToString(),
                 $"Exhausted 50 seeds without solver-detected solvable level. Increase MaxStatesLimit or check seed distribution.");
 
+            // Son çare: tutorial override yapmadan, minimum parametrelerle deneme
+            if (levelIndex <= 3)
+            {
+                return GenerateFallbackLevel(levelIndex, poleCount, colorCount, maxCapacity);
+            }
+
+            return null;
+        }
+
+        private static LevelData GenerateFallbackLevel(int levelIndex, int poleCount, int colorCount, int maxCapacity)
+        {
+            var board = new BoardState { PoleCount = poleCount, MaxCapacity = maxCapacity };
+            var colors = (RingColor[])Enum.GetValues(typeof(RingColor));
+            var selectedColors = new List<RingColor>();
+            for (int i = 1; i <= colorCount && i < colors.Length; i++)
+            {
+                selectedColors.Add(colors[i]);
+            }
+            if (selectedColors.Count < 1)
+            {
+                selectedColors.Add(RingColor.Red);
+                colorCount = 1;
+            }
+
+            for (int i = 0; i < colorCount; i++)
+            {
+                for (int r = 0; r < maxCapacity; r++)
+                {
+                    board.AddRingSimple(i, new RingData(selectedColors[i]));
+                }
+            }
+
+            // Basit karıştırma: ilk direkten son direğe tek hamle
+            if (board.GetRingCount(0) > 0)
+            {
+                var ring = board.PopRing(0);
+                board.AddRing(poleCount - 1, ring);
+            }
+
+            var solveResult = LevelSolver.Solve(board, maxCapacity, maxStatesLimit: 5000);
+            if (solveResult.IsSolvable && solveResult.MoveCount > 0)
+            {
+                var levelData = new LevelData
+                {
+                    LevelIndex = levelIndex,
+                    Seed = 0,
+                    TargetMoves = solveResult.MoveCount
+                };
+
+                for (int p = 0; p < poleCount; p++)
+                {
+                    var poleData = new PoleData(maxCapacity)
+                    {
+                        IsLocked = board.IsPoleLocked(p)
+                    };
+                    int count = board.GetRingCount(p);
+                    for (int r = 0; r < count; r++)
+                    {
+                        var color = board.GetRingColor(p, r);
+                        var type = board.GetRingType(p, r);
+                        int additionalData = 0;
+                        if (type == RingType.Bomb) additionalData = 5;
+                        else if (type == RingType.Chain) additionalData = (int)color;
+                        poleData.Rings.Add(new RingData(color, type, additionalData));
+                    }
+                    levelData.Poles.Add(poleData);
+                }
+                return levelData;
+            }
+
             return null;
         }
 
@@ -197,7 +280,8 @@ namespace RingFlow.Gameplay
         {
             int worldIndex = WorldConfigSO.WorldFromAbsoluteLevel(levelIndex);
             var mechanic = GameConfigDatabaseSO.Instance.GetMechanicForWorld(worldIndex);
-            
+            int intensity = GameConfigDatabaseSO.Instance.GetMechanicIntensityForLevel(levelIndex);
+
             if (mechanic == WorldMechanicType.None) return;
 
             // FIX P1.EmptyPoles — GDD §5 sets MinEmptyPoles per band. Validate that the
@@ -217,81 +301,67 @@ namespace RingFlow.Gameplay
                     $"Reduce colour/pole counts in the Generator section to comply with GDD §5.");
             }
 
-            int poleCount = board.PoleCount;
+            int mechanicCount = intensity;
 
-            // GDD §4: Map each mechanic specifically to teach in 1 world
+            // GDD §4: Each world teaches exactly one mechanic. Inject it unconditionally —
+            // the band's AllowedMechanics gates only RandomPool, not world-assigned mechanics.
             if (mechanic == WorldMechanicType.Mystery)
-            {
-                InjectSingleType(ref board, RingType.Mystery, 2, rand);
-            }
+                InjectSingleType(ref board, RingType.Mystery, mechanicCount, rand);
             else if (mechanic == WorldMechanicType.Frozen)
-            {
-                InjectFrozen(ref board, 2, rand);
-            }
+                InjectFrozen(ref board, mechanicCount, rand);
             else if (mechanic == WorldMechanicType.LockedPole)
-            {
-                InjectLockedPole(ref board, rand);
-            }
+                for (int i = 0; i < mechanicCount; i++) InjectLockedPole(ref board, rand);
             else if (mechanic == WorldMechanicType.Stone)
-            {
-                InjectSingleType(ref board, RingType.Stone, 2, rand);
-            }
+                InjectSingleType(ref board, RingType.Stone, mechanicCount, rand);
             else if (mechanic == WorldMechanicType.Glass)
-            {
-                InjectSingleType(ref board, RingType.Glass, 2, rand);
-            }
+                InjectSingleType(ref board, RingType.Glass, mechanicCount, rand);
             else if (mechanic == WorldMechanicType.Rainbow)
-            {
-                InjectSingleType(ref board, RingType.Rainbow, 2, rand);
-            }
+                InjectSingleType(ref board, RingType.Rainbow, mechanicCount, rand);
             else if (mechanic == WorldMechanicType.Bomb)
-            {
-                InjectSingleType(ref board, RingType.Bomb, 2, rand);
-            }
+                InjectSingleType(ref board, RingType.Bomb, mechanicCount, rand);
             else if (mechanic == WorldMechanicType.Chain)
-            {
-                InjectSingleType(ref board, RingType.Chain, 2, rand);
-            }
+                InjectSingleType(ref board, RingType.Chain, mechanicCount, rand);
             else if (mechanic == WorldMechanicType.Magnet)
-            {
-                InjectSingleType(ref board, RingType.Magnet, 2, rand);
-            }
+                InjectSingleType(ref board, RingType.Magnet, mechanicCount, rand);
             else if (mechanic == WorldMechanicType.Paint)
-            {
-                InjectSingleType(ref board, RingType.Paint, 2, rand);
-            }
+                InjectSingleType(ref board, RingType.Paint, mechanicCount, rand);
             else if (mechanic == WorldMechanicType.Ghost)
+                InjectSingleType(ref board, RingType.Ghost, mechanicCount, rand);
+            else if (mechanic == WorldMechanicType.RandomPool1 ||
+                     mechanic == WorldMechanicType.RandomPool2 ||
+                     mechanic == WorldMechanicType.RandomPool3)
             {
-                InjectSingleType(ref board, RingType.Ghost, 2, rand);
-            }
-            // Advanced mechanics pool (RandomPool1/2/3)
-            else
-            {
-                var availableTypes = new[] {
-                    RingType.Rainbow,
-                    RingType.Bomb,
-                    RingType.Chain,
-                    RingType.Magnet,
-                    RingType.Paint,
-                    RingType.Ghost,
-                    RingType.Stone,
-                    RingType.Glass
-                };
+                // RandomPool filters through band's AllowedMechanics so early worlds
+                // don't get advanced ring types they haven't been taught yet.
+                var allowedMechanics = GameConfigDatabaseSO.Instance.GetAllowedMechanicsForLevel(levelIndex);
+                var availableTypes = new List<RingType>();
+                if (allowedMechanics.Contains(WorldMechanicType.Stone)) availableTypes.Add(RingType.Stone);
+                if (allowedMechanics.Contains(WorldMechanicType.Glass)) availableTypes.Add(RingType.Glass);
+                if (allowedMechanics.Contains(WorldMechanicType.Rainbow)) availableTypes.Add(RingType.Rainbow);
+                if (allowedMechanics.Contains(WorldMechanicType.Bomb)) availableTypes.Add(RingType.Bomb);
+                if (allowedMechanics.Contains(WorldMechanicType.Chain)) availableTypes.Add(RingType.Chain);
+                if (allowedMechanics.Contains(WorldMechanicType.Magnet)) availableTypes.Add(RingType.Magnet);
+                if (allowedMechanics.Contains(WorldMechanicType.Paint)) availableTypes.Add(RingType.Paint);
+                if (allowedMechanics.Contains(WorldMechanicType.Ghost)) availableTypes.Add(RingType.Ghost);
+
+                if (availableTypes.Count == 0) return;
 
                 int numMechanicTypes = 1;
                 if (mechanic == WorldMechanicType.RandomPool3) numMechanicTypes = 3;
                 else if (mechanic == WorldMechanicType.RandomPool2) numMechanicTypes = 2;
+                numMechanicTypes = Math.Min(numMechanicTypes, Math.Min(mechanicCount, availableTypes.Count));
 
+                // Pick distinct types to avoid stacking the same mechanic twice
                 var chosenTypes = new List<RingType>();
                 for (int i = 0; i < numMechanicTypes; i++)
                 {
-                    chosenTypes.Add(availableTypes[rand.Next(availableTypes.Length)]);
+                    int idx = rand.Next(availableTypes.Count);
+                    chosenTypes.Add(availableTypes[idx]);
+                    availableTypes.RemoveAt(idx);
                 }
 
                 foreach (var chosenType in chosenTypes)
-                {
-                    InjectSingleType(ref board, chosenType, 2, rand);
-                }
+                    InjectSingleType(ref board, chosenType, mechanicCount, rand);
             }
 
             EnforceMaxMechanicsLimit(ref board);
@@ -435,6 +505,7 @@ namespace RingFlow.Gameplay
                 {
                     uniqueTypes.Add(RingType.Locked);
                 }
+
                 int count = board.GetRingCount(p);
                 for (int r = 0; r < count; r++)
                 {
@@ -446,28 +517,54 @@ namespace RingFlow.Gameplay
                 }
             }
 
-            if (uniqueTypes.Count > 4)
+            if (uniqueTypes.Count <= 4)
             {
-                var allowed = new List<RingType>(uniqueTypes);
-                while (allowed.Count > 4)
+                return;
+            }
+
+            var priority = new[]
+            {
+                RingType.Locked,
+                RingType.Mystery,
+                RingType.Frozen,
+                RingType.Stone,
+                RingType.Glass,
+                RingType.Rainbow,
+                RingType.Bomb,
+                RingType.Chain,
+                RingType.Magnet,
+                RingType.Paint,
+                RingType.Ghost
+            };
+
+            var allowed = new List<RingType>(4);
+            for (int i = 0; i < priority.Length && allowed.Count < 4; i++)
+            {
+                if (uniqueTypes.Contains(priority[i]))
                 {
-                    allowed.RemoveAt(allowed.Count - 1);
+                    allowed.Add(priority[i]);
+                }
+            }
+
+            if (allowed.Count == 0)
+            {
+                allowed.Add(RingType.Mystery);
+            }
+
+            for (int p = 0; p < board.PoleCount; p++)
+            {
+                if (board.IsPoleLocked(p) && !allowed.Contains(RingType.Locked))
+                {
+                    board.SetPoleLocked(p, false);
                 }
 
-                for (int p = 0; p < board.PoleCount; p++)
+                int count = board.GetRingCount(p);
+                for (int r = 0; r < count; r++)
                 {
-                    if (board.IsPoleLocked(p) && !allowed.Contains(RingType.Locked))
+                    var t = board.GetRingType(p, r);
+                    if (t != RingType.Standard && !allowed.Contains(t))
                     {
-                        board.SetPoleLocked(p, false);
-                    }
-                    int count = board.GetRingCount(p);
-                    for (int r = 0; r < count; r++)
-                    {
-                        var t = board.GetRingType(p, r);
-                        if (t != RingType.Standard && !allowed.Contains(t))
-                        {
-                            board.SetRingType(p, r, RingType.Standard);
-                        }
+                        board.SetRingType(p, r, RingType.Standard);
                     }
                 }
             }
