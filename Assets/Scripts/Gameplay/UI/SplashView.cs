@@ -20,7 +20,7 @@ namespace RingFlow.Gameplay.UI
 
         protected override void OnEnable()
         {
-            Debug.Log("[SplashView] OnEnable called");
+            NexusLog.Info("SplashView", nameof(OnEnable), "", "OnEnable called");
             base.OnEnable();
         }
 

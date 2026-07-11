@@ -50,6 +50,8 @@ namespace RingFlow.Gameplay.AOT
             typeof(PausedState).ToString();
             typeof(WinState).ToString();
             typeof(GameOverState).ToString();
+            typeof(LoadingState).ToString();
+            typeof(ErrorState).ToString();
         }
 
         /// <summary>

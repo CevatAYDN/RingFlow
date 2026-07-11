@@ -16,10 +16,11 @@ namespace RingFlow.Gameplay
             // Show Pause UI
             _signalBus?.Fire(new ShowScreenSignal(ScreenType.Pause));
 
-            // GDD §12: pause %20
+            // GDD §12: pause BGM at 20% using state multiplier so the user's
+            // saved volume slider is preserved when resuming.
             if (_audio != null)
             {
-                _audio.BgmVolume = 0.20f;
+                _audio.BgmStateMultiplier = 0.20f;
             }
             return default;
         }

@@ -9,6 +9,7 @@ namespace RingFlow.Gameplay
         [Inject] private GameplayModel _model;
         [Inject] private IProgressionService _progressionService;
         [Inject] private ISignalBus _signalBus;
+        [Inject] private Services.IAssetService _assetService;
 
         public void Execute(InitLevelSignal signal)
         {
@@ -26,7 +27,21 @@ namespace RingFlow.Gameplay
                 : _progressionService?.CurrentLevel.Value ?? 1;
 
             LevelData levelData = null;
-            var savedLevel = Resources.Load<LevelDataSO>($"Levels/Level_{currentLevel}");
+
+            // Route through IAssetService so future Addressables migration is a one-line change.
+            // Falls back to Resources.Load if the service is not available (editor/test scenarios).
+            LevelDataSO savedLevel = null;
+            string levelKey = $"Levels/Level_{currentLevel}";
+            if (_assetService != null)
+            {
+                var task = _assetService.LoadAsync<LevelDataSO>(levelKey);
+                task.Wait(); // Synchronous in command context; Addressables replacement can go async later
+                savedLevel = task.Result;
+            }
+            else
+            {
+                savedLevel = Resources.Load<LevelDataSO>(levelKey);
+            }
 
             // GDD curve params — always computed so retry logic can reuse them
             int poleCount = DifficultyCurve.PoleCountForLevel(currentLevel);

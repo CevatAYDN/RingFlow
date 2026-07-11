@@ -33,9 +33,9 @@ namespace RingFlow.Gameplay
                 AnalyticsEvents.UndoUse(level, wasFree: true);
                 _signalBus.Fire(new UndoSignal());
             }
-            else if (_economy.CanAfford("Coins", Cfg.UndoCoinCost))
+            else if (_economy != null && _economy.CanAfford(CurrencyIds.Coins, Cfg.UndoCoinCost))
             {
-                if (_economy.Spend("Coins", Cfg.UndoCoinCost, "Undo"))
+                if (_economy.Spend(CurrencyIds.Coins, Cfg.UndoCoinCost, "Undo"))
                 {
                     NexusLog.Info("UndoRequestedCommand", "Execute", "",
                         $"Paid undo with {Cfg.UndoCoinCost} coins.");

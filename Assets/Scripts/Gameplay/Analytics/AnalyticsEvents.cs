@@ -12,18 +12,13 @@ namespace RingFlow.Gameplay
     internal static class AnalyticsEvents
     {
         private static IAnalyticsService _service;
+        private static readonly System.Collections.Generic.Dictionary<string, object> _pooledDict = new(8);
 
         public static void SetService(IAnalyticsService service) => _service = service;
 
-        /// <summary>
-        /// Gets the analytics service through proper DI first, falls back to service locator.
-        /// This ensures Nexus DI principles are followed while maintaining compatibility.
-        /// </summary>
         private static IAnalyticsService GetService()
         {
             if (_service != null) return _service;
-            
-            // Fallback to service locator for editor compatibility
             return NexusRuntime.CurrentContext?.TryResolve<IAnalyticsService>();
         }
 
@@ -45,12 +40,16 @@ namespace RingFlow.Gameplay
             if (props == null || props.Length == 0)
             {
                 analytics.LogEvent(eventName);
+                return;
             }
-            else
+
+            lock (_pooledDict)
             {
-                var dict = new System.Collections.Generic.Dictionary<string, object>(props.Length);
-                for (int i = 0; i < props.Length; i++) dict[props[i].key] = props[i].value;
-                analytics.LogEvent(eventName, dict);
+                _pooledDict.Clear();
+                for (int i = 0; i < props.Length; i++)
+                    _pooledDict[props[i].key] = props[i].value;
+                analytics.LogEvent(eventName, _pooledDict);
+                _pooledDict.Clear();
             }
         }
 

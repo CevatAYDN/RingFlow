@@ -42,7 +42,10 @@ namespace RingFlow.Gameplay.UI
         private Canvas _canvas;
         private readonly Dictionary<ScreenType, GameObject> _screens = new();
         private Root _root;
+        private ISignalBus _signalBus;
+        private SettingsModel _settings;
         private bool _subscribed;
+        private bool _screensLoaded;
         private ScreenType _activeExclusiveScreen = ScreenType.Splash;
         private readonly Stack<ScreenType> _popupStack = new();
         private readonly List<ISignalSubscription> _subscriptions = new();
@@ -108,9 +111,10 @@ namespace RingFlow.Gameplay.UI
                 return;
             }
 
-            if (_screens.Count == 0)
+            if (!_screensLoaded && _screens.Count == 0)
             {
                 LoadPrefabScreensFromResources();
+                _screensLoaded = true;
             }
 
             SubscribeOnce();
@@ -121,6 +125,19 @@ namespace RingFlow.Gameplay.UI
             if (!_subscribed)
             {
                 TrySubscribeNow();
+            }
+
+            // Safety net: Escape/Back key closes the topmost popup.
+            // Prevents softlocks when a popup's buttons fail to bind.
+            if (_popupStack.Count > 0 && UnityEngine.InputSystem.Keyboard.current != null &&
+                UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame)
+            {
+                if (PopupScreens.Contains(_activeExclusiveScreen))
+                {
+                    NexusLog.Warn("UIRoot", nameof(Update), "",
+                        $"Escape key pressed — forcibly closing popup {_activeExclusiveScreen}.");
+                    _signalBus?.Fire(new HideScreenSignal(_activeExclusiveScreen));
+                }
             }
         }
 
@@ -134,6 +151,15 @@ namespace RingFlow.Gameplay.UI
                 $"Subscribing to UI signals. screens={_screens.Count}");
 
             var sb = _root.Context.Resolve<ISignalBus>();
+            _signalBus = sb;
+            _settings = _root.Context.TryResolve<SettingsModel>();
+
+            if (_settings?.BigButtons != null)
+            {
+                _settings.BigButtons.OnChanged((old, val) => OnBigButtonsChanged());
+                OnBigButtonsChanged();
+            }
+
             _subscriptions.Add(sb.Subscribe<ShowScreenSignal>(OnShowScreen));
             _subscriptions.Add(sb.Subscribe<HideScreenSignal>(OnHideScreen));
 
@@ -230,7 +256,17 @@ namespace RingFlow.Gameplay.UI
             {
                 canvasGo.AddComponent<GraphicRaycaster>();
             }
+
+            ApplyBigButtons(scaler);
         }
+
+        private static void ApplyBigButtons(CanvasScaler scaler)
+        {
+            // Default reference resolution; will be overridden when context is available
+            scaler.referenceResolution = new Vector2(1080, 1920);
+        }
+
+        private bool IsBigButtonsEnabled() => _settings?.BigButtons?.Value ?? false;
 
         private static readonly ScreenType[] s_allScreens =
         {
@@ -546,27 +582,56 @@ namespace RingFlow.Gameplay.UI
             }
         }
 
-        private static void TransitionScreen(GameObject go, bool show)
+        private void TransitionScreen(GameObject go, bool show)
         {
             if (go == null) return;
             if (show) FadeInAndActivate(go);
             else FadeOutAndDeactivate(go);
         }
 
-        private static void FadeInAndActivate(GameObject go)
+        private void OnBigButtonsChanged()
+        {
+            var go = _canvas?.gameObject;
+            if (go == null) return;
+            var scaler = go.GetComponent<CanvasScaler>();
+            if (scaler == null) return;
+            scaler.referenceResolution = IsBigButtonsEnabled()
+                ? new Vector2(810, 1440)
+                : new Vector2(1080, 1920);
+        }
+
+        private void FadeInAndActivate(GameObject go)
         {
             var cg = EnsureCanvasGroup(go);
             DOTween.Kill(cg);
+
+            bool reduceMotion = _settings?.ReduceMotion?.Value ?? false;
+            if (reduceMotion)
+            {
+                go.SetActive(true);
+                cg.alpha = 1f;
+                return;
+            }
+
             go.SetActive(true);
             cg.alpha = 0f;
             DOTween.To(() => cg.alpha, v => cg.alpha = v, 1f, ScreenFadeDuration)
                 .SetEase(Ease.OutCubic).SetTarget(cg);
         }
 
-        private static void FadeOutAndDeactivate(GameObject go)
+        private void FadeOutAndDeactivate(GameObject go)
         {
             var cg = EnsureCanvasGroup(go);
             DOTween.Kill(cg);
+
+            bool reduceMotion = _settings?.ReduceMotion?.Value ?? false;
+            if (reduceMotion)
+            {
+                go.SetActive(false);
+                cg.alpha = 0f;
+                return;
+            }
+
             DOTween.To(() => cg.alpha, v => cg.alpha = v, 0f, ScreenFadeDuration)
                 .SetEase(Ease.InCubic).SetTarget(cg)
                 .OnComplete(() => go.SetActive(false));

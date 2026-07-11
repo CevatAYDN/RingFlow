@@ -235,16 +235,9 @@ namespace RingFlow.Gameplay
         {
             if (context.MovingRing.Type != RingType.Magnet) return;
 
-            int toIdx = context.ToPoleId;
-            int[] candidateIdx = (toIdx % 2 == 0)
-                ? new[] { toIdx - 1, toIdx + 1 }
-                : new[] { toIdx - 1, toIdx + 1 };
-
             int pullCount = 0;
-            for (int i = 0; i < candidateIdx.Length; i++)
+            for (int p = 0; p < _model.Poles.Count; p++)
             {
-                int p = candidateIdx[i];
-                if (p < 0 || p >= _model.Poles.Count) continue;
                 if (p == context.ToPoleId) continue;
                 if (context.ToPole.IsFull) break;
                 var pole = _model.Poles[p];
@@ -264,7 +257,7 @@ namespace RingFlow.Gameplay
             if (pullCount > 0)
             {
                 NexusLog.Info("MoveRingCommand", "ApplyMagnetPull", context.ToPoleId.ToString(),
-                    $"Magnet pulled {pullCount} matching ring(s) from adjacent poles to pole {context.ToPoleId}, color={context.MovingRing.Color}.");
+                    $"Magnet pulled {pullCount} matching ring(s) from all poles to pole {context.ToPoleId}, color={context.MovingRing.Color}.");
             }
         }
 

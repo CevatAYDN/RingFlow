@@ -344,37 +344,7 @@ namespace RingFlow.Gameplay
                 ring.Type = RingType.Standard;
             }
 
-            // Paint Kontrolü 1 — Gelen halka Paint ise altındaki halkayı boyar ve kendisi Standard olur
-            if (ring.Type == RingType.Paint)
-            {
-                if (count > 0)
-                {
-                    SetRingColor(poleIndex, count - 1, ring.Color);
-                }
-                ring.Type = RingType.Standard;
-            }
-            // Paint Kontrolü 2 — Paint halka üzerine gelen halkayı boyar ve Paint standartlaşır
-            else if (count > 0 && GetTopRingType(poleIndex) == RingType.Paint)
-            {
-                ring.Color = GetTopRingColor(poleIndex);
-                SetRingType(poleIndex, count - 1, RingType.Standard);
-            }
-
-            // Rainbow Kontrolü 1 — Gelen halka Rainbow ise yerleştiği halkanın rengini alır ve standartlaşır
-            if (ring.Type == RingType.Rainbow)
-            {
-                if (count > 0)
-                {
-                    ring.Color = GetTopRingColor(poleIndex);
-                    ring.Type = RingType.Standard;
-                }
-            }
-            // Rainbow Kontrolü 2 — Rainbow halka üzerine gelen halkanın rengini kopyalar ve standartlaşır
-            else if (count > 0 && GetTopRingType(poleIndex) == RingType.Rainbow)
-            {
-                SetRingColor(poleIndex, count - 1, ring.Color);
-                SetRingType(poleIndex, count - 1, RingType.Standard);
-            }
+            ResolvePaintAndRainbowSpecial(ref ring, poleIndex, count);
 
             SetRingColor(poleIndex, count, ring.Color);
             SetRingType(poleIndex, count, ring.Type);
@@ -454,37 +424,7 @@ namespace RingFlow.Gameplay
 
             if (!isSubMove)
             {
-                // Paint Kontrolü 1 — Gelen halka Paint ise altındaki halkayı boyar ve kendisi Standard olur
-                if (ring.Type == RingType.Paint)
-                {
-                    if (count > 0)
-                    {
-                        SetRingColor(poleIndex, count - 1, ring.Color);
-                    }
-                    ring.Type = RingType.Standard;
-                }
-                // Paint Kontrolü 2 — Paint halka üzerine gelen halkayı boyar ve Paint standartlaşır
-                else if (count > 0 && GetTopRingType(poleIndex) == RingType.Paint)
-                {
-                    ring.Color = GetTopRingColor(poleIndex);
-                    SetRingType(poleIndex, count - 1, RingType.Standard);
-                }
-
-                // Rainbow Kontrolü 1 — Gelen halka Rainbow ise yerleştiği halkanın rengini alır ve standartlaşır
-                if (ring.Type == RingType.Rainbow)
-                {
-                    if (count > 0)
-                    {
-                        ring.Color = GetTopRingColor(poleIndex);
-                        ring.Type = RingType.Standard;
-                    }
-                }
-                // Rainbow Kontrolü 2 — Rainbow halka üzerine gelen halkanın rengini kopyalar ve standartlaşır
-                else if (count > 0 && GetTopRingType(poleIndex) == RingType.Rainbow)
-                {
-                    SetRingColor(poleIndex, count - 1, ring.Color);
-                    SetRingType(poleIndex, count - 1, RingType.Standard);
-                }
+                ResolvePaintAndRainbowSpecial(ref ring, poleIndex, count);
             }
 
             SetRingColor(poleIndex, count, ring.Color);
@@ -596,6 +536,30 @@ namespace RingFlow.Gameplay
         public override bool Equals(object obj)
         {
             return obj is BoardState other && Equals(other);
+        }
+
+        private void ResolvePaintAndRainbowSpecial(ref RingData ring, int poleIndex, int count)
+        {
+            if (ring.Type == RingType.Paint)
+            {
+                if (count > 0) SetRingColor(poleIndex, count - 1, ring.Color);
+                ring.Type = RingType.Standard;
+            }
+            else if (count > 0 && GetTopRingType(poleIndex) == RingType.Paint)
+            {
+                ring.Color = GetTopRingColor(poleIndex);
+                SetRingType(poleIndex, count - 1, RingType.Standard);
+            }
+
+            if (ring.Type == RingType.Rainbow)
+            {
+                if (count > 0) { ring.Color = GetTopRingColor(poleIndex); ring.Type = RingType.Standard; }
+            }
+            else if (count > 0 && GetTopRingType(poleIndex) == RingType.Rainbow)
+            {
+                SetRingColor(poleIndex, count - 1, ring.Color);
+                SetRingType(poleIndex, count - 1, RingType.Standard);
+            }
         }
 
         public override int GetHashCode()

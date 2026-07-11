@@ -141,8 +141,10 @@ namespace RingFlow.Editor
                 case ScreenType.Settings:
                 case ScreenType.DailyReward:
                 case ScreenType.ChestPopup:
-                case ScreenType.ParentalGate:
                     CreatePopupTemplate(root, screen);
+                    break;
+                case ScreenType.ParentalGate:
+                    CreateParentalGateTemplate(root);
                     break;
                 default:
                     AddScreenText(root, "Header", screen.ToString(), 34,
@@ -216,7 +218,134 @@ namespace RingFlow.Editor
                 Vector2.zero, new Vector2(720f, 160f));
         }
 
-        private static void AddScreenText(Transform parent, string name, string textValue, int fontSize,
+        private static void CreateParentalGateTemplate(Transform root)
+        {
+            // Card background (dark panel)
+            var card = new GameObject("Card", typeof(RectTransform), typeof(Image));
+            card.transform.SetParent(root, false);
+            var cardRt = card.GetComponent<RectTransform>();
+            cardRt.anchorMin = new Vector2(0.10f, 0.20f);
+            cardRt.anchorMax = new Vector2(0.90f, 0.80f);
+            cardRt.offsetMin = Vector2.zero;
+            cardRt.offsetMax = Vector2.zero;
+            card.GetComponent<Image>().color = new Color(0.14f, 0.14f, 0.20f);
+
+            // Title text
+            AddScreenText(card.transform, "Title", "Parental Verification", 36,
+                new Vector2(0.05f, 0.72f), new Vector2(0.95f, 0.88f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+
+            // Question text (named "Question" for BindReferencesFromChildren)
+            var questionGo = AddScreenText(card.transform, "Question", "5 x 7 = ?", 28,
+                new Vector2(0.05f, 0.56f), new Vector2(0.95f, 0.68f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+            var questionText = questionGo.GetComponent<Text>();
+            questionText.color = new Color(1f, 0.76f, 0.03f);
+            questionText.fontStyle = FontStyle.Bold;
+
+            // Answer input field
+            var inputGo = new GameObject("Answer", typeof(RectTransform), typeof(Image), typeof(InputField));
+            inputGo.transform.SetParent(card.transform, false);
+            var inputRt = inputGo.GetComponent<RectTransform>();
+            inputRt.anchorMin = new Vector2(0.28f, 0.44f);
+            inputRt.anchorMax = new Vector2(0.72f, 0.53f);
+            inputRt.offsetMin = Vector2.zero;
+            inputRt.offsetMax = Vector2.zero;
+            inputGo.GetComponent<Image>().color = new Color(0.12f, 0.13f, 0.18f);
+
+            var placeholderGo = new GameObject("Placeholder", typeof(RectTransform), typeof(Text));
+            placeholderGo.transform.SetParent(inputGo.transform, false);
+            var phRt = placeholderGo.GetComponent<RectTransform>();
+            phRt.anchorMin = Vector2.zero;
+            phRt.anchorMax = Vector2.one;
+            phRt.offsetMin = new Vector2(10, 0);
+            phRt.offsetMax = new Vector2(-10, 0);
+            var phText = placeholderGo.GetComponent<Text>();
+            phText.text = "Enter answer...";
+            phText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            phText.fontSize = 22;
+            phText.alignment = TextAnchor.MiddleLeft;
+            phText.color = new Color(0.6f, 0.6f, 0.65f);
+            phText.fontStyle = FontStyle.Italic;
+
+            var textGo = new GameObject("Text", typeof(RectTransform), typeof(Text));
+            textGo.transform.SetParent(inputGo.transform, false);
+            var tRt = textGo.GetComponent<RectTransform>();
+            tRt.anchorMin = Vector2.zero;
+            tRt.anchorMax = Vector2.one;
+            tRt.offsetMin = new Vector2(10, 0);
+            tRt.offsetMax = new Vector2(-10, 0);
+            var tText = textGo.GetComponent<Text>();
+            tText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            tText.fontSize = 22;
+            tText.alignment = TextAnchor.MiddleLeft;
+            tText.color = Color.white;
+
+            var inputField = inputGo.GetComponent<InputField>();
+            inputField.textComponent = tText;
+            inputField.placeholder = phText;
+            inputField.characterLimit = 5;
+            inputField.contentType = InputField.ContentType.IntegerNumber;
+
+            // Error text (named "Error")
+            var errorGo = AddScreenText(card.transform, "Error", "", 18,
+                new Vector2(0.15f, 0.38f), new Vector2(0.85f, 0.43f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+            errorGo.GetComponent<Text>().color = new Color(0.78f, 0.20f, 0.20f);
+
+            // Accept button (named "Accept")
+            var acceptGo = CreateButtonPrefabChild(card.transform, "Accept", "ACCEPT & CONTINUE", 320, 64,
+                new Vector2(0.20f, 0.24f), new Vector2(0.80f, 0.34f));
+            var acceptImg = acceptGo.GetComponent<Image>();
+            acceptImg.color = new Color(0.22f, 0.51f, 0.91f);
+
+            // Terms button (named "Terms")
+            var termsGo = CreateButtonPrefabChild(card.transform, "Terms", "Terms of Service", 180, 40,
+                new Vector2(0.08f, 0.10f), new Vector2(0.48f, 0.18f));
+            var termsImg = termsGo.GetComponent<Image>();
+            termsImg.color = new Color(0.12f, 0.13f, 0.18f);
+            var termsTxt = termsGo.GetComponentInChildren<Text>();
+            if (termsTxt != null) termsTxt.fontSize = 14;
+
+            // Privacy button (named "Privacy")
+            var privacyGo = CreateButtonPrefabChild(card.transform, "Privacy", "Privacy Policy", 180, 40,
+                new Vector2(0.52f, 0.10f), new Vector2(0.92f, 0.18f));
+            var privacyImg = privacyGo.GetComponent<Image>();
+            privacyImg.color = new Color(0.12f, 0.13f, 0.18f);
+            var privacyTxt = privacyGo.GetComponentInChildren<Text>();
+            if (privacyTxt != null) privacyTxt.fontSize = 14;
+        }
+
+        private static GameObject CreateButtonPrefabChild(Transform parent, string name, string label, float width, float height,
+            Vector2 anchorMin, Vector2 anchorMax)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+            go.transform.SetParent(parent, false);
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            var textGo = new GameObject("Text", typeof(RectTransform), typeof(Text));
+            textGo.transform.SetParent(go.transform, false);
+            var textRect = textGo.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+            var text = textGo.GetComponent<Text>();
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.fontSize = 22;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.color = Color.white;
+            text.text = label;
+            text.fontStyle = FontStyle.Bold;
+
+            return go;
+        }
+
+        private static GameObject AddScreenText(Transform parent, string name, string textValue, int fontSize,
             Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot, Vector2 anchoredPosition, Vector2 sizeDelta)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
@@ -237,6 +366,7 @@ namespace RingFlow.Editor
             text.color = Color.white;
             text.horizontalOverflow = HorizontalWrapMode.Wrap;
             text.verticalOverflow = VerticalWrapMode.Overflow;
+            return go;
         }
     }
 }

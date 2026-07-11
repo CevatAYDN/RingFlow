@@ -19,9 +19,10 @@ namespace RingFlow.Gameplay
 
         public System.Action OnClicked;
 
-        private static readonly Color SelectedTint = new Color(0.30f, 0.85f, 1f, 1f);
-        private static readonly Color ErrorTint = new Color(1f, 0.30f, 0.30f, 1f);
-        private static readonly Color LockedTint = Color.black;
+        // Read from GameFeelConfigSO at first use; falls back to static defaults when SO not available.
+        private static Color GetSelectedTint() => GameFeelConfigSO.Instance?.SelectedTint ?? new Color(0.30f, 0.85f, 1f, 1f);
+        private static Color GetErrorTint() => GameFeelConfigSO.Instance?.ErrorTint ?? new Color(1f, 0.30f, 0.30f, 1f);
+        private static Color GetLockedTint() => GameFeelConfigSO.Instance?.LockedTint ?? Color.black;
 
         private Renderer _renderer;
         private Color _baseColor = Color.white;
@@ -56,7 +57,7 @@ namespace RingFlow.Gameplay
 
         private IEnumerator FlashRoutine(float duration)
         {
-            SetColor(ErrorTint);
+            SetColor(GetErrorTint());
             yield return new WaitForSeconds(duration);
             ApplyTint();
             _flashRoutine = null;
@@ -65,7 +66,7 @@ namespace RingFlow.Gameplay
         private void ApplyTint()
         {
             if (_flashRoutine != null) return;
-            Color c = _isLocked ? LockedTint : (_isSelected ? SelectedTint : _baseColor);
+            Color c = _isLocked ? GetLockedTint() : (_isSelected ? GetSelectedTint() : _baseColor);
             SetColor(c);
         }
 

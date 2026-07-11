@@ -28,14 +28,14 @@ namespace RingFlow.Gameplay
 
             switch (reward.CurrencyId)
             {
-                case "Coins":
-                    _economy?.Earn("Coins", reward.Amount, "Daily Reward");
+                case CurrencyIds.Coins:
+                    _economy?.Earn(CurrencyIds.Coins, reward.Amount, "Daily Reward");
                     break;
-                case "Diamonds":
-                    _economy?.Earn("Diamonds", reward.Amount, "Daily Reward");
+                case CurrencyIds.Diamonds:
+                    _economy?.Earn(CurrencyIds.Diamonds, reward.Amount, "Daily Reward");
                     break;
-                case "Hint":
-                    _economy?.Earn("Hint", reward.Amount, "Daily Reward");
+                case CurrencyIds.Hint:
+                    _economy?.Earn(CurrencyIds.Hint, reward.Amount, "Daily Reward");
                     break;
                 case "Theme":
                     if (_progress != null && _progress.OwnedThemes != null)

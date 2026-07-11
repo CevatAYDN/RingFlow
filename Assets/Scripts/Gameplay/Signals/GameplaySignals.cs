@@ -1,75 +1,21 @@
 namespace RingFlow.Gameplay
 {
-    // ── UI Screen Management ──────────────────────────────
-    public enum ScreenType
-    {
-        Splash,
-        MainMenu,
-        WorldMap,
-        LevelSelect,
-        Gameplay,
-        Pause,
-        Win,
-        Settings,
-        DailyReward,
-        Onboarding,
-        GameOver,
-        ChestPopup,
-        ParentalGate
-    }
-
-    public readonly struct ShowScreenSignal
-    {
-        public readonly ScreenType Screen;
-        public ShowScreenSignal(ScreenType screen) => Screen = screen;
-    }
-
-    public readonly struct HideScreenSignal
-    {
-        public readonly ScreenType Screen;
-        public HideScreenSignal(ScreenType screen) => Screen = screen;
-    }
-
-    // ── UI Button Signals ─────────────────────────────────
-    public readonly struct PlayRequestedSignal {}
-    public readonly struct LevelSelectedSignal
-    {
-        public readonly int LevelIndex;
-        public LevelSelectedSignal(int levelIndex) => LevelIndex = levelIndex;
-    }
-    public readonly struct PauseRequestedSignal {}
-    public readonly struct ResumeRequestedSignal {}
-    public readonly struct NextLevelRequestedSignal {}
-    public readonly struct QuitToMenuRequestedSignal {}
-    public readonly struct OpenSettingsSignal {}
-    public readonly struct CloseSettingsSignal {}
-    public readonly struct OpenDailyRewardSignal {}
-    public readonly struct CloseDailyRewardSignal {}
-    public readonly struct WorldSelectedSignal
-    {
-        public readonly int WorldIndex;
-        public WorldSelectedSignal(int worldIndex) => WorldIndex = worldIndex;
-    }
-
-    // ── Gameplay Signals ──────────────────────────────────
+    // ── Level Lifecycle ───────────────────────────────────
     public readonly struct InitLevelSignal
     {
         public readonly int LevelIndex;
         public InitLevelSignal(int levelIndex) => LevelIndex = levelIndex;
     }
 
-    /// <summary>
-    /// Fired by <see cref="Commands.InitLevelCommand"/> AFTER the model has been
-    /// populated with the new level's poles and rings. BoardMediator subscribes
-    /// to this signal (not InitLevelSignal) so the visual board rebuilds only
-    /// after the model is in a consistent state.
-    /// </summary>
     public readonly struct LevelLoadedSignal
     {
         public readonly int LevelIndex;
         public LevelLoadedSignal(int levelIndex) => LevelIndex = levelIndex;
     }
 
+    public readonly struct LevelWonSignal {}
+
+    // ── Core Gameplay ─────────────────────────────────────
     public readonly struct SelectPoleSignal
     {
         public readonly int PoleId;
@@ -98,10 +44,9 @@ namespace RingFlow.Gameplay
         }
     }
 
-    public readonly struct UndoSignal {}
-
     public readonly struct CheckWinSignal {}
 
+    // ── Special Mechanic Signals ──────────────────────────
     public readonly struct RevealMysterySignal
     {
         public readonly int PoleId;
@@ -153,16 +98,6 @@ namespace RingFlow.Gameplay
         }
     }
 
-    /// <summary>
-    /// GDD §9 — Hint: aynı seviyeyi solver ile çözüp SONUÇ listesinin ilk hamlesini döndürür (çözümü vermez).
-    /// Maliyet: 50 coin VEYA rewarded ad (AdService tarafından yönetilir).
-    /// </summary>
-    public readonly struct HintRequestedSignal {}
-
-    /// <summary>
-    /// Solver'ın bulduğu ilk doğru hamle — view yalnızca bu halkaya görsel ipucu gösterir.
-    /// Çözümü vermez — UI sadece bu ipucunu highlight eder (örn. halkayı parlatır).
-    /// </summary>
     public readonly struct MoveBlockedSignal
     {
         public readonly int FromPoleId;
@@ -176,42 +111,35 @@ namespace RingFlow.Gameplay
         }
     }
 
+    // ── Hint & Undo ───────────────────────────────────────
+    public readonly struct HintRequestedSignal {}
     public readonly struct HintResolvedSignal
     {
         public readonly int FromPoleId;
         public readonly int ToPoleId;
         public readonly bool HasHint;
-
         public HintResolvedSignal(int fromPoleId, int toPoleId, bool hasHint)
         {
             FromPoleId = fromPoleId;
             ToPoleId = toPoleId;
             HasHint = hasHint;
         }
-
-        public static HintResolvedSignal Empty => new HintResolvedSignal(-1, -1, false);
+        public static HintResolvedSignal Empty => new(-1, -1, false);
     }
 
-    /// <summary>
-    /// GDD §9 — Undo butonuna basıldı. Maliyet: ilk 5 ücretsiz, sonrası 5 coin/ad.
-    /// </summary>
+    public readonly struct UndoSignal {}
     public readonly struct UndoRequestedSignal {}
 
-    // ── Game Over / Restart Signals ───────────────────────
+    // ── Game Over / Restart ───────────────────────────────
     public readonly struct GameOverSignal {}
-
     public readonly struct RestartLevelSignal
     {
         public readonly int LevelIndex;
         public RestartLevelSignal(int levelIndex) => LevelIndex = levelIndex;
     }
 
-    /// <summary>
-    /// GDD §9 — Günlük ödül talep edildi. İlk girişimde sadece FreeUndosUsedThisSession dikkate alınır,
-    /// sonraki adımlarda AdvertiserGate üzerinden geçer.
-    /// </summary>
+    // ── Daily Reward ──────────────────────────────────────
     public readonly struct DailyRewardClaimSignal {}
-
     public readonly struct DailyRewardGrantedSignal
     {
         public readonly int DayIndex;
@@ -234,61 +162,13 @@ namespace RingFlow.Gameplay
         }
     }
 
-    // ── Chest System Signals (GDD §9) ─────────────────────
-    public readonly struct ChestAwardedSignal
-    {
-        public readonly int Bronze;
-        public readonly int Silver;
-        public readonly int Gold;
-        public readonly int Diamond;
-        public ChestAwardedSignal(int bronze, int silver, int gold, int diamond)
-        {
-            Bronze = bronze;
-            Silver = silver;
-            Gold = gold;
-            Diamond = diamond;
-        }
-    }
-
-    public readonly struct ChestClaimAllSignal {}
-
-    public readonly struct OpenChestPopupSignal {}
-    public readonly struct CloseChestPopupSignal {}
-
-    // ── Purchase Failure (P0.2 fix) ─────────────────────────
-    // Fires when IIapService.PurchaseProduct/RestorePurchases completes with success=false.
-    // UI mediators (toasts) and analytics should subscribe.
-    public readonly struct PurchaseFailedSignal
-    {
-        public readonly string ProductId;
-        public readonly bool StoreUnavailable;
-        public PurchaseFailedSignal(string productId, bool storeUnavailable)
-        {
-            ProductId = productId;
-            StoreUnavailable = storeUnavailable;
-        }
-    }
-
-    // ── Refactoring: Type-safe Level Won & State Arguments ─────────────
-    public readonly struct LevelWonSignal {}
-
+    // ── State Args ────────────────────────────────────────
     public class PlayingStateArgs
     {
         public bool IsResume { get; }
         public int LevelIndex { get; }
-
-        public PlayingStateArgs(int levelIndex)
-        {
-            IsResume = false;
-            LevelIndex = levelIndex;
-        }
-
-        private PlayingStateArgs(bool isResume)
-        {
-            IsResume = isResume;
-            LevelIndex = -1;
-        }
-
-        public static PlayingStateArgs Resume { get; } = new PlayingStateArgs(true);
+        public PlayingStateArgs(int levelIndex) { IsResume = false; LevelIndex = levelIndex; }
+        private PlayingStateArgs(bool isResume) { IsResume = isResume; LevelIndex = -1; }
+        public static PlayingStateArgs Resume { get; } = new(true);
     }
 }

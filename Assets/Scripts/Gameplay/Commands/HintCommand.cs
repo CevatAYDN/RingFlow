@@ -69,13 +69,13 @@ namespace RingFlow.Gameplay
                     "EconomyService not bound. Hint flow will fall back to ad path only.");
             }
 
-            if (_economy != null && _economy.CanAfford("Hint", 1))
+            if (_economy != null && _economy.CanAfford(CurrencyIds.Hint, 1))
             {
                 ResolveAndFire(firstMove, true);
                 return;
             }
 
-            if (_economy != null && _economy.CanAfford("Coins", HintCostCoins))
+            if (_economy != null && _economy.CanAfford(CurrencyIds.Coins, HintCostCoins))
             {
                 ResolveAndFire(firstMove, false);
                 return;
@@ -104,7 +104,7 @@ namespace RingFlow.Gameplay
 
             if (useHintCurrency)
             {
-                if (_economy == null || !_economy.Spend("Hint", 1, "Hint"))
+                if (_economy == null || !_economy.Spend(CurrencyIds.Hint, 1, "Hint"))
                 {
                     NexusLog.Warn("HintCommand", nameof(ResolveAndFire), "",
                         "Hint currency spend failed (race with another consumer?).");
@@ -114,7 +114,7 @@ namespace RingFlow.Gameplay
             }
             else
             {
-                if (_economy == null || !_economy.Spend("Coins", HintCostCoins, "Hint"))
+                if (_economy == null || !_economy.Spend(CurrencyIds.Coins, HintCostCoins, "Hint"))
                 {
                     NexusLog.Warn("HintCommand", nameof(ResolveAndFire), "",
                         "Coins spend failed (insufficient balance or economy unbound).");
@@ -156,6 +156,7 @@ namespace RingFlow.Gameplay
                     var ringData = pole.Rings[r];
                     board.SetRingColor(p, r, ringData.Color);
                     board.SetRingType(p, r, ringData.Type);
+                    board.SetRingAdditional(p, r, ringData.AdditionalData);
                     totalRings++;
                 }
                 if (count > 0)

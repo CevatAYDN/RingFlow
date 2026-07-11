@@ -33,8 +33,8 @@ namespace RingFlow.Gameplay.Strategies
 
     /// <summary>
     /// Context struct passed between strategies during ring move operations.
-    /// Zero-GC compliant (struct) to maintain Nexus performance goals.
-    /// Contains all mutable state needed for strategy execution.
+    /// All list fields are initialized by the command before strategies access them.
+    /// Strategies must null-check before calling .Add()/.Count on collection fields.
     /// </summary>
     public struct MoveContext
     {
