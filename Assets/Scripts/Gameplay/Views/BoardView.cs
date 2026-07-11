@@ -716,23 +716,41 @@ namespace RingFlow.Gameplay
             
             _polePrefab = new GameObject("Pole_Template");
             
-            var body = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            body.name = "Body";
+            GameObject body;
+            if (F.PoleBodyMesh != null)
+            {
+                body = new GameObject("Body", typeof(MeshFilter), typeof(MeshRenderer));
+                body.GetComponent<MeshFilter>().sharedMesh = F.PoleBodyMesh;
+            }
+            else
+            {
+                body = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                body.name = "Body";
+                var bodyCol = body.GetComponent<Collider>();
+                if (bodyCol != null) DestroyImmediate(bodyCol);
+            }
             body.transform.SetParent(_polePrefab.transform, false);
             body.transform.localPosition = new Vector3(0f, 0f, 0f);
             body.transform.localScale = new Vector3(1f, 1f, 1f);
-            var bodyCol = body.GetComponent<Collider>();
-            if (bodyCol != null) DestroyImmediate(bodyCol);
             
-            var cap = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            cap.name = "Cap";
+            GameObject cap;
+            if (F.PoleCapMesh != null)
+            {
+                cap = new GameObject("Cap", typeof(MeshFilter), typeof(MeshRenderer));
+                cap.GetComponent<MeshFilter>().sharedMesh = F.PoleCapMesh;
+            }
+            else
+            {
+                cap = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                cap.name = "Cap";
+                var capCol = cap.GetComponent<Collider>();
+                if (capCol != null) DestroyImmediate(capCol);
+            }
             cap.transform.SetParent(_polePrefab.transform, false);
             cap.transform.localPosition = new Vector3(0f, 1.0f, 0f);
             
             float capYScale = F.PoleScale.x / F.PoleScale.y;
             cap.transform.localScale = new Vector3(1f, capYScale, 1f);
-            var capCol = cap.GetComponent<Collider>();
-            if (capCol != null) DestroyImmediate(capCol);
 
             var box = _polePrefab.AddComponent<BoxCollider>();
             box.size = new Vector3(F.PoleSpacing * F.PoleColliderWidthFraction, 3.0f, 2.0f);
@@ -786,7 +804,7 @@ namespace RingFlow.Gameplay
             var meshFilter = ringObj.GetComponentInChildren<MeshFilter>();
             if (meshFilter != null)
             {
-                meshFilter.sharedMesh = GetProceduralTorusMesh();
+                meshFilter.sharedMesh = F.RingMesh != null ? F.RingMesh : GetProceduralTorusMesh();
             }
             return ringObj;
         }
@@ -1015,25 +1033,33 @@ namespace RingFlow.Gameplay
             _floorPlane = GameObject.Find("ShadowFloorPlane");
             if (_floorPlane != null) return;
 
-            _floorPlane = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            _floorPlane.name = "ShadowFloorPlane";
+            if (F.FloorMesh != null)
+            {
+                _floorPlane = new GameObject("ShadowFloorPlane", typeof(MeshFilter), typeof(MeshRenderer));
+                _floorPlane.GetComponent<MeshFilter>().sharedMesh = F.FloorMesh;
+            }
+            else
+            {
+                _floorPlane = GameObject.CreatePrimitive(PrimitiveType.Plane);
+                _floorPlane.name = "ShadowFloorPlane";
+                var col = _floorPlane.GetComponent<Collider>();
+                if (col != null) Destroy(col);
+            }
+
             _floorPlane.transform.position = new Vector3(0f, -0.51f, 0f);
             _floorPlane.transform.localScale = new Vector3(10f, 1f, 10f); // 100x100 units
-            
-            var col = _floorPlane.GetComponent<Collider>();
-            if (col != null) Destroy(col);
             
             var renderer = _floorPlane.GetComponent<MeshRenderer>();
             renderer.receiveShadows = true;
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             
             var mat = new Material(GetDefaultShader());
-            Color floorColor = new Color(0.88f, 0.92f, 0.97f); // matches bottom background gradient
+            Color floorColor = F.FloorColor;
             mat.color = floorColor;
             if (mat.HasProperty("_BaseColor"))
                 mat.SetColor("_BaseColor", floorColor);
-            mat.SetFloat("_Metallic", 0f);
-            mat.SetFloat("_Smoothness", 0.1f);
+            mat.SetFloat("_Metallic", F.FloorMetallic);
+            mat.SetFloat("_Smoothness", F.FloorSmoothness);
             renderer.sharedMaterial = mat;
         }
 

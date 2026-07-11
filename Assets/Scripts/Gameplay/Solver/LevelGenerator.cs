@@ -410,6 +410,10 @@ namespace RingFlow.Gameplay
                 if (ringCount > 0)
                 {
                     int r = rand.Next(ringCount);
+                    if (type == RingType.Stone)
+                    {
+                        r = 0;
+                    }
                     if (board.GetRingType(p, r) == RingType.Standard)
                     {
                         board.SetRingType(p, r, type);

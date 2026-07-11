@@ -407,15 +407,20 @@ namespace RingFlow.Tests
         {
             var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };
             var pole1 = new PoleState { Id = 1, MaxCapacity = 4 };
+            var pole2 = new PoleState { Id = 2, MaxCapacity = 4 };
 
             pole0.AddRing(new RingData(RingColor.Red, RingType.Stone));
             pole1.AddRing(new RingData(RingColor.Red, RingType.Standard));
+            pole2.AddRing(new RingData(RingColor.Blue, RingType.Standard));
 
             // Stone rings cannot be popped
             Assert.IsFalse(pole0.CanPopRing());
 
-            // Placing standard on top of Stone should be invalid
-            Assert.IsFalse(pole0.CanAddRing(pole1.TopRing));
+            // Placing same color standard on top of Stone should be valid
+            Assert.IsTrue(pole0.CanAddRing(pole1.TopRing));
+
+            // Placing different color standard on top of Stone should be invalid
+            Assert.IsFalse(pole0.CanAddRing(pole2.TopRing));
         }
 
         [Test]

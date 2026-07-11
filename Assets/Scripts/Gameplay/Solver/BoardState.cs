@@ -325,7 +325,7 @@ namespace RingFlow.Gameplay
             if (IsEmpty(poleIndex)) return true;
 
             var top = GetTopRing(poleIndex);
-            if (top.Type == RingType.Stone) return false;
+            if (top.Type == RingType.Stone) return top.Color == color;
 
             // Gökkuşağı (Rainbow) veya Boya (Paint) joker kuralları
             if (type == RingType.Rainbow || type == RingType.Paint || top.Type == RingType.Rainbow || top.Type == RingType.Paint) return true;

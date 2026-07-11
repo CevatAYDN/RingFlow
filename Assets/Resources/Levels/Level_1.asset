@@ -14,12 +14,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.LevelDataSO
   Data:
     LevelIndex: 1
-    Seed: 101
-    TargetMoves: 4
+    Seed: 1001
+    TargetMoves: 6
     Poles:
     - MaxCapacity: 3
       Rings:
       - Color: 2
+        Type: 0
+        AdditionalData: 0
+      - Color: 1
+        Type: 0
+        AdditionalData: 0
+      - Color: 2
+        Type: 0
+        AdditionalData: 0
+      IsLocked: 0
+    - MaxCapacity: 3
+      Rings:
+      - Color: 1
         Type: 0
         AdditionalData: 0
       - Color: 2
@@ -31,16 +43,4 @@ MonoBehaviour:
       IsLocked: 0
     - MaxCapacity: 3
       Rings: []
-      IsLocked: 0
-    - MaxCapacity: 3
-      Rings:
-      - Color: 1
-        Type: 0
-        AdditionalData: 0
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
-      - Color: 1
-        Type: 0
-        AdditionalData: 0
       IsLocked: 0

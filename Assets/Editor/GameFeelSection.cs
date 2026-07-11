@@ -125,6 +125,27 @@ namespace RingFlow.Editor
 
             EditorGUILayout.Space(4f);
 
+            EditorGUILayout.LabelField("Floor/Ground Visuals", EditorStyles.boldLabel);
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                DrawProp(serialized, "FloorMesh");
+                DrawProp(serialized, "FloorColor");
+                DrawProp(serialized, "FloorMetallic");
+                DrawProp(serialized, "FloorSmoothness");
+            }
+
+            EditorGUILayout.Space(4f);
+
+            EditorGUILayout.LabelField("Model Meshes", EditorStyles.boldLabel);
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                DrawProp(serialized, "RingMesh");
+                DrawProp(serialized, "PoleBodyMesh");
+                DrawProp(serialized, "PoleCapMesh");
+            }
+
+            EditorGUILayout.Space(4f);
+
             EditorGUILayout.LabelField("Object Pools", EditorStyles.boldLabel);
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {

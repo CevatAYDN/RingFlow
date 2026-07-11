@@ -291,7 +291,7 @@ namespace RingFlow.Gameplay
             if (freeSlots < requiredSlots) return false;
             if (state.IsEmpty(poleIndex)) return true;
             var top = state.GetTopRing(poleIndex);
-            if (top.Type == RingType.Stone) return false;
+            if (top.Type == RingType.Stone) return top.Color == color;
             if (type == RingType.Rainbow || type == RingType.Paint
                 || top.Type == RingType.Rainbow || top.Type == RingType.Paint) return true;
             return top.Color == color;

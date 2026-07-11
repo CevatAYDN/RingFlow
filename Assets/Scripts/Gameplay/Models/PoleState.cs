@@ -103,7 +103,7 @@ namespace RingFlow.Gameplay
             if (IsFull) return false;
             if (IsEmpty) return true;
 
-            if (TopRing.Type == RingType.Stone) return false;
+            if (TopRing.Type == RingType.Stone) return TopRing.Color == ring.Color;
 
             if (ring.Type == RingType.Rainbow || ring.Type == RingType.Paint) return true;
 

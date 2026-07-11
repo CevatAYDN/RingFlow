@@ -16,8 +16,8 @@ namespace RingFlow.Gameplay.Strategies
             if (isPoleLocked) return false;
             if (isPoleFull) return false;
             
-            // Cannot place any ring on top of a Stone ring (GDD §4)
-            if (topRing.Type == RingType.Stone) return false;
+            // Cannot place any ring on top of a Stone ring (GDD §4) unless they share the same color
+            if (topRing.Type == RingType.Stone) return topRing.Color == ring.Color;
             
             if (topRing.Color == RingColor.None) return true;
             return topRing.Color == ring.Color;

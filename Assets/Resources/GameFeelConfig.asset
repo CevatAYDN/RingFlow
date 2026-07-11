@@ -47,6 +47,13 @@ MonoBehaviour:
   PoleSmoothness: 0.8
   RingMetallic: 0.1
   RingSmoothness: 0.85
+  FloorMesh: {fileID: 0}
+  FloorColor: {r: 0.88, g: 0.92, b: 0.97, a: 1}
+  FloorMetallic: 0
+  FloorSmoothness: 0.1
+  RingMesh: {fileID: 0}
+  PoleBodyMesh: {fileID: 0}
+  PoleCapMesh: {fileID: 0}
   SelectionGlowColor: {r: 1, g: 0.85, b: 0.5, a: 1}
   SelectionGlowIntensity: 2
   SelectionGlowRange: 2.5

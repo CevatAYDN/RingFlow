@@ -110,6 +110,24 @@ namespace RingFlow.Gameplay
         [Tooltip("Ring material smoothness value.")]
         public float RingSmoothness = 0.85f;
 
+        [Header("Floor/Ground Visuals")]
+        [Tooltip("Custom mesh to use for the floor/ground (falls back to Plane if null).")]
+        public Mesh FloorMesh;
+        [Tooltip("Floor/ground material color.")]
+        public Color FloorColor = new Color(0.88f, 0.92f, 0.97f);
+        [Tooltip("Floor material metallic value.")]
+        public float FloorMetallic = 0f;
+        [Tooltip("Floor material smoothness value.")]
+        public float FloorSmoothness = 0.1f;
+
+        [Header("Model Meshes")]
+        [Tooltip("Custom mesh to use for the rings (falls back to Procedural Torus if null).")]
+        public Mesh RingMesh;
+        [Tooltip("Custom mesh to use for the pole body (falls back to Cylinder if null).")]
+        public Mesh PoleBodyMesh;
+        [Tooltip("Custom mesh to use for the pole cap (falls back to Sphere if null).")]
+        public Mesh PoleCapMesh;
+
         [Header("Selection Glow")]
         [Tooltip("Glow point light color.")]
         public Color SelectionGlowColor = new Color(1f, 0.85f, 0.5f);

@@ -329,6 +329,14 @@ namespace RingFlow.Gameplay
         public DifficultyBand GetBandForLevel(int level)
         {
             if (level <= 3) return DifficultyBand.Tutorial;
+            if (TotalLevels <= 50)
+            {
+                if (level <= 10) return DifficultyBand.Tutorial;
+                if (level <= 20) return DifficultyBand.Easy;
+                if (level <= 30) return DifficultyBand.Medium;
+                if (level <= 40) return DifficultyBand.Hard;
+                return DifficultyBand.Expert;
+            }
             if (DifficultyBands == null || DifficultyBands.Count == 0) return DifficultyBand.Tutorial;
             foreach (var b in DifficultyBands)
             {
@@ -341,6 +349,14 @@ namespace RingFlow.Gameplay
         {
             if (level == 1 || level == 2) return 2;
             if (level == 3) return 3;
+
+            if (TotalLevels <= 50)
+            {
+                if (level <= 10) return 3;
+                if (level <= 20) return 4;
+                if (level <= 35) return 5;
+                return 6;
+            }
 
             if (ColorCurve == null || ColorCurve.Count == 0) return 3;
             int count = ColorCurve[0].ColorCount;
@@ -364,6 +380,12 @@ namespace RingFlow.Gameplay
         {
             if (level == 1 || level == 2) return 1;
             if (level == 3) return 1;
+
+            if (TotalLevels <= 50)
+            {
+                if (level <= 30) return 2;
+                return 1;
+            }
 
             if (DifficultyBands == null || DifficultyBands.Count == 0) return 1;
             var band = GetBandForLevel(level);
@@ -448,7 +470,7 @@ namespace RingFlow.Gameplay
 
         public int GetWorldForLevel(int level)
         {
-            const int levelsPerWorld = 50;
+            int levelsPerWorld = TotalLevels <= 50 ? 10 : 50;
             int world = (level - 1) / levelsPerWorld;
             return Mathf.Clamp(world, 0, Worlds.Count - 1);
         }

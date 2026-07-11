@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f132cd875a226c447bb35db28e54b6f1, type: 3}
   m_Name: GameConfigDatabase
   m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.GameConfigDatabaseSO
-  TotalLevels: 50
+  TotalLevels: 2000
   DifficultyBands:
   - Band: 0
     MaxLevel: 20
