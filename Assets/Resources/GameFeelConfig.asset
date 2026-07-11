@@ -16,10 +16,10 @@ MonoBehaviour:
   PoleYPosition: 2
   PoleScale: {x: 0.2, y: 2, z: 0.2}
   PoleColliderWidthFraction: 0.85
-  RingScaleTorus: {x: 3.6, y: 0.22, z: 3.6}
-  RingScaleFallback: {x: 4, y: 0.08, z: 4}
+  RingScaleTorus: {x: 3.6, y: 0.6, z: 3.6}
+  RingScaleFallback: {x: 4, y: 0.1, z: 4}
   RingBaseYOffset: -0.9
-  RingStackSpacing: 0.4
+  RingStackSpacing: 0.35
   RingSelectionLift: 0.35
   MoveDuration: 0.3
   MoveJumpPower: 0.8
@@ -41,15 +41,43 @@ MonoBehaviour:
   ErrorTint: {r: 1, g: 0.3, b: 0.3, a: 1}
   LockedTint: {r: 0, g: 0, b: 0, a: 1}
   ErrorFlashDuration: 0.35
+  PoleColorOpen: {r: 0.2, g: 0.22, b: 0.25, a: 1}
+  PoleColorLocked: {r: 0.12, g: 0.12, b: 0.14, a: 1}
+  PoleMetallic: 0.8
+  PoleSmoothness: 0.8
+  RingMetallic: 0.1
+  RingSmoothness: 0.85
+  SelectionGlowColor: {r: 1, g: 0.85, b: 0.5, a: 1}
+  SelectionGlowIntensity: 2
+  SelectionGlowRange: 2.5
+  SelectionEmissionColor: {r: 0.4, g: 0.3, b: 0.1, a: 1}
+  TutorialArrowColor: {r: 1, g: 0.85, b: 0, a: 1}
+  TutorialArrowScale: {x: 0.5, y: 0.5, z: 0.5}
+  TutorialArrowBobHeight: 0.25
+  TutorialArrowBobSpeed: 0.45
+  TutorialArrowRotationSpeed: 120
   RainbowHueSpeed: 0.25
   RainbowSaturation: 0.8
   RainbowValue: 0.9
   RingPopCount: 12
   RingPopDuration: 0.5
   RingPopDespawnDelay: 0.55
+  MergeBurstCount: 16
+  MergeBurstDuration: 0.4
+  MergeGlowOrbScale: 0.5
   ConfettiCount: 40
   ConfettiFallDuration: {x: 1.8, y: 3}
   ConfettiDespawnDelay: 3.1
+  PoleSuccessFlashDuration: 0.3
+  PoleSuccessFlashColor: {r: 1, g: 0.82, b: 0, a: 1}
+  BloomIntensityMultiplier: 2.5
+  BloomPulseDuration: 0.6
+  FinalBloomIntensityMultiplier: 5
+  FinalBloomPulseDuration: 1.2
+  MediumTierThreshold: 3
+  CompleteShakeIntensity: 0.06
+  CompleteShakeDuration: 0.15
   RingPoolSize: 100
   RingPopPoolSize: 50
   ConfettiPoolSize: 30
+  MergeEffectPoolSize: 20
