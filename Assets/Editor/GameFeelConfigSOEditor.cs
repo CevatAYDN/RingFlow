@@ -86,6 +86,45 @@ namespace RingFlow.Editor
                 DrawField("Error Tint", "ErrorTint", "Pole error flash color.");
                 DrawField("Locked Tint", "LockedTint", "Locked pole color.");
                 DrawField("Error Flash Duration", "ErrorFlashDuration", "Error flash duration.");
+                DrawField("Pole Color Open", "PoleColorOpen", "Open pole standard color.");
+                DrawField("Pole Color Locked", "PoleColorLocked", "Locked pole standard color.");
+                DrawField("Pole Metallic", "PoleMetallic", "Pole material metallic value.");
+                DrawField("Pole Smoothness", "PoleSmoothness", "Pole material smoothness value.");
+            }
+
+            EditorGUILayout.Space(6f);
+
+            // ── Ring Materials ──
+            EditorGUILayout.LabelField("Ring Materials", EditorStyles.boldLabel);
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                DrawField("Ring Metallic", "RingMetallic", "Ring material metallic value.");
+                DrawField("Ring Smoothness", "RingSmoothness", "Ring material smoothness value.");
+            }
+
+            EditorGUILayout.Space(6f);
+
+            // ── Selection Glow ──
+            EditorGUILayout.LabelField("Selection Glow", EditorStyles.boldLabel);
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                DrawField("Glow Color", "SelectionGlowColor", "Glow point light color.");
+                DrawField("Glow Intensity", "SelectionGlowIntensity", "Glow point light intensity.");
+                DrawField("Glow Range", "SelectionGlowRange", "Glow point light range.");
+                DrawField("Emission Color", "SelectionEmissionColor", "Selected ring emission color.");
+            }
+
+            EditorGUILayout.Space(6f);
+
+            // ── Tutorial Visuals ──
+            EditorGUILayout.LabelField("Tutorial Visuals", EditorStyles.boldLabel);
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                DrawField("Arrow Color", "TutorialArrowColor", "Tutorial arrow/cone tint color.");
+                DrawField("Arrow Scale", "TutorialArrowScale", "Tutorial arrow/cone scale.");
+                DrawField("Arrow Bob Height", "TutorialArrowBobHeight", "Tutorial arrow/cone bobbing height.");
+                DrawField("Arrow Bob Speed", "TutorialArrowBobSpeed", "Tutorial arrow/cone bobbing speed.");
+                DrawField("Arrow Rotation Speed", "TutorialArrowRotationSpeed", "Tutorial arrow/cone rotation speed.");
             }
 
             EditorGUILayout.Space(6f);

@@ -9,6 +9,11 @@ namespace RingFlow.Gameplay
     {
         [Inject] private GameplayModel _model;
         [Inject] private ILoggerService _logger;
+        [Inject] private IProgressionService _progression;
+
+        private int _tutorialFromPole = -1;
+        private int _tutorialToPole = -1;
+        private System.Threading.CancellationTokenSource _tutorialSolveCts;
 
         [Inject] private Diagnostics.IGameDiagnostics _diag;
         [Inject] private Diagnostics.IViewMediatorTracker _tracker;
@@ -85,6 +90,7 @@ namespace RingFlow.Gameplay
             if (View != null && _model != null)
                 View.AnimateRingMove(signal.FromPoleId, signal.ToPoleId, _model.Poles);
             View?.SetSelectedPole(_model?.SelectedPoleId.Value ?? -1);
+            UpdateTutorialStateAsync();
         }
 
         private void OnMoveBlocked(MoveBlockedSignal signal)
@@ -102,6 +108,7 @@ namespace RingFlow.Gameplay
             {
                 _logger?.Log($"[BoardMediator] Pole {poleId} selected.");
             }
+            UpdateTutorialStateAsync();
         }
 
         private void OnHintResolved(HintResolvedSignal signal)
@@ -126,6 +133,10 @@ namespace RingFlow.Gameplay
 
         protected override void OnUnbind()
         {
+            _tutorialSolveCts?.Cancel();
+            _tutorialSolveCts?.Dispose();
+            _tutorialSolveCts = null;
+
             if (_model != null)
             {
                 if (_selectedPoleHandler != null) _model.SelectedPoleId.RemoveOnChanged(_selectedPoleHandler);
@@ -141,6 +152,7 @@ namespace RingFlow.Gameplay
             _logger?.Log($"[BoardMediator] Level {signal.LevelIndex} loaded. Rebuilding visual board for {_model.Poles.Count} poles.");
             RebuildBoard();
             View?.FitCameraToBoard(_model.Poles.Count);
+            UpdateTutorialStateAsync();
         }
 
         private void RebuildBoard()
@@ -152,7 +164,100 @@ namespace RingFlow.Gameplay
                 View.SetSelectedPole(_model.SelectedPoleId.Value);
                 var elapsed = _diag != null ? _diag.GetElapsedSinceCheckpoint("BoardRebuild") : System.TimeSpan.Zero;
                 _diag?.Log("Performance", $"Board rebuilt. Time: {elapsed.TotalMilliseconds}ms");
+                UpdateTutorialStateAsync();
             }
+        }
+
+        private async void UpdateTutorialStateAsync()
+        {
+            if (View == null || _model == null || _progression == null) return;
+
+            _tutorialSolveCts?.Cancel();
+            _tutorialSolveCts?.Dispose();
+            _tutorialSolveCts = new System.Threading.CancellationTokenSource();
+
+            int currentLevel = _progression.CurrentLevel.Value;
+            if (currentLevel > 3)
+            {
+                View.HideTutorialArrow();
+                _tutorialFromPole = -1;
+                _tutorialToPole = -1;
+                return;
+            }
+
+            if (_model.IsGameWon.Value || _model.Poles.Count == 0)
+            {
+                View.HideTutorialArrow();
+                return;
+            }
+
+            var (board, maxCapacity) = BuildBoardStateFromModel(_model);
+            var ct = _tutorialSolveCts.Token;
+
+            try
+            {
+                var result = await LevelSolver.SolveAsync(board, maxCapacity, cancellationToken: ct);
+                if (ct.IsCancellationRequested) return;
+
+                if (result.IsSolvable && result.MoveCount > 0 && result.Moves != null && result.Moves.Count > 0)
+                {
+                    var firstMove = result.Moves[0];
+                    _tutorialFromPole = firstMove.FromPoleId;
+                    _tutorialToPole = firstMove.ToPoleId;
+
+                    int selected = _model.SelectedPoleId.Value;
+                    if (selected == -1)
+                    {
+                        View.ShowTutorialArrow(_tutorialFromPole, "SELECT");
+                    }
+                    else if (selected == _tutorialFromPole)
+                    {
+                        View.ShowTutorialArrow(_tutorialToPole, "PLACE");
+                    }
+                    else
+                    {
+                        View.ShowTutorialArrow(_tutorialFromPole, "SELECT");
+                    }
+                }
+                else
+                {
+                    View.HideTutorialArrow();
+                    _tutorialFromPole = -1;
+                    _tutorialToPole = -1;
+                }
+            }
+            catch (System.Exception)
+            {
+                View.HideTutorialArrow();
+            }
+        }
+
+        private static (BoardState Board, int MaxCapacity) BuildBoardStateFromModel(GameplayModel m)
+        {
+            var board = new BoardState { PoleCount = m.Poles.Count };
+            int maxCapacity = 0;
+            for (int p = 0; p < m.Poles.Count && p < 12; p++)
+            {
+                var pole = m.Poles[p];
+                if (pole == null) continue;
+                if (pole.MaxCapacity > maxCapacity) maxCapacity = pole.MaxCapacity;
+                board.SetPoleLocked(p, pole.IsLocked);
+                int count = pole.Rings.Count;
+                board.SetRingCount(p, count);
+                for (int r = 0; r < count; r++)
+                {
+                    var ringData = pole.Rings[r];
+                    board.SetRingColor(p, r, ringData.Color);
+                    board.SetRingType(p, r, ringData.Type);
+                    board.SetRingAdditional(p, r, ringData.AdditionalData);
+                }
+                if (count > 0)
+                {
+                    var top = pole.TopRing;
+                    board.SetTopRingFrozen(p, top.Type == RingType.Frozen);
+                }
+            }
+            return (board, maxCapacity);
         }
     }
 }

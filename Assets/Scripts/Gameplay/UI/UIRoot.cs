@@ -539,7 +539,7 @@ namespace RingFlow.Gameplay.UI
             foreach (var kvp in _screens)
             {
                 bool shouldShow = kvp.Key == signal.Screen;
-                TransitionScreen(kvp.Value, shouldShow);
+                TransitionScreen(kvp.Key, kvp.Value, shouldShow);
             }
             _activeExclusiveScreen = signal.Screen;
             _popupStack.Clear();
@@ -563,7 +563,7 @@ namespace RingFlow.Gameplay.UI
             foreach (var kvp in _screens)
             {
                 if (OverlayScreens.Contains(kvp.Key)) continue;
-                TransitionScreen(kvp.Value, kvp.Key == popup);
+                TransitionScreen(kvp.Key, kvp.Value, kvp.Key == popup);
             }
             _activeExclusiveScreen = popup;
         }
@@ -582,11 +582,26 @@ namespace RingFlow.Gameplay.UI
             }
         }
 
-        private void TransitionScreen(GameObject go, bool show)
+        private void TransitionScreen(ScreenType type, GameObject go, bool show)
         {
             if (go == null) return;
-            if (show) FadeInAndActivate(go);
-            else FadeOutAndDeactivate(go);
+            if (show)
+            {
+                FadeInAndActivate(go);
+                if (PopupScreens.Contains(type))
+                {
+                    bool reduceMotion = _settings?.ReduceMotion?.Value ?? false;
+                    if (!reduceMotion)
+                    {
+                        go.transform.localScale = new Vector3(0.8f, 0.8f, 0.8f);
+                        go.transform.DOScale(Vector3.one, 0.25f).SetEase(Ease.OutBack).SetUpdate(true);
+                    }
+                }
+            }
+            else
+            {
+                FadeOutAndDeactivate(go);
+            }
         }
 
         private void OnBigButtonsChanged()

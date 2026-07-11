@@ -69,6 +69,12 @@ namespace RingFlow.Gameplay
                 }
 
                 int minEmptyPoles = DifficultyCurve.MinEmptyPolesForLevel(levelIndex);
+                if (minEmptyPoles > poleCount - colorCount)
+                {
+                    minEmptyPoles = poleCount - colorCount;
+                }
+                if (minEmptyPoles < 1) minEmptyPoles = 1;
+
                 int untouchedPoles = System.Math.Max(0, minEmptyPoles - 1);
                 int scramblePoleCount = poleCount - untouchedPoles;
                 if (scramblePoleCount < colorCount + 1) scramblePoleCount = colorCount + 1;

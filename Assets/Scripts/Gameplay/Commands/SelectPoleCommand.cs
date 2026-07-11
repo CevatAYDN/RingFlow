@@ -7,6 +7,7 @@ namespace RingFlow.Gameplay
     {
         [Inject] private GameplayModel _model;
         [Inject] private ISignalBus _signalBus;
+        [Inject] private IProgressionService _progression;
 
         public void Execute(SelectPoleSignal signal)
         {
@@ -14,6 +15,41 @@ namespace RingFlow.Gameplay
                 $"Start. Selected={_model.SelectedPoleId.Value}, Won={_model.IsGameWon.Value}, Poles={_model.Poles.Count}");
 
             if (_model.IsGameWon.Value) return;
+
+            // --- Tutorial Guided Move Input Restriction ---
+            if (_progression != null && _progression.CurrentLevel.Value <= 3 && _model.Poles.Count > 0)
+            {
+                var (board, maxCapacity) = BuildBoardStateFromModel(_model);
+                var solveResult = LevelSolver.Solve(board, maxCapacity);
+                if (solveResult.IsSolvable && solveResult.MoveCount > 0 && solveResult.Moves != null && solveResult.Moves.Count > 0)
+                {
+                    var recommendedMove = solveResult.Moves[0];
+                    int reqFrom = recommendedMove.FromPoleId;
+                    int reqTo = recommendedMove.ToPoleId;
+
+                    int currentSel = _model.SelectedPoleId.Value;
+                    if (currentSel == -1)
+                    {
+                        if (signal.PoleId != reqFrom)
+                        {
+                            NexusLog.Warn("SelectPoleCommand", "Execute", signal.PoleId.ToString(),
+                                $"Tutorial input blocked: must select pole {reqFrom}.");
+                            _signalBus?.Fire(new MoveBlockedSignal(signal.PoleId, reqFrom, "tutorial_select"));
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        if (signal.PoleId != currentSel && signal.PoleId != reqTo)
+                        {
+                            NexusLog.Warn("SelectPoleCommand", "Execute", signal.PoleId.ToString(),
+                                $"Tutorial input blocked: must move to pole {reqTo}.");
+                            _signalBus?.Fire(new MoveBlockedSignal(currentSel, signal.PoleId, "tutorial_place"));
+                            return;
+                        }
+                    }
+                }
+            }
 
             int currentSelected = _model.SelectedPoleId.Value;
 
@@ -79,6 +115,34 @@ namespace RingFlow.Gameplay
             ghostCopy.Type = RingType.Standard;
             pole.Rings[^1] = ghostCopy;
             signalBus?.Fire(new RevealMysterySignal(poleId, ghostCopy));
+        }
+
+        private static (BoardState Board, int MaxCapacity) BuildBoardStateFromModel(GameplayModel m)
+        {
+            var board = new BoardState { PoleCount = m.Poles.Count };
+            int maxCapacity = 0;
+            for (int p = 0; p < m.Poles.Count && p < 12; p++)
+            {
+                var pole = m.Poles[p];
+                if (pole == null) continue;
+                if (pole.MaxCapacity > maxCapacity) maxCapacity = pole.MaxCapacity;
+                board.SetPoleLocked(p, pole.IsLocked);
+                int count = pole.Rings.Count;
+                board.SetRingCount(p, count);
+                for (int r = 0; r < count; r++)
+                {
+                    var ringData = pole.Rings[r];
+                    board.SetRingColor(p, r, ringData.Color);
+                    board.SetRingType(p, r, ringData.Type);
+                    board.SetRingAdditional(p, r, ringData.AdditionalData);
+                }
+                if (count > 0)
+                {
+                    var top = pole.TopRing;
+                    board.SetTopRingFrozen(p, top.Type == RingType.Frozen);
+                }
+            }
+            return (board, maxCapacity);
         }
     }
 }

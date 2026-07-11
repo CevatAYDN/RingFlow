@@ -22,6 +22,7 @@ namespace RingFlow.Gameplay
         [Inject] private IObjectPoolService _objectPoolService;
         [Inject] private VfxPrefabRegistry _vfxRegistry;
         [Inject] private IAudioService _audioService;
+        [Inject] private IHapticService _hapticService;
         [Inject] private SettingsModel _settingsModel;
 
         private Camera _mainCamera;
@@ -35,7 +36,9 @@ namespace RingFlow.Gameplay
         private int _animatingTargetPoleId = -1;
         private bool _ringPrewarmed;
         private Mesh _proceduralTorusMesh;
+        private Mesh _proceduralConeMesh;
         private GameObject _floorPlane;
+        private GameObject _tutorialArrowGo;
 
         public void EnsureRingPoolPrewarmed()
         {
@@ -215,14 +218,38 @@ namespace RingFlow.Gameplay
                     }
                     else
                     {
+                        float targetWidth = 1.5f;
+                        float targetHeight = 0.44f;
+                        float meshHeight = 0.26f;
+                        float localX = targetWidth / F.PoleScale.x;
+                        float localY = (targetHeight / meshHeight) / F.PoleScale.y;
+                        float localZ = targetWidth / F.PoleScale.z;
+                        Vector3 normalScale = new Vector3(localX, localY, localZ);
+
                         movedRing.transform.DOLocalJump(targetLocal, F.MoveJumpPower, 1, duration)
                             .SetEase(Ease.InOutQuad)
                             .OnComplete(() =>
                             {
                                 _animatingTargetPoleId = -1;
                                 TriggerMoveEffects(movedRing.transform.position, movedColor);
-                                PlayRingPlacePulse(movedRing);
+                                _hapticService?.Vibrate(HapticType.Light);
+
+                                DOTween.Kill(movedRing.transform);
+                                movedRing.transform.DOScale(new Vector3(localX * 1.25f, localY * 0.6f, localZ * 1.25f), 0.08f)
+                                    .SetEase(Ease.OutQuad)
+                                    .OnComplete(() =>
+                                    {
+                                        movedRing.transform.DOScale(normalScale, 0.18f).SetEase(Ease.OutBack);
+                                    });
+
                                 ApplySelection();
+                            });
+
+                        movedRing.transform.DOScale(new Vector3(localX * 0.85f, localY * 1.35f, localZ * 0.85f), duration * 0.4f)
+                            .SetEase(Ease.OutQuad)
+                            .OnComplete(() =>
+                            {
+                                movedRing.transform.DOScale(normalScale, duration * 0.4f).SetEase(Ease.InQuad);
                             });
                     }
                 }
@@ -236,13 +263,25 @@ namespace RingFlow.Gameplay
             return _spawnedPoles[poleId];
         }
 
-        public void SetSelectedPole(int poleId) { _lastSelectedPoleId = poleId; ApplySelection(); }
+        public void SetSelectedPole(int poleId)
+        {
+            if (_lastSelectedPoleId != poleId)
+            {
+                _lastSelectedPoleId = poleId;
+                if (poleId >= 0)
+                {
+                    _hapticService?.Vibrate(HapticType.Selection);
+                }
+                ApplySelection();
+            }
+        }
 
         public void FlashPoleError(int poleId)
         {
             var pv = GetPoleView(poleId);
             if (pv == null) return;
             pv.FlashError();
+            _hapticService?.Vibrate(HapticType.Warning);
             if (_audioService != null)
                 _audioService.PlaySfx(ProceduralAudio.GetOrCreateErrorClip(), 1.0f);
         }
@@ -272,9 +311,22 @@ namespace RingFlow.Gameplay
 
                     DOTween.Kill(topRing.transform);
                     if (reduceMotion)
+                    {
                         topRing.transform.localPosition = new Vector3(0f, targetY, 0f);
+                    }
                     else
-                        topRing.transform.DOLocalMoveY(targetY, duration).SetEase(Ease.OutQuad);
+                    {
+                        topRing.transform.DOLocalMoveY(targetY, duration).SetEase(Ease.OutQuad)
+                            .OnComplete(() =>
+                            {
+                                if (isSelected)
+                                {
+                                    topRing.transform.DOLocalMoveY(targetY + F.TutorialArrowBobHeight * 0.4f, 0.6f)
+                                        .SetEase(Ease.InOutSine)
+                                        .SetLoops(-1, LoopType.Yoyo);
+                                }
+                            });
+                    }
 
                     // --- Warm Selection Glow ---
                     var lightChildTransform = topRing.transform.Find("SelectionGlowLight");
@@ -322,6 +374,7 @@ namespace RingFlow.Gameplay
 
         public void ClearBoard()
         {
+            HideTutorialArrow();
             _ringMaterialCache.Clear();
             foreach (var pole in _spawnedPoles)
                 if (pole != null) RecyclePole(pole.gameObject);
@@ -330,6 +383,139 @@ namespace RingFlow.Gameplay
                 foreach (var ring in list)
                     if (ring != null) RecycleRing(ring);
             _spawnedRings.Clear();
+        }
+
+        public void ShowTutorialArrow(int poleId, string labelText)
+        {
+            if (poleId < 0 || poleId >= _spawnedPoles.Count)
+            {
+                HideTutorialArrow();
+                return;
+            }
+
+            if (_tutorialArrowGo == null)
+            {
+                _tutorialArrowGo = new GameObject("TutorialArrow");
+                var meshFilter = _tutorialArrowGo.AddComponent<MeshFilter>();
+                if (_proceduralConeMesh == null)
+                {
+                    _proceduralConeMesh = CreateProceduralConeMesh();
+                }
+                meshFilter.sharedMesh = _proceduralConeMesh;
+
+                var renderer = _tutorialArrowGo.AddComponent<MeshRenderer>();
+                var mat = new Material(GetDefaultShader());
+                mat.color = F.TutorialArrowColor;
+                if (mat.HasProperty("_BaseColor"))
+                    mat.SetColor("_BaseColor", F.TutorialArrowColor);
+                mat.SetFloat("_Metallic", 0.1f);
+                mat.SetFloat("_Smoothness", 0.8f);
+                mat.EnableKeyword("_EMISSION");
+                mat.SetColor("_EmissionColor", F.TutorialArrowColor * 0.4f);
+                renderer.sharedMaterial = mat;
+
+                _tutorialArrowGo.transform.localScale = F.TutorialArrowScale;
+
+                var labelGo = new GameObject("Label", typeof(TextMesh));
+                labelGo.transform.SetParent(_tutorialArrowGo.transform, false);
+                labelGo.transform.localPosition = new Vector3(0f, 1.3f, 0f);
+                labelGo.transform.localScale = new Vector3(0.18f, 0.18f, 0.18f);
+                labelGo.transform.rotation = Quaternion.Euler(30f, 0f, 0f);
+                
+                var textMesh = labelGo.GetComponent<TextMesh>();
+                textMesh.fontSize = 48;
+                textMesh.anchor = TextAnchor.MiddleCenter;
+                textMesh.alignment = TextAlignment.Center;
+                textMesh.color = Color.white;
+                textMesh.fontStyle = FontStyle.Bold;
+
+                _tutorialArrowGo.transform.DOLocalMoveY(F.TutorialArrowBobHeight, F.TutorialArrowBobSpeed)
+                    .SetRelative(true)
+                    .SetEase(Ease.InOutSine)
+                    .SetLoops(-1, LoopType.Yoyo);
+
+                _tutorialArrowGo.transform.DOLocalRotate(new Vector3(0f, 360f, 0f), 2.5f, RotateMode.FastBeyond360)
+                    .SetEase(Ease.Linear)
+                    .SetLoops(-1, LoopType.Restart);
+            }
+
+            var targetPole = _spawnedPoles[poleId];
+            _tutorialArrowGo.transform.SetParent(targetPole.transform, false);
+            float startY = F.PoleScale.y + 0.6f;
+            _tutorialArrowGo.transform.localPosition = new Vector3(0f, startY, 0f);
+            _tutorialArrowGo.SetActive(true);
+
+            var label = _tutorialArrowGo.transform.Find("Label")?.GetComponent<TextMesh>();
+            if (label != null)
+            {
+                label.text = labelText;
+            }
+        }
+
+        public void HideTutorialArrow()
+        {
+            if (_tutorialArrowGo != null)
+            {
+                _tutorialArrowGo.SetActive(false);
+                _tutorialArrowGo.transform.SetParent(null);
+            }
+        }
+
+        private Mesh CreateProceduralConeMesh()
+        {
+            Mesh mesh = new Mesh();
+            mesh.name = "ProceduralCone";
+            int segments = 16;
+            int numVertices = segments + 2;
+            Vector3[] vertices = new Vector3[numVertices];
+            int[] triangles = new int[segments * 6];
+
+            vertices[0] = new Vector3(0f, 0f, 0f);
+            vertices[numVertices - 1] = new Vector3(0f, -1f, 0f);
+
+            for (int i = 0; i < segments; i++)
+            {
+                float angle = (float)i / segments * Mathf.PI * 2f;
+                vertices[i + 1] = new Vector3(Mathf.Cos(angle) * 0.4f, 0f, Mathf.Sin(angle) * 0.4f);
+            }
+
+            int tIdx = 0;
+            for (int i = 0; i < segments; i++)
+            {
+                int next = (i == segments - 1) ? 1 : i + 2;
+                triangles[tIdx++] = 0;
+                triangles[tIdx++] = next;
+                triangles[tIdx++] = i + 1;
+                triangles[tIdx++] = i + 1;
+                triangles[tIdx++] = next;
+                triangles[tIdx++] = numVertices - 1;
+            }
+
+            mesh.vertices = vertices;
+            mesh.triangles = triangles;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        private void OnDestroy()
+        {
+            if (_tutorialArrowGo != null)
+            {
+                Destroy(_tutorialArrowGo);
+                _tutorialArrowGo = null;
+            }
+            if (_proceduralConeMesh != null)
+            {
+                Destroy(_proceduralConeMesh);
+                _proceduralConeMesh = null;
+            }
+            if (_proceduralTorusMesh != null)
+            {
+                Destroy(_proceduralTorusMesh);
+                _proceduralTorusMesh = null;
+            }
+            _ringMaterialCache.Clear();
         }
 
         private static Shader GetDefaultShader()
@@ -546,7 +732,7 @@ namespace RingFlow.Gameplay
         private void TriggerMoveEffects(Vector3 position, RingColor color)
         {
             if (_audioService != null)
-                _audioService.PlaySfx(ProceduralAudio.GetOrCreateMoveClip(), 1.0f);
+                _audioService.PlaySfx(ProceduralAudio.GetOrCreateMoveClip(), 1.0f, 0.92f, 1.08f);
             if (_vfxRegistry != null && _objectPoolService != null)
             {
                 var prefab = _vfxRegistry.GetRingPopPrefab();

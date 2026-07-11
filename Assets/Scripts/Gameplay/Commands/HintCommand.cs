@@ -132,7 +132,7 @@ namespace RingFlow.Gameplay
         private static (BoardState Board, int MaxCapacity) BuildBoardStateFromModel(GameplayModel m)
         {
             var board = new BoardState { PoleCount = m.Poles.Count };
-            int maxCapacity = 4;
+            int maxCapacity = 0;
             int totalRings = 0;
 
             for (int p = 0; p < m.Poles.Count && p < 12; p++)

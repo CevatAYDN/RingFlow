@@ -120,6 +120,18 @@ namespace RingFlow.Gameplay
         [Tooltip("Selected ring emission color.")]
         public Color SelectionEmissionColor = new Color(0.4f, 0.3f, 0.1f);
 
+        [Header("Tutorial Visuals")]
+        [Tooltip("Tutorial arrow/cone tint color.")]
+        public Color TutorialArrowColor = new Color(1f, 0.85f, 0f, 1f);
+        [Tooltip("Tutorial arrow/cone scale.")]
+        public Vector3 TutorialArrowScale = new Vector3(0.5f, 0.5f, 0.5f);
+        [Tooltip("Tutorial arrow/cone bobbing height.")]
+        public float TutorialArrowBobHeight = 0.25f;
+        [Tooltip("Tutorial arrow/cone bobbing speed.")]
+        public float TutorialArrowBobSpeed = 0.45f;
+        [Tooltip("Tutorial arrow/cone rotation speed.")]
+        public float TutorialArrowRotationSpeed = 120f;
+
         [Header("Rainbow Cycle")]
         [Tooltip("Hue rotation speed multiplier.")]
         public float RainbowHueSpeed = 0.25f;

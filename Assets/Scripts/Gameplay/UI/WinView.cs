@@ -2,6 +2,7 @@ using Nexus.Core;
 using Nexus.Core.Services;
 using UnityEngine;
 using UnityEngine.UI;
+using DG.Tweening;
 
 namespace RingFlow.Gameplay.UI
 {
@@ -15,6 +16,7 @@ namespace RingFlow.Gameplay.UI
         public Text[] StarIcons { get; private set; } = new Text[3];
         public Text TitleText { get; private set; }
         private GameObject _nextBtn, _quitBtn;
+        [Inject] private IAudioService _audio;
 
         private void Awake()
         {
@@ -104,10 +106,37 @@ namespace RingFlow.Gameplay.UI
             {
                 RewardText.text = $"+{coins} Coins   +{xp} XP";
             }
+
             for (int i = 0; i < StarIcons.Length; i++)
             {
                 if (StarIcons[i] == null) continue;
-                StarIcons[i].color = i < stars ? GameUIResources.AccentColor : new Color(0.35f, 0.35f, 0.40f);
+                StarIcons[i].color = new Color(0.35f, 0.35f, 0.40f);
+                StarIcons[i].transform.localScale = Vector3.zero;
+            }
+
+            for (int i = 0; i < StarIcons.Length; i++)
+            {
+                if (StarIcons[i] == null) continue;
+
+                int index = i;
+                bool isEarned = index < stars;
+
+                var seq = DOTween.Sequence();
+                seq.AppendInterval(index * 0.2f);
+                seq.AppendCallback(() =>
+                {
+                    if (isEarned)
+                    {
+                        StarIcons[index].color = GameUIResources.AccentColor;
+                        if (_audio != null)
+                        {
+                            var chime = ProceduralAudio.GetOrCreateMoveClip();
+                            _audio.PlaySfx(chime, 1.0f, 1.0f + index * 0.1f, 1.0f + index * 0.1f);
+                        }
+                    }
+                });
+                seq.Append(StarIcons[index].transform.DOScale(1f, 0.35f).SetEase(Ease.OutBack));
+                seq.Play();
             }
         }
 
