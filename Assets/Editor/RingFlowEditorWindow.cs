@@ -666,7 +666,7 @@ namespace RingFlow.Editor
                 }
             }
 
-            s_uiRootType.GetField("_activeExclusiveScreen", s_privInst)?.SetValue(uiRoot, ScreenType.Splash);
+            uiRoot.ActiveExclusiveScreen = ScreenType.Splash;
             EditorUtility.SetDirty(uiRoot);
             EditorUtility.SetDirty(canvas.gameObject);
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
@@ -704,35 +704,20 @@ namespace RingFlow.Editor
         //  UIRoot Reflection Helpers
         // ---------------------------------------------------------------
 
-        private static readonly BindingFlags s_privInst = BindingFlags.Instance | BindingFlags.NonPublic;
-        private static readonly System.Type s_uiRootType = typeof(UIRoot);
-
-        private static readonly Dictionary<string, FieldInfo> s_uiRootFieldCache = new();
-
-        private static FieldInfo GetCachedUIRootField(string name)
-        {
-            if (!s_uiRootFieldCache.TryGetValue(name, out var fi))
-            {
-                fi = s_uiRootType.GetField(name, s_privInst);
-                s_uiRootFieldCache[name] = fi;
-            }
-            return fi;
-        }
-
         private static Canvas GetUIRootCanvas(UIRoot uiRoot)
-            => GetCachedUIRootField("_canvas")?.GetValue(uiRoot) as Canvas;
+            => uiRoot != null ? uiRoot.Canvas : null;
 
         private static System.Collections.IDictionary GetUIRootScreens(UIRoot uiRoot)
-            => GetCachedUIRootField("_screens")?.GetValue(uiRoot) as System.Collections.IDictionary;
+            => uiRoot != null ? uiRoot.Screens : null;
 
         private static object GetUIRootActiveScreen(UIRoot uiRoot)
-            => GetCachedUIRootField("_activeExclusiveScreen")?.GetValue(uiRoot);
+            => uiRoot != null ? uiRoot.ActiveExclusiveScreen : null;
 
         private static System.Collections.ICollection GetUIRootPopupStack(UIRoot uiRoot)
-            => GetCachedUIRootField("_popupStack")?.GetValue(uiRoot) as System.Collections.ICollection;
+            => uiRoot != null ? uiRoot.PopupStack : null;
 
         private static System.Collections.ICollection GetUIRootSubscriptions(UIRoot uiRoot)
-            => GetCachedUIRootField("_subscriptions")?.GetValue(uiRoot) as System.Collections.ICollection;
+            => uiRoot != null ? uiRoot.Subscriptions : null;
 
         private static UIRoot s_cachedUIRoot;
         private static double s_lastUIRootLookup;
@@ -751,34 +736,20 @@ namespace RingFlow.Editor
 
         private static void ResetUIRootCanvas(UIRoot uiRoot)
         {
-            if (uiRoot == null) return;
-            var screens = GetUIRootScreens(uiRoot);
-            if (screens != null)
-            {
-                var toDestroy = new List<GameObject>();
-                foreach (var key in screens.Keys)
-                    if (screens[key] is GameObject go && go != null)
-                        toDestroy.Add(go);
-                screens.Clear();
-                foreach (var go in toDestroy) Object.DestroyImmediate(go);
-            }
-            var canvas = GetUIRootCanvas(uiRoot);
-            if (canvas != null) Object.DestroyImmediate(canvas.gameObject);
-            s_uiRootType.GetField("_canvas", s_privInst)?.SetValue(uiRoot, null);
-            s_uiRootType.GetField("_subscribed", s_privInst)?.SetValue(uiRoot, false);
+            if (uiRoot != null) uiRoot.ResetForEditor();
         }
 
         private static void ManualSetScreenActive(UIRoot uiRoot, ScreenType screen, bool active)
         {
             if (uiRoot == null) return;
-            var screens = GetUIRootScreens(uiRoot);
-            if (screens == null || !screens.Contains(screen)) return;
-            var go = screens[screen] as GameObject;
+            var screens = uiRoot.Screens;
+            if (screens == null || !screens.ContainsKey(screen)) return;
+            var go = screens[screen];
             if (go == null) return;
 
             go.SetActive(active);
             if (active)
-                s_uiRootType.GetField("_activeExclusiveScreen", s_privInst)?.SetValue(uiRoot, screen);
+                uiRoot.ActiveExclusiveScreen = screen;
         }
 
         private static string FormatStack(System.Collections.ICollection stack)

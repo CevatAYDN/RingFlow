@@ -676,5 +676,45 @@ namespace RingFlow.Gameplay.UI
         {
             BindExistingScreens();
         }
+
+#if UNITY_EDITOR
+        public Canvas Canvas 
+        { 
+            get 
+            {
+                if (_canvas == null) EnsureCanvasExists();
+                return _canvas; 
+            }
+            set => _canvas = value; 
+        }
+        public Dictionary<ScreenType, GameObject> Screens => _screens;
+        public ScreenType ActiveExclusiveScreen 
+        { 
+            get => _activeExclusiveScreen; 
+            set => _activeExclusiveScreen = value; 
+        }
+        public Stack<ScreenType> PopupStack => _popupStack;
+        public List<ISignalSubscription> Subscriptions => _subscriptions;
+        public bool Subscribed 
+        { 
+            get => _subscribed; 
+            set => _subscribed = value; 
+        }
+
+        public void ResetForEditor()
+        {
+            var toDestroy = new List<GameObject>();
+            foreach (var go in _screens.Values)
+            {
+                if (go != null) toDestroy.Add(go);
+            }
+            _screens.Clear();
+            foreach (var go in toDestroy) DestroyImmediate(go);
+
+            if (_canvas != null) DestroyImmediate(_canvas.gameObject);
+            _canvas = null;
+            _subscribed = false;
+        }
+#endif
     }
 }
