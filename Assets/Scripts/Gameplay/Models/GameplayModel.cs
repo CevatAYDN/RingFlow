@@ -8,6 +8,7 @@ namespace RingFlow.Gameplay
     public class GameplayModel : IReactiveModel, IResettableModel
     {
         public List<PoleState> Poles { get; } = new(12);
+        public HashSet<int> CompletedPoles { get; } = new();
         public ObservableProperty<int> SelectedPoleId { get; } = new(-1);
         public ObservableProperty<int> MovesCount { get; } = new(0);
         public ObservableProperty<int> TargetMovesCount { get; } = new(0);
@@ -24,6 +25,7 @@ namespace RingFlow.Gameplay
         public void Reset()
         {
             Poles.Clear();
+            CompletedPoles.Clear();
             SelectedPoleId.Value = -1;
             MovesCount.Value = 0;
             TargetMovesCount.Value = 0;

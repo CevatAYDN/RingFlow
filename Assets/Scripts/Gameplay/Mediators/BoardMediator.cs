@@ -32,6 +32,7 @@ namespace RingFlow.Gameplay
         private Action<BombExplodedSignal> _bombExplodedHandler;
         private Action<HintResolvedSignal> _hintResolvedHandler;
         private Action<MoveBlockedSignal> _moveBlockedHandler;
+        private Action<PoleCompletedSignal> _poleCompletedHandler;
 
         protected override void OnBind()
         {
@@ -73,6 +74,9 @@ namespace RingFlow.Gameplay
             Subscribe<HintResolvedSignal>(_hintResolvedHandler);
             Subscribe<MoveBlockedSignal>(_moveBlockedHandler);
 
+            _poleCompletedHandler ??= OnPoleCompleted;
+            Subscribe<PoleCompletedSignal>(_poleCompletedHandler);
+
             _selectedPoleHandler = (_, id) => ApplySelection(id);
             _movesCountHandler = (_, _) => _logger?.Log($"[BoardMediator] Moves now {_model.MovesCount.Value}");
             _model.SelectedPoleId.OnChanged(_selectedPoleHandler);
@@ -91,6 +95,15 @@ namespace RingFlow.Gameplay
                 View.AnimateRingMove(signal.FromPoleId, signal.ToPoleId, _model.Poles);
             View?.SetSelectedPole(_model?.SelectedPoleId.Value ?? -1);
             UpdateTutorialStateAsync();
+        }
+
+        private void OnPoleCompleted(PoleCompletedSignal signal)
+        {
+            _logger?.Log($"[BoardMediator] Pole {signal.PoleId} completed! Celebrating.");
+            if (View != null)
+            {
+                View.CelebratePoleComplete(signal.PoleId);
+            }
         }
 
         private void OnMoveBlocked(MoveBlockedSignal signal)

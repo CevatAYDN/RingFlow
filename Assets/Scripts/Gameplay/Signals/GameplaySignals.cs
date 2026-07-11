@@ -46,6 +46,12 @@ namespace RingFlow.Gameplay
 
     public readonly struct CheckWinSignal {}
 
+    public readonly struct PoleCompletedSignal
+    {
+        public readonly int PoleId;
+        public PoleCompletedSignal(int poleId) => PoleId = poleId;
+    }
+
     // ── Special Mechanic Signals ──────────────────────────
     public readonly struct RevealMysterySignal
     {

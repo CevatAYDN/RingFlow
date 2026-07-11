@@ -286,6 +286,74 @@ namespace RingFlow.Gameplay
                 _audioService.PlaySfx(ProceduralAudio.GetOrCreateErrorClip(), 1.0f);
         }
 
+        public void CelebratePoleComplete(int poleId)
+        {
+            var pv = GetPoleView(poleId);
+            if (pv == null) return;
+
+            // 1. Flash the pole gold
+            pv.FlashSuccess(0.8f);
+
+            // 2. Play ascending success chime
+            if (_audioService != null)
+                _audioService.PlaySfx(ProceduralAudio.GetOrCreatePoleCompleteClip(), 1.0f);
+
+            // 3. Staggered vertical ring wave animation
+            var ringsList = new List<Transform>();
+            foreach (Transform child in pv.transform)
+            {
+                if (child.name.StartsWith("Ring_"))
+                {
+                    ringsList.Add(child);
+                }
+            }
+
+            ringsList.Sort((a, b) => a.localPosition.y.CompareTo(b.localPosition.y));
+
+            for (int i = 0; i < ringsList.Count; i++)
+            {
+                var ringTrans = ringsList[i];
+                float originalY = ringTrans.localPosition.y;
+                float originalScaleY = ringTrans.localScale.y;
+
+                ringTrans.DOLocalMoveY(originalY + 0.35f, 0.15f)
+                         .SetEase(Ease.OutQuad)
+                         .SetDelay(i * 0.04f)
+                         .OnComplete(() =>
+                         {
+                             ringTrans.DOLocalMoveY(originalY, 0.20f)
+                                      .SetEase(Ease.InQuad)
+                                      .OnComplete(() =>
+                                      {
+                                          ringTrans.DOScaleY(originalScaleY * 0.7f, 0.08f)
+                                                   .SetEase(Ease.OutQuad)
+                                                   .OnComplete(() =>
+                                                   {
+                                                       ringTrans.DOScaleY(originalScaleY, 0.12f)
+                                                                .SetEase(Ease.OutBack);
+                                                   });
+                                      });
+                         });
+            }
+
+            // 4. Burst multiple overlapping colorful particle bursts at the top of the pole
+            if (_vfxRegistry != null && _objectPoolService != null)
+            {
+                var prefab = _vfxRegistry.GetRingPopPrefab();
+                if (prefab != null)
+                {
+                    float poleTopY = pv.transform.position.y + 1.5f;
+                    Vector3 spawnPos = new Vector3(pv.transform.position.x, poleTopY, pv.transform.position.z);
+                    for (int k = 0; k < 3; k++)
+                    {
+                        var popInstance = _objectPoolService.Spawn(prefab, spawnPos + new Vector3(Random.Range(-0.1f, 0.1f), 0, Random.Range(-0.1f, 0.1f)), Quaternion.identity);
+                        Color completeColor = k == 0 ? new Color(1f, 0.84f, 0f) : k == 1 ? Color.green : Color.magenta;
+                        popInstance?.GetComponent<RingPopVfx>()?.Initialize(completeColor);
+                    }
+                }
+            }
+        }
+
         private void ApplySelection()
         {
             bool reduceMotion = _settingsModel != null && _settingsModel.ReduceMotion.Value;

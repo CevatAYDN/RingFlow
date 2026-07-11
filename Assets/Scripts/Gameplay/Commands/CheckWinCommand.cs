@@ -22,17 +22,30 @@ namespace RingFlow.Gameplay
             bool won = true;
             int nonEmptyPoleCount = 0;
 
-            foreach (var pole in _model.Poles)
+            for (int p = 0; p < _model.Poles.Count; p++)
             {
-                if (pole.IsEmpty) continue;
+                var pole = _model.Poles[p];
+                if (pole.IsEmpty)
+                {
+                    _model.CompletedPoles.Remove(p);
+                    continue;
+                }
 
                 nonEmptyPoleCount++;
 
                 bool poleSolved = LevelSolver.IsSolved(pole, pole.MaxCapacity);
-                if (!poleSolved)
+                if (poleSolved)
                 {
+                    if (!_model.CompletedPoles.Contains(p))
+                    {
+                        _model.CompletedPoles.Add(p);
+                        _signalBus.Fire(new PoleCompletedSignal(p));
+                    }
+                }
+                else
+                {
+                    _model.CompletedPoles.Remove(p);
                     won = false;
-                    break;
                 }
             }
 

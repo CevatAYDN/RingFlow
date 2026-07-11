@@ -125,6 +125,7 @@ namespace RingFlow.Gameplay.AOT
             typeof(RingMovedSignal).ToString();
             typeof(UndoSignal).ToString();
             typeof(CheckWinSignal).ToString();
+            typeof(PoleCompletedSignal).ToString();
             typeof(LevelWonSignal).ToString();
             typeof(PlayingStateArgs).ToString();
             typeof(RevealMysterySignal).ToString();

@@ -8,7 +8,29 @@ namespace RingFlow.Gameplay
         private static AudioClip _winClip;
         private static AudioClip _errorClip;
         private static AudioClip _explosionClip;
+        private static AudioClip _poleCompleteClip;
         private static readonly System.Collections.Generic.Dictionary<int, AudioClip> _bgmClips = new();
+
+        public static AudioClip GetOrCreatePoleCompleteClip()
+        {
+            if (_poleCompleteClip == null)
+            {
+                int sampleRate = 44100;
+                float duration = 0.4f;
+                int samplesCount = (int)(sampleRate * duration);
+                float[] samples = new float[samplesCount];
+                for (int i = 0; i < samplesCount; i++)
+                {
+                    float t = (float)i / sampleRate;
+                    float volume = Mathf.Cos((t / duration) * Mathf.PI * 0.5f);
+                    float freq = Mathf.Lerp(523.25f, 1046.50f, t / duration);
+                    samples[i] = Mathf.Sin(2f * Mathf.PI * freq * t) * 0.22f * volume;
+                }
+                _poleCompleteClip = AudioClip.Create("PoleCompleteSFX", samplesCount, 1, sampleRate, false);
+                _poleCompleteClip.SetData(samples, 0);
+            }
+            return _poleCompleteClip;
+        }
 
         public static AudioClip GetOrCreateMoveClip()
         {
