@@ -7,7 +7,7 @@ namespace RingFlow.Editor
 {
     public sealed class DatabaseSection : EditorSection
     {
-        public override string DisplayName => "Game Configuration Database";
+        public override string DisplayName => "Oyun Ayarları Veritabanı";
         public override string PrefKey => EditorPrefsKeys.FoldDatabase;
 
         private GameConfigDatabaseSO _database;
@@ -41,11 +41,11 @@ namespace RingFlow.Editor
             if (_database == null)
             {
                 EditorGUILayout.HelpBox(
-                    "GameConfigDatabase asset not found in Resources. " +
-                    "A default instance will be used at runtime, but you must create the asset file to modify parameters permanently.",
+                    "Resources klasöründe GameConfigDatabase asset dosyası bulunamadı. " +
+                    "Çalışma zamanında varsayılan ayarlar kullanılır, ancak kalıcı değişiklik yapmak için asset dosyasını oluşturmalısınız.",
                     MessageType.Warning);
 
-                if (GUILayout.Button("Create GameConfigDatabase Asset", GUILayout.Height(36)))
+                if (GUILayout.Button("GameConfigDatabase Dosyası Oluştur", GUILayout.Height(36)))
                 {
                     CreateDatabaseAsset();
                 }
@@ -54,21 +54,23 @@ namespace RingFlow.Editor
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                EditorGUILayout.LabelField("Database Asset Properties", EditorStyles.boldLabel);
-                EditorGUILayout.ObjectField("Asset File", _database, typeof(GameConfigDatabaseSO), false);
+                EditorGUILayout.LabelField("Veritabanı Asset Özellikleri", EditorStyles.boldLabel);
+                EditorGUILayout.ObjectField("Asset Dosyası", _database, typeof(GameConfigDatabaseSO), false);
 
                 EditorGUILayout.Space(5f);
 
                 EditorGUI.BeginChangeCheck();
 
-                _database.TotalLevels = EditorGUILayout.IntField("Total Levels", _database.TotalLevels);
+                _database.TotalLevels = EditorGUILayout.IntField("Toplam Seviye Sayısı", _database.TotalLevels);
+                _database.LevelsPerThemeStep = EditorGUILayout.IntField("Tema Başına Seviye Adımı", _database.LevelsPerThemeStep);
+                _database.MinimumEmptyPoles = EditorGUILayout.IntField("Minimum Boş Direk Sayısı", _database.MinimumEmptyPoles);
 
                 EditorGUILayout.Space(10f);
                 DrawDifficultyOverview();
 
                 EditorGUILayout.Space(10f);
-                // --- 1. DIFFICULTY BANDS ---
-                EditorGUILayout.LabelField("Difficulty Bands Config", EditorStyles.boldLabel);
+                // --- 1. ZORLUK DERECELERİ ---
+                EditorGUILayout.LabelField("Zorluk Dereceleri Ayarları", EditorStyles.boldLabel);
                 using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
                     for (int i = 0; i < _database.DifficultyBands.Count; i++)
@@ -78,9 +80,9 @@ namespace RingFlow.Editor
                         {
                             EditorGUILayout.LabelField(bandData.Band.ToString(), GUILayout.Width(80f));
                             
-                            int maxLvl = EditorGUILayout.IntField("Max Lvl", bandData.MaxLevel, GUILayout.Width(110f));
-                            int minEmpty = EditorGUILayout.IntField("Empty Poles", bandData.MinEmptyPoles, GUILayout.Width(110f));
-                            int maxCap = EditorGUILayout.IntField("Cap", bandData.MaxCapacity, GUILayout.Width(90f));
+                            int maxLvl = EditorGUILayout.IntField("Maks. Seviye", bandData.MaxLevel, GUILayout.Width(130f));
+                            int minEmpty = EditorGUILayout.IntField("Boş Direk", bandData.MinEmptyPoles, GUILayout.Width(110f));
+                            int maxCap = EditorGUILayout.IntField("Kapasite", bandData.MaxCapacity, GUILayout.Width(100f));
 
                             bandData.MaxLevel = maxLvl;
                             bandData.MinEmptyPoles = minEmpty;
@@ -92,14 +94,14 @@ namespace RingFlow.Editor
 
                 EditorGUILayout.Space(10f);
 
-                // --- 2. COLOR CURVE ---
-                EditorGUILayout.LabelField("Color Progression Curve", EditorStyles.boldLabel);
+                // --- 2. RENK İLERLEME EĞRİSİ ───
+                EditorGUILayout.LabelField("Renk İlerleme Eğrisi", EditorStyles.boldLabel);
                 using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
                     using (new EditorGUILayout.HorizontalScope())
                     {
-                        EditorGUILayout.LabelField("Level Threshold", EditorStyles.miniBoldLabel, GUILayout.Width(120f));
-                        EditorGUILayout.LabelField("Color Count", EditorStyles.miniBoldLabel, GUILayout.Width(100f));
+                        EditorGUILayout.LabelField("Seviye Eşiği (≥)", EditorStyles.miniBoldLabel, GUILayout.Width(120f));
+                        EditorGUILayout.LabelField("Renk Sayısı", EditorStyles.miniBoldLabel, GUILayout.Width(100f));
                     }
 
                     for (int i = 0; i < _database.ColorCurve.Count; i++)
@@ -108,7 +110,7 @@ namespace RingFlow.Editor
                         using (new EditorGUILayout.HorizontalScope())
                         {
                             int threshold = EditorGUILayout.IntField(pt.LevelThreshold, GUILayout.Width(120f));
-                            int colors = EditorGUILayout.IntSlider(pt.ColorCount, 3, 10, GUILayout.Width(200f));
+                            int colors = EditorGUILayout.IntSlider(pt.ColorCount, 2, 10, GUILayout.Width(200f));
 
                             pt.LevelThreshold = threshold;
                             pt.ColorCount = colors;
@@ -118,11 +120,11 @@ namespace RingFlow.Editor
 
                     using (new EditorGUILayout.HorizontalScope())
                     {
-                        if (GUILayout.Button("Add Curve Point", GUILayout.Width(120f)))
+                        if (GUILayout.Button("+ Yeni Nokta Ekle", GUILayout.Width(140f)))
                         {
                             _database.ColorCurve.Add(new ColorCurvePoint { LevelThreshold = 2000, ColorCount = 10 });
                         }
-                        if (_database.ColorCurve.Count > 0 && GUILayout.Button("Remove Last Point", GUILayout.Width(120f)))
+                        if (_database.ColorCurve.Count > 0 && GUILayout.Button("- Son Noktayı Sil", GUILayout.Width(140f)))
                         {
                             _database.ColorCurve.RemoveAt(_database.ColorCurve.Count - 1);
                         }
@@ -131,17 +133,17 @@ namespace RingFlow.Editor
 
                 EditorGUILayout.Space(10f);
 
-                // --- 3. WORLDS SELECTOR & EDITOR ---
-                EditorGUILayout.LabelField("Worlds & Theme Config", EditorStyles.boldLabel);
+                // --- 3. DÜNYA VE TEMA AYARLARI ---
+                EditorGUILayout.LabelField("Dünyalar ve Tema Ayarları", EditorStyles.boldLabel);
                 using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
                     string[] worldNames = new string[_database.Worlds.Count];
                     for (int i = 0; i < _database.Worlds.Count; i++)
                     {
-                        worldNames[i] = $"World {i + 1}: {_database.Worlds[i].Theme}";
+                        worldNames[i] = $"Dünya {i + 1}: {_database.Worlds[i].Theme}";
                     }
 
-                    _selectedWorldIndex = EditorGUILayout.Popup("Select World to Edit", _selectedWorldIndex, worldNames);
+                    _selectedWorldIndex = EditorGUILayout.Popup("Düzenlenecek Dünyayı Seç", _selectedWorldIndex, worldNames);
 
                     EditorGUILayout.Space(5f);
 
@@ -149,10 +151,10 @@ namespace RingFlow.Editor
                     {
                         var wData = _database.Worlds[_selectedWorldIndex];
                         
-                        wData.Theme = EditorGUILayout.TextField("Theme Display Name", wData.Theme);
-                        wData.UnlockedByWorldIndex = EditorGUILayout.IntField("Unlocked by World Index", wData.UnlockedByWorldIndex);
-                        wData.IsEventWorld = EditorGUILayout.Toggle("Is Event (Boss) World", wData.IsEventWorld);
-                        wData.MechanicType = (WorldMechanicType)EditorGUILayout.EnumPopup("Special Mechanic Type", wData.MechanicType);
+                        wData.Theme = EditorGUILayout.TextField("Tema Görünen Adı", wData.Theme);
+                        wData.UnlockedByWorldIndex = EditorGUILayout.IntField("Kilit Açan Dünya Endeksi", wData.UnlockedByWorldIndex);
+                        wData.IsEventWorld = EditorGUILayout.Toggle("Boss (Etkinlik) Dünyası mı", wData.IsEventWorld);
+                        wData.MechanicType = (WorldMechanicType)EditorGUILayout.EnumPopup("Özel Mekanik Tipi", wData.MechanicType);
 
                         _database.Worlds[_selectedWorldIndex] = wData;
                     }
@@ -167,15 +169,15 @@ namespace RingFlow.Editor
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    if (GUILayout.Button("Save Database Changes", GUILayout.Height(36)))
+                    if (GUILayout.Button("Veritabanı Değişikliklerini Kaydet", GUILayout.Height(36)))
                     {
                         SaveDatabase();
                     }
-                    if (GUILayout.Button("Reset to Default Settings", GUILayout.Height(36)))
+                    if (GUILayout.Button("Varsayılan Ayarlara Sıfırla", GUILayout.Height(36)))
                     {
-                        if (EditorUtility.DisplayDialog("Reset Database",
-                            "Are you sure you want to reset all database parameters to the default GDD rules? This will overwrite your custom settings.",
-                            "Reset", "Cancel"))
+                        if (EditorUtility.DisplayDialog("Veritabanını Sıfırla",
+                            "Tüm veritabanı ayarlarını varsayılan GDD kurallarına sıfırlamak istediğinize emin misiniz? Özel ayarlarınızın üzerine yazılacaktır.",
+                            "Sıfırla", "İptal"))
                         {
                             _database.InitializeDefaults();
                             EditorUtility.SetDirty(_database);
@@ -184,22 +186,22 @@ namespace RingFlow.Editor
                     }
                 }
 
-                // --- 4. BATCH LEVEL VALIDATOR ---
+                // --- 4. TOPLU SEVİYE DOĞRULAYICI ───
                 EditorGUILayout.Space(15f);
                 using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
-                    EditorGUILayout.LabelField("Batch Level Validator & Solver Benchmarker", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField("Toplu Seviye Doğrulayıcı & Çözücü Testi", EditorStyles.boldLabel);
                     EditorGUILayout.HelpBox(
-                        "Iterates over the selected range of level indices, generates each level, solves it, and reports timings & solvability.",
+                        "Seçilen seviye aralığındaki bölümleri tek tek üretir, çözücü ile doğrular, süre ve çözülebilirlik raporu sunar.",
                         MessageType.Info);
 
                     using (new EditorGUILayout.HorizontalScope())
                     {
-                        _valStartLevel = EditorGUILayout.IntField("Start Level", _valStartLevel, GUILayout.Width(160f));
-                        _valEndLevel = EditorGUILayout.IntField("End Level", _valEndLevel, GUILayout.Width(160f));
+                        _valStartLevel = EditorGUILayout.IntField("Başlangıç Seviyesi", _valStartLevel, GUILayout.Width(180f));
+                        _valEndLevel = EditorGUILayout.IntField("Bitiş Seviyesi", _valEndLevel, GUILayout.Width(180f));
                     }
 
-                    if (GUILayout.Button("Run Batch Validation", GUILayout.Height(30)))
+                    if (GUILayout.Button("Toplu Doğrulamayı Başlat", GUILayout.Height(30)))
                     {
                         RunBatchValidation();
                     }
@@ -207,7 +209,7 @@ namespace RingFlow.Editor
                     if (_validationResults.Count > 0)
                     {
                         EditorGUILayout.Space(6f);
-                        EditorGUILayout.LabelField($"Results ({_validationResults.Count})", EditorStyles.boldLabel);
+                        EditorGUILayout.LabelField($"Sonuçlar ({_validationResults.Count})", EditorStyles.boldLabel);
                         
                         _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos, GUILayout.Height(200f));
                         for (int i = 0; i < _validationResults.Count; i++)
@@ -226,7 +228,7 @@ namespace RingFlow.Editor
                         }
                         EditorGUILayout.EndScrollView();
 
-                        if (GUILayout.Button("Clear Results", GUILayout.Width(120f)))
+                        if (GUILayout.Button("Sonuçları Temizle", GUILayout.Width(140f)))
                         {
                             _validationResults.Clear();
                         }
@@ -261,7 +263,7 @@ namespace RingFlow.Editor
                 if (levelData == null)
                 {
                     res.Success = false;
-                    res.Log = "FAILED - Generator returned null (unsolvable seed / scramble mismatch)";
+                    res.Log = "BAŞARISIZ - Jeneratör null döndü (çözülemez tohum / kilit uyuşmazlığı)";
                 }
                 else
                 {
@@ -285,7 +287,7 @@ namespace RingFlow.Editor
                         res.Success = true;
                         res.MoveCount = solveResult.MoveCount;
                         res.TimeMs = timeMs;
-                        res.Log = $"SUCCESS - Solvable in {res.MoveCount} moves (Solve time: {timeMs:F1}ms)";
+                        res.Log = $"BAŞARILI - {res.MoveCount} hamlede çözüldü (Süre: {timeMs:F1}ms)";
                         solvedCount++;
                         totalTime += timeMs;
                         totalMoves += res.MoveCount;
@@ -293,18 +295,18 @@ namespace RingFlow.Editor
                     else
                     {
                         res.Success = false;
-                        res.Log = "FAILED - Solver returned unsolvable within state limit";
+                        res.Log = "BAŞARISIZ - Çözücü belirtilen sınırda çözüme ulaşamadı";
                     }
                 }
 
                 _validationResults.Add(res);
             }
             
-            string summaryMsg = $"Validated {_validationResults.Count} levels.\n" +
-                                $"Success: {solvedCount} / {_validationResults.Count}\n" +
-                                $"Avg time: {(solvedCount > 0 ? (totalTime / solvedCount) : 0):F1}ms\n" +
-                                $"Avg moves: {(solvedCount > 0 ? (totalMoves / (float)solvedCount) : 0):F1}";
-            EditorUtility.DisplayDialog("Validation Complete", summaryMsg, "OK");
+            string summaryMsg = $"Doğrulanan Seviye: {_validationResults.Count}\n" +
+                                $"Başarılı: {solvedCount} / {_validationResults.Count}\n" +
+                                $"Ort. Süre: {(solvedCount > 0 ? (totalTime / solvedCount) : 0):F1}ms\n" +
+                                $"Ort. Hamle: {(solvedCount > 0 ? (totalMoves / (float)solvedCount) : 0):F1}";
+            EditorUtility.DisplayDialog("Doğrulama Tamamlandı", summaryMsg, "Tamam");
         }
 
         private const string DatabaseAssetPath = "Assets/Resources/GameConfigDatabase.asset";
@@ -315,12 +317,12 @@ namespace RingFlow.Editor
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                EditorGUILayout.LabelField("Difficulty Overview", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Zorluk Özeti (Önizleme)", EditorStyles.boldLabel);
                 for (int i = 0; i < _database.DifficultyBands.Count; i++)
                 {
                     var band = _database.DifficultyBands[i];
                     EditorGUILayout.LabelField(
-                        $"{band.Band}: Lvl≤{band.MaxLevel} | Empty={band.MinEmptyPoles} | Cap={band.MaxCapacity} | Mechanics={band.AllowedMechanics?.Count ?? 0}");
+                        $"{band.Band}: Maks Seviye={band.MaxLevel} | Boş Direk={band.MinEmptyPoles} | Kapasite={band.MaxCapacity} | İzinli Mekanikler={band.AllowedMechanics?.Count ?? 0}");
                 }
             }
         }
@@ -336,7 +338,7 @@ namespace RingFlow.Editor
             AssetDatabase.Refresh();
 
             _database = db;
-            EditorUtility.DisplayDialog("Success", $"GameConfigDatabase asset created successfully at {DatabaseAssetPath}!", "OK");
+            EditorUtility.DisplayDialog("Başarılı", $"GameConfigDatabase asset dosyası başarıyla {DatabaseAssetPath} konumunda oluşturuldu!", "Tamam");
         }
 
         private void SaveDatabase()
@@ -345,7 +347,7 @@ namespace RingFlow.Editor
             EditorUtility.SetDirty(_database);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            EditorUtility.DisplayDialog("Database Saved", "All difficulty, color, and world configurations saved successfully to GameConfigDatabase.asset!", "OK");
+            EditorUtility.DisplayDialog("Veritabanı Kaydedildi", "Tüm zorluk, renk ve dünya ayarları başarıyla GameConfigDatabase.asset dosyasına kaydedildi!", "Tamam");
         }
     }
 }

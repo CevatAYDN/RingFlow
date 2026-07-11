@@ -8,26 +8,33 @@ namespace RingFlow.Editor
     public class GameConfigDatabaseSOEditor : UnityEditor.Editor
     {
         private int _selectedWorldIndex;
+        private int _lookupLevelIndex = 1;
         private Vector2 _scrollPos;
 
         public override void OnInspectorGUI()
         {
             var db = (GameConfigDatabaseSO)target;
 
-            EditorGUILayout.LabelField("RingFlow Game Config Database", RingFlowEditorUtils.HeaderStyle);
+            EditorGUILayout.LabelField("RingFlow Veritabanı Editörü (Database)", RingFlowEditorUtils.HeaderStyle);
             EditorGUILayout.Space(4f);
 
             _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
 
             EditorGUI.BeginChangeCheck();
 
-            // ── Total Levels ──
-            db.TotalLevels = EditorGUILayout.IntField("Total Levels", db.TotalLevels);
+            // ── Genel Ayarlar ──
+            EditorGUILayout.LabelField("Genel Seviye Ayarları", EditorStyles.boldLabel);
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                db.TotalLevels = EditorGUILayout.IntField("Toplam Seviye Sayısı", db.TotalLevels);
+                db.LevelsPerThemeStep = EditorGUILayout.IntField("Tema Başına Seviye Adımı", db.LevelsPerThemeStep);
+                db.MinimumEmptyPoles = EditorGUILayout.IntField("Minimum Boş Direk Sayısı", db.MinimumEmptyPoles);
+            }
 
             EditorGUILayout.Space(8f);
 
-            // ── Difficulty Bands ──
-            EditorGUILayout.LabelField("Difficulty Bands", EditorStyles.boldLabel);
+            // ── Zorluk Dereceleri (Bands) ──
+            EditorGUILayout.LabelField("Zorluk Dereceleri (Difficulty Bands)", EditorStyles.boldLabel);
             if (db.DifficultyBands == null) db.DifficultyBands = new System.Collections.Generic.List<DifficultyBandData>();
 
             for (int i = 0; i < db.DifficultyBands.Count; i++)
@@ -39,37 +46,49 @@ namespace RingFlow.Editor
 
                     using (new EditorGUILayout.HorizontalScope())
                     {
-                        band.MaxLevel = EditorGUILayout.IntField("Max Level", band.MaxLevel);
-                        band.MinEmptyPoles = EditorGUILayout.IntField("Min Empty Poles", band.MinEmptyPoles);
-                        band.MaxCapacity = EditorGUILayout.IntField("Max Capacity", band.MaxCapacity);
+                        band.MaxLevel = EditorGUILayout.IntField("Maks. Seviye", band.MaxLevel);
+                        band.MinEmptyPoles = EditorGUILayout.IntField("Min. Boş Direk", band.MinEmptyPoles);
+                        band.MaxCapacity = EditorGUILayout.IntField("Maks. Kapasite", band.MaxCapacity);
                     }
 
-                    EditorGUILayout.LabelField("Allowed Mechanics:");
-                    using (new EditorGUILayout.HorizontalScope())
+                    EditorGUILayout.Space(2f);
+                    EditorGUILayout.LabelField("İzin Verilen Halka/Mekanik Tipleri:");
+                    
+                    if (band.AllowedMechanics == null)
+                        band.AllowedMechanics = new System.Collections.Generic.List<WorldMechanicType>();
+
+                    var mechNames = System.Enum.GetNames(typeof(WorldMechanicType));
+                    var mechValues = (WorldMechanicType[])System.Enum.GetValues(typeof(WorldMechanicType));
+
+                    // 3-Sütunlu Izgara (Grid) Düzeni - Taşmayı ve kesilmeyi önler
+                    int columns = 3;
+                    for (int m = 0; m < mechNames.Length; m += columns)
                     {
-                        if (band.AllowedMechanics == null)
-                            band.AllowedMechanics = new System.Collections.Generic.List<WorldMechanicType>();
-
-                        var mechNames = System.Enum.GetNames(typeof(WorldMechanicType));
-                        var mechValues = (WorldMechanicType[])System.Enum.GetValues(typeof(WorldMechanicType));
-
-                        for (int m = 0; m < mechNames.Length; m++)
+                        using (new EditorGUILayout.HorizontalScope())
                         {
-                            bool allowed = band.AllowedMechanics.Contains(mechValues[m]);
-                            bool newAllowed = EditorGUILayout.ToggleLeft(mechNames[m], allowed, GUILayout.Width(110f));
-                            if (newAllowed != allowed)
+                            for (int col = 0; col < columns; col++)
                             {
-                                if (newAllowed)
-                                    band.AllowedMechanics.Add(mechValues[m]);
-                                else
-                                    band.AllowedMechanics.Remove(mechValues[m]);
+                                int idx = m + col;
+                                if (idx >= mechNames.Length) break;
+
+                                bool allowed = band.AllowedMechanics.Contains(mechValues[idx]);
+                                bool newAllowed = EditorGUILayout.ToggleLeft(mechNames[idx], allowed, GUILayout.Width(130f));
+                                if (newAllowed != allowed)
+                                {
+                                    if (newAllowed)
+                                        band.AllowedMechanics.Add(mechValues[idx]);
+                                    else
+                                        band.AllowedMechanics.Remove(mechValues[idx]);
+                                }
                             }
                         }
                     }
 
-                    EditorGUILayout.LabelField($"Active: {string.Join(", ", band.AllowedMechanics ?? new System.Collections.Generic.List<WorldMechanicType>())}",
-                        EditorStyles.miniLabel);
+                    EditorGUILayout.Space(2f);
+                    EditorGUILayout.LabelField($"Aktif Olanlar: {string.Join(", ", band.AllowedMechanics)}", EditorStyles.miniLabel);
                 }
+
+                db.DifficultyBands[i] = band;
 
                 if (i < db.DifficultyBands.Count - 1)
                     EditorGUILayout.Space(2f);
@@ -77,8 +96,8 @@ namespace RingFlow.Editor
 
             EditorGUILayout.Space(8f);
 
-            // ── Color Curve ──
-            EditorGUILayout.LabelField("Color Progression Curve", EditorStyles.boldLabel);
+            // ── Renk İlerleme Eğrisi ──
+            EditorGUILayout.LabelField("Renk İlerleme Eğrisi (Color Curve)", EditorStyles.boldLabel);
             if (db.ColorCurve == null)
                 db.ColorCurve = new System.Collections.Generic.List<ColorCurvePoint>();
 
@@ -89,34 +108,36 @@ namespace RingFlow.Editor
                     var pt = db.ColorCurve[i];
                     using (new EditorGUILayout.HorizontalScope())
                     {
-                        EditorGUILayout.LabelField($"Point {i + 1}", GUILayout.Width(60f));
-                        pt.LevelThreshold = EditorGUILayout.IntField("Level ≥", pt.LevelThreshold, GUILayout.Width(100f));
-                        pt.ColorCount = EditorGUILayout.IntSlider("Colors", pt.ColorCount, 2, 10, GUILayout.Width(180f));
+                        EditorGUILayout.LabelField($"Nokta {i + 1}", GUILayout.Width(60f));
+                        EditorGUILayout.LabelField("Seviye ≥", GUILayout.Width(55f));
+                        pt.LevelThreshold = EditorGUILayout.IntField(pt.LevelThreshold, GUILayout.Width(50f));
+                        EditorGUILayout.LabelField("Renkler", GUILayout.Width(50f));
+                        pt.ColorCount = EditorGUILayout.IntSlider(pt.ColorCount, 2, 10);
                         db.ColorCurve[i] = pt;
                     }
                 }
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    if (GUILayout.Button("+ Add Point"))
+                    if (GUILayout.Button("+ Yeni Nokta Ekle"))
                         db.ColorCurve.Add(new ColorCurvePoint { LevelThreshold = 2000, ColorCount = 10 });
-                    if (db.ColorCurve.Count > 1 && GUILayout.Button("- Remove Last"))
+                    if (db.ColorCurve.Count > 1 && GUILayout.Button("- Son Noktayı Sil"))
                         db.ColorCurve.RemoveAt(db.ColorCurve.Count - 1);
                 }
             }
 
             EditorGUILayout.Space(8f);
 
-            // ── Worlds ──
-            EditorGUILayout.LabelField("Worlds & Theme Config", EditorStyles.boldLabel);
+            // ── Dünyalar ve Temalar ──
+            EditorGUILayout.LabelField("Dünyalar ve Tema Ayarları (Worlds)", EditorStyles.boldLabel);
             if (db.Worlds == null)
                 db.Worlds = new System.Collections.Generic.List<WorldConfigData>();
 
             string[] worldNames = new string[db.Worlds.Count];
             for (int i = 0; i < db.Worlds.Count; i++)
-                worldNames[i] = $"World {i + 1}: {db.Worlds[i].Theme}";
+                worldNames[i] = $"Dünya {i + 1}: {db.Worlds[i].Theme}";
 
-            _selectedWorldIndex = EditorGUILayout.Popup("Select World", _selectedWorldIndex, worldNames);
+            _selectedWorldIndex = EditorGUILayout.Popup("Dünya Seç", _selectedWorldIndex, worldNames);
 
             if (_selectedWorldIndex >= 0 && _selectedWorldIndex < db.Worlds.Count)
             {
@@ -126,18 +147,18 @@ namespace RingFlow.Editor
                     int startLevel = _selectedWorldIndex * WorldConfigSO.LevelsPerWorld + 1;
                     int endLevel = startLevel + WorldConfigSO.LevelsPerWorld - 1;
 
-                    EditorGUILayout.LabelField($"Level Range: {startLevel} – {endLevel}", EditorStyles.miniLabel);
+                    EditorGUILayout.LabelField($"Seviye Aralığı: {startLevel} – {endLevel}", EditorStyles.miniLabel);
 
                     var band = db.GetBandForLevel(startLevel);
-                    var intensity = db.GetMechanicIntensityForLevel(startLevel);
-                    EditorGUILayout.LabelField($"Band: {band} | Intensity: {intensity}", EditorStyles.miniLabel);
+                    int intensity = db.GetMechanicIntensityForLevel(startLevel);
+                    EditorGUILayout.LabelField($"Zorluk Bandı: {band} | Yoğunluk: {intensity}", EditorStyles.miniLabel);
 
-                    w.Theme = EditorGUILayout.TextField("Theme Display Name", w.Theme);
-                    w.UnlockedByWorldIndex = EditorGUILayout.IntField("Unlocked by World Index", w.UnlockedByWorldIndex);
-                    w.IsEventWorld = EditorGUILayout.Toggle("Is Boss World", w.IsEventWorld);
-                    w.MechanicType = (WorldMechanicType)EditorGUILayout.EnumPopup("Special Mechanic", w.MechanicType);
+                    w.Theme = EditorGUILayout.TextField("Dünya Tema Adı", w.Theme);
+                    w.UnlockedByWorldIndex = EditorGUILayout.IntField("Kilit Açma Dünya Endeksi", w.UnlockedByWorldIndex);
+                    w.IsEventWorld = EditorGUILayout.Toggle("Boss (Etkinlik) Dünyası mı", w.IsEventWorld);
+                    w.MechanicType = (WorldMechanicType)EditorGUILayout.EnumPopup("Özel Mekanik", w.MechanicType);
 
-                    // Band-mechanic mismatch warning
+                    // Uyuşmazlık uyarısı
                     var allowed = db.GetAllowedMechanicsForLevel(startLevel);
                     if (w.MechanicType != WorldMechanicType.None &&
                         w.MechanicType != WorldMechanicType.RandomPool1 &&
@@ -146,9 +167,8 @@ namespace RingFlow.Editor
                         !allowed.Contains(w.MechanicType))
                     {
                         EditorGUILayout.HelpBox(
-                            $"World's mechanic ({w.MechanicType}) is NOT in band {band}'s AllowedMechanics list. " +
-                            $"The mechanic will still inject (world-assigned mechanics bypass band gating), but this may indicate a misconfiguration. " +
-                            $"Consider adding {w.MechanicType} to band {band}'s AllowedMechanics.",
+                            $"Uyuşmazlık Uyarısı: Seçilen özel mekanik ({w.MechanicType}), bu seviyedeki zorluk bandının ({band}) izin verilen mekanikler listesinde yok. " +
+                            $"Mekanik seviyede yine de üretilir (dünya mekanikleri band kuralını ezer), ancak tutarlılık için bandın izin verilen listesine eklemeyi düşünebilirsiniz.",
                             MessageType.Warning);
                     }
 
@@ -158,48 +178,79 @@ namespace RingFlow.Editor
 
             EditorGUILayout.Space(8f);
 
-            // ── Balance Config ──
-            EditorGUILayout.LabelField("Balance Config", EditorStyles.boldLabel);
+            // ── Denge ve Ödül Ayarları ──
+            EditorGUILayout.LabelField("Denge ve Ödül Ayarları (Balance Config)", EditorStyles.boldLabel);
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                EditorGUILayout.LabelField("Undo", EditorStyles.miniBoldLabel);
-                db.BalanceConfig.FreeUndosPerSession = EditorGUILayout.IntField("Free Undos Per Session", db.BalanceConfig.FreeUndosPerSession);
-                db.BalanceConfig.UndoCoinCost = EditorGUILayout.IntField("Undo Coin Cost", db.BalanceConfig.UndoCoinCost);
+                EditorGUILayout.LabelField("Geri Alma (Undo)", EditorStyles.miniBoldLabel);
+                db.BalanceConfig.FreeUndosPerSession = EditorGUILayout.IntField("Ücretsiz Hak (Oturum)", db.BalanceConfig.FreeUndosPerSession);
+                db.BalanceConfig.UndoCoinCost = EditorGUILayout.IntField("Geri Alma Altın Bedeli", db.BalanceConfig.UndoCoinCost);
 
                 EditorGUILayout.Space(4f);
-                EditorGUILayout.LabelField("Level Completion Rewards", EditorStyles.miniBoldLabel);
-                db.BalanceConfig.NormalCoinReward = EditorGUILayout.IntField("Normal Coin Reward", db.BalanceConfig.NormalCoinReward);
-                db.BalanceConfig.BossCoinReward = EditorGUILayout.IntField("Boss Coin Reward", db.BalanceConfig.BossCoinReward);
-                db.BalanceConfig.NormalXpReward = EditorGUILayout.IntField("Normal XP Reward", db.BalanceConfig.NormalXpReward);
-                db.BalanceConfig.BossXpReward = EditorGUILayout.IntField("Boss XP Reward", db.BalanceConfig.BossXpReward);
-                db.BalanceConfig.LevelUpCoinReward = EditorGUILayout.IntField("Level Up Coin Reward", db.BalanceConfig.LevelUpCoinReward);
+                EditorGUILayout.LabelField("Seviye Tamamlama Ödülleri", EditorStyles.miniBoldLabel);
+                db.BalanceConfig.NormalCoinReward = EditorGUILayout.IntField("Normal Bölüm Altın Ödülü", db.BalanceConfig.NormalCoinReward);
+                db.BalanceConfig.BossCoinReward = EditorGUILayout.IntField("Boss Bölüm Altın Ödülü", db.BalanceConfig.BossCoinReward);
+                db.BalanceConfig.NormalXpReward = EditorGUILayout.IntField("Normal Bölüm XP Ödülü", db.BalanceConfig.NormalXpReward);
+                db.BalanceConfig.BossXpReward = EditorGUILayout.IntField("Boss Bölüm XP Ödülü", db.BalanceConfig.BossXpReward);
+                db.BalanceConfig.LevelUpCoinReward = EditorGUILayout.IntField("Seviye Atlama Altın Ödülü", db.BalanceConfig.LevelUpCoinReward);
 
                 EditorGUILayout.Space(4f);
-                EditorGUILayout.LabelField("Star Thresholds", EditorStyles.miniBoldLabel);
-                db.BalanceConfig.ThreeStarTargetRatioPercent = EditorGUILayout.IntSlider("3-Star Ratio %", db.BalanceConfig.ThreeStarTargetRatioPercent, 50, 200);
-                db.BalanceConfig.TwoStarTargetRatioPercent = EditorGUILayout.IntSlider("2-Star Ratio %", db.BalanceConfig.TwoStarTargetRatioPercent, 50, 300);
+                EditorGUILayout.LabelField("Yıldız Eşikleri (Adım Oranı %)", EditorStyles.miniBoldLabel);
+                db.BalanceConfig.ThreeStarTargetRatioPercent = EditorGUILayout.IntSlider("3-Yıldız Hedef Hamle %", db.BalanceConfig.ThreeStarTargetRatioPercent, 50, 200);
+                db.BalanceConfig.TwoStarTargetRatioPercent = EditorGUILayout.IntSlider("2-Yıldız Hedef Hamle %", db.BalanceConfig.TwoStarTargetRatioPercent, 50, 300);
 
                 EditorGUILayout.Space(4f);
-                EditorGUILayout.LabelField("Chest Drop Rates", EditorStyles.miniBoldLabel);
-                db.BalanceConfig.SilverChestChance = EditorGUILayout.Slider("Silver Chest %", db.BalanceConfig.SilverChestChance, 0f, 1f);
-                db.BalanceConfig.GoldChestChance = EditorGUILayout.Slider("Gold Chest %", db.BalanceConfig.GoldChestChance, 0f, 1f);
-                db.BalanceConfig.DiamondChestChance = EditorGUILayout.Slider("Diamond Chest %", db.BalanceConfig.DiamondChestChance, 0f, 1f);
+                EditorGUILayout.LabelField("Sandık Kazanma İhtimalleri (Kümülatif)", EditorStyles.miniBoldLabel);
+                db.BalanceConfig.SilverChestChance = EditorGUILayout.Slider("Gümüş Sandık Şansı %", db.BalanceConfig.SilverChestChance, 0f, 1f);
+                db.BalanceConfig.GoldChestChance = EditorGUILayout.Slider("Altın Sandık Şansı %", db.BalanceConfig.GoldChestChance, 0f, 1f);
+                db.BalanceConfig.DiamondChestChance = EditorGUILayout.Slider("Elmas Sandık Şansı %", db.BalanceConfig.DiamondChestChance, 0f, 1f);
 
                 EditorGUILayout.Space(4f);
-                EditorGUILayout.LabelField("Ad Intervals", EditorStyles.miniBoldLabel);
-                db.BalanceConfig.InterstitialAdInterval = EditorGUILayout.IntField("Interstitial Ad Interval", db.BalanceConfig.InterstitialAdInterval);
+                EditorGUILayout.LabelField("Reklam Sıklığı", EditorStyles.miniBoldLabel);
+                db.BalanceConfig.InterstitialAdInterval = EditorGUILayout.IntField("Geçiş Reklamı Sıklığı (Bölüm)", db.BalanceConfig.InterstitialAdInterval);
+            }
+
+            // ── Hızlı Seviye Sorgulama ve Önizleme ──
+            EditorGUILayout.Space(12f);
+            EditorGUILayout.LabelField("Hızlı Seviye Sorgulama ve Tema Önizleme", EditorStyles.boldLabel);
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                _lookupLevelIndex = EditorGUILayout.IntField("Sorgulanacak Seviye", _lookupLevelIndex);
+                _lookupLevelIndex = Mathf.Clamp(_lookupLevelIndex, 1, db.TotalLevels);
+
+                var band = db.GetBandForLevel(_lookupLevelIndex);
+                int colorCount = db.GetColorCountForLevel(_lookupLevelIndex);
+                int poleCount = db.GetPoleCountForLevel(_lookupLevelIndex);
+                int maxCap = db.GetMaxCapacityForLevel(_lookupLevelIndex);
+                int emptyPoles = db.GetMinEmptyPolesForLevel(_lookupLevelIndex);
+                var theme = db.GetLevelThemeForLevel(_lookupLevelIndex);
+                int worldIdx = db.GetWorldForLevel(_lookupLevelIndex);
+                var worldMechanic = db.GetMechanicForWorld(worldIdx);
+
+                string forcedMechanicsString = (theme.ForcedMechanics == null || theme.ForcedMechanics.Count == 0) ? 
+                    "Yok" : string.Join(", ", theme.ForcedMechanics);
+
+                EditorGUILayout.HelpBox(
+                    $"[Seviye {_lookupLevelIndex} Raporu]\n" +
+                    $"• Zorluk Derecesi: {band}\n" +
+                    $"• Bulunduğu Dünya: Dünya {worldIdx + 1} ({db.Worlds[worldIdx].Theme})\n" +
+                    $"• Dünya Ana Mekaniği: {worldMechanic}\n" +
+                    $"• Renk Sayısı: {colorCount} | Direk Sayısı: {poleCount} (Boş Direkler: {emptyPoles})\n" +
+                    $"• Maksimum Halka Kapasitesi: {maxCap}\n" +
+                    $"• Aktif Tema Adımı: Seviye {theme.StartLevel} - {theme.EndLevel} (Zorunlu Mekanikler: {forcedMechanicsString})",
+                    MessageType.Info);
             }
 
             EditorGUILayout.Space(12f);
 
-            // ── Actions ──
+            // ── Sıfırlama Butonu ──
             using (new EditorGUILayout.HorizontalScope())
             {
-                if (GUILayout.Button("Reset to Defaults", GUILayout.Height(30)))
+                if (GUILayout.Button("Varsayılan GDD Ayarlarına Sıfırla", GUILayout.Height(30)))
                 {
-                    if (EditorUtility.DisplayDialog("Reset to Defaults",
-                        "Reset all database values to GDD defaults? This cannot be undone.",
-                        "Reset", "Cancel"))
+                    if (EditorUtility.DisplayDialog("Varsayılan Ayarlara Sıfırla",
+                        "Tüm veritabanı ayarlarını varsayılan GDD kurallarına sıfırlamak istiyor musunuz? Bu işlem geri alınamaz.",
+                        "Sıfırla", "İptal"))
                     {
                         db.InitializeDefaults();
                         EditorUtility.SetDirty(db);

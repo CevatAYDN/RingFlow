@@ -16,7 +16,7 @@ namespace RingFlow.Editor
 
         private GeneratorSection _generator;
 
-        public override string DisplayName => "Scene Visual Board Builder";
+        public override string DisplayName => "Sahne Görsel Tahta Oluşturucu";
         public override string PrefKey => EditorPrefsKeys.FoldBuilder;
 
         private List<MoveRecord> _previewMoves = new();
@@ -35,7 +35,7 @@ namespace RingFlow.Editor
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 EditorGUILayout.HelpBox(
-                    "Sahne tahtası kur, temizle veya çözücü adımlarını önizle.",
+                    "Aktif veya üretilmiş seviyenin sahne tahtasını kurun, temizleyin veya çözücü adımlarını önizleyin.",
                     MessageType.Info);
 
                 using (new EditorGUILayout.HorizontalScope())
@@ -62,12 +62,12 @@ namespace RingFlow.Editor
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    if (GUILayout.Button("Solve Scene Board", GUILayout.Height(26)))
+                    if (GUILayout.Button("Sahne Tahtasını Çöz", GUILayout.Height(26)))
                     {
                         var board = ReadBoardFromScene();
                         if (board.PoleCount == 0)
                         {
-                            _solveStatusMsg = "Sahne tahtası bulunamadı. Önce sahneyi kurun.";
+                            _solveStatusMsg = "Sahne üzerinde tahta bulunamadı. Önce sahneyi kurun.";
                             _solvedSuccessfully = false;
                         }
                         else
@@ -79,13 +79,13 @@ namespace RingFlow.Editor
                                 _initialPreviewBoard = board;
                                 _previewMoves = result.Moves;
                                 _currentPreviewIndex = -1;
-                                _solveStatusMsg = $"Solvable! moves: {result.MoveCount}";
+                                _solveStatusMsg = $"Çözülebilir! Hamle sayısı: {result.MoveCount}";
                             }
                             else
                             {
                                 _previewMoves.Clear();
                                 _currentPreviewIndex = -1;
-                                _solveStatusMsg = result.IsSolvable ? "Solved state already!" : "Unsolvable board!";
+                                _solveStatusMsg = result.IsSolvable ? "Tahta zaten çözülmüş durumda!" : "Çözülemez tahta!";
                             }
                         }
                     }
@@ -108,18 +108,18 @@ namespace RingFlow.Editor
                     {
                         using (new EditorGUI.DisabledScope(_currentPreviewIndex < 0))
                         {
-                            if (GUILayout.Button("<< Prev Move", GUILayout.Height(24)))
+                            if (GUILayout.Button("<< Önceki Hamle", GUILayout.Height(24)))
                             {
                                 _currentPreviewIndex--;
                                 RebuildPreviewStep();
                             }
                         }
 
-                        EditorGUILayout.LabelField($"Step: {_currentPreviewIndex + 1} / {_previewMoves.Count}", EditorStyles.centeredGreyMiniLabel, GUILayout.Width(100f));
+                        EditorGUILayout.LabelField($"Adım: {_currentPreviewIndex + 1} / {_previewMoves.Count}", EditorStyles.centeredGreyMiniLabel, GUILayout.Width(100f));
 
                         using (new EditorGUI.DisabledScope(_currentPreviewIndex >= _previewMoves.Count - 1))
                         {
-                            if (GUILayout.Button("Next Move >>", GUILayout.Height(24)))
+                            if (GUILayout.Button("Sonraki Hamle >>", GUILayout.Height(24)))
                             {
                                 _currentPreviewIndex++;
                                 RebuildPreviewStep();
@@ -130,14 +130,14 @@ namespace RingFlow.Editor
                     if (_currentPreviewIndex >= 0 && _currentPreviewIndex < _previewMoves.Count)
                     {
                         var currentMove = _previewMoves[_currentPreviewIndex];
-                        EditorGUILayout.HelpBox($"Current Step: Move from Pole {currentMove.FromPoleId} to Pole {currentMove.ToPoleId}", MessageType.Info);
+                        EditorGUILayout.HelpBox($"Mevcut Adım: Direk {currentMove.FromPoleId}'den Direk {currentMove.ToPoleId}'ye taşı.", MessageType.Info);
                     }
                     else if (_currentPreviewIndex == -1)
                     {
-                        EditorGUILayout.HelpBox("Initial board state. Click 'Next Move >>' to begin.", MessageType.None);
+                        EditorGUILayout.HelpBox("Başlangıç tahta durumu. Başlamak için 'Sonraki Hamle >>' butonuna tıklayın.", MessageType.None);
                     }
 
-                    if (GUILayout.Button("Reset Preview", GUILayout.Height(20)))
+                    if (GUILayout.Button("Önizlemeyi Sıfırla", GUILayout.Height(20)))
                     {
                         _currentPreviewIndex = -1;
                         RebuildPreviewStep();
@@ -175,17 +175,21 @@ namespace RingFlow.Editor
 
             if (polesToBuild == null && _generator.GeneratedLevel == null)
             {
-                EditorUtility.DisplayDialog("Error",
-                    "Please generate a level first OR enter PlayMode to load from active game!", "OK");
+                EditorUtility.DisplayDialog("Hata",
+                    "Lütfen önce bir seviye üretin VEYA aktif oyundan yüklemek için PlayMode'a girin!", "Tamam");
                 return;
             }
 
             int poleCount = polesToBuild != null ? polesToBuild.Count : _generator.GeneratedLevel.Poles.Count;
             NexusLog.Info("RingFlowEditor", nameof(BuildInScene), "", $"Building visual board with {poleCount} poles.");
 
-            var board = new BoardState { PoleCount = poleCount, MaxCapacity = 4 };
-            int boardMaxCapacity = 4;
-            EditorGUILayout.LabelField($"Kapasite: {boardMaxCapacity}", EditorStyles.miniLabel);
+            int defaultMaxCapacity = _generator.GeneratedLevel != null 
+                ? GameConfigDatabaseSO.Instance.GetMaxCapacityForLevel(_generator.GeneratedLevel.LevelIndex) 
+                : 4;
+
+            var board = new BoardState { PoleCount = poleCount, MaxCapacity = defaultMaxCapacity };
+            int boardMaxCapacity = defaultMaxCapacity;
+
             for (int p = 0; p < poleCount; p++)
             {
                 bool isLocked;
@@ -211,7 +215,7 @@ namespace RingFlow.Editor
                     board.SetRingType(p, r, rings[r].Type);
                     board.SetRingAdditional(p, r, rings[r].AdditionalData);
                 }
-                boardMaxCapacity = maxCapacity;
+                boardMaxCapacity = Mathf.Max(boardMaxCapacity, maxCapacity);
             }
             board.MaxCapacity = boardMaxCapacity;
 
@@ -263,7 +267,17 @@ namespace RingFlow.Editor
                 }
             }
 
-            var board = new BoardState { PoleCount = polesList.Count, MaxCapacity = 4 };
+            int resolvedMaxCapacity = 4;
+            if (polesList.Count > 0)
+            {
+                var firstPoleText = polesList[0].GetComponentInChildren<TextMesh>();
+                if (firstPoleText != null && firstPoleText.text.StartsWith("Cap: "))
+                {
+                    int.TryParse(firstPoleText.text.Substring(5), out resolvedMaxCapacity);
+                }
+            }
+
+            var board = new BoardState { PoleCount = polesList.Count, MaxCapacity = resolvedMaxCapacity };
 
             for (int p = 0; p < polesList.Count; p++)
             {
@@ -338,11 +352,11 @@ namespace RingFlow.Editor
                     ));
                 }
 
-                CreatePole(boardRoot.transform, p, startX, spacing, isLocked, rings, torusModel, f);
+                CreatePole(boardRoot.transform, p, startX, spacing, isLocked, board.MaxCapacity, rings, torusModel, f);
             }
         }
 
-        private static void CreatePole(Transform parent, int index, float startX, float spacing, bool isLocked, List<RingData> rings, GameObject torusModel, GameFeelConfigSO f)
+        private static void CreatePole(Transform parent, int index, float startX, float spacing, bool isLocked, int capacity, List<RingData> rings, GameObject torusModel, GameFeelConfigSO f)
         {
             var poleObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             poleObj.name = $"Pole_{index}" + (isLocked ? " [LOCKED]" : "");
@@ -355,7 +369,6 @@ namespace RingFlow.Editor
             capacityLabel.transform.SetParent(poleObj.transform);
             capacityLabel.transform.localPosition = new Vector3(0f, 2.25f, 0f);
             var text = capacityLabel.AddComponent<TextMesh>();
-            int capacity = f != null ? Mathf.Max(1, Mathf.RoundToInt(f.PoleScale.y * 2f)) : 4;
             text.text = $"Cap: {capacity}";
             text.characterSize = 0.08f;
             text.fontSize = 64;

@@ -8,6 +8,12 @@ namespace RingFlow.Tests
     [TestFixture]
     public class LevelGeneratorAndSolverTests
     {
+        [SetUp]
+        public void SetUp()
+        {
+            GameConfigDatabaseSO.Instance.InitializeDefaults();
+        }
+
         private static void AssertLevelContainsOnlyAllowedMechanics(LevelData levelData, System.Collections.Generic.List<WorldMechanicType> allowedMechanics,
             System.Collections.Generic.List<WorldMechanicType> allowedWorldMechanics = null)
         {
@@ -61,10 +67,10 @@ namespace RingFlow.Tests
             Assert.AreEqual(3, DifficultyCurve.ColorCountForLevel(1));
             Assert.AreEqual(4, DifficultyCurve.PoleCountForLevel(1));
 
-            // Level 55: Easy (4 colors + 1 MinEmptyPoles = 5 poles)
+            // Level 55: Easy (4 colors + 2 MinEmptyPoles = 6 poles)
             Assert.AreEqual(DifficultyBand.Easy, DifficultyCurve.BandForLevel(55));
             Assert.AreEqual(4, DifficultyCurve.ColorCountForLevel(55));
-            Assert.AreEqual(5, DifficultyCurve.PoleCountForLevel(55));
+            Assert.AreEqual(6, DifficultyCurve.PoleCountForLevel(55));
 
             // Level 1500: Master (10 colors + 1 MinEmptyPoles = 11 poles)
             Assert.AreEqual(DifficultyBand.Master, DifficultyCurve.BandForLevel(1500));

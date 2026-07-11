@@ -57,6 +57,115 @@ namespace RingFlow.Editor
 
             DrawHeader($"SEVİYE {levelSO.Data.LevelIndex} YAPILANDIRMASI");
 
+            // ── GDD Uyum & Doğrulama Kontrolleri ──
+            var warnings = new List<string>();
+            if (levelSO.Data.Poles == null || levelSO.Data.Poles.Count == 0)
+            {
+                warnings.Add("• Seviyede henüz hiç direk bulunmuyor.");
+            }
+            else
+            {
+                // 1. En az bir boş direk kontrolü
+                bool hasEmptyPole = false;
+                for (int p = 0; p < levelSO.Data.Poles.Count; p++)
+                {
+                    if (levelSO.Data.Poles[p].Rings == null || levelSO.Data.Poles[p].Rings.Count == 0)
+                    {
+                        hasEmptyPole = true;
+                        break;
+                    }
+                }
+                if (!hasEmptyPole)
+                {
+                    warnings.Add("• GDD uyarınca oyunu tamamlamak için en az 1 boş direk gereklidir.");
+                }
+
+                // 2. Kilitli direk ve anahtar kontrolü
+                bool hasLockedPole = false;
+                for (int p = 0; p < levelSO.Data.Poles.Count; p++)
+                {
+                    if (levelSO.Data.Poles[p].IsLocked)
+                    {
+                        hasLockedPole = true;
+                        break;
+                    }
+                }
+                if (hasLockedPole)
+                {
+                    bool hasKey = false;
+                    for (int p = 0; p < levelSO.Data.Poles.Count; p++)
+                    {
+                        var pole = levelSO.Data.Poles[p];
+                        if (pole.Rings != null)
+                        {
+                            for (int r = 0; r < pole.Rings.Count; r++)
+                            {
+                                if (pole.Rings[r].Type == RingType.Locked || pole.Rings[r].Type == RingType.Key)
+                                {
+                                    hasKey = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (hasKey) break;
+                    }
+                    if (!hasKey)
+                    {
+                        warnings.Add("• Seviyede kilitli direk var ancak kilidi açmak için gereken Altın Anahtar Halka (Locked/Key) yerleştirilmemiş.");
+                    }
+                }
+
+                // 3. Kilitli direk içinde Taş (Stone) veya Bomba (Bomb) kontrolü
+                for (int p = 0; p < levelSO.Data.Poles.Count; p++)
+                {
+                    var pole = levelSO.Data.Poles[p];
+                    if (pole.IsLocked && pole.Rings != null)
+                    {
+                        for (int r = 0; r < pole.Rings.Count; r++)
+                        {
+                            if (pole.Rings[r].Type == RingType.Stone || pole.Rings[r].Type == RingType.Bomb)
+                            {
+                                warnings.Add($"• Direk {p} kilitli olmasına rağmen içinde Taş veya Bomba halkası var. Bu durum kilit açılmadan hamleyi bloke edeceği için uyumsuzdur.");
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // 4. Benzersiz mekanik limiti (Maks. 4)
+                var uniqueMechanics = new HashSet<RingType>();
+                for (int p = 0; p < levelSO.Data.Poles.Count; p++)
+                {
+                    if (levelSO.Data.Poles[p].IsLocked) uniqueMechanics.Add(RingType.Locked);
+                    if (levelSO.Data.Poles[p].Rings != null)
+                    {
+                        for (int r = 0; r < levelSO.Data.Poles[p].Rings.Count; r++)
+                        {
+                            var t = levelSO.Data.Poles[p].Rings[r].Type;
+                            if (t != RingType.Standard) uniqueMechanics.Add(t);
+                        }
+                    }
+                }
+                if (uniqueMechanics.Count > 4)
+                {
+                    warnings.Add($"• GDD uyarınca bir seviyede en fazla 4 farklı özel mekanik bulunabilir. Mevcut seviyede {uniqueMechanics.Count} farklı mekanik var.");
+                }
+            }
+
+            if (warnings.Count > 0)
+            {
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                {
+                    var titleStyle = new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = new Color(0.9f, 0.3f, 0.3f) } };
+                    EditorGUILayout.LabelField("⚠️ GDD UYUMLULUK UYARILARI:", titleStyle);
+                    foreach (var w in warnings)
+                    {
+                        EditorGUILayout.LabelField(w, EditorStyles.wordWrappedMiniLabel);
+                    }
+                }
+                EditorGUILayout.Space(4f);
+            }
+
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 EditorGUILayout.LabelField("Seviye Ayarları", EditorStyles.boldLabel);
@@ -99,7 +208,9 @@ namespace RingFlow.Editor
                     {
                         if (GUILayout.Button("Boş Direk Ekle", GUILayout.Height(24)))
                         {
-                            int ringCapacity = levelSO.Data.Poles.Count > 0 ? levelSO.Data.Poles[0].RingCapacity : 4;
+                            int ringCapacity = levelSO.Data.Poles.Count > 0 
+                                ? levelSO.Data.Poles[0].RingCapacity 
+                                : GameConfigDatabaseSO.Instance.GetMaxCapacityForLevel(levelSO.Data.LevelIndex);
                             Undo.RecordObject(levelSO, "Direk Ekle");
                             levelSO.Data.Poles.Add(new PoleData(ringCapacity));
                             EditorUtility.SetDirty(levelSO);
@@ -137,7 +248,9 @@ namespace RingFlow.Editor
                     board.AddRing(p, pole.Rings[r]);
             }
 
-            int maxCapacity = levelSO.Data.Poles.Count > 0 ? levelSO.Data.Poles[0].RingCapacity : 4;
+            int maxCapacity = levelSO.Data.Poles.Count > 0 
+                ? levelSO.Data.Poles[0].RingCapacity 
+                : GameConfigDatabaseSO.Instance.GetMaxCapacityForLevel(levelSO.Data.LevelIndex);
             var database = GameConfigDatabaseSO.Instance;
             int levelIndex = levelSO.Data.LevelIndex;
             var band = database.GetBandForLevel(levelIndex);
@@ -257,7 +370,7 @@ namespace RingFlow.Editor
                 EditorGUILayout.LabelField("Renk Sayısı", colorCount.ToString());
                 EditorGUILayout.LabelField("Direk Sayısı", poleCount.ToString());
                 EditorGUILayout.LabelField("Kapasite", maxCapacity.ToString());
-                EditorGUILayout.LabelField("Direk Kapasite Etiketi", levelData.Poles.Count > 0 ? levelData.Poles[0].CapacityText : "N/A");
+                EditorGUILayout.LabelField("Direk Kapasite Etiketi", levelData.Poles.Count > 0 ? levelData.Poles[0].CapacityText : "Yok");
                 EditorGUILayout.LabelField("Boş Direk", minEmptyPoles.ToString());
                 EditorGUILayout.LabelField("Mekanik Yoğunluğu", intensity.ToString());
                 EditorGUILayout.LabelField("Açık Mekanikler", string.Join(", ", allowed));

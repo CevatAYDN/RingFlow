@@ -114,19 +114,14 @@ namespace RingFlow.Gameplay
                 // GDD §4 & §5 Kuralları uyarınca özel halka mekaniklerini enjekte et
                 InjectSpecialMechanics(ref scrambledState, levelIndex, rand);
 
-                if (scrambledState.PoleCount > 1 && CountEmptyPoles(scrambledState) > 1)
-                {
-                    currentSeed++;
-                    attempts++;
-                    continue;
-                }
+
 
                 // Enforce that we successfully reached the minEmptyPoles count
                 int finalEmptyCount = 0;
                 for (int p = 0; p < scrambledState.PoleCount; p++)
                     if (scrambledState.IsEmpty(p)) finalEmptyCount++;
 
-                if (finalEmptyCount != minEmptyPoles)
+                if (finalEmptyCount < minEmptyPoles)
                 {
                     currentSeed++;
                     attempts++;

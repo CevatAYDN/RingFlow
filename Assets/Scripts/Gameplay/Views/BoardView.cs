@@ -92,7 +92,11 @@ namespace RingFlow.Gameplay
                 poleView.SetLocked(poleData.IsLocked);
                 poleObj.transform.localPosition = new Vector3(startX + p * spacing, F.PoleYPosition, 0f);
                 poleObj.transform.localRotation = Quaternion.identity;
-                poleObj.transform.localScale = F.PoleScale;
+                var poleScale = F.PoleScale;
+                int poleCap = poleData.RingCapacity > 0 ? poleData.RingCapacity : 4;
+                poleScale.y = F.PoleScale.y * (poleCap / 4f);
+                poleObj.transform.localScale = poleScale;
+
 
                 var renderers = poleObj.GetComponentsInChildren<Renderer>(true);
                 var poleMat = GetPoleMaterial(poleData.IsLocked);
@@ -149,9 +153,9 @@ namespace RingFlow.Gameplay
                     float targetWidth = 1.5f;
                     float targetHeight = 0.44f;
                     float meshHeight = 0.26f;
-                    float localX = targetWidth / F.PoleScale.x;
-                    float localY = (targetHeight / meshHeight) / F.PoleScale.y;
-                    float localZ = targetWidth / F.PoleScale.z;
+                    float localX = targetWidth / poleObj.transform.localScale.x;
+                    float localY = (targetHeight / meshHeight) / poleObj.transform.localScale.y;
+                    float localZ = targetWidth / poleObj.transform.localScale.z;
                     ringObj.transform.localScale = new Vector3(localX, localY, localZ);
 
                     var ringRenderer = ringObj.GetComponentInChildren<Renderer>();
