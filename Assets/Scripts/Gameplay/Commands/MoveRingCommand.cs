@@ -43,6 +43,7 @@ namespace RingFlow.Gameplay
             var ring = fromPole.TopRing;
 
             if (!TryReserveChainCapacity(ref ring, fromPole, toPole)) return false;
+            if (toPole.Rings.Count >= toPole.MaxCapacity) return false;
             if (!toPole.CanAddRing(ring)) return false;
 
             context = new MoveContext

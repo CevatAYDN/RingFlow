@@ -48,7 +48,7 @@ namespace RingFlow.Gameplay
             }
 
             // Find all Volume components
-            var volumes = FindObjectsByType(volumeType, FindObjectsSortMode.None);
+            var volumes = FindObjectsByType(volumeType, FindObjectsInactive.Include);
             if (volumes == null || volumes.Length == 0)
             {
                 Debug.LogWarning("[BloomPulse] No Volume components found. Bloom pulse disabled.");

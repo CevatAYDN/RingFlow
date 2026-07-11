@@ -143,12 +143,14 @@ Ring Flow tamamen kurallara dayalı deterministik bir puzzle oyunudur.
 
 ### 12. POLE SYSTEM
 Pole (Çubuk) oyunun temel taşıyıcı objesidir.
-* Maksimum 4 Ring taşır (Normal modda). Minimum 0 Ring içerir. Dikey konumlandırılır. Aynı anda yalnızca en üstteki Ring seçilebilir.
+* Standart modda her Pole için kapasite değeri config üzerinden belirlenir. Varsayılan kapasite 4’tür; ancak level tasarımında kapasite etiketleri ve tema bazlı varyasyonlar gösterilebilir.
+* Oyunu tamamlamak için her seviyede en az 1 boş pole gereklidir (çözüm algoritması için).
+* Dikey konumlandırılır. Aynı anda yalnızca en üstteki Ring seçilebilir.
 * **Direk Durumları (Pole States):**
   * `EMPTY`: Çubuk tamamen boştur.
-  * `PARTIAL`: 1-3 Ring içerir.
-  * `FULL`: 4 Ring içerir.
-  * `COMPLETED`: 4 Ring aynı renktedir (ve kilitlenir).
+  * `PARTIAL`: 1 veya daha fazla Ring içerir.
+  * `FULL`: Kapasiteye ulaşmıştır.
+  * `COMPLETED`: Aynı kapasitede, aynı renkten halka ile tamamlanmıştır (ve kilitlenebilir).
   * `LOCKED`: Bir kilit mekanizması ile kapatılmıştır.
   * `PORTAL`: Başka bir Pole'a bağlıdır.
   * `MOVING`: Yer değiştirme veya dönüş animasyonu oynamaktadır.

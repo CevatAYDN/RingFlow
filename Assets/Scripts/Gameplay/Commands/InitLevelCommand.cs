@@ -126,9 +126,10 @@ namespace RingFlow.Gameplay
             for (int i = 0; i < levelData.Poles.Count; i++)
             {
                 var pData = levelData.Poles[i];
-                var poleState = new PoleState { Id = i, MaxCapacity = pData.MaxCapacity, IsLocked = pData.IsLocked };
+                var poleState = new PoleState { Id = i, IsLocked = pData.IsLocked };
+                poleState.SetCapacity(pData.RingCapacity);
                 for (int r = 0; r < pData.Rings.Count; r++)
-                    poleState.AddRing(pData.Rings[r]);
+                    poleState.AddRing(pData.Rings[r].Clone());
                 _model.Poles.Add(poleState);
             }
             _model.TargetMovesCount.Value = levelData.TargetMoves;

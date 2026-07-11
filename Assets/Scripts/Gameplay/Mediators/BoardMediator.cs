@@ -249,11 +249,12 @@ namespace RingFlow.Gameplay
         {
             var board = new BoardState { PoleCount = m.Poles.Count };
             int maxCapacity = 0;
-            for (int p = 0; p < m.Poles.Count && p < 12; p++)
+            int poleCount = Math.Min(m.Poles.Count, 12);
+            for (int p = 0; p < poleCount; p++)
             {
                 var pole = m.Poles[p];
                 if (pole == null) continue;
-                if (pole.MaxCapacity > maxCapacity) maxCapacity = pole.MaxCapacity;
+                if (pole.RingCapacity > maxCapacity) maxCapacity = pole.RingCapacity;
                 board.SetPoleLocked(p, pole.IsLocked);
                 int count = pole.Rings.Count;
                 board.SetRingCount(p, count);

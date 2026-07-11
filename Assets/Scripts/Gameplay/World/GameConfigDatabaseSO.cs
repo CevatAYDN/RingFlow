@@ -76,12 +76,24 @@ namespace RingFlow.Gameplay
         public int ColorCount;
     }
 
+    [System.Serializable]
+    public struct LevelThemeData
+    {
+        public int StartLevel;
+        public int EndLevel;
+        public int ColorCount;
+        public List<WorldMechanicType> ForcedMechanics;
+    }
+
     [CreateAssetMenu(fileName = "GameConfigDatabase", menuName = "RingFlow/Game Config Database")]
     public class GameConfigDatabaseSO : ScriptableObject
     {
         public int TotalLevels = 2000;
+        public int LevelsPerThemeStep = 5;
+        public int MinimumEmptyPoles = 1;
         public List<DifficultyBandData> DifficultyBands = new();
         public List<ColorCurvePoint> ColorCurve = new();
+        public List<LevelThemeData> LevelThemes = new();
         public List<WorldConfigData> Worlds = new();
         public GameBalanceConfig BalanceConfig = new();
 
@@ -291,6 +303,7 @@ namespace RingFlow.Gameplay
 
             // Default 40 Worlds configuration
             Worlds = new List<WorldConfigData>();
+            LevelThemes = new List<LevelThemeData>();
             for (int i = 0; i < 40; i++)
             {
                 var w = new WorldConfigData
@@ -298,10 +311,9 @@ namespace RingFlow.Gameplay
                     WorldIndex = i,
                     Theme = i == 0 ? "Grass Valley" : $"World {i + 1}",
                     UnlockedByWorldIndex = i == 0 ? 0 : i - 1,
-                    IsEventWorld = (i + 1) % 5 == 0 // Boss world every 5 worlds
+                    IsEventWorld = (i + 1) % 5 == 0
                 };
 
-                // Mechanics mapping based on world index (GDD: 12 worlds for 12 mechanics)
                 if (i == 0) w.MechanicType = WorldMechanicType.None;
                 else if (i == 1) w.MechanicType = WorldMechanicType.Mystery;
                 else if (i == 2) w.MechanicType = WorldMechanicType.Frozen;
@@ -314,14 +326,20 @@ namespace RingFlow.Gameplay
                 else if (i == 9) w.MechanicType = WorldMechanicType.Magnet;
                 else if (i == 10) w.MechanicType = WorldMechanicType.Paint;
                 else if (i == 11) w.MechanicType = WorldMechanicType.Ghost;
-                else
-                {
-                    if (i >= 25) w.MechanicType = WorldMechanicType.RandomPool3;
-                    else if (i >= 18) w.MechanicType = WorldMechanicType.RandomPool2;
-                    else w.MechanicType = WorldMechanicType.RandomPool1;
-                }
+                else if (i >= 25) w.MechanicType = WorldMechanicType.RandomPool3;
+                else if (i >= 18) w.MechanicType = WorldMechanicType.RandomPool2;
+                else w.MechanicType = WorldMechanicType.RandomPool1;
 
                 Worlds.Add(w);
+
+                int startLevel = i * LevelsPerThemeStep + 1;
+                LevelThemes.Add(new LevelThemeData
+                {
+                    StartLevel = startLevel,
+                    EndLevel = Mathf.Min(startLevel + LevelsPerThemeStep - 1, TotalLevels),
+                    ColorCount = Mathf.Clamp(3 + (i / 2), 3, 10),
+                    ForcedMechanics = new List<WorldMechanicType> { w.MechanicType }
+                });
             }
         }
 
@@ -347,15 +365,16 @@ namespace RingFlow.Gameplay
 
         public int GetColorCountForLevel(int level)
         {
-            if (level == 1 || level == 2) return 2;
-            if (level == 3) return 3;
-
-            if (TotalLevels <= 50)
+            if (LevelThemes != null && LevelThemes.Count > 0)
             {
-                if (level <= 10) return 3;
-                if (level <= 20) return 4;
-                if (level <= 35) return 5;
-                return 6;
+                for (int i = 0; i < LevelThemes.Count; i++)
+                {
+                    var theme = LevelThemes[i];
+                    if (level >= theme.StartLevel && level <= theme.EndLevel)
+                    {
+                        return theme.ColorCount;
+                    }
+                }
             }
 
             if (ColorCurve == null || ColorCurve.Count == 0) return 3;
@@ -370,30 +389,12 @@ namespace RingFlow.Gameplay
 
         public int GetPoleCountForLevel(int level)
         {
-            if (level == 1 || level == 2) return 3;
-            if (level == 3) return 4;
-
             return GetColorCountForLevel(level) + GetMinEmptyPolesForLevel(level);
         }
 
         public int GetMinEmptyPolesForLevel(int level)
         {
-            if (level == 1 || level == 2) return 1;
-            if (level == 3) return 1;
-
-            if (TotalLevels <= 50)
-            {
-                if (level <= 30) return 2;
-                return 1;
-            }
-
-            if (DifficultyBands == null || DifficultyBands.Count == 0) return 1;
-            var band = GetBandForLevel(level);
-            foreach (var b in DifficultyBands)
-            {
-                if (b.Band == band) return b.MinEmptyPoles;
-            }
-            return 1;
+            return MinimumEmptyPoles > 0 ? MinimumEmptyPoles : 1;
         }
 
         public int GetMaxCapacityForLevel(int level)
@@ -412,8 +413,19 @@ namespace RingFlow.Gameplay
 
         public List<WorldMechanicType> GetAllowedMechanicsForLevel(int level)
         {
-            var band = GetBandForLevel(level);
+            if (LevelThemes != null && LevelThemes.Count > 0)
+            {
+                for (int i = 0; i < LevelThemes.Count; i++)
+                {
+                    var theme = LevelThemes[i];
+                    if (level >= theme.StartLevel && level <= theme.EndLevel && theme.ForcedMechanics != null && theme.ForcedMechanics.Count > 0)
+                    {
+                        return theme.ForcedMechanics;
+                    }
+                }
+            }
 
+            var band = GetBandForLevel(level);
             if (DifficultyBands != null && DifficultyBands.Count > 0)
             {
                 foreach (var b in DifficultyBands)
@@ -429,7 +441,6 @@ namespace RingFlow.Gameplay
                 }
             }
 
-            // Asset'te AllowedMechanics boşsa Band'a göre default döndür
             return GetDefaultAllowedMechanicsForBand(band);
         }
 
@@ -458,6 +469,18 @@ namespace RingFlow.Gameplay
 
         public int GetMechanicIntensityForLevel(int level)
         {
+            if (LevelThemes != null && LevelThemes.Count > 0)
+            {
+                for (int i = 0; i < LevelThemes.Count; i++)
+                {
+                    var theme = LevelThemes[i];
+                    if (level >= theme.StartLevel && level <= theme.EndLevel)
+                    {
+                        return Mathf.Max(1, theme.ForcedMechanics != null ? theme.ForcedMechanics.Count : 1);
+                    }
+                }
+            }
+
             var band = GetBandForLevel(level);
             if (band == DifficultyBand.Tutorial) return 1;
             if (band == DifficultyBand.Easy) return 1;
@@ -473,6 +496,29 @@ namespace RingFlow.Gameplay
             int levelsPerWorld = TotalLevels <= 50 ? 10 : 50;
             int world = (level - 1) / levelsPerWorld;
             return Mathf.Clamp(world, 0, Worlds.Count - 1);
+        }
+
+        public LevelThemeData GetLevelThemeForLevel(int level)
+        {
+            if (LevelThemes != null && LevelThemes.Count > 0)
+            {
+                for (int i = 0; i < LevelThemes.Count; i++)
+                {
+                    var theme = LevelThemes[i];
+                    if (level >= theme.StartLevel && level <= theme.EndLevel)
+                    {
+                        return theme;
+                    }
+                }
+            }
+
+            return new LevelThemeData
+            {
+                StartLevel = level,
+                EndLevel = level,
+                ColorCount = GetColorCountForLevel(level),
+                ForcedMechanics = GetAllowedMechanicsForLevel(level)
+            };
         }
 
         public WorldMechanicType GetMechanicForWorld(int worldIndex)

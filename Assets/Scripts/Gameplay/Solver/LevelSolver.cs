@@ -193,7 +193,7 @@ namespace RingFlow.Gameplay
         public static bool IsSolved(PoleState pole, int maxCapacity)
         {
             if (pole == null || pole.IsEmpty) return false;
-            if (!pole.IsFull) return false;
+            if (pole.Rings.Count != pole.RingCapacity) return false;
 
             var firstRing = pole.Rings[0];
             for (int i = 1; i < pole.Rings.Count; i++)

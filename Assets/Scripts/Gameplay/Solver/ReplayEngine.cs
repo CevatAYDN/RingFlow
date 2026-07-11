@@ -84,7 +84,8 @@ namespace RingFlow.Gameplay
             if (levelData == null)
                 return new ReplayResult { IsValid = false };
 
-            var board = new BoardState { PoleCount = poleCount, MaxCapacity = maxCapacity };
+            var board = new BoardState();
+            board.Initialize(poleCount, maxCapacity, levelData.Poles.Count);
             for (int p = 0; p < levelData.Poles.Count; p++)
             {
                 var poleData = levelData.Poles[p];

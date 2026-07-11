@@ -14,99 +14,79 @@ MonoBehaviour:
   m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.LevelDataSO
   Data:
     LevelIndex: 37
-    Seed: 1037
-    TargetMoves: 23
+    Seed: 137
+    TargetMoves: 14
     Poles:
     - MaxCapacity: 4
       Rings:
-      - Color: 5
+      - Color: 1
         Type: 0
         AdditionalData: 0
-      - Color: 5
-        Type: 0
-        AdditionalData: 0
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
-      - Color: 6
-        Type: 0
-        AdditionalData: 0
-      IsLocked: 0
-    - MaxCapacity: 4
-      Rings:
       - Color: 2
         Type: 0
         AdditionalData: 0
       - Color: 2
         Type: 0
         AdditionalData: 0
-      - Color: 1
-        Type: 0
-        AdditionalData: 0
-      - Color: 1
-        Type: 4
-        AdditionalData: 0
-      IsLocked: 0
-    - MaxCapacity: 4
-      Rings:
-      - Color: 3
-        Type: 0
-        AdditionalData: 0
-      - Color: 3
-        Type: 0
-        AdditionalData: 0
-      - Color: 5
-        Type: 0
-        AdditionalData: 0
-      - Color: 2
-        Type: 4
-        AdditionalData: 0
-      IsLocked: 0
-    - MaxCapacity: 4
-      Rings:
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
-      - Color: 5
-        Type: 0
-        AdditionalData: 0
-      - Color: 1
-        Type: 0
-        AdditionalData: 0
-      - Color: 6
-        Type: 0
-        AdditionalData: 0
-      IsLocked: 0
-    - MaxCapacity: 4
-      Rings:
-      - Color: 3
-        Type: 0
-        AdditionalData: 0
-      - Color: 1
-        Type: 0
-        AdditionalData: 0
-      - Color: 6
-        Type: 0
-        AdditionalData: 0
       - Color: 4
         Type: 0
         AdditionalData: 0
       IsLocked: 0
+      CapacityLabel: 4
+      RingTargetCount: 4
     - MaxCapacity: 4
       Rings: []
-      IsLocked: 1
+      IsLocked: 0
+      CapacityLabel: 4
+      RingTargetCount: 4
     - MaxCapacity: 4
       Rings:
+      - Color: 1
+        Type: 0
+        AdditionalData: 0
+      - Color: 2
+        Type: 0
+        AdditionalData: 0
       - Color: 4
         Type: 0
         AdditionalData: 0
       - Color: 2
         Type: 0
         AdditionalData: 0
+      IsLocked: 0
+      CapacityLabel: 4
+      RingTargetCount: 4
+    - MaxCapacity: 4
+      Rings:
+      - Color: 4
+        Type: 0
+        AdditionalData: 0
+      - Color: 4
+        Type: 0
+        AdditionalData: 0
+      - Color: 1
+        Type: 0
+        AdditionalData: 0
       - Color: 3
         Type: 0
         AdditionalData: 0
-      - Color: 6
+      IsLocked: 0
+      CapacityLabel: 4
+      RingTargetCount: 4
+    - MaxCapacity: 4
+      Rings:
+      - Color: 1
+        Type: 0
+        AdditionalData: 0
+      - Color: 3
+        Type: 0
+        AdditionalData: 0
+      - Color: 3
+        Type: 0
+        AdditionalData: 0
+      - Color: 3
         Type: 0
         AdditionalData: 0
       IsLocked: 0
+      CapacityLabel: 4
+      RingTargetCount: 4

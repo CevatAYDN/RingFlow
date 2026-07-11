@@ -309,6 +309,7 @@ namespace RingFlow.Editor
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 EditorGUILayout.LabelField("Hızlı İşlemler", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("1) Üret → 2) Doğrula → 3) Sahneye Uygula", EditorStyles.miniLabel);
                 EditorGUILayout.Space(2f);
 
                 using (new EditorGUILayout.HorizontalScope())
@@ -319,9 +320,9 @@ namespace RingFlow.Editor
                         _selectedTab = 2;
                     if (ActionCard("Araçlar", "Çalışma & Ayar", new Color(0.4f, 0.7f, 0.4f)))
                         _selectedTab = 3;
-                    if (ActionCard("Üret", "Tek Seviye", new Color(0.85f, 0.5f, 0.2f)))
+                    if (ActionCard("Hızlı Üret", "Seçili Seviye", new Color(0.85f, 0.5f, 0.2f)))
                         _generator.GenerateFromDashboard();
-                    if (ActionCard("Tahta Kur", "Sahnede Kur", new Color(0.85f, 0.3f, 0.3f)))
+                    if (ActionCard("Hızlı Kur", "Sahne Tahtası", new Color(0.85f, 0.3f, 0.3f)))
                         _visualBuilder.BuildFromDashboard();
                 }
             }
@@ -364,6 +365,8 @@ namespace RingFlow.Editor
                     if (GUILayout.Button("Toplu Üret", EditorStyles.miniButton, GUILayout.Width(110f)))
                         _generator.GenerateFromDashboardAll();
                 }
+
+                EditorGUILayout.HelpBox("İpucu: Seçili seviye üzerinde çalışın, sonra toplu üretimle aynı kuralları tüm aralığa uygulayın.", MessageType.Info);
             }
         }
 

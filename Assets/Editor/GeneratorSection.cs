@@ -13,6 +13,8 @@ namespace RingFlow.Editor
         private int _poleCount = 4;
         private int _colorCount = 3;
         private int _maxCapacity = 4;
+        private int _minEmptyPoles = 1;
+        private bool _lockMinEmptyPoles = true;
         private bool _autoSave = true;
         private bool _generateInProgress;
         private int _batchLevelCount = 100;
@@ -34,6 +36,8 @@ namespace RingFlow.Editor
             _poleCount = EditorPrefs.GetInt(EditorPrefsKeys.Poles, 4);
             _colorCount = EditorPrefs.GetInt(EditorPrefsKeys.Colors, 3);
             _maxCapacity = EditorPrefs.GetInt(EditorPrefsKeys.MaxCap, 4);
+            _minEmptyPoles = Mathf.Max(1, EditorPrefs.GetInt("RF_MinEmptyPoles", 1));
+            _lockMinEmptyPoles = EditorPrefs.GetBool("RF_LockMinEmptyPoles", true);
             _batchLevelCount = EditorPrefs.GetInt("RF_BatchLevelCount", 100);
         }
 
@@ -55,44 +59,61 @@ namespace RingFlow.Editor
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 EditorGUI.BeginChangeCheck();
-                _levelIndex  = EditorGUILayout.IntSlider("Seviye Endeksi",   _levelIndex,  1, WorldConfigSO.TotalLevels);
-                _seed        = EditorGUILayout.IntField  ("Rastgele Tohum (Seed)",   _seed);
-                _poleCount   = EditorGUILayout.IntSlider("Direk Sayısı",   _poleCount,   3, 12);
-                _colorCount  = EditorGUILayout.IntSlider("Renk Sayısı",  _colorCount,  2, 10);
-                _maxCapacity = EditorGUILayout.IntSlider("Maks. Halka Kapasitesi",  _maxCapacity, 3, 5);
-                DrawDifficultyPreview(_levelIndex);
-                if (EditorGUI.EndChangeCheck())
-                {
-                    EditorPrefs.SetInt(EditorPrefsKeys.LevelIndex, _levelIndex);
-                    EditorPrefs.SetInt(EditorPrefsKeys.Seed, _seed);
-                    EditorPrefs.SetInt(EditorPrefsKeys.Poles, _poleCount);
-                    EditorPrefs.SetInt(EditorPrefsKeys.Colors, _colorCount);
-                    EditorPrefs.SetInt(EditorPrefsKeys.MaxCap, _maxCapacity);
-                }
+            _levelIndex  = EditorGUILayout.IntSlider("Seviye Endeksi",   _levelIndex,  1, WorldConfigSO.TotalLevels);
+            _seed        = EditorGUILayout.IntField  ("Rastgele Tohum (Seed)",   _seed);
+            _poleCount   = EditorGUILayout.IntSlider("Direk Sayısı",   _poleCount,   3, 12);
+            _colorCount  = EditorGUILayout.IntSlider("Renk Sayısı",  _colorCount,  2, 10);
+            _maxCapacity = EditorGUILayout.IntSlider("Maks. Halka Kapasitesi",  _maxCapacity, 3, 5);
+            _minEmptyPoles = EditorGUILayout.IntSlider("Boş Direk", _minEmptyPoles, 1, 3);
+            _lockMinEmptyPoles = EditorGUILayout.Toggle("Boş Direk Kilitle", _lockMinEmptyPoles);
+            DrawDifficultyPreview(_levelIndex);
+            if (EditorGUI.EndChangeCheck())
+            {
+                EditorPrefs.SetInt(EditorPrefsKeys.LevelIndex, _levelIndex);
+                EditorPrefs.SetInt(EditorPrefsKeys.Seed, _seed);
+                EditorPrefs.SetInt(EditorPrefsKeys.Poles, _poleCount);
+                EditorPrefs.SetInt(EditorPrefsKeys.Colors, _colorCount);
+                EditorPrefs.SetInt(EditorPrefsKeys.MaxCap, _maxCapacity);
+                EditorPrefs.SetInt("RF_MinEmptyPoles", _minEmptyPoles);
+                EditorPrefs.SetBool("RF_LockMinEmptyPoles", _lockMinEmptyPoles);
+            }
 
                 EditorGUILayout.Space();
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    if (GUILayout.Button("GDD Zorluk Eğrisini Uygula", GUILayout.Height(ButtonHeight)))
+                    if (GUILayout.Button("GDD Kurallarını Uygula", GUILayout.Height(ButtonHeight)))
                         ApplyGddCurveParams();
 
                     if (GUILayout.Button("Tek Seviye Üret", GUILayout.Height(ButtonHeight)))
                         Generate();
+                    if (GUILayout.Button("Tema Önizleme", GUILayout.Height(ButtonHeight)))
+                        ApplyGddCurveParams();
                 }
 
                 _autoSave = EditorGUILayout.Toggle("Otomatik Asset Olarak Kaydet", _autoSave);
 
                 EditorGUILayout.Space();
                 EditorGUILayout.LabelField("Toplu Seviye Üretim Ayarları", EditorStyles.boldLabel);
-                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-                {
-                    _batchLevelCount = EditorGUILayout.IntField("Üretilecek Seviye Adedi", _batchLevelCount);
-                    _batchLevelCount = Mathf.Clamp(_batchLevelCount, 1, WorldConfigSO.TotalLevels);
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                _batchLevelCount = EditorGUILayout.IntField("Üretilecek Seviye Adedi", _batchLevelCount);
+                _batchLevelCount = Mathf.Clamp(_batchLevelCount, 1, WorldConfigSO.TotalLevels);
 
-                    if (GUILayout.Button($"{_batchLevelCount} Seviyeyi Toplu Üret", GUILayout.Height(ButtonHeight)))
-                        GenerateAllLevels();
-                }
+                if (GUILayout.Button($"{_batchLevelCount} Seviyeyi Toplu Üret", GUILayout.Height(ButtonHeight)))
+                    GenerateAllLevels();
+            }
+
+            EditorGUILayout.Space();
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                EditorGUILayout.LabelField("Hızlı Doğrulama", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("• Her seviyede en fazla 1 boş direk bırakılır.");
+                EditorGUILayout.LabelField("• Her 5 seviyede yeni tema ve mekanik önizlenir.");
+                EditorGUILayout.LabelField("• Üretim sonrası solver otomatik doğrular.");
+                if (GUILayout.Button("Seçili Seviyeyi Yeniden Üret", GUILayout.Height(ButtonHeight)))
+                    Generate();
+            }
 
                 if (_generatedLevel != null && !_autoSave &&
                     GUILayout.Button("Mevcut Seviyeyi Asset Olarak Kaydet", GUILayout.Height(ButtonHeight)))
@@ -111,31 +132,31 @@ namespace RingFlow.Editor
             var band = db.GetBandForLevel(levelIndex);
             int intensity = db.GetMechanicIntensityForLevel(levelIndex);
             var allowed = db.GetAllowedMechanicsForLevel(levelIndex);
+            var theme = db.GetLevelThemeForLevel(levelIndex);
             int worldIndex = db.GetWorldForLevel(levelIndex);
             var worldMechanic = db.GetMechanicForWorld(worldIndex);
+            int emptyPoles = db.GetMinEmptyPolesForLevel(levelIndex);
 
             EditorGUILayout.Space(4f);
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 EditorGUILayout.LabelField("Zorluk Önizleme", EditorStyles.boldLabel);
                 EditorGUILayout.LabelField($"Band: {band}");
+                EditorGUILayout.LabelField($"Tema: {theme.StartLevel}-{theme.EndLevel} | Renk: {theme.ColorCount}");
+                EditorGUILayout.LabelField($"Boş Direk: {emptyPoles} (zorunlu)");
                 EditorGUILayout.LabelField($"World {worldIndex + 1}: {(worldMechanic == WorldMechanicType.None ? "Yok" : worldMechanic.ToString())}");
                 EditorGUILayout.LabelField($"Mekanik Yoğunluğu: {intensity}");
-                EditorGUILayout.LabelField($"Band-İzinli Mekanikler: {string.Join(", ", allowed)}");
+                EditorGUILayout.LabelField($"Aktif Mekanikler: {string.Join(", ", allowed)}");
 
-                // Uyarı: World'ün mekanik tipi band tarafından desteklenmiyorsa bilgilendir
                 if (worldMechanic != WorldMechanicType.None
                     && worldMechanic != WorldMechanicType.RandomPool1
                     && worldMechanic != WorldMechanicType.RandomPool2
-                    && worldMechanic != WorldMechanicType.RandomPool3)
+                    && worldMechanic != WorldMechanicType.RandomPool3
+                    && !allowed.Contains(worldMechanic))
                 {
-                    if (!allowed.Contains(worldMechanic))
-                    {
-                        EditorGUILayout.HelpBox(
-                            $"World {worldIndex + 1}, {worldMechanic} mekaniğini öğretiyor, ancak band {band} bu mekaniği AllowedMechanics listesinde içermiyor. " +
-                            $"LevelGenerator, world'ün birincil mekaniğini yine de enjekte edecek, fakat ileride karışıklık olmaması için {worldMechanic}'i band {band}'e eklemeniz önerilir.",
-                            MessageType.Warning);
-                    }
+                    EditorGUILayout.HelpBox(
+                        $"World {worldIndex + 1} mekanik ataması ile bant izinleri uyuşmuyor. Generator yine world mekaniğini enjekte eder, ancak config güncellemesi önerilir.",
+                        MessageType.Warning);
                 }
             }
         }
@@ -155,6 +176,11 @@ namespace RingFlow.Editor
             EditorGUILayout.LabelField($"Band: {band} | Yoğunluk: {intensity}");
             EditorGUILayout.LabelField($"Açık Mekanikler: {string.Join(", ", allowed)}");
             EditorGUILayout.LabelField($"Hedef Hamle Sayısı: {_generatedLevel.TargetMoves} (Yapay Zeka Doğruladı)");
+            for (int i = 0; i < _generatedLevel.Poles.Count; i++)
+            {
+                EditorGUILayout.LabelField($"Direk {i + 1} Kapasite: {_generatedLevel.Poles[i].RingCapacity}");
+                EditorGUILayout.LabelField($"Direk {i + 1} Hedef Halka: {_generatedLevel.Poles[i].RingCapacity}");
+            }
 
             DrawLevelVisual(_generatedLevel);
 
@@ -189,7 +215,7 @@ namespace RingFlow.Editor
                 for (int p = 0; p < levelData.Poles.Count; p++)
                 {
                     var pole = levelData.Poles[p];
-                    int poleMaxCap = pole.MaxCapacity;
+                    int poleMaxCap = pole.RingCapacity;
 
                     using (new EditorGUILayout.VerticalScope(GUILayout.Width(poleWidth)))
                     {
@@ -271,11 +297,15 @@ namespace RingFlow.Editor
                     "Seviye endeksi sınırların dışında, düzeltiliyor.");
                 _levelIndex = Mathf.Clamp(_levelIndex, 1, WorldConfigSO.TotalLevels);
             }
-            if (_poleCount < _colorCount + 1) _poleCount = _colorCount + 1;
+            _colorCount = Mathf.Max(_colorCount, GameConfigDatabaseSO.Instance.GetColorCountForLevel(_levelIndex));
+            _poleCount = Mathf.Max(_colorCount + 1, GameConfigDatabaseSO.Instance.GetPoleCountForLevel(_levelIndex));
+            if (_lockMinEmptyPoles)
+                _minEmptyPoles = GameConfigDatabaseSO.Instance.GetMinEmptyPolesForLevel(_levelIndex);
+            _minEmptyPoles = Mathf.Max(1, _minEmptyPoles);
             if (_poleCount > 12) _poleCount = 12;
 
             NexusLog.Info("RingFlowEditor", nameof(Generate), _levelIndex.ToString(),
-                $"Seviye {_levelIndex} üretiliyor: Seed={_seed}, Direkler={_poleCount}, Renkler={_colorCount}, Kapasite={_maxCapacity}");
+                $"Seviye {_levelIndex} üretiliyor: Seed={_seed}, Direkler={_poleCount}, Renkler={_colorCount}, Kapasite={_maxCapacity}, BoşDirek={_minEmptyPoles}");
 
             _generatedLevel = LevelGenerator.GenerateLevel(_levelIndex, _seed, _poleCount, _colorCount, _maxCapacity);
 
@@ -301,9 +331,22 @@ namespace RingFlow.Editor
             }
 
             var solveResult = LevelSolver.Solve(board, _maxCapacity);
-            if (solveResult.IsSolvable && solveResult.MoveCount > 0)
+            var summary = new ValidationSummary
             {
-                _solveStatus = $"Yapay zeka çözümü bulundu: {solveResult.MoveCount} hamle.";
+                Solvable = solveResult.IsSolvable,
+                MoveCount = solveResult.MoveCount,
+                EmptyPoles = CountEmptyPoles(_generatedLevel),
+                MaxEmptyAllowed = 1
+            };
+
+            if (summary.EmptyPoles > summary.MaxEmptyAllowed)
+            {
+                _solveStatus = $"Geçersiz: en fazla {summary.MaxEmptyAllowed} boş direk olmalı, bulunan: {summary.EmptyPoles}.";
+                _solutionSteps.Clear();
+            }
+            else if (summary.Solvable && summary.MoveCount > 0)
+            {
+                _solveStatus = $"Yapay zeka çözümü bulundu: {summary.MoveCount} hamle.";
                 _solutionSteps.Clear();
                 foreach (var move in solveResult.Moves)
                     _solutionSteps.Add($"Halkayı Direk {move.FromPoleId}'den Direk {move.ToPoleId}'ye taşı.");
@@ -332,6 +375,7 @@ namespace RingFlow.Editor
             int originalPoleCount = _poleCount;
             int originalColorCount = _colorCount;
             int originalMaxCapacity = _maxCapacity;
+            int originalMinEmptyPoles = _minEmptyPoles;
 
             try
             {
@@ -340,7 +384,8 @@ namespace RingFlow.Editor
                     int poles = DifficultyCurve.PoleCountForLevel(level);
                     int colors = DifficultyCurve.ColorCountForLevel(level);
                     int maxCap = DifficultyCurve.MaxCapacityForLevel(level);
-                    if (poles < colors + 1) poles = colors + 1;
+                    int minEmpty = GameConfigDatabaseSO.Instance.GetMinEmptyPolesForLevel(level);
+                    if (poles < colors + minEmpty) poles = colors + minEmpty;
                     if (poles > 12) poles = 12;
 
                     var levelData = LevelGenerator.GenerateLevel(level, 100 + level, poles, colors, maxCap);
@@ -382,6 +427,7 @@ namespace RingFlow.Editor
             _poleCount = originalPoleCount;
             _colorCount = originalColorCount;
             _maxCapacity = originalMaxCapacity;
+            _minEmptyPoles = originalMinEmptyPoles;
         }
 
         private static void EnsureLevelsFolder(string folderPath)
@@ -450,13 +496,34 @@ namespace RingFlow.Editor
 
             foreach (var p in source.Poles)
             {
-                var poleClone = new PoleData(p.MaxCapacity) { IsLocked = p.IsLocked, Rings = new List<RingData>() };
+                var poleClone = new PoleData(p.RingCapacity) { IsLocked = p.IsLocked, Rings = new List<RingData>() };
                 foreach (var r in p.Rings)
                     poleClone.Rings.Add(new RingData(r.Color, r.Type, r.AdditionalData));
                 clone.Poles.Add(poleClone);
             }
 
             return clone;
+        }
+
+        private static int CountEmptyPoles(LevelData levelData)
+        {
+            if (levelData == null || levelData.Poles == null) return 0;
+            int empty = 0;
+            for (int i = 0; i < levelData.Poles.Count; i++)
+            {
+                if (levelData.Poles[i].Rings == null || levelData.Poles[i].Rings.Count == 0)
+                    empty++;
+            }
+            return empty;
+        }
+
+        [System.Serializable]
+        private struct ValidationSummary
+        {
+            public bool Solvable;
+            public int EmptyPoles;
+            public int MaxEmptyAllowed;
+            public int MoveCount;
         }
     }
 }

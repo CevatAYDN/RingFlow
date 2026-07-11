@@ -14,72 +14,62 @@ MonoBehaviour:
   m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.LevelDataSO
   Data:
     LevelIndex: 12
-    Seed: 1012
-    TargetMoves: 18
+    Seed: 113
+    TargetMoves: 7
     Poles:
     - MaxCapacity: 4
-      Rings:
-      - Color: 1
-        Type: 0
-        AdditionalData: 0
-      - Color: 3
-        Type: 0
-        AdditionalData: 0
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
-      - Color: 1
-        Type: 0
-        AdditionalData: 0
-      IsLocked: 0
-    - MaxCapacity: 4
       Rings: []
       IsLocked: 0
+      CapacityLabel: 4
+      RingTargetCount: 4
     - MaxCapacity: 4
       Rings:
       - Color: 3
+        Type: 0
+        AdditionalData: 0
+      - Color: 3
+        Type: 0
+        AdditionalData: 0
+      - Color: 3
+        Type: 0
+        AdditionalData: 0
+      - Color: 2
+        Type: 0
+        AdditionalData: 0
+      IsLocked: 0
+      CapacityLabel: 4
+      RingTargetCount: 4
+    - MaxCapacity: 4
+      Rings:
+      - Color: 1
         Type: 0
         AdditionalData: 0
       - Color: 1
         Type: 0
         AdditionalData: 0
-      - Color: 4
+      - Color: 2
         Type: 0
         AdditionalData: 0
       - Color: 2
         Type: 0
         AdditionalData: 0
       IsLocked: 0
+      CapacityLabel: 4
+      RingTargetCount: 4
     - MaxCapacity: 4
       Rings:
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
-      - Color: 3
-        Type: 0
-        AdditionalData: 0
-      - Color: 4
+      - Color: 1
         Type: 0
         AdditionalData: 0
       - Color: 1
         Type: 0
         AdditionalData: 0
-      IsLocked: 0
-    - MaxCapacity: 4
-      Rings:
-      - Color: 4
+      - Color: 2
         Type: 0
         AdditionalData: 0
       - Color: 3
         Type: 0
         AdditionalData: 0
-      - Color: 2
-        Type: 2
-        AdditionalData: 0
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
       IsLocked: 0
-    - MaxCapacity: 4
-      Rings: []
-      IsLocked: 0
+      CapacityLabel: 4
+      RingTargetCount: 4

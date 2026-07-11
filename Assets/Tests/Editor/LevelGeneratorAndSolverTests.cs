@@ -58,13 +58,13 @@ namespace RingFlow.Tests
         {
             // Level 1: Tutorial
             Assert.AreEqual(DifficultyBand.Tutorial, DifficultyCurve.BandForLevel(1));
-            Assert.AreEqual(2, DifficultyCurve.ColorCountForLevel(1));
-            Assert.AreEqual(3, DifficultyCurve.PoleCountForLevel(1));
+            Assert.AreEqual(3, DifficultyCurve.ColorCountForLevel(1));
+            Assert.AreEqual(4, DifficultyCurve.PoleCountForLevel(1));
 
-            // Level 55: Easy (4 colors + 2 MinEmptyPoles = 6 poles)
+            // Level 55: Easy (4 colors + 1 MinEmptyPoles = 5 poles)
             Assert.AreEqual(DifficultyBand.Easy, DifficultyCurve.BandForLevel(55));
             Assert.AreEqual(4, DifficultyCurve.ColorCountForLevel(55));
-            Assert.AreEqual(6, DifficultyCurve.PoleCountForLevel(55));
+            Assert.AreEqual(5, DifficultyCurve.PoleCountForLevel(55));
 
             // Level 1500: Master (10 colors + 1 MinEmptyPoles = 11 poles)
             Assert.AreEqual(DifficultyBand.Master, DifficultyCurve.BandForLevel(1500));

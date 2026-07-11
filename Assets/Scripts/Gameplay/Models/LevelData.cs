@@ -42,20 +42,26 @@ namespace RingFlow.Gameplay
             Type = type;
             AdditionalData = additionalData;
         }
+
+        public RingData Clone()
+        {
+            return new RingData(Color, Type, AdditionalData);
+        }
     }
 
     [Serializable]
     public class PoleData
     {
-        public int MaxCapacity = 4;
+        public int RingCapacity = 4;
         public List<RingData> Rings = new(4);
         public bool IsLocked;
+        public string CapacityText => $"{RingCapacity}";
 
         public PoleData() { }
 
-        public PoleData(int maxCapacity)
+        public PoleData(int ringCapacity)
         {
-            MaxCapacity = maxCapacity;
+            RingCapacity = ringCapacity > 0 ? ringCapacity : 4;
         }
     }
 

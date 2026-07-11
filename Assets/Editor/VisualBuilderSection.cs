@@ -35,15 +35,15 @@ namespace RingFlow.Editor
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 EditorGUILayout.HelpBox(
-                    "Spawns Cylinder primitives as poles and uses Torus.obj models as rings in the active scene.",
+                    "Sahne tahtası kur, temizle veya çözücü adımlarını önizle.",
                     MessageType.Info);
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    if (GUILayout.Button("Build Board in Scene", GUILayout.Height(36)))
+                    if (GUILayout.Button("Sahneyi Kur", GUILayout.Height(32)))
                         BuildInScene();
 
-                    if (GUILayout.Button("Clear Scene Board", GUILayout.Height(36)))
+                    if (GUILayout.Button("Sahneyi Temizle", GUILayout.Height(32)))
                     {
                         ClearScene();
                         _previewMoves.Clear();
@@ -55,10 +55,9 @@ namespace RingFlow.Editor
 
             EditorGUILayout.Space(6f);
 
-            // ── Edit-Mode Solver Step Preview ──
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                EditorGUILayout.LabelField("Edit-Mode Solver Step Preview", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Çözücü Önizleme", EditorStyles.boldLabel);
                 EditorGUILayout.Space(2f);
 
                 using (new EditorGUILayout.HorizontalScope())
@@ -68,7 +67,7 @@ namespace RingFlow.Editor
                         var board = ReadBoardFromScene();
                         if (board.PoleCount == 0)
                         {
-                            _solveStatusMsg = "Scene Board not found! Build it first.";
+                            _solveStatusMsg = "Sahne tahtası bulunamadı. Önce sahneyi kurun.";
                             _solvedSuccessfully = false;
                         }
                         else
@@ -185,18 +184,23 @@ namespace RingFlow.Editor
             NexusLog.Info("RingFlowEditor", nameof(BuildInScene), "", $"Building visual board with {poleCount} poles.");
 
             var board = new BoardState { PoleCount = poleCount, MaxCapacity = 4 };
+            int boardMaxCapacity = 4;
+            EditorGUILayout.LabelField($"Kapasite: {boardMaxCapacity}", EditorStyles.miniLabel);
             for (int p = 0; p < poleCount; p++)
             {
                 bool isLocked;
+                int maxCapacity;
                 List<RingData> rings;
                 if (polesToBuild != null)
                 {
                     isLocked = polesToBuild[p].IsLocked;
+                    maxCapacity = polesToBuild[p].MaxCapacity;
                     rings = polesToBuild[p].Rings;
                 }
                 else
                 {
                     isLocked = _generator.GeneratedLevel.Poles[p].IsLocked;
+                    maxCapacity = _generator.GeneratedLevel.Poles[p].RingCapacity;
                     rings = _generator.GeneratedLevel.Poles[p].Rings;
                 }
                 board.SetPoleLocked(p, isLocked);
@@ -207,7 +211,9 @@ namespace RingFlow.Editor
                     board.SetRingType(p, r, rings[r].Type);
                     board.SetRingAdditional(p, r, rings[r].AdditionalData);
                 }
+                boardMaxCapacity = maxCapacity;
             }
+            board.MaxCapacity = boardMaxCapacity;
 
             BuildBoardStateInScene(board);
 
@@ -344,6 +350,18 @@ namespace RingFlow.Editor
             float poleY = f != null ? f.PoleYPosition : 2.0f;
             poleObj.transform.position = new Vector3(startX + index * spacing, poleY, 0f);
             poleObj.transform.localScale = f != null ? f.PoleScale : new Vector3(0.2f, 2.0f, 0.2f);
+
+            var capacityLabel = new GameObject("CapacityLabel");
+            capacityLabel.transform.SetParent(poleObj.transform);
+            capacityLabel.transform.localPosition = new Vector3(0f, 2.25f, 0f);
+            var text = capacityLabel.AddComponent<TextMesh>();
+            int capacity = f != null ? Mathf.Max(1, Mathf.RoundToInt(f.PoleScale.y * 2f)) : 4;
+            text.text = $"Cap: {capacity}";
+            text.characterSize = 0.08f;
+            text.fontSize = 64;
+            text.anchor = TextAnchor.MiddleCenter;
+            text.alignment = TextAlignment.Center;
+            text.color = Color.white;
 
             var poleView = poleObj.AddComponent<PoleView>();
             poleView.PoleId = index;

@@ -144,8 +144,8 @@ namespace RingFlow.Gameplay
                         "Null pole in GameplayModel.Poles at index. Skipping.");
                     continue;
                 }
-                if (pole.MaxCapacity > maxCapacity)
-                    maxCapacity = pole.MaxCapacity;
+                if (pole.RingCapacity > maxCapacity)
+                    maxCapacity = pole.RingCapacity;
 
                 board.SetPoleLocked(p, pole.IsLocked);
 

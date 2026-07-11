@@ -9,6 +9,7 @@ namespace RingFlow.Editor
     public class LevelDataSOEditor : UnityEditor.Editor
     {
         private bool _showRawData;
+        private bool _showTools = true;
 
         private static RingColor s_brushColor = RingColor.Red;
         private static RingType s_brushType = RingType.Standard;
@@ -23,7 +24,7 @@ namespace RingFlow.Editor
             { fontSize = 9, fontStyle = FontStyle.Normal };
 
         private static GUIStyle BoldCompactButton => s_boldButtonStyle ??= new GUIStyle(GUI.skin.button)
-            { fontSize = 8, fontStyle = FontStyle.Bold };
+            { fontSize = 9, fontStyle = FontStyle.Bold };
 
         private static GUIStyle HeaderStyle
         {
@@ -69,43 +70,49 @@ namespace RingFlow.Editor
                     EditorUtility.SetDirty(levelSO);
             }
 
-            DrawColorPalette();
-            DrawTypePalette();
+            DrawLevelSummary(levelSO.Data);
             DrawDifficultyAndMechanicPreview(levelSO.Data);
-            DrawLevelVisualInteractive(levelSO.Data, levelSO);
 
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            _showTools = EditorGUILayout.Foldout(_showTools, "Seviye Düzenleme Araçları", true, EditorStyles.foldoutHeader);
+            if (_showTools)
             {
-                EditorGUILayout.LabelField("Seviye Tasarımcı Araçları", EditorStyles.boldLabel);
+                DrawColorPalette();
+                DrawTypePalette();
+                DrawLevelVisualInteractive(levelSO.Data, levelSO);
 
-                using (new EditorGUILayout.HorizontalScope())
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
-                    if (GUILayout.Button("Seviyeyi Doğrula & Çöz", GUILayout.Height(30)))
-                        VerifyAndSolve(levelSO);
+                    EditorGUILayout.LabelField("Seviye Tasarımcı Araçları", EditorStyles.boldLabel);
 
-                    if (GUILayout.Button("Seviyeyi Yeniden Karıştır", GUILayout.Height(30)))
-                        ReScramble(levelSO);
-                }
-
-                EditorGUILayout.Space(2f);
-
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    if (GUILayout.Button("Boş Direk Ekle", GUILayout.Height(24)))
+                    using (new EditorGUILayout.HorizontalScope())
                     {
-                        int maxCap = levelSO.Data.Poles.Count > 0 ? levelSO.Data.Poles[0].MaxCapacity : 4;
-                        Undo.RecordObject(levelSO, "Direk Ekle");
-                        levelSO.Data.Poles.Add(new PoleData(maxCap));
-                        EditorUtility.SetDirty(levelSO);
+                        if (GUILayout.Button("Seviyeyi Doğrula & Çöz", GUILayout.Height(30)))
+                            VerifyAndSolve(levelSO);
+
+                        if (GUILayout.Button("Seviyeyi Yeniden Karıştır", GUILayout.Height(30)))
+                            ReScramble(levelSO);
                     }
 
-                    if (levelSO.Data.Poles.Count > 0 && GUILayout.Button("Son Direği Kaldır", GUILayout.Height(24)))
+                    EditorGUILayout.Space(2f);
+
+                    using (new EditorGUILayout.HorizontalScope())
                     {
-                        if (EditorUtility.DisplayDialog("Direği Kaldır", "Son direği bu seviye yapılandırmasından kaldırmak istediğinize emin misiniz?", "Kaldır", "İptal"))
+                        if (GUILayout.Button("Boş Direk Ekle", GUILayout.Height(24)))
                         {
-                            Undo.RecordObject(levelSO, "Direk Kaldır");
-                            levelSO.Data.Poles.RemoveAt(levelSO.Data.Poles.Count - 1);
+                            int ringCapacity = levelSO.Data.Poles.Count > 0 ? levelSO.Data.Poles[0].RingCapacity : 4;
+                            Undo.RecordObject(levelSO, "Direk Ekle");
+                            levelSO.Data.Poles.Add(new PoleData(ringCapacity));
                             EditorUtility.SetDirty(levelSO);
+                        }
+
+                        if (levelSO.Data.Poles.Count > 0 && GUILayout.Button("Son Direği Kaldır", GUILayout.Height(24)))
+                        {
+                            if (EditorUtility.DisplayDialog("Direği Kaldır", "Son direği bu seviye yapılandırmasından kaldırmak istediğinize emin misiniz?", "Kaldır", "İptal"))
+                            {
+                                Undo.RecordObject(levelSO, "Direk Kaldır");
+                                levelSO.Data.Poles.RemoveAt(levelSO.Data.Poles.Count - 1);
+                                EditorUtility.SetDirty(levelSO);
+                            }
                         }
                     }
                 }
@@ -130,7 +137,7 @@ namespace RingFlow.Editor
                     board.AddRing(p, pole.Rings[r]);
             }
 
-            int maxCapacity = levelSO.Data.Poles.Count > 0 ? levelSO.Data.Poles[0].MaxCapacity : 4;
+            int maxCapacity = levelSO.Data.Poles.Count > 0 ? levelSO.Data.Poles[0].RingCapacity : 4;
             var database = GameConfigDatabaseSO.Instance;
             int levelIndex = levelSO.Data.LevelIndex;
             var band = database.GetBandForLevel(levelIndex);
@@ -158,7 +165,7 @@ namespace RingFlow.Editor
         {
             if (levelSO.Data.Poles.Count == 0) return;
 
-            int maxCap = levelSO.Data.Poles[0].MaxCapacity;
+            int maxCap = levelSO.Data.Poles[0].RingCapacity;
             var colorsList = new HashSet<RingColor>();
             foreach (var pole in levelSO.Data.Poles)
                 foreach (var ring in pole.Rings)
@@ -199,6 +206,33 @@ namespace RingFlow.Editor
             }
         }
 
+        private static void DrawLevelSummary(LevelData levelData)
+        {
+            if (levelData == null)
+            {
+                return;
+            }
+
+            int poleCount = levelData.Poles != null ? levelData.Poles.Count : 0;
+            int totalRings = 0;
+            int maxCapacity = 0;
+            for (int i = 0; i < poleCount; i++)
+            {
+                var pole = levelData.Poles[i];
+                if (pole == null) continue;
+                totalRings += pole.Rings != null ? pole.Rings.Count : 0;
+                if (pole.RingCapacity > maxCapacity) maxCapacity = pole.RingCapacity;
+            }
+
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                EditorGUILayout.LabelField("Seviye Özeti", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Direk Sayısı", poleCount.ToString());
+                EditorGUILayout.LabelField("Toplam Halka", totalRings.ToString());
+                EditorGUILayout.LabelField("Maks. Kapasite", maxCapacity.ToString());
+            }
+        }
+
         private static void DrawDifficultyAndMechanicPreview(LevelData levelData)
         {
             if (levelData == null)
@@ -223,6 +257,7 @@ namespace RingFlow.Editor
                 EditorGUILayout.LabelField("Renk Sayısı", colorCount.ToString());
                 EditorGUILayout.LabelField("Direk Sayısı", poleCount.ToString());
                 EditorGUILayout.LabelField("Kapasite", maxCapacity.ToString());
+                EditorGUILayout.LabelField("Direk Kapasite Etiketi", levelData.Poles.Count > 0 ? levelData.Poles[0].CapacityText : "N/A");
                 EditorGUILayout.LabelField("Boş Direk", minEmptyPoles.ToString());
                 EditorGUILayout.LabelField("Mekanik Yoğunluğu", intensity.ToString());
                 EditorGUILayout.LabelField("Açık Mekanikler", string.Join(", ", allowed));
@@ -350,7 +385,7 @@ namespace RingFlow.Editor
                     {
                         EditorGUILayout.LabelField($"Direk {p}", RingFlowEditorUtils.CenteredMiniLabel, GUILayout.Width(poleWidth));
 
-                        int maxCapacity = pole.MaxCapacity;
+                        int maxCapacity = pole.RingCapacity;
                         float height = maxCapacity * (ringHeight + 2f) + 12f;
                         Rect rect = GUILayoutUtility.GetRect(poleWidth, height);
 
@@ -439,12 +474,12 @@ namespace RingFlow.Editor
                         }
 
                         EditorGUI.BeginChangeCheck();
-                        int capNew = EditorGUILayout.IntField("Kapasite", pole.MaxCapacity, GUILayout.Width(poleWidth));
+                        int capNew = EditorGUILayout.IntField("Kapasite", pole.RingCapacity, GUILayout.Width(poleWidth));
                         if (EditorGUI.EndChangeCheck())
                         {
                             Undo.RecordObject(levelSO, "Direk Kapasitesi Değiştir");
-                            pole.MaxCapacity = Mathf.Clamp(capNew, 2, 8);
-                            while (pole.Rings.Count > pole.MaxCapacity)
+                            pole.RingCapacity = Mathf.Clamp(capNew, 2, 8);
+                            while (pole.Rings.Count > pole.RingCapacity)
                                 pole.Rings.RemoveAt(pole.Rings.Count - 1);
                             EditorUtility.SetDirty(levelSO);
                         }

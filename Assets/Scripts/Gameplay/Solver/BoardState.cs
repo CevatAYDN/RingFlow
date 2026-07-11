@@ -54,6 +54,12 @@ namespace RingFlow.Gameplay
         public int PoleCount;
         public int MaxCapacity;
 
+        public void Initialize(int poleCount, int maxCapacity, int poleCapacity)
+        {
+            PoleCount = poleCount;
+            MaxCapacity = maxCapacity;
+        }
+
         public uint GetPoleRaw(int index)
         {
             return index switch

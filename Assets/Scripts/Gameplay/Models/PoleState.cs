@@ -14,10 +14,30 @@ namespace RingFlow.Gameplay
 
         public int Id { get; set; }
         public List<RingData> Rings { get; } = new(4);
-        public int MaxCapacity { get; set; } = 4;
+        private int _maxCapacity = 4;
+        public int MaxCapacity
+        {
+            get => _maxCapacity;
+            set
+            {
+                _maxCapacity = value;
+                _ringCapacity = value;
+            }
+        }
         public bool IsLocked { get; set; }
 
-        public bool IsFull => Rings.Count >= MaxCapacity;
+        private int _ringCapacity = 4;
+        public int RingCapacity
+        {
+            get => _ringCapacity;
+            set
+            {
+                _ringCapacity = value;
+                _maxCapacity = value;
+            }
+        }
+
+        public bool IsFull => Rings.Count >= RingCapacity;
         public bool IsEmpty => Rings.Count == 0;
 
         public RingData TopRing => IsEmpty ? new RingData(RingColor.None) : Rings[^1];
@@ -39,23 +59,19 @@ namespace RingFlow.Gameplay
         {
             if (s_validationManager == null)
             {
-                // Fallback to legacy logic if manager not set (editor compatibility)
                 return LegacyCanAddRing(ring);
             }
 
-            // Special handling for universal rings (Rainbow, Paint)
             if (ring.Type == RingType.Rainbow || ring.Type == RingType.Paint)
             {
                 return s_validationManager.CanAddUniversalRing(ring, TopRing, IsFull, IsLocked);
             }
 
-            // Special handling for target pole having universal rings
             if (!IsEmpty && (TopRing.Type == RingType.Rainbow || TopRing.Type == RingType.Paint))
             {
                 return s_validationManager.CanAddUniversalRing(ring, TopRing, IsFull, IsLocked);
             }
 
-            // Standard validation through strategy manager
             return s_validationManager.CanAddRing(ring, TopRing, IsFull, IsLocked);
         }
 
@@ -78,10 +94,16 @@ namespace RingFlow.Gameplay
 
         public void AddRing(RingData ring)
         {
-            if (Rings.Count < MaxCapacity)
+            if (Rings.Count < RingCapacity)
             {
                 Rings.Add(ring);
             }
+        }
+
+        public void SetCapacity(int capacity)
+        {
+            RingCapacity = capacity > 0 ? capacity : 4;
+            MaxCapacity = RingCapacity;
         }
 
         public RingData PopRing()

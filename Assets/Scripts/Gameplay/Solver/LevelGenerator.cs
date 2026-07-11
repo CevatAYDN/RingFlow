@@ -16,20 +16,6 @@ namespace RingFlow.Gameplay
 
         public static LevelData GenerateLevel(int levelIndex, int seed, int poleCount, int colorCount, int maxCapacity)
         {
-            // Level 1-3 Tutorial Overrides
-            if (levelIndex == 1 || levelIndex == 2)
-            {
-                poleCount = 3;
-                colorCount = 2;
-                maxCapacity = 3;
-            }
-            else if (levelIndex == 3)
-            {
-                poleCount = 4;
-                colorCount = 3;
-                maxCapacity = 4;
-            }
-
             int currentSeed = seed;
             int attempts = 0;
 
@@ -43,7 +29,7 @@ namespace RingFlow.Gameplay
                 
                 // Kullanılabilir renkleri belirle (None rengini atla, index 1'den başla)
                 var selectedColors = new List<RingColor>();
-                for (int i = 1; i <= colorCount && i < colors.Length; i++)
+                for (int i = 1; i < colors.Length && selectedColors.Count < colorCount; i++)
                 {
                     selectedColors.Add(colors[i]);
                 }
@@ -51,10 +37,6 @@ namespace RingFlow.Gameplay
                 // Renk sayısı yeterli değilse fallback
                 if (selectedColors.Count < colorCount)
                 {
-                    for (int i = selectedColors.Count; i < colorCount && i < colors.Length; i++)
-                    {
-                        selectedColors.Add(colors[i]);
-                    }
                     colorCount = selectedColors.Count;
                 }
 
@@ -69,15 +51,15 @@ namespace RingFlow.Gameplay
                 }
 
                 int minEmptyPoles = DifficultyCurve.MinEmptyPolesForLevel(levelIndex);
+                if (minEmptyPoles < 1) minEmptyPoles = 1;
                 if (minEmptyPoles > poleCount - colorCount)
                 {
                     minEmptyPoles = poleCount - colorCount;
                 }
-                if (minEmptyPoles < 1) minEmptyPoles = 1;
 
                 int untouchedPoles = System.Math.Max(0, minEmptyPoles - 1);
                 int scramblePoleCount = poleCount - untouchedPoles;
-                if (scramblePoleCount < colorCount + 1) scramblePoleCount = colorCount + 1;
+                if (scramblePoleCount < colorCount + minEmptyPoles) scramblePoleCount = colorCount + minEmptyPoles;
                 if (scramblePoleCount > poleCount) scramblePoleCount = poleCount;
 
                 int validScrambleMoves = 0;
@@ -127,17 +109,24 @@ namespace RingFlow.Gameplay
                 // GDD §5 Enforce MinEmptyPoles by compacting least occupied poles if needed
                 EnforceEmptyPolesFloor(ref board, minEmptyPoles, maxCapacity);
 
-                // GDD §4 & §5 Kuralları uyarınca özel halka mekaniklerini enjekte et
-                InjectSpecialMechanics(ref board, levelIndex, rand);
-
                 var scrambledState = board;
+
+                // GDD §4 & §5 Kuralları uyarınca özel halka mekaniklerini enjekte et
+                InjectSpecialMechanics(ref scrambledState, levelIndex, rand);
+
+                if (scrambledState.PoleCount > 1 && CountEmptyPoles(scrambledState) > 1)
+                {
+                    currentSeed++;
+                    attempts++;
+                    continue;
+                }
 
                 // Enforce that we successfully reached the minEmptyPoles count
                 int finalEmptyCount = 0;
                 for (int p = 0; p < scrambledState.PoleCount; p++)
                     if (scrambledState.IsEmpty(p)) finalEmptyCount++;
 
-                if (finalEmptyCount < minEmptyPoles)
+                if (finalEmptyCount != minEmptyPoles)
                 {
                     currentSeed++;
                     attempts++;
@@ -148,7 +137,8 @@ namespace RingFlow.Gameplay
                 // Solver limit scales down with complexity to keep editor iteration fast:
                 // fewer colors → bigger budget (fast solve), 10 colors → tighter budget
                 int solverLimit = colorCount <= 3 ? 20000 : colorCount <= 5 ? 15000 : colorCount <= 7 ? 12000 : colorCount <= 9 ? 8000 : 6000;
-                var solveResult = LevelSolver.Solve(scrambledState, maxCapacity, maxStatesLimit: solverLimit);
+                int solverCapacity = maxCapacity;
+                var solveResult = LevelSolver.Solve(scrambledState, solverCapacity, maxStatesLimit: solverLimit);
 
                 if (solveResult.IsSolvable && solveResult.MoveCount > 0)
                 {
@@ -218,6 +208,16 @@ namespace RingFlow.Gameplay
             return null;
         }
 
+        private static int CountEmptyPoles(BoardState board)
+        {
+            int empty = 0;
+            for (int p = 0; p < board.PoleCount; p++)
+            {
+                if (board.IsEmpty(p)) empty++;
+            }
+            return empty;
+        }
+
         private static LevelData GenerateFallbackLevel(int levelIndex, int poleCount, int colorCount, int maxCapacity)
         {
             var board = new BoardState { PoleCount = poleCount, MaxCapacity = maxCapacity };
@@ -284,43 +284,22 @@ namespace RingFlow.Gameplay
 
         private static void InjectSpecialMechanics(ref BoardState board, int levelIndex, Random rand)
         {
+            var db = GameConfigDatabaseSO.Instance;
             int worldIndex = WorldConfigSO.WorldFromAbsoluteLevel(levelIndex);
-            var mechanic = GameConfigDatabaseSO.Instance.GetMechanicForWorld(worldIndex);
-            int intensity = GameConfigDatabaseSO.Instance.GetMechanicIntensityForLevel(levelIndex);
+            var mechanic = db.GetMechanicForWorld(worldIndex);
+            int intensity = db.GetMechanicIntensityForLevel(levelIndex);
+            var allowedMechanics = db.GetAllowedMechanicsForLevel(levelIndex);
+            var theme = db.GetLevelThemeForLevel(levelIndex);
 
-            // ── Transition Sieve ──
-            // Smooth out difficulty spikes in the first 10 levels of a new difficulty band
-            var band = GameConfigDatabaseSO.Instance.GetBandForLevel(levelIndex);
-            if (band != DifficultyBand.Tutorial)
+            if (theme.ForcedMechanics != null && theme.ForcedMechanics.Count > 0)
             {
-                int bandStartLevel = 1;
-                foreach (var b in GameConfigDatabaseSO.Instance.DifficultyBands)
-                {
-                    if (b.Band == band)
-                    {
-                        int prevMax = 0;
-                        foreach (var prevB in GameConfigDatabaseSO.Instance.DifficultyBands)
-                        {
-                            if (prevB.MaxLevel < b.MaxLevel && prevB.MaxLevel > prevMax)
-                            {
-                                prevMax = prevB.MaxLevel;
-                            }
-                        }
-                        bandStartLevel = prevMax + 1;
-                        break;
-                    }
-                }
-
-                int levelInBand = levelIndex - bandStartLevel;
-                if (levelInBand >= 0 && levelInBand < 10)
-                {
-                    intensity = Math.Max(1, intensity - 1);
-                }
+                if (levelIndex % db.LevelsPerThemeStep == 0)
+                    intensity += 1;
             }
 
-            if (mechanic == WorldMechanicType.None) return;
+            if (mechanic == WorldMechanicType.None && (theme.ForcedMechanics == null || theme.ForcedMechanics.Count == 0)) return;
 
-            int minEmptyPoles = DifficultyCurve.MinEmptyPolesForLevel(levelIndex);
+            int minEmptyPoles = db.GetMinEmptyPolesForLevel(levelIndex);
             int occupiedPoles = 0;
             for (int p = 0; p < board.PoleCount; p++)
                 if (!board.IsEmpty(p)) occupiedPoles++;
@@ -328,14 +307,11 @@ namespace RingFlow.Gameplay
             if (emptyPoles < minEmptyPoles)
             {
                 NexusLog.Warn("LevelGenerator", nameof(InjectSpecialMechanics), levelIndex.ToString(),
-                    $"Empty-pole floor violated for band of level {levelIndex}: empty={emptyPoles}, required>={minEmptyPoles}. " +
-                    $"Reduce colour/pole counts in the Generator section to comply with GDD §5.");
+                    $"Empty-pole floor violated for level {levelIndex}: empty={emptyPoles}, required>={minEmptyPoles}.");
             }
 
             int mechanicCount = intensity;
 
-            // GDD §4: Each world teaches exactly one mechanic. Inject it unconditionally —
-            // the band's AllowedMechanics gates only RandomPool, not world-assigned mechanics.
             if (mechanic == WorldMechanicType.Mystery)
                 InjectSingleType(ref board, RingType.Mystery, mechanicCount, rand);
             else if (mechanic == WorldMechanicType.Frozen)
@@ -362,9 +338,6 @@ namespace RingFlow.Gameplay
                      mechanic == WorldMechanicType.RandomPool2 ||
                      mechanic == WorldMechanicType.RandomPool3)
             {
-                // RandomPool filters through band's AllowedMechanics so early worlds
-                // don't get advanced ring types they haven't been taught yet.
-                var allowedMechanics = GameConfigDatabaseSO.Instance.GetAllowedMechanicsForLevel(levelIndex);
                 var availableTypes = new List<RingType>();
                 if (allowedMechanics.Contains(WorldMechanicType.Stone)) availableTypes.Add(RingType.Stone);
                 if (allowedMechanics.Contains(WorldMechanicType.Glass)) availableTypes.Add(RingType.Glass);
@@ -382,7 +355,6 @@ namespace RingFlow.Gameplay
                 else if (mechanic == WorldMechanicType.RandomPool2) numMechanicTypes = 2;
                 numMechanicTypes = Math.Min(numMechanicTypes, Math.Min(mechanicCount, availableTypes.Count));
 
-                // Pick distinct types to avoid stacking the same mechanic twice
                 var chosenTypes = new List<RingType>();
                 for (int i = 0; i < numMechanicTypes; i++)
                 {
@@ -391,8 +363,8 @@ namespace RingFlow.Gameplay
                     availableTypes.RemoveAt(idx);
                 }
 
-                foreach (var chosenType in chosenTypes)
-                    InjectSingleType(ref board, chosenType, mechanicCount, rand);
+                for (int i = 0; i < chosenTypes.Count; i++)
+                    InjectSingleType(ref board, chosenTypes[i], mechanicCount, rand);
             }
 
             EnforceMaxMechanicsLimit(ref board);
