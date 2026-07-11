@@ -10,7 +10,7 @@ namespace RingFlow.Editor
         [MenuItem("RingFlow/Migration/Sync GameConfigDatabase AllowedMechanics")]
         public static void SyncGameConfigDatabaseAllowedMechanics()
         {
-            const string assetPath = "Assets/Resources/GameConfigDatabase.asset";
+            const string assetPath = EditorPaths.GameConfigDbPath;
 
             var database = AssetDatabase.LoadAssetAtPath<GameConfigDatabaseSO>(assetPath);
             if (database == null)

@@ -9,7 +9,8 @@ namespace RingFlow.Gameplay
     /// Confetti celebration effect for level win.
     /// Zero runtime allocation — all child meshes pre-created in Awake.
     /// Uses shared static materials with GPU Instancing support.
-    /// Auto-despawns via DOTween callback, no coroutine allocation.
+    /// Per-piece tweens are local (not joined to a Sequence) so they auto-dispose
+    /// on completion, preventing the DOTween tween pool from growing unboundedly.
     /// </summary>
     public class ConfettiVfx : MonoBehaviour, IPoolable
     {
@@ -20,10 +21,19 @@ namespace RingFlow.Gameplay
             Color.cyan, Color.magenta, new Color(1f, 0.5f, 0f), new Color(0.5f, 0f, 1f)
         };
 
-        private GameObject[] _confettis;
-        private Renderer[] _renderers;
-        private MaterialPropertyBlock[] _mpbs;
-        private Sequence _animationSequence;
+        private struct Piece
+        {
+            public Transform Transform;
+            public Renderer Renderer;
+            public Vector3 StartPos;
+            public float StartX;
+            public float FallDuration;
+            public float SwayFreq;
+            public float SwayAmp;
+            public Vector3 EndPos;
+        }
+
+        private Piece[] _pieces;
         private int _count;
 
         [Inject] private IObjectPoolService _objectPoolService;
@@ -47,9 +57,7 @@ namespace RingFlow.Gameplay
 
             var config = GameFeelConfigSO.Instance;
             _count = config != null ? config.ConfettiCount : 40;
-            _confettis = new GameObject[_count];
-            _renderers = new Renderer[_count];
-            _mpbs = new MaterialPropertyBlock[_count];
+            _pieces = new Piece[_count];
 
             for (int i = 0; i < _count; i++)
             {
@@ -66,108 +74,111 @@ namespace RingFlow.Gameplay
                 mr.sharedMaterial = s_sharedMaterial;
                 mr.enabled = false;
 
-                _mpbs[i] = new MaterialPropertyBlock();
+                var mpb = new MaterialPropertyBlock();
                 int colorIdx = i % s_Colors.Length;
-                _mpbs[i].SetColor("_BaseColor", s_Colors[colorIdx]);
-                mr.SetPropertyBlock(_mpbs[i]);
+                mpb.SetColor("_BaseColor", s_Colors[colorIdx]);
+                mr.SetPropertyBlock(mpb);
 
-                _confettis[i] = c;
-                _renderers[i] = mr;
+                _pieces[i].Transform = c.transform;
+                _pieces[i].Renderer = mr;
             }
         }
 
         public void Initialize()
         {
-            _animationSequence?.Kill();
-            _animationSequence = DOTween.Sequence();
+            KillAllPieces();
 
             var config = GameFeelConfigSO.Instance;
             Vector2 fallDurRange = config != null ? config.ConfettiFallDuration : new Vector2(1.8f, 3.0f);
 
             for (int i = 0; i < _count; i++)
             {
-                var c = _confettis[i];
-                var r = _renderers[i];
-                if (c == null || r == null) continue;
+                ref Piece piece = ref _pieces[i];
+                var t = piece.Transform;
+                var r = piece.Renderer;
+                if (t == null || r == null) continue;
 
-                c.SetActive(true);
+                t.gameObject.SetActive(true);
                 r.enabled = true;
-                r.SetPropertyBlock(_mpbs[i]);
 
-                // Random starting position (above screen)
-                c.transform.localPosition = new Vector3(
+                piece.StartPos = new Vector3(
                     Random.Range(-5f, 15f),
                     Random.Range(6f, 9f),
                     Random.Range(-2f, 2f)
                 );
-                c.transform.localScale = new Vector3(
+                t.localPosition = piece.StartPos;
+                t.localScale = new Vector3(
                     Random.Range(0.15f, 0.25f),
                     Random.Range(0.15f, 0.25f),
                     1f
                 );
-                c.transform.localRotation = Quaternion.identity;
+                t.localRotation = Quaternion.identity;
 
-                float fallDuration = Random.Range(fallDurRange.x, fallDurRange.y);
-                float swayFreq = Random.Range(3f, 6f);
-                float swayAmp = Random.Range(0.5f, 1.2f);
-                float startX = c.transform.localPosition.x;
-                Vector3 startPos = c.transform.localPosition;
+                piece.StartX = piece.StartPos.x;
+                piece.FallDuration = Random.Range(fallDurRange.x, fallDurRange.y);
+                piece.SwayFreq = Random.Range(3f, 6f);
+                piece.SwayAmp = Random.Range(0.5f, 1.2f);
+                piece.EndPos = new Vector3(piece.StartX, piece.StartPos.y - 12f, piece.StartPos.z);
 
-                // Fall down
-                _animationSequence.Join(c.transform.DOLocalMoveY(startPos.y - 12f, fallDuration).SetEase(Ease.OutQuad));
+                t.DOLocalMoveY(piece.EndPos.y, piece.FallDuration)
+                    .SetEase(Ease.OutQuad)
+                    .SetAutoKill(true);
 
-                // Horizontal sway via DOTween
-                float localStartX = startX;
-                _animationSequence.Join(DOTween.To(
-                    () => 0f,
-                    val =>
-                    {
-                        if (c == null) return;
-                        float sway = Mathf.Sin(val * swayFreq) * swayAmp;
-                        var pos = c.transform.localPosition;
-                        c.transform.localPosition = new Vector3(localStartX + sway, pos.y, pos.z);
-                    },
-                    fallDuration,
-                    fallDuration
-                ).SetEase(Ease.Linear));
-
-                // Spin
-                _animationSequence.Join(c.transform.DOLocalRotate(
+                t.DOLocalRotate(
                     new Vector3(Random.Range(360f, 720f), Random.Range(360f, 720f), Random.Range(360f, 720f)),
-                    fallDuration,
+                    piece.FallDuration,
                     RotateMode.FastBeyond360
-                ).SetEase(Ease.Linear));
+                ).SetEase(Ease.Linear).SetAutoKill(true);
 
-                // Fade out at end
-                _animationSequence.Join(c.transform.DOScale(Vector3.zero, 0.5f)
-                    .SetDelay(fallDuration - 0.5f)
-                    .SetEase(Ease.InQuad));
+                t.DOScale(Vector3.zero, 0.5f)
+                    .SetDelay(piece.FallDuration - 0.5f)
+                    .SetEase(Ease.InQuad)
+                    .SetAutoKill(true)
+                    .OnComplete(() => DespawnIfAllDone());
             }
+        }
 
-            float despawnDelay = config != null ? config.ConfettiDespawnDelay : 3.1f;
-            _animationSequence.OnComplete(() =>
+        private void DespawnIfAllDone()
+        {
+            if (this == null) return;
+            for (int i = 0; i < _count; i++)
             {
-                HideAll();
-                DespawnSelf();
-            });
+                var t = _pieces[i].Transform;
+                if (t == null) continue;
+                if (t.gameObject.activeSelf) return;
+            }
+            DespawnSelf();
+        }
+
+        private void KillAllPieces()
+        {
+            for (int i = 0; i < _count; i++)
+            {
+                var t = _pieces[i].Transform;
+                if (t == null) continue;
+                DOTween.Kill(t);
+            }
         }
 
         private void HideAll()
         {
             for (int i = 0; i < _count; i++)
             {
-                if (_confettis[i] != null)
+                var t = _pieces[i].Transform;
+                var r = _pieces[i].Renderer;
+                if (t != null)
                 {
-                    _confettis[i].SetActive(false);
-                    _confettis[i].transform.localScale = Vector3.zero;
+                    t.gameObject.SetActive(false);
+                    t.localScale = Vector3.zero;
                 }
-                if (_renderers[i] != null)
-                    _renderers[i].enabled = false;
+                if (r != null) r.enabled = false;
             }
         }
 
         private void DespawnSelf()
         {
+            if (this == null) return;
+            HideAll();
             if (_objectPoolService != null)
                 _objectPoolService.Despawn(gameObject);
             else
@@ -180,15 +191,13 @@ namespace RingFlow.Gameplay
 
         public void OnDespawned()
         {
-            _animationSequence?.Kill();
-            _animationSequence = null;
+            KillAllPieces();
             HideAll();
         }
 
         private void OnDestroy()
         {
-            _animationSequence?.Kill();
-            _animationSequence = null;
+            KillAllPieces();
         }
     }
 }

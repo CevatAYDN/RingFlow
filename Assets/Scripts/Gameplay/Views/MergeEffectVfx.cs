@@ -10,6 +10,8 @@ namespace RingFlow.Gameplay
     /// Each ring on the pole shrinks into a central point with a glowing trail,
     /// then bursts outward as ring-shaped particles.
     /// Zero runtime allocation — all child meshes pre-created in Awake.
+    /// Per-piece tweens are local (not joined to a Sequence) so they auto-dispose
+    /// on completion, preventing the DOTween tween pool from growing unboundedly.
     /// </summary>
     public class MergeEffectVfx : MonoBehaviour, IPoolable
     {
@@ -17,16 +19,20 @@ namespace RingFlow.Gameplay
         private static Material s_sharedMaterial;
         private static Material s_glowMaterial;
 
-        private GameObject[] _mergeParticles;
-        private Renderer[] _mergeRenderers;
-        private MaterialPropertyBlock _mpb;
+        private struct ParticlePiece
+        {
+            public Transform Transform;
+            public Renderer Renderer;
+        }
 
-        private GameObject _glowOrb;
+        private ParticlePiece[] _particles;
+        private Transform _glowOrb;
         private Renderer _glowRenderer;
+        private MaterialPropertyBlock _mpb;
         private MaterialPropertyBlock _glowMpb;
 
         private int _particleCount;
-        private Sequence _mergeSequence;
+        private int _activeCount;
 
         [Inject] private IObjectPoolService _objectPoolService;
 
@@ -41,11 +47,8 @@ namespace RingFlow.Gameplay
             var config = GameFeelConfigSO.Instance;
             int burstCount = config != null ? config.MergeBurstCount : 16;
             _particleCount = burstCount;
+            _particles = new ParticlePiece[_particleCount];
 
-            _mergeParticles = new GameObject[_particleCount];
-            _mergeRenderers = new Renderer[_particleCount];
-
-            // Pre-create burst particles (ring segments)
             for (int i = 0; i < _particleCount; i++)
             {
                 var p = new GameObject("MergeBurst_" + i);
@@ -61,21 +64,20 @@ namespace RingFlow.Gameplay
                 mr.sharedMaterial = s_sharedMaterial;
                 mr.enabled = false;
 
-                _mergeParticles[i] = p;
-                _mergeRenderers[i] = mr;
+                _particles[i].Transform = p.transform;
+                _particles[i].Renderer = mr;
             }
 
-            // Pre-create glow orb
-            _glowOrb = new GameObject("MergeGlowOrb");
-            _glowOrb.transform.SetParent(transform, false);
-            _glowOrb.transform.localPosition = Vector3.zero;
-            _glowOrb.transform.localScale = Vector3.zero;
-            _glowOrb.SetActive(false);
+            _glowOrb = new GameObject("MergeGlowOrb").transform;
+            _glowOrb.SetParent(transform, false);
+            _glowOrb.localPosition = Vector3.zero;
+            _glowOrb.localScale = Vector3.zero;
+            _glowOrb.gameObject.SetActive(false);
 
-            var orbMf = _glowOrb.AddComponent<MeshFilter>();
+            var orbMf = _glowOrb.gameObject.AddComponent<MeshFilter>();
             orbMf.sharedMesh = VfxMeshCache.SparkMesh;
 
-            _glowRenderer = _glowOrb.AddComponent<MeshRenderer>();
+            _glowRenderer = _glowOrb.gameObject.AddComponent<MeshRenderer>();
             _glowRenderer.sharedMaterial = s_glowMaterial;
             _glowRenderer.enabled = false;
         }
@@ -99,7 +101,6 @@ namespace RingFlow.Gameplay
                 s_sharedMaterial.SetFloat("_Smoothness", 0.9f);
             }
 
-            // Glow material — emissive unlit-like appearance via high smoothness + emission
             if (s_glowMaterial == null && s_litShader != null)
             {
                 s_glowMaterial = new Material(s_litShader)
@@ -116,15 +117,9 @@ namespace RingFlow.Gameplay
         /// <summary>
         /// Play the merge effect at the given position.
         /// </summary>
-        /// <param name="position">World position of the pole top.</param>
-        /// <param name="ringColor">Primary ring color for the burst.</param>
-        /// <param name="ringCount">Number of rings on the pole (scales effect intensity).</param>
-        /// <param name="isFinalPole">Whether this is the last pole (full intensity).</param>
         public void Initialize(Vector3 position, Color ringColor, int ringCount, bool isFinalPole)
         {
-            _mergeSequence?.Kill();
-            _mergeSequence = DOTween.Sequence();
-
+            KillAllLocalTweens();
             transform.position = position;
 
             float intensityScale = Mathf.Lerp(0.6f, 1.2f, (ringCount - 1) / 3f);
@@ -133,46 +128,53 @@ namespace RingFlow.Gameplay
             _mpb.SetColor("_BaseColor", ringColor);
             _glowMpb.SetColor("_BaseColor", ringColor);
 
-            // Phase 1: Glow orb appears and expands (0s - 0.25s)
-            _glowOrb.SetActive(true);
+            // Phase 1: glow orb appear
+            _glowOrb.gameObject.SetActive(true);
             _glowRenderer.enabled = true;
             _glowRenderer.SetPropertyBlock(_glowMpb);
-            _glowOrb.transform.localScale = Vector3.zero;
-            _glowOrb.transform.localRotation = Quaternion.identity;
+            _glowOrb.localScale = Vector3.zero;
+            _glowOrb.localRotation = Quaternion.identity;
 
-            _mergeSequence.Append(_glowOrb.transform
-                .DOScale(Vector3.one * 0.5f * intensityScale, 0.2f)
-                .SetEase(Ease.OutBack));
-            _mergeSequence.Join(_glowOrb.transform
-                .DORotate(new Vector3(0f, 180f, 0f), 0.25f, RotateMode.FastBeyond360)
-                .SetEase(Ease.OutQuad));
-
-            // Phase 2: Orb shrinks (absorption "pop") (0.25s - 0.45s)
-            _mergeSequence.Append(_glowOrb.transform
-                .DOScale(Vector3.zero, 0.2f)
-                .SetEase(Ease.InBack));
-            _mergeSequence.Join(_glowOrb.transform
-                .DORotate(new Vector3(0f, 360f, 0f), 0.2f, RotateMode.FastBeyond360)
-                .SetEase(Ease.InQuad));
-
-            // Phase 3: Burst particles (0.45s - 0.95s)
+            float glowExpand = 0.2f;
+            float glowShrink = 0.2f;
             float burstDuration = isFinalPole ? 0.6f : 0.4f;
             float burstScale = isFinalPole ? 1.5f : 1.0f;
+            float finalDespawnAt = glowExpand + glowShrink + burstDuration;
 
+            _glowOrb.DOScale(Vector3.one * 0.5f * intensityScale, glowExpand)
+                .SetEase(Ease.OutBack)
+                .SetAutoKill(true);
+
+            _glowOrb.DORotate(new Vector3(0f, 180f, 0f), glowExpand, RotateMode.FastBeyond360)
+                .SetEase(Ease.OutQuad)
+                .SetAutoKill(true);
+
+            _glowOrb.DOScale(Vector3.zero, glowShrink)
+                .SetDelay(glowExpand)
+                .SetEase(Ease.InBack)
+                .SetAutoKill(true);
+
+            _glowOrb.DORotate(new Vector3(0f, 360f, 0f), glowShrink, RotateMode.FastBeyond360)
+                .SetDelay(glowExpand)
+                .SetEase(Ease.InQuad)
+                .SetAutoKill(true);
+
+            // Phase 2: burst pieces
+            int activeParticles = 0;
             for (int i = 0; i < _particleCount; i++)
             {
-                var p = _mergeParticles[i];
-                var r = _mergeRenderers[i];
-                if (p == null || r == null) continue;
+                ref var piece = ref _particles[i];
+                var t = piece.Transform;
+                var r = piece.Renderer;
+                if (t == null || r == null) continue;
 
-                p.SetActive(true);
+                t.gameObject.SetActive(true);
                 r.enabled = true;
                 r.SetPropertyBlock(_mpb);
-                p.transform.localPosition = Vector3.zero;
-                p.transform.localScale = Vector3.one * Random.Range(0.15f, 0.3f) * intensityScale * burstScale;
-                p.transform.localRotation = Quaternion.identity;
+                t.localPosition = Vector3.zero;
+                t.localScale = Vector3.one * Random.Range(0.15f, 0.3f) * intensityScale * burstScale;
+                t.localRotation = Quaternion.identity;
 
-                // Ring-shaped burst: distribute in a disk (XZ plane) with slight vertical variation
                 float angle = (float)i / _particleCount * Mathf.PI * 2f;
                 float radius = Random.Range(1.8f, 3.5f) * intensityScale * burstScale;
                 Vector3 burstDir = new Vector3(
@@ -181,25 +183,31 @@ namespace RingFlow.Gameplay
                     Mathf.Sin(angle) * radius
                 );
 
-                _mergeSequence.Join(p.transform
-                    .DOLocalMove(burstDir, burstDuration)
-                    .SetEase(Ease.OutQuad));
-                _mergeSequence.Join(p.transform
-                    .DOScale(Vector3.zero, burstDuration)
-                    .SetEase(Ease.InQuad));
-                _mergeSequence.Join(p.transform
-                    .DOLocalRotate(
-                        new Vector3(Random.Range(-180f, 180f), Random.Range(-180f, 180f), Random.Range(-180f, 180f)),
-                        burstDuration,
-                        RotateMode.FastBeyond360
-                    ).SetEase(Ease.OutQuad));
-            }
+                float startDelay = glowExpand + glowShrink;
+                t.DOLocalMove(burstDir, burstDuration)
+                    .SetDelay(startDelay)
+                    .SetEase(Ease.OutQuad)
+                    .SetAutoKill(true);
 
-            _mergeSequence.OnComplete(() =>
-            {
-                HideAll();
-                DespawnSelf();
-            });
+                t.DOScale(Vector3.zero, burstDuration)
+                    .SetDelay(startDelay)
+                    .SetEase(Ease.InQuad)
+                    .SetAutoKill(true);
+
+                t.DOLocalRotate(
+                    new Vector3(Random.Range(-180f, 180f), Random.Range(-180f, 180f), Random.Range(-180f, 180f)),
+                    burstDuration,
+                    RotateMode.FastBeyond360
+                )
+                    .SetDelay(startDelay)
+                    .SetEase(Ease.OutQuad)
+                    .SetAutoKill(true);
+
+                activeParticles++;
+            }
+            _activeCount = activeParticles;
+
+            Invoke(nameof(DespawnSelf), finalDespawnAt);
         }
 
         /// <summary>
@@ -207,9 +215,7 @@ namespace RingFlow.Gameplay
         /// </summary>
         public void InitializeBurstOnly(Vector3 position, Color color)
         {
-            _mergeSequence?.Kill();
-            _mergeSequence = DOTween.Sequence();
-
+            KillAllLocalTweens();
             transform.position = position;
 
             _mpb.SetColor("_BaseColor", color);
@@ -218,16 +224,17 @@ namespace RingFlow.Gameplay
 
             for (int i = 0; i < _particleCount; i++)
             {
-                var p = _mergeParticles[i];
-                var r = _mergeRenderers[i];
-                if (p == null || r == null) continue;
+                ref var piece = ref _particles[i];
+                var t = piece.Transform;
+                var r = piece.Renderer;
+                if (t == null || r == null) continue;
 
-                p.SetActive(true);
+                t.gameObject.SetActive(true);
                 r.enabled = true;
                 r.SetPropertyBlock(_mpb);
-                p.transform.localPosition = Vector3.zero;
-                p.transform.localScale = Vector3.one * Random.Range(0.1f, 0.2f);
-                p.transform.localRotation = Quaternion.identity;
+                t.localPosition = Vector3.zero;
+                t.localScale = Vector3.one * Random.Range(0.1f, 0.2f);
+                t.localRotation = Quaternion.identity;
 
                 float angle = (float)i / _particleCount * Mathf.PI * 2f;
                 float radius = Random.Range(0.8f, 1.8f);
@@ -237,40 +244,55 @@ namespace RingFlow.Gameplay
                     Mathf.Sin(angle) * radius
                 );
 
-                _mergeSequence.Join(p.transform.DOLocalMove(burstDir, burstDuration).SetEase(Ease.OutQuad));
-                _mergeSequence.Join(p.transform.DOScale(Vector3.zero, burstDuration).SetEase(Ease.InQuad));
+                t.DOLocalMove(burstDir, burstDuration)
+                    .SetEase(Ease.OutQuad)
+                    .SetAutoKill(true);
+                t.DOScale(Vector3.zero, burstDuration)
+                    .SetEase(Ease.InQuad)
+                    .SetAutoKill(true);
             }
+            _activeCount = _particleCount;
 
-            _mergeSequence.OnComplete(() =>
+            Invoke(nameof(DespawnSelf), burstDuration);
+        }
+
+        private void KillAllLocalTweens()
+        {
+            CancelInvoke(nameof(DespawnSelf));
+            if (_glowOrb != null) DOTween.Kill(_glowOrb);
+            for (int i = 0; i < _particleCount; i++)
             {
-                HideAll();
-                DespawnSelf();
-            });
+                var t = _particles[i].Transform;
+                if (t != null) DOTween.Kill(t);
+            }
         }
 
         private void HideAll()
         {
             for (int i = 0; i < _particleCount; i++)
             {
-                if (_mergeParticles[i] != null)
+                var t = _particles[i].Transform;
+                var r = _particles[i].Renderer;
+                if (t != null)
                 {
-                    _mergeParticles[i].SetActive(false);
-                    _mergeParticles[i].transform.localScale = Vector3.zero;
+                    t.gameObject.SetActive(false);
+                    t.localScale = Vector3.zero;
                 }
-                if (_mergeRenderers[i] != null)
-                    _mergeRenderers[i].enabled = false;
+                if (r != null) r.enabled = false;
             }
             if (_glowOrb != null)
             {
-                _glowOrb.SetActive(false);
-                _glowOrb.transform.localScale = Vector3.zero;
+                _glowOrb.gameObject.SetActive(false);
+                _glowOrb.localScale = Vector3.zero;
             }
-            if (_glowRenderer != null)
-                _glowRenderer.enabled = false;
+            if (_glowRenderer != null) _glowRenderer.enabled = false;
         }
 
         private void DespawnSelf()
         {
+            if (this == null) return;
+            CancelInvoke(nameof(DespawnSelf));
+            HideAll();
             if (_objectPoolService != null)
                 _objectPoolService.Despawn(gameObject);
             else
@@ -281,15 +303,13 @@ namespace RingFlow.Gameplay
 
         public void OnDespawned()
         {
-            _mergeSequence?.Kill();
-            _mergeSequence = null;
+            KillAllLocalTweens();
             HideAll();
         }
 
         private void OnDestroy()
         {
-            _mergeSequence?.Kill();
-            _mergeSequence = null;
+            KillAllLocalTweens();
         }
     }
 }

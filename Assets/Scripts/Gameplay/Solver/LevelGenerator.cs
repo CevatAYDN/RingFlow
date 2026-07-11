@@ -18,8 +18,10 @@ namespace RingFlow.Gameplay
         {
             int currentSeed = seed;
             int attempts = 0;
+            var candidates = new List<(LevelData level, float diff)>();
+            float targetScore = 15f + (levelIndex / 2000f) * 125f;
 
-            while (attempts < 50) // GDD: Up to 50 seed retry limit for softlock protection
+            while (attempts < 50 && candidates.Count < 5)
             {
                 var rand = new Random(currentSeed);
                 var board = new BoardState { PoleCount = poleCount, MaxCapacity = maxCapacity };
@@ -114,8 +116,6 @@ namespace RingFlow.Gameplay
                 // GDD §4 & §5 Kuralları uyarınca özel halka mekaniklerini enjekte et
                 InjectSpecialMechanics(ref scrambledState, levelIndex, rand);
 
-
-
                 // Enforce that we successfully reached the minEmptyPoles count
                 int finalEmptyCount = 0;
                 for (int p = 0; p < scrambledState.PoleCount; p++)
@@ -128,22 +128,21 @@ namespace RingFlow.Gameplay
                     continue;
                 }
 
-                // 3. Çözülebilirliği ve optimal hamle sayısını test et
-                // Solver limit scales down with complexity to keep editor iteration fast:
-                // fewer colors → bigger budget (fast solve), 10 colors → tighter budget
-                int solverLimit = colorCount <= 3 ? 20000 : colorCount <= 5 ? 15000 : colorCount <= 7 ? 12000 : colorCount <= 9 ? 8000 : 6000;
+                // 3. Çözülebilirliği ve optimal hamle sayısını test et.
+                // Solver budget scales with color count: deeper color spaces need
+                // proportionally more IDA* states before a path is found. 4–5 colors
+                // were under-budgeted (15000) which caused every seed in the 50-iteration
+                // window to abort — see level-21 cluster failure. Doubled here.
+                int solverLimit = colorCount <= 3 ? 20000
+                                : colorCount <= 5 ? 30000
+                                : colorCount <= 7 ? 20000
+                                : colorCount <= 9 ? 12000
+                                : 8000;
                 int solverCapacity = maxCapacity;
                 var solveResult = LevelSolver.Solve(scrambledState, solverCapacity, maxStatesLimit: solverLimit);
 
-                if (solveResult.IsSolvable && solveResult.MoveCount > 0)
+                if (solveResult.IsSolvable && solveResult.MoveCount >= 2)
                 {
-                    if (solveResult.MoveCount < 2)
-                    {
-                        currentSeed++;
-                        attempts++;
-                        continue;
-                    }
-
                     var levelData = new LevelData
                     {
                         LevelIndex = levelIndex,
@@ -166,7 +165,7 @@ namespace RingFlow.Gameplay
                             int additionalData = 0;
                             if (type == RingType.Bomb)
                             {
-                                additionalData = 5; // GDD: Bomb (sayaç 5→0)
+                                additionalData = 5;
                             }
                             else if (type == RingType.Chain)
                             {
@@ -177,18 +176,36 @@ namespace RingFlow.Gameplay
                         levelData.Poles.Add(poleData);
                     }
 
-                    if (attempts > 0)
+                    // GDD Zorluk Puanı hesaplama ve karşılaştırma
+                    int specialCount = 0;
+                    for (int p = 0; p < scrambledState.PoleCount; p++)
                     {
-                        NexusLog.Info("LevelGenerator", nameof(GenerateLevel), levelIndex.ToString(),
-                            $"Solvable level found on seed retry {attempts} (target moves={solveResult.MoveCount}).");
+                        if (scrambledState.IsPoleLocked(p)) specialCount++;
+                        int rCount = scrambledState.GetRingCount(p);
+                        for (int r = 0; r < rCount; r++)
+                        {
+                            if (scrambledState.GetRingType(p, r) != RingType.Standard)
+                                specialCount++;
+                        }
                     }
-
-                    return levelData;
+                    float difficultyScore = (scrambledState.PoleCount * 2.5f) + (colorCount * 3.0f) + (solveResult.MoveCount * 0.8f) + (finalEmptyCount * -4.0f) + (specialCount * 5.0f);
+                    float scoreDiff = Math.Abs(difficultyScore - targetScore);
+                    candidates.Add((levelData, scoreDiff));
                 }
 
-                // Çözülemiyorsa (veya kilitlendiyse) tohumu değiştirip tekrar dene
                 currentSeed++;
                 attempts++;
+            }
+
+            if (candidates.Count > 0)
+            {
+                candidates.Sort((a, b) => a.diff.CompareTo(b.diff));
+                var bestCandidate = candidates[0].level;
+                
+                NexusLog.Info("LevelGenerator", nameof(GenerateLevel), levelIndex.ToString(),
+                    $"Solvable level optimized via GDD curve. Seed={bestCandidate.Seed}, Score diff={candidates[0].diff:F2}, Moves={bestCandidate.TargetMoves}. Candidates: {candidates.Count}");
+                
+                return bestCandidate;
             }
 
             NexusLog.Warn("LevelGenerator", nameof(GenerateLevel), levelIndex.ToString(),

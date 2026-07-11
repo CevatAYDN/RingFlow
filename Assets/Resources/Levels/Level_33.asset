@@ -14,9 +14,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.LevelDataSO
   Data:
     LevelIndex: 33
-    Seed: 133
-    TargetMoves: 17
+    Seed: 137
+    TargetMoves: 13
     Poles:
+    - RingCapacity: 4
+      Rings:
+      - Color: 4
+        Type: 0
+        AdditionalData: 0
+      - Color: 1
+        Type: 0
+        AdditionalData: 0
+      - Color: 3
+        Type: 0
+        AdditionalData: 0
+      - Color: 4
+        Type: 0
+        AdditionalData: 0
+      IsLocked: 0
     - RingCapacity: 4
       Rings:
       - Color: 2
@@ -25,7 +40,22 @@ MonoBehaviour:
       - Color: 1
         Type: 0
         AdditionalData: 0
+      - Color: 1
+        Type: 0
+        AdditionalData: 0
+      - Color: 3
+        Type: 0
+        AdditionalData: 0
+      IsLocked: 0
+    - RingCapacity: 4
+      Rings:
       - Color: 2
+        Type: 0
+        AdditionalData: 0
+      - Color: 2
+        Type: 0
+        AdditionalData: 0
+      - Color: 3
         Type: 0
         AdditionalData: 0
       - Color: 3
@@ -36,47 +66,20 @@ MonoBehaviour:
       Rings: []
       IsLocked: 0
     - RingCapacity: 4
-      Rings:
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
-      - Color: 3
-        Type: 0
-        AdditionalData: 0
-      - Color: 3
-        Type: 0
-        AdditionalData: 0
+      Rings: []
       IsLocked: 0
     - RingCapacity: 4
       Rings:
       - Color: 1
         Type: 0
         AdditionalData: 0
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
-      - Color: 1
-        Type: 0
-        AdditionalData: 0
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
-      IsLocked: 0
-    - RingCapacity: 4
-      Rings:
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
       - Color: 2
         Type: 0
         AdditionalData: 0
-      - Color: 3
+      - Color: 4
         Type: 0
         AdditionalData: 0
-      - Color: 1
+      - Color: 4
         Type: 0
         AdditionalData: 0
       IsLocked: 0

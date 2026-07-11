@@ -22,7 +22,7 @@ MonoBehaviour:
       - Color: 1
         Type: 0
         AdditionalData: 0
-      - Color: 1
+      - Color: 2
         Type: 0
         AdditionalData: 0
       - Color: 4
@@ -34,31 +34,34 @@ MonoBehaviour:
       IsLocked: 0
     - RingCapacity: 4
       Rings:
-      - Color: 1
-        Type: 0
-        AdditionalData: 0
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
-      IsLocked: 0
-    - RingCapacity: 4
-      Rings:
-      - Color: 4
+      - Color: 3
         Type: 0
         AdditionalData: 0
       - Color: 3
         Type: 0
         AdditionalData: 0
+      - Color: 2
+        Type: 0
+        AdditionalData: 0
+      - Color: 1
+        Type: 0
+        AdditionalData: 0
+      IsLocked: 0
+    - RingCapacity: 4
+      Rings: []
+      IsLocked: 0
+    - RingCapacity: 4
+      Rings:
+      - Color: 4
+        Type: 0
+        AdditionalData: 0
       - Color: 1
         Type: 0
         AdditionalData: 0
       - Color: 2
+        Type: 0
+        AdditionalData: 0
+      - Color: 3
         Type: 0
         AdditionalData: 0
       IsLocked: 0
@@ -70,10 +73,10 @@ MonoBehaviour:
       - Color: 3
         Type: 0
         AdditionalData: 0
-      - Color: 3
+      - Color: 4
         Type: 0
         AdditionalData: 0
-      - Color: 3
+      - Color: 1
         Type: 0
         AdditionalData: 0
       - Color: 4

@@ -10,7 +10,7 @@ namespace RingFlow.Editor
 {
     internal static class RingFlowEditorUiStudio
     {
-        private const string ScreenPrefabFolder = "Assets/Resources/UI";
+        private const string ScreenPrefabFolder = EditorPaths.UiScreensFolder;
 
         public static string GetPrefabPathForScreen(ScreenType screen)
             => $"{ScreenPrefabFolder}/{screen}.prefab";

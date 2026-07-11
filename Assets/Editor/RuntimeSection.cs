@@ -216,7 +216,7 @@ namespace RingFlow.Editor
 
         private static void ResetAllPlayerData()
         {
-            string secureFolder = Path.Combine(Application.persistentDataPath, "SecureData");
+            string secureFolder = Path.Combine(Application.persistentDataPath, EditorPaths.SecureDataFolderName);
             if (Directory.Exists(secureFolder))
             {
                 try
@@ -230,7 +230,7 @@ namespace RingFlow.Editor
                 }
             }
 
-            PlayerPrefs.DeleteKey("NT_StorageSeed");
+            PlayerPrefs.DeleteKey(EditorPaths.PlayerPrefsStorageSeed);
             PlayerPrefs.DeleteAll();
             PlayerPrefs.Save();
             Debug.Log("[Editor] Cleared PlayerPrefs.");

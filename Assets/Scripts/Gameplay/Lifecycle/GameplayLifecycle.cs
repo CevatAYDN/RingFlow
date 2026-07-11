@@ -34,6 +34,8 @@ namespace RingFlow.Gameplay
 
         public void OnConfigure(IContextBuilder builder)
         {
+            DoTweenCapacityBootstrap.EnsureInitialized();
+
             NexusLog.Info("GameplayLifecycle", nameof(OnConfigure), "Gameplay", "Configuring gameplay context.");
             
             // -------------------- VFX Prefab Registration --------------------

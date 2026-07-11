@@ -14,23 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.LevelDataSO
   Data:
     LevelIndex: 31
-    Seed: 131
-    TargetMoves: 20
+    Seed: 132
+    TargetMoves: 11
     Poles:
     - RingCapacity: 4
-      Rings:
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
-      - Color: 3
-        Type: 0
-        AdditionalData: 0
-      - Color: 3
-        Type: 0
-        AdditionalData: 0
+      Rings: []
       IsLocked: 0
     - RingCapacity: 4
       Rings: []
@@ -40,25 +28,10 @@ MonoBehaviour:
       - Color: 3
         Type: 0
         AdditionalData: 0
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
       - Color: 1
         Type: 0
         AdditionalData: 0
       - Color: 2
-        Type: 0
-        AdditionalData: 0
-      IsLocked: 0
-    - RingCapacity: 4
-      Rings:
-      - Color: 1
-        Type: 0
-        AdditionalData: 0
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
-      - Color: 1
         Type: 0
         AdditionalData: 0
       - Color: 1
@@ -67,6 +40,9 @@ MonoBehaviour:
       IsLocked: 0
     - RingCapacity: 4
       Rings:
+      - Color: 2
+        Type: 0
+        AdditionalData: 0
       - Color: 4
         Type: 0
         AdditionalData: 0
@@ -76,7 +52,34 @@ MonoBehaviour:
       - Color: 2
         Type: 0
         AdditionalData: 0
+      IsLocked: 0
+    - RingCapacity: 4
+      Rings:
       - Color: 4
+        Type: 0
+        AdditionalData: 0
+      - Color: 4
+        Type: 0
+        AdditionalData: 0
+      - Color: 4
+        Type: 0
+        AdditionalData: 0
+      - Color: 3
+        Type: 0
+        AdditionalData: 0
+      IsLocked: 0
+    - RingCapacity: 4
+      Rings:
+      - Color: 1
+        Type: 0
+        AdditionalData: 0
+      - Color: 1
+        Type: 0
+        AdditionalData: 0
+      - Color: 2
+        Type: 0
+        AdditionalData: 0
+      - Color: 3
         Type: 0
         AdditionalData: 0
       IsLocked: 0

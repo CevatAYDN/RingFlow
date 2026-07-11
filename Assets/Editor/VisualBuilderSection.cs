@@ -9,8 +9,6 @@ namespace RingFlow.Editor
 {
     public sealed class VisualBuilderSection : EditorSection
     {
-        private const float PoleSpacing = 2.5f;
-
         private static Shader s_cachedShader;
         private static Material s_cachedDefaultMaterial;
 
@@ -332,7 +330,7 @@ namespace RingFlow.Editor
             var boardRoot = new GameObject("RingFlow_VisualBoard");
             Undo.RegisterCreatedObjectUndo(boardRoot, "Build Visual Board");
 
-            var torusModel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Torus.obj");
+            var torusModel = AssetDatabase.LoadAssetAtPath<GameObject>(EditorPaths.TorusPrefabPath);
             var f = GameFeelConfigSO.Instance;
             float spacing = f != null ? f.PoleSpacing : 2.5f;
             float boardWidth = (board.PoleCount - 1) * spacing;

@@ -6,7 +6,7 @@ namespace RingFlow.Editor
     public sealed class GameFeelSection : EditorSection
     {
         public override string DisplayName => "Game Feel & Camera Config";
-        public override string PrefKey => "RF_FoldGameFeel";
+        public override string PrefKey => EditorPrefsKeys.FoldGameFeel;
 
         private Gameplay.GameFeelConfigSO _config;
 
@@ -17,7 +17,7 @@ namespace RingFlow.Editor
 
             if (_config == null)
                 _config = AssetDatabase.LoadAssetAtPath<Gameplay.GameFeelConfigSO>(
-                    "Assets/Resources/GameFeelConfig.asset");
+                    EditorPaths.GameFeelConfigPath);
 
             if (_config == null)
             {
@@ -175,11 +175,11 @@ namespace RingFlow.Editor
         {
             var config = ScriptableObject.CreateInstance<Gameplay.GameFeelConfigSO>();
             RingFlowEditorUtils.EnsureAssetFolders("Assets/Resources");
-            AssetDatabase.CreateAsset(config, "Assets/Resources/GameFeelConfig.asset");
+            AssetDatabase.CreateAsset(config, EditorPaths.GameFeelConfigPath);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             EditorUtility.DisplayDialog("Success",
-                "GameFeelConfig asset created at Assets/Resources/GameFeelConfig.asset", "OK");
+                $"GameFeelConfig asset created at {EditorPaths.GameFeelConfigPath}", "OK");
         }
     }
 }

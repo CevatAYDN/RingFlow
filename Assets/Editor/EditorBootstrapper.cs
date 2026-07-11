@@ -10,7 +10,7 @@ namespace RingFlow.Editor
 {
     public static class EditorBootstrapper
     {
-        private const string ContextDataPath = "Assets/Settings/GameplayContextData.asset";
+        private const string ContextDataPath = EditorPaths.ContextDataPath;
 
         public static BootstrapResult Bootstrap()
         {
@@ -82,7 +82,7 @@ namespace RingFlow.Editor
             var boardView = rootObj.AddComponent<BoardView>();
             Undo.RegisterCreatedObjectUndo(boardView, "Attach BoardView");
 
-            var torusPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Torus.obj");
+            var torusPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(EditorPaths.TorusPrefabPath);
             if (torusPrefab != null)
                 boardView.SetTorusPrefab(torusPrefab);
 
@@ -138,7 +138,7 @@ namespace RingFlow.Editor
             camera.orthographic = true;
             camera.orthographicSize = feel.CameraBaseOrtho;
             camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = new Color(0.12f, 0.14f, 0.17f);
+            camera.backgroundColor = EditorPaths.CameraBackground;
             camera.nearClipPlane = 0.1f;
             camera.farClipPlane = 100f;
             camera.depth = -1;
@@ -181,7 +181,7 @@ namespace RingFlow.Editor
             dirLight.type = LightType.Directional;
             dirLight.intensity = 1f;
             dirLight.shadows = LightShadows.Soft;
-            dirLight.color = new Color(1f, 0.96f, 0.90f);
+            dirLight.color = EditorPaths.DirectionalLightColor;
 
             if (isNew)
             {

@@ -110,6 +110,7 @@ namespace RingFlow.Gameplay.UI
             for (int i = 0; i < StarIcons.Length; i++)
             {
                 if (StarIcons[i] == null) continue;
+                DOTween.Kill(StarIcons[i].transform);
                 StarIcons[i].color = new Color(0.35f, 0.35f, 0.40f);
                 StarIcons[i].transform.localScale = Vector3.zero;
             }
@@ -121,22 +122,21 @@ namespace RingFlow.Gameplay.UI
                 int index = i;
                 bool isEarned = index < stars;
 
-                var seq = DOTween.Sequence();
-                seq.AppendInterval(index * 0.2f);
-                seq.AppendCallback(() =>
-                {
-                    if (isEarned)
+                StarIcons[index].transform
+                    .DOScale(1f, 0.35f)
+                    .SetDelay(index * 0.2f)
+                    .SetEase(Ease.OutBack)
+                    .SetAutoKill(true)
+                    .OnStart(() =>
                     {
+                        if (!isEarned) return;
                         StarIcons[index].color = GameUIResources.AccentColor;
                         if (_audio != null)
                         {
                             var chime = ProceduralAudio.GetOrCreateMoveClip();
                             _audio.PlaySfx(chime, 1.0f, 1.0f + index * 0.1f, 1.0f + index * 0.1f);
                         }
-                    }
-                });
-                seq.Append(StarIcons[index].transform.DOScale(1f, 0.35f).SetEase(Ease.OutBack));
-                seq.Play();
+                    });
             }
         }
 

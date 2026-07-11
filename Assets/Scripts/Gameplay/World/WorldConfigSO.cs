@@ -131,8 +131,8 @@ namespace RingFlow.Gameplay
             score += poleCount * 2.5f;
             score += colorCount * 3.0f;
             score += minMoves * 0.8f;
-            score += emptyPoles * 5.0f;
-            score += specialCount * 4.0f;
+            score += emptyPoles * -4.0f;
+            score += specialCount * 5.0f;
             score += branchFactor * 1.5f;
             score -= symmetry * 2.0f;
 

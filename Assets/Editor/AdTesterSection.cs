@@ -7,8 +7,12 @@ namespace RingFlow.Editor
 {
     public sealed class AdTesterSection : EditorSection
     {
-        private string _placement = "default";
-        private string _lastResult = "No ad tested yet.";
+        private const string DefaultPlacement = "default";
+        private const string DefaultLastResult = "No ad tested yet.";
+
+        private string _placement = DefaultPlacement;
+        private string _lastResult = DefaultLastResult;
+        private bool _placementLoaded;
 
         public override string DisplayName => "Ad Tester (Editor Mock)";
         public override string PrefKey => EditorPrefsKeys.FoldAdTester;
@@ -24,11 +28,17 @@ namespace RingFlow.Editor
                     "Tests ad placements against the mock adapter. In production, replace the adapter with AdMob/Unity Ads.",
                     MessageType.Info);
 
-                _placement = EditorGUILayout.TextField("Placement", _placement);
+                EditorGUI.BeginChangeCheck();
+                _placement = EditorGUILayout.TextField(
+                    new GUIContent("Placement", "AdMob/Unity Ads placement ID. Saved across domain reloads."), _placement);
+                if (EditorGUI.EndChangeCheck())
+                    EditorPrefs.SetString(EditorPrefsKeys.AdPlacement, _placement);
 
                 if (!Application.isPlaying)
                 {
-                    EditorGUILayout.LabelField("(Ad tests require PlayMode — Nexus must initialize the AdService.)");
+                    EditorGUILayout.HelpBox(
+                        "Ad tests require PlayMode — Nexus must initialize the AdService.",
+                        MessageType.Info);
                     return;
                 }
 

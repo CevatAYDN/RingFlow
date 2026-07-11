@@ -593,8 +593,12 @@ namespace RingFlow.Gameplay.UI
                     bool reduceMotion = _settings?.ReduceMotion?.Value ?? false;
                     if (!reduceMotion)
                     {
+                        DOTween.Kill(go.transform);
                         go.transform.localScale = new Vector3(0.8f, 0.8f, 0.8f);
-                        go.transform.DOScale(Vector3.one, 0.25f).SetEase(Ease.OutBack).SetUpdate(true);
+                        go.transform.DOScale(Vector3.one, 0.25f)
+                            .SetEase(Ease.OutBack)
+                            .SetUpdate(true)
+                            .SetAutoKill(true);
                     }
                 }
             }
@@ -631,7 +635,9 @@ namespace RingFlow.Gameplay.UI
             go.SetActive(true);
             cg.alpha = 0f;
             DOTween.To(() => cg.alpha, v => cg.alpha = v, 1f, ScreenFadeDuration)
-                .SetEase(Ease.OutCubic).SetTarget(cg);
+                .SetEase(Ease.OutCubic)
+                .SetTarget(cg)
+                .SetAutoKill(true);
         }
 
         private void FadeOutAndDeactivate(GameObject go)
@@ -648,7 +654,9 @@ namespace RingFlow.Gameplay.UI
             }
 
             DOTween.To(() => cg.alpha, v => cg.alpha = v, 0f, ScreenFadeDuration)
-                .SetEase(Ease.InCubic).SetTarget(cg)
+                .SetEase(Ease.InCubic)
+                .SetTarget(cg)
+                .SetAutoKill(true)
                 .OnComplete(() => go.SetActive(false));
         }
 

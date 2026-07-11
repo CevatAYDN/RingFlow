@@ -10,17 +10,23 @@ namespace RingFlow.Gameplay
     /// Zero runtime allocation — all child meshes are pre-created in Awake.
     /// Uses shared static material with MaterialPropertyBlock for per-instance color.
     /// GPU Instancing compatible via shared mesh and property block.
+    /// Per-piece tweens are local (not joined to a Sequence) so they auto-dispose
+    /// on completion, preventing the DOTween tween pool from growing unboundedly.
     /// </summary>
     public class RingPopVfx : MonoBehaviour, IPoolable
     {
         private static Shader s_litShader;
         private static Material s_sharedMaterial;
 
-        private GameObject[] _particles;
-        private Renderer[] _renderers;
+        private struct PopPiece
+        {
+            public Transform Transform;
+            public Renderer Renderer;
+        }
+
+        private PopPiece[] _pieces;
         private MaterialPropertyBlock _mpb;
-        private Sequence _animationSequence;
-        private int _particleCount;
+        private int _pieceCount;
 
         [Inject] private IObjectPoolService _objectPoolService;
 
@@ -29,18 +35,16 @@ namespace RingFlow.Gameplay
             EnsureSharedResources();
             _mpb = new MaterialPropertyBlock();
 
-            // Pre-create all child particles — zero allocation on Initialize
             var config = GameFeelConfigSO.Instance;
-            _particleCount = config != null ? config.RingPopCount : 12;
-            _particles = new GameObject[_particleCount];
-            _renderers = new Renderer[_particleCount];
+            _pieceCount = config != null ? config.RingPopCount : 12;
+            _pieces = new PopPiece[_pieceCount];
 
-            for (int i = 0; i < _particleCount; i++)
+            for (int i = 0; i < _pieceCount; i++)
             {
                 var p = new GameObject("Pop_" + i);
                 p.transform.SetParent(transform, false);
                 p.transform.localPosition = Vector3.zero;
-                p.transform.localScale = Vector3.zero; // Hidden until Initialize
+                p.transform.localScale = Vector3.zero;
                 p.SetActive(false);
 
                 var mf = p.AddComponent<MeshFilter>();
@@ -51,9 +55,8 @@ namespace RingFlow.Gameplay
                 mr.SetPropertyBlock(_mpb);
                 mr.enabled = false;
 
-                // Remove any collider — cubes don't have one but explicit is safe
-                _particles[i] = p;
-                _renderers[i] = mr;
+                _pieces[i].Transform = p.transform;
+                _pieces[i].Renderer = mr;
             }
         }
 
@@ -79,69 +82,88 @@ namespace RingFlow.Gameplay
 
         public void Initialize(Color color)
         {
-            // Kill any running animation
-            _animationSequence?.Kill();
+            KillAllLocalTweens();
 
             var config = GameFeelConfigSO.Instance;
             float duration = config != null ? config.RingPopDuration : 0.5f;
 
             _mpb.SetColor("_BaseColor", color);
-            _animationSequence = DOTween.Sequence();
 
-            for (int i = 0; i < _particleCount; i++)
+            for (int i = 0; i < _pieceCount; i++)
             {
-                var p = _particles[i];
-                var r = _renderers[i];
-                if (p == null || r == null) continue;
+                ref var piece = ref _pieces[i];
+                var t = piece.Transform;
+                var r = piece.Renderer;
+                if (t == null || r == null) continue;
 
-                // Reset and position
-                p.SetActive(true);
+                t.gameObject.SetActive(true);
                 r.enabled = true;
                 r.SetPropertyBlock(_mpb);
-                p.transform.localPosition = Vector3.zero;
-                p.transform.localScale = Vector3.one * Random.Range(0.12f, 0.22f);
-                p.transform.localRotation = Quaternion.identity;
+                t.localPosition = Vector3.zero;
+                t.localScale = Vector3.one * Random.Range(0.12f, 0.22f);
+                t.localRotation = Quaternion.identity;
 
-                // Random burst direction
                 Vector3 direction = new Vector3(
                     Random.Range(-1f, 1f),
                     Random.Range(0.5f, 2f),
                     Random.Range(-1f, 1f)
                 ).normalized * Random.Range(1.5f, 3f);
 
-                // Animate
-                _animationSequence.Join(p.transform.DOLocalMove(direction, duration).SetEase(Ease.OutQuad));
-                _animationSequence.Join(p.transform.DOScale(Vector3.zero, duration).SetEase(Ease.InQuad));
-                _animationSequence.Join(p.transform.DORotate(
+                t.DOLocalMove(direction, duration)
+                    .SetEase(Ease.OutQuad)
+                    .SetAutoKill(true);
+                t.DOScale(Vector3.zero, duration)
+                    .SetEase(Ease.InQuad)
+                    .SetAutoKill(true);
+                t.DORotate(
                     new Vector3(Random.Range(-180f, 180f), Random.Range(-180f, 180f), Random.Range(-180f, 180f)),
                     duration,
                     RotateMode.FastBeyond360
-                ).SetEase(Ease.OutQuad));
+                )
+                    .SetEase(Ease.OutQuad)
+                    .SetAutoKill(true)
+                    .OnComplete(DespawnIfLast);
             }
+        }
 
-            _animationSequence.OnComplete(() =>
+        private int _completionCount;
+
+        private void DespawnIfLast()
+        {
+            _completionCount++;
+            if (_completionCount < _pieceCount) return;
+            _completionCount = 0;
+            DespawnSelf();
+        }
+
+        private void KillAllLocalTweens()
+        {
+            for (int i = 0; i < _pieceCount; i++)
             {
-                HideAll();
-                DespawnSelf();
-            });
+                var t = _pieces[i].Transform;
+                if (t != null) DOTween.Kill(t);
+            }
         }
 
         private void HideAll()
         {
-            for (int i = 0; i < _particleCount; i++)
+            for (int i = 0; i < _pieceCount; i++)
             {
-                if (_particles[i] != null)
+                var t = _pieces[i].Transform;
+                var r = _pieces[i].Renderer;
+                if (t != null)
                 {
-                    _particles[i].SetActive(false);
-                    _particles[i].transform.localScale = Vector3.zero;
+                    t.gameObject.SetActive(false);
+                    t.localScale = Vector3.zero;
                 }
-                if (_renderers[i] != null)
-                    _renderers[i].enabled = false;
+                if (r != null) r.enabled = false;
             }
         }
 
         private void DespawnSelf()
         {
+            if (this == null) return;
+            HideAll();
             if (_objectPoolService != null)
                 _objectPoolService.Despawn(gameObject);
             else
@@ -154,15 +176,14 @@ namespace RingFlow.Gameplay
 
         public void OnDespawned()
         {
-            _animationSequence?.Kill();
-            _animationSequence = null;
+            _completionCount = 0;
+            KillAllLocalTweens();
             HideAll();
         }
 
         private void OnDestroy()
         {
-            _animationSequence?.Kill();
-            _animationSequence = null;
+            KillAllLocalTweens();
         }
     }
 }

@@ -280,7 +280,11 @@ namespace RingFlow.Editor
                         }
                     }
 
-                    int solverLimit = colorCount <= 3 ? 20000 : 15000;
+                    int solverLimit = colorCount <= 3 ? 20000
+                                    : colorCount <= 5 ? 30000
+                                    : colorCount <= 7 ? 20000
+                                    : colorCount <= 9 ? 12000
+                                    : 8000;
                     var solveResult = LevelSolver.Solve(board, maxCap, maxStatesLimit: solverLimit);
                     if (solveResult.IsSolvable)
                     {
@@ -309,7 +313,7 @@ namespace RingFlow.Editor
             EditorUtility.DisplayDialog("Doğrulama Tamamlandı", summaryMsg, "Tamam");
         }
 
-        private const string DatabaseAssetPath = "Assets/Resources/GameConfigDatabase.asset";
+        private const string DatabaseAssetPath = EditorPaths.GameConfigDbPath;
 
         private void DrawDifficultyOverview()
         {

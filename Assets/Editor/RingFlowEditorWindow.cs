@@ -1,14 +1,16 @@
-using System.Collections.Generic;
-using System.Reflection;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.UI;
-using RingFlow.Gameplay;
 using RingFlow.Gameplay.UI;
-using Nexus.Core;
 
 namespace RingFlow.Editor
 {
+    /// <summary>
+    /// Top-level dashboard window. The window itself is intentionally thin —
+    /// it owns the tab list, status bar, and the section lifecycle. The
+    /// heavy work (UI Studio tree, prefab reload, signal tester, JSON
+    /// export) lives in <see cref="RingFlowEditorUiStudioController"/>.
+    /// </summary>
     public class RingFlowEditorWindow : EditorWindow
     {
         private const float HeaderHeight = 40f;
@@ -23,15 +25,13 @@ namespace RingFlow.Editor
         private DiagnosticsSection _diagnostics;
         private DatabaseSection _databaseSection;
         private GameFeelSection _gameFeel;
+        private RingFlowEditorUiStudioController _uiStudio;
 
         private Vector2 _scroll;
         private int _selectedTab;
         private readonly string[] _tabs = { "Ana Sayfa", "Seviyeler", "Arayüz Stüdyosu", "Ayarlar & Araçlar" };
-        private Vector2 _uiScroll;
-        private ScreenType _uiSelectedScreen = ScreenType.Splash;
 
         private double _lastValidationUpdateTime;
-        private const double ValidationUpdateInterval = 1.0;
         private string _cachedSceneName;
         private bool _cachedHasRoot;
         private bool _cachedHasUIRoot;
@@ -41,11 +41,11 @@ namespace RingFlow.Editor
         public static void ShowWindow()
         {
             var window = GetWindow<RingFlowEditorWindow>("RingFlow Dashboard");
-            window.minSize = new Vector2(720, 760);
+            window.minSize = EditorPaths.MinWindowSize;
             window.Show();
         }
 
-        [MenuItem("Ring Flow/Generate All 500 Levels", false, 11)]
+        [MenuItem("Ring Flow/Generate Levels (Batch)", false, 11)]
         public static void GenerateAllLevels()
         {
             GetWindow<RingFlowEditorWindow>("RingFlow Dashboard")._generator.GenerateFromDashboardAll();
@@ -54,18 +54,18 @@ namespace RingFlow.Editor
         [MenuItem("Ring Flow/Create Working Scene", false, 10)]
         public static void CreateWorkingScene()
         {
-            const string scenePath = "Assets/Scenes/RingFlow.unity";
+            const string scenePath = EditorPaths.ScenePath;
             if (System.IO.File.Exists(scenePath))
             {
                 if (EditorUtility.DisplayDialog("Scene Exists",
                     $"A scene already exists at {scenePath}. Open it instead?", "Open", "Cancel"))
-                    UnityEditor.SceneManagement.EditorSceneManager.OpenScene(scenePath);
+                    EditorSceneManager.OpenScene(scenePath);
                 return;
             }
 
-            var scene = UnityEditor.SceneManagement.EditorSceneManager.NewScene(
-                UnityEditor.SceneManagement.NewSceneSetup.EmptyScene,
-                UnityEditor.SceneManagement.NewSceneMode.Single);
+            var scene = EditorSceneManager.NewScene(
+                NewSceneSetup.EmptyScene,
+                NewSceneMode.Single);
 
             var result = EditorBootstrapper.Bootstrap();
             if (!result.Success)
@@ -75,9 +75,10 @@ namespace RingFlow.Editor
             }
 
             var uiRoot = result.Root.GetComponent<UIRoot>();
-            if (uiRoot != null) ReloadPrefabScreens(uiRoot, false);
+            if (uiRoot != null)
+                RingFlowEditorUiStudioController.ReloadPrefabScreens(uiRoot, showDialog: false);
 
-            UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene, scenePath);
+            EditorSceneManager.SaveScene(scene, scenePath);
             EditorUtility.DisplayDialog("Scene Created",
                 $"Working scene saved to {scenePath} with all UI screens instantiated as Prefab Links.", "OK");
         }
@@ -88,7 +89,8 @@ namespace RingFlow.Editor
             if (result.Success)
             {
                 var uiRoot = result.Root.GetComponent<UIRoot>();
-                if (uiRoot != null) ReloadPrefabScreens(uiRoot, false);
+                if (uiRoot != null)
+                    RingFlowEditorUiStudioController.ReloadPrefabScreens(uiRoot, showDialog: false);
                 EditorUtility.DisplayDialog("Setup",
                     "Nexus Bootstrapper successfully added to the active scene, and UI screens populated as Prefab Links! Press Play to run.", "OK");
             }
@@ -108,6 +110,7 @@ namespace RingFlow.Editor
             _diagnostics = new DiagnosticsSection();
             _databaseSection = new DatabaseSection();
             _gameFeel = new GameFeelSection();
+            _uiStudio = new RingFlowEditorUiStudioController();
 
             foreach (var s in new EditorSection[]
                 { _generator, _visualBuilder, _runtime, _settings, _adTester, _diagnostics, _databaseSection, _gameFeel })
@@ -116,25 +119,24 @@ namespace RingFlow.Editor
             _generator.OnEnable();
             _selectedTab = Mathf.Clamp(EditorPrefs.GetInt(EditorPrefsKeys.SelectedTab, 0), 0, _tabs.Length - 1);
 
-            UnityEditor.SceneManagement.EditorSceneManager.sceneOpened += OnAnySceneChanged;
-            UnityEditor.SceneManagement.EditorSceneManager.sceneClosed += OnAnySceneClosed;
-            UnityEditor.SceneManagement.EditorSceneManager.newSceneCreated += OnNewSceneCreated;
+            EditorSceneManager.sceneOpened += OnAnySceneChanged;
+            EditorSceneManager.sceneClosed += OnAnySceneClosed;
+            EditorSceneManager.newSceneCreated += OnNewSceneCreated;
         }
 
-        private void OnAnySceneChanged(UnityEngine.SceneManagement.Scene scene, UnityEditor.SceneManagement.OpenSceneMode mode)
+        private void OnAnySceneChanged(UnityEngine.SceneManagement.Scene scene, OpenSceneMode mode)
             => InvalidateCaches();
 
         private void OnAnySceneClosed(UnityEngine.SceneManagement.Scene scene)
             => InvalidateCaches();
 
         private void OnNewSceneCreated(UnityEngine.SceneManagement.Scene scene,
-            UnityEditor.SceneManagement.NewSceneSetup setup,
-            UnityEditor.SceneManagement.NewSceneMode mode)
+            NewSceneSetup setup, NewSceneMode mode)
             => InvalidateCaches();
 
         private void InvalidateCaches()
         {
-            s_cachedUIRoot = null;
+            EditorSceneContext.InvalidateAll();
             _cachedSceneName = null;
             _lastValidationUpdateTime = 0;
             _cachedHasRoot = false;
@@ -146,24 +148,25 @@ namespace RingFlow.Editor
         {
             _generator?.OnDisable();
             EditorPrefs.SetInt(EditorPrefsKeys.SelectedTab, _selectedTab);
-            UnityEditor.SceneManagement.EditorSceneManager.sceneOpened -= OnAnySceneChanged;
-            UnityEditor.SceneManagement.EditorSceneManager.sceneClosed -= OnAnySceneClosed;
-            UnityEditor.SceneManagement.EditorSceneManager.newSceneCreated -= OnNewSceneCreated;
+            EditorSceneManager.sceneOpened -= OnAnySceneChanged;
+            EditorSceneManager.sceneClosed -= OnAnySceneClosed;
+            EditorSceneManager.newSceneCreated -= OnNewSceneCreated;
         }
 
         private void RefreshValidationCache()
         {
             var now = EditorApplication.timeSinceStartup;
-            if (now - _lastValidationUpdateTime < ValidationUpdateInterval && !string.IsNullOrEmpty(_cachedSceneName))
+            if (now - _lastValidationUpdateTime < EditorPaths.ValidationCacheSeconds && !string.IsNullOrEmpty(_cachedSceneName))
                 return;
 
             _lastValidationUpdateTime = now;
-            var activeScene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
+            var activeScene = EditorSceneManager.GetActiveScene();
             _cachedSceneName = activeScene.name;
-            var root = Object.FindAnyObjectByType<Root>();
+
+            var root = EditorSceneContext.GetRoot();
             _cachedHasRoot = root != null;
             _cachedHasUIRoot = root != null && root.GetComponentInChildren<UIRoot>(true) != null;
-            _cachedHasEventSystem = Object.FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>() != null;
+            _cachedHasEventSystem = EditorSceneContext.GetEventSystem() != null;
         }
 
         private void OnGUI()
@@ -177,7 +180,7 @@ namespace RingFlow.Editor
             {
                 case 0: DrawHomeTab(); break;
                 case 1: DrawLevelsTab(); break;
-                case 2: DrawUIStudioTab(); break;
+                case 2: _uiStudio.DrawTab(); break;
                 case 3: DrawToolsTab(); break;
             }
 
@@ -202,13 +205,13 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(2f);
         }
 
-        // ---------------------------------------------------------------
+        // ──────────────────────────────────────────────────────────────
         //  Status Bar
-        // ---------------------------------------------------------------
+        // ──────────────────────────────────────────────────────────────
 
         private void DrawStatusBar()
         {
-            var scene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
+            var scene = EditorSceneManager.GetActiveScene();
             string mode = RingFlowEditorUtils.GetEditorModeLabel();
             Color modeColor = RingFlowEditorUtils.GetEditorModeColor();
 
@@ -238,7 +241,7 @@ namespace RingFlow.Editor
                 if (warnCount > 0)
                 {
                     GUI.color = new Color(1f, 0.85f, 0.3f);
-                    EditorGUILayout.LabelField($"Uyarılar: {warnCount}", GUILayout.Width(90f));
+                    EditorGUILayout.LabelField($"Uyarılar: {warnCount}", EditorStyles.boldLabel, GUILayout.Width(90f));
                     GUI.color = Color.white;
                 }
 
@@ -249,9 +252,9 @@ namespace RingFlow.Editor
             }
         }
 
-        // ---------------------------------------------------------------
+        // ──────────────────────────────────────────────────────────────
         //  Home Tab
-        // ---------------------------------------------------------------
+        // ──────────────────────────────────────────────────────────────
 
         private void DrawHomeTab()
         {
@@ -266,7 +269,7 @@ namespace RingFlow.Editor
         {
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                var scene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
+                var scene = EditorSceneManager.GetActiveScene();
                 string mode = RingFlowEditorUtils.GetEditorModeLabel();
 
                 using (new EditorGUILayout.HorizontalScope())
@@ -280,9 +283,13 @@ namespace RingFlow.Editor
                     GUI.color = prevColor;
 
                     GUILayout.FlexibleSpace();
-                    if (GUILayout.Button("Sahne Oluştur", EditorStyles.miniButton, GUILayout.Width(100f)))
+                    if (GUILayout.Button(new GUIContent("Sahne Oluştur",
+                            "Yeni boş sahne oluşturur, Nexus Root + UIRoot ekler ve tüm UI prefablerini bağlar."),
+                            EditorStyles.miniButton, GUILayout.Width(110f)))
                         CreateWorkingScene();
-                    if (GUILayout.Button("Kurulum Yap (Bootstrap)", EditorStyles.miniButton, GUILayout.Width(140f)))
+                    if (GUILayout.Button(new GUIContent("Kurulum Yap (Bootstrap)",
+                            "Aktif sahneye Nexus Root + UIRoot ekler (sahneyi sıfırlamaz)."),
+                            EditorStyles.miniButton, GUILayout.Width(160f)))
                         BootstrapScene();
                 }
 
@@ -314,26 +321,32 @@ namespace RingFlow.Editor
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    if (ActionCard("Seviyeler", "Üret & Kur", new Color(0.25f, 0.55f, 0.85f)))
+                    if (ActionCard("Seviyeler", "Üret & Kur", new Color(0.25f, 0.55f, 0.85f),
+                        "Seviye üretici + veritabanı + sahne tahtası sekmesine atlar."))
                         _selectedTab = 1;
-                    if (ActionCard("Arayüz", "Ekran & Sinyal", new Color(0.7f, 0.35f, 0.8f)))
+                    if (ActionCard("Arayüz", "Ekran & Sinyal", new Color(0.7f, 0.35f, 0.8f),
+                        "UI Studio sekmesine atlar: ekranlar, sinyaller, JSON dışa aktarımı."))
                         _selectedTab = 2;
-                    if (ActionCard("Araçlar", "Çalışma & Ayar", new Color(0.4f, 0.7f, 0.4f)))
+                    if (ActionCard("Araçlar", "Çalışma & Ayar", new Color(0.4f, 0.7f, 0.4f),
+                        "Runtime, reklam test, ayarlar, tanılama, game-feel sekmesine atlar."))
                         _selectedTab = 3;
-                    if (ActionCard("Hızlı Üret", "Seçili Seviye", new Color(0.85f, 0.5f, 0.2f)))
+                    if (ActionCard("Hızlı Üret", "Seçili Seviye", new Color(0.85f, 0.5f, 0.2f),
+                        "Seviye Üretici sekmesindeki parametrelerle tek seviye üretir."))
                         _generator.GenerateFromDashboard();
-                    if (ActionCard("Hızlı Kur", "Sahne Tahtası", new Color(0.85f, 0.3f, 0.3f)))
+                    if (ActionCard("Hızlı Kur", "Sahne Tahtası", new Color(0.85f, 0.3f, 0.3f),
+                        "Üretilen seviyeyi (veya aktif oyunu) sahnede tahta olarak kurar."))
                         _visualBuilder.BuildFromDashboard();
                 }
             }
         }
 
-        private static bool ActionCard(string title, string subtitle, Color accent)
+        private static bool ActionCard(string title, string subtitle, Color accent, string tooltip)
         {
             var defaultBg = GUI.backgroundColor;
             GUI.backgroundColor = accent;
 
-            bool clicked = GUILayout.Button(title, RingFlowEditorUtils.CompactBoldButton,
+            var content = new GUIContent(title, tooltip);
+            bool clicked = GUILayout.Button(content, RingFlowEditorUtils.CompactBoldButton,
                 GUILayout.MinWidth(120f), GUILayout.ExpandWidth(true));
             GUI.backgroundColor = defaultBg;
 
@@ -370,9 +383,9 @@ namespace RingFlow.Editor
             }
         }
 
-        // ---------------------------------------------------------------
+        // ──────────────────────────────────────────────────────────────
         //  Levels Tab
-        // ---------------------------------------------------------------
+        // ──────────────────────────────────────────────────────────────
 
         private void DrawLevelsTab()
         {
@@ -386,165 +399,9 @@ namespace RingFlow.Editor
             _visualBuilder.OnGUI();
         }
 
-        // ---------------------------------------------------------------
-        //  UI Studio Tab
-        // ---------------------------------------------------------------
-
-        private void DrawUIStudioTab()
-        {
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-            {
-                DrawUIStudioInitControls();
-                EditorGUILayout.Space(SectionSpacing);
-                DrawUIStudioScreenTree();
-                EditorGUILayout.Space(SectionSpacing);
-                DrawUIStudioSignalControls();
-                EditorGUILayout.Space(SectionSpacing);
-                DrawUIStudioPersistence();
-            }
-        }
-
-        private void DrawUIStudioInitControls()
-        {
-            var uiRoot = GetCachedUIRoot();
-
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                string status;
-                if (uiRoot == null) status = "EKSİK";
-                else if (GetUIRootCanvas(uiRoot) != null) status = "Hazır";
-                else status = "Başlatma Bekliyor";
-
-                EditorGUILayout.LabelField($"UIRoot: {(uiRoot != null ? uiRoot.name : "\u2014")}  [{status}]",
-                    EditorStyles.boldLabel, GUILayout.MinWidth(280f));
-                GUILayout.FlexibleSpace();
-
-                using (new EditorGUI.DisabledScope(uiRoot == null))
-                {
-                    if (GUILayout.Button("Tuvali Sıfırla (Reset)", GUILayout.Height(22)))
-                    {
-                        if (EditorUtility.DisplayDialog("UIRoot Tuvalini Sıfırla",
-                            "Tüm yüklenen ekran örneklerini yok etmek istediğinize emin misiniz?", "Sıfırla", "İptal"))
-                            ResetUIRootCanvas(uiRoot);
-                    }
-                    if (GUILayout.Button("Ekranları Yeniden Yükle", GUILayout.Height(22)))
-                        ReloadPrefabScreens(uiRoot);
-                }
-                if (GUILayout.Button("Yenile", GUILayout.Width(70f), GUILayout.Height(22)))
-                    Repaint();
-            }
-        }
-
-        private void DrawUIStudioScreenTree()
-        {
-            var uiRoot = GetCachedUIRoot();
-            if (uiRoot == null)
-            {
-                EditorGUILayout.HelpBox("Sahnede UIRoot bulunamadı. Önce kurulumu yapın (Setup Bootstrapper).", MessageType.Warning);
-                return;
-            }
-
-            var screens = GetUIRootScreens(uiRoot);
-            var active = GetUIRootActiveScreen(uiRoot);
-            var popupStack = GetUIRootPopupStack(uiRoot);
-            var subs = GetUIRootSubscriptions(uiRoot);
-
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                EditorGUILayout.LabelField($"Aktif: {active ?? "\u2014"}   Popuplar: {FormatStack(popupStack)}   " +
-                    $"Abonelik: {subs?.Count ?? 0}{(Application.isPlaying ? "" : " (PlayMode)")}",
-                    EditorStyles.miniLabel);
-            }
-
-            if (screens == null || screens.Count == 0)
-            {
-                EditorGUILayout.HelpBox("Kayıtlı ekran bulunamadı.", MessageType.Info);
-                return;
-            }
-
-            _uiScroll = EditorGUILayout.BeginScrollView(_uiScroll, GUILayout.Height(260));
-            foreach (var key in screens.Keys)
-            {
-                ScreenType screen;
-                try { screen = (ScreenType)key; }
-                catch { continue; }
-
-                var go = screens[key] as GameObject;
-                bool isActive = go != null && go.activeSelf;
-                bool isActiveScreen = screen.Equals(active);
-                int btnCount = go != null ? go.GetComponentsInChildren<Button>(true).Length : 0;
-
-                using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
-                {
-                    string marker = isActiveScreen ? ">>" : "  ";
-                    string state = go == null ? "YOK" : (isActive ? "Açık" : "Gizli");
-                    var style = new GUIStyle(EditorStyles.label)
-                        { fontStyle = isActiveScreen ? FontStyle.Bold : FontStyle.Normal };
-                    EditorGUILayout.LabelField($"{marker} {screen,-14} [{state}] {btnCount} Buton", style,
-                        GUILayout.MinWidth(240f));
-
-                    using (new EditorGUI.DisabledScope(go == null))
-                    {
-                        if (GUILayout.Button("Göster", GUILayout.Width(44f)))
-                            ManualSetScreenActive(uiRoot, screen, true);
-                        if (GUILayout.Button("Gizle", GUILayout.Width(44f)))
-                            ManualSetScreenActive(uiRoot, screen, false);
-                        if (GUILayout.Button("Sinyal", GUILayout.Width(50f)))
-                            FireShowScreen(screen);
-                        if (GUILayout.Button("Aç", GUILayout.Width(44f)))
-                            OpenPrefabSourceForScreen(screen, go);
-                    }
-                }
-            }
-            EditorGUILayout.EndScrollView();
-        }
-
-        private void DrawUIStudioSignalControls()
-        {
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                EditorGUILayout.LabelField("Sinyal Test Edici (PlayMode gerekir)", EditorStyles.miniBoldLabel,
-                    GUILayout.Width(220f));
-                _uiSelectedScreen = (ScreenType)EditorGUILayout.EnumPopup(_uiSelectedScreen, GUILayout.Width(140f));
-                if (GUILayout.Button("Göster Sinyali", GUILayout.Height(22)))
-                    FireShowScreen(_uiSelectedScreen);
-                if (GUILayout.Button("Gizle Sinyali", GUILayout.Height(22)))
-                    FireHideScreen(_uiSelectedScreen);
-            }
-        }
-
-        private void DrawUIStudioPersistence()
-        {
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                if (GUILayout.Button("Sahneyi Kaydet", GUILayout.Height(24)))
-                {
-                    UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
-                    Debug.Log("[RingFlow] Sahne mevcut durumla kaydedildi.");
-                }
-                if (GUILayout.Button("Prefab Ekranlarını Yenile", GUILayout.Height(24)))
-                {
-                    try
-                    {
-                        var uiRoot = GetCachedUIRoot();
-                        if (uiRoot != null) ReloadPrefabScreens(uiRoot);
-                    }
-                    catch (System.Exception ex)
-                    {
-                        Debug.LogException(ex);
-                        EditorUtility.DisplayDialog("Prefab Ekranlarını Yenile", ex.Message, "Tamam");
-                    }
-                }
-                if (GUILayout.Button("Eksik Ekranları Oluştur", GUILayout.Height(24)))
-                    RingFlowEditorUiStudio.CreateMissingUIScreenPrefabs();
-                if (GUILayout.Button("UI Yapısını Dışa Aktar (JSON)", GUILayout.Height(24)))
-                    ExportUIHierarchyAsJson();
-            }
-        }
-
-        // ---------------------------------------------------------------
+        // ──────────────────────────────────────────────────────────────
         //  Tools Tab
-        // ---------------------------------------------------------------
+        // ──────────────────────────────────────────────────────────────
 
         private void DrawToolsTab()
         {
@@ -565,236 +422,6 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(8f);
             EditorGUILayout.LabelField("Veritabanı Düzenleyici", EditorStyles.boldLabel);
             _databaseSection.OnGUI();
-        }
-
-        // ---------------------------------------------------------------
-        //  UI Export
-        // ---------------------------------------------------------------
-
-        private static void ExportUIHierarchyAsJson()
-        {
-            var uiRoot = GetCachedUIRoot();
-            if (uiRoot == null)
-            {
-                EditorUtility.DisplayDialog("Export UI Tree", "UIRoot missing.", "OK");
-                return;
-            }
-
-            var screens = GetUIRootScreens(uiRoot);
-            if (screens == null || screens.Count == 0)
-            {
-                EditorUtility.DisplayDialog("Export UI Tree", "No screens to export.", "OK");
-                return;
-            }
-
-            var sb = new System.Text.StringBuilder();
-            sb.Append("{\"screens\":[");
-            bool first = true;
-            foreach (var key in screens.Keys)
-            {
-                var go = screens[key] as GameObject;
-                if (go == null) continue;
-                if (!first) sb.Append(",");
-                first = false;
-                sb.Append("{\"type\":\"").Append(key).Append("\",");
-                sb.Append("\"active\":").Append(go.activeSelf ? "true" : "false");
-                sb.Append("}");
-            }
-            sb.Append("]}");
-
-            var path = EditorUtility.SaveFilePanel("Export UI Tree", "Assets/Snapshots", "ui-tree.json", "json");
-            if (string.IsNullOrEmpty(path)) return;
-            try
-            {
-                System.IO.File.WriteAllText(path, sb.ToString());
-                EditorUtility.DisplayDialog("Export UI Tree", $"Exported to:\n{path}", "OK");
-            }
-            catch (System.Exception ex)
-            {
-                EditorUtility.DisplayDialog("Export Failed", ex.Message, "OK");
-            }
-        }
-
-        // ---------------------------------------------------------------
-        //  Prefab Screens
-        // ---------------------------------------------------------------
-
-        private static void ReloadPrefabScreens(UIRoot uiRoot, bool showDialog = true)
-        {
-            if (uiRoot == null)
-            {
-                if (showDialog)
-                    EditorUtility.DisplayDialog("Reload Prefab Screens", "UIRoot missing. Run Setup Bootstrapper first.", "OK");
-                return;
-            }
-
-            var canvas = GetUIRootCanvas(uiRoot);
-            if (canvas == null)
-            {
-                if (showDialog)
-                    EditorUtility.DisplayDialog("Reload Prefab Screens", "UIRoot Canvas is missing.", "OK");
-                return;
-            }
-
-            var screens = GetUIRootScreens(uiRoot);
-            if (screens == null) return;
-
-            var toDestroy = new List<GameObject>();
-            foreach (var key in screens.Keys)
-                if (screens[key] is GameObject go && go != null)
-                    toDestroy.Add(go);
-            screens.Clear();
-            foreach (var go in toDestroy) Object.DestroyImmediate(go);
-
-            var missingScreens = new List<string>();
-            var allScreens = System.Enum.GetValues(typeof(ScreenType));
-            foreach (ScreenType screen in allScreens)
-            {
-                var path = RingFlowEditorUiStudio.GetPrefabPathForScreen(screen);
-                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-                if (prefab == null)
-                    prefab = Resources.Load<GameObject>($"UI/{screen}");
-                if (prefab == null)
-                {
-                    missingScreens.Add(screen.ToString());
-                    continue;
-                }
-
-                var instance = PrefabUtility.InstantiatePrefab(prefab, canvas.transform) as GameObject;
-                if (instance != null)
-                {
-                    instance.name = screen.ToString();
-                    instance.SetActive(screen == ScreenType.Splash);
-                    screens[screen] = instance;
-                }
-            }
-
-            uiRoot.ActiveExclusiveScreen = ScreenType.Splash;
-            EditorUtility.SetDirty(uiRoot);
-            EditorUtility.SetDirty(canvas.gameObject);
-            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
-                UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
-
-            string msg = $"Loaded {screens.Count} screen(s) as Prefab Links.";
-            if (missingScreens.Count > 0)
-                msg += $"\nMissing: {string.Join(", ", missingScreens)}";
-            Debug.Log($"[RingFlow] ReloadPrefabScreens: {screens.Count} screens. Missing: {missingScreens.Count}");
-            if (showDialog)
-                EditorUtility.DisplayDialog("Reload Prefab Screens", msg, "OK");
-        }
-
-        private static void OpenPrefabSourceForScreen(ScreenType screen, GameObject go)
-        {
-            var path = RingFlowEditorUiStudio.GetPrefabPathForScreen(screen);
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            if (prefab != null)
-            {
-                Selection.activeObject = prefab;
-                EditorGUIUtility.PingObject(prefab);
-                AssetDatabase.OpenAsset(prefab);
-                return;
-            }
-
-            if (go != null)
-            {
-                Selection.activeGameObject = go;
-                EditorGUIUtility.PingObject(go);
-            }
-            EditorUtility.DisplayDialog("Open Prefab", $"Prefab not found at:\n{path}", "OK");
-        }
-
-        // ---------------------------------------------------------------
-        //  UIRoot Reflection Helpers
-        // ---------------------------------------------------------------
-
-        private static Canvas GetUIRootCanvas(UIRoot uiRoot)
-            => uiRoot != null ? uiRoot.Canvas : null;
-
-        private static System.Collections.IDictionary GetUIRootScreens(UIRoot uiRoot)
-            => uiRoot != null ? uiRoot.Screens : null;
-
-        private static object GetUIRootActiveScreen(UIRoot uiRoot)
-            => uiRoot != null ? uiRoot.ActiveExclusiveScreen : null;
-
-        private static System.Collections.ICollection GetUIRootPopupStack(UIRoot uiRoot)
-            => uiRoot != null ? uiRoot.PopupStack : null;
-
-        private static System.Collections.ICollection GetUIRootSubscriptions(UIRoot uiRoot)
-            => uiRoot != null ? uiRoot.Subscriptions : null;
-
-        private static UIRoot s_cachedUIRoot;
-        private static double s_lastUIRootLookup;
-        private const double UIRootCacheSeconds = 0.5;
-
-        private static UIRoot GetCachedUIRoot()
-        {
-            var now = EditorApplication.timeSinceStartup;
-            if (s_cachedUIRoot == null || (now - s_lastUIRootLookup) > UIRootCacheSeconds)
-            {
-                s_cachedUIRoot = Object.FindAnyObjectByType<UIRoot>(FindObjectsInactive.Include);
-                s_lastUIRootLookup = now;
-            }
-            return s_cachedUIRoot;
-        }
-
-        private static void ResetUIRootCanvas(UIRoot uiRoot)
-        {
-            if (uiRoot != null) uiRoot.ResetForEditor();
-        }
-
-        private static void ManualSetScreenActive(UIRoot uiRoot, ScreenType screen, bool active)
-        {
-            if (uiRoot == null) return;
-            var screens = uiRoot.Screens;
-            if (screens == null || !screens.ContainsKey(screen)) return;
-            var go = screens[screen];
-            if (go == null) return;
-
-            go.SetActive(active);
-            if (active)
-                uiRoot.ActiveExclusiveScreen = screen;
-        }
-
-        private static string FormatStack(System.Collections.ICollection stack)
-        {
-            if (stack == null || stack.Count == 0) return "(empty)";
-            var items = new List<string>();
-            foreach (var item in stack) items.Add(item?.ToString() ?? "null");
-            return string.Join(" \u2192 ", items);
-        }
-
-        private static void FireShowScreen(ScreenType screen)
-        {
-            var root = Object.FindAnyObjectByType<Root>();
-            if (root?.Context == null)
-            {
-                EditorUtility.DisplayDialog("UI Studio", "No initialized Root found.", "OK");
-                return;
-            }
-            var bus = root.Context.TryResolve<ISignalBus>();
-            if (bus == null)
-            {
-                EditorUtility.DisplayDialog("UI Studio", "Signal bus unavailable.", "OK");
-                return;
-            }
-            bus.Fire(new ShowScreenSignal(screen));
-        }
-
-        private static void FireHideScreen(ScreenType screen)
-        {
-            var root = Object.FindAnyObjectByType<Root>();
-            if (root?.Context == null)
-            {
-                EditorUtility.DisplayDialog("UI Studio", "No initialized Root found.", "OK");
-                return;
-            }
-            var bus = root.Context.TryResolve<ISignalBus>();
-            if (bus == null)
-            {
-                EditorUtility.DisplayDialog("UI Studio", "Signal bus unavailable.", "OK");
-                return;
-            }
-            bus.Fire(new HideScreenSignal(screen));
         }
     }
 }

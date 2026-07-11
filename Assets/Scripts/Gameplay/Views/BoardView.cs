@@ -37,9 +37,10 @@ namespace RingFlow.Gameplay
         private int _animatingTargetPoleId = -1;
         private bool _ringPrewarmed;
         private Mesh _proceduralTorusMesh;
-        private Mesh _proceduralConeMesh;
         private GameObject _floorPlane;
         private GameObject _tutorialArrowGo;
+        private GameObject _tutorialCanvasGo;
+        private UnityEngine.UI.Text _tutorialLabelText;
 
         private BloomPulseController _bloomPulseController;
         private bool _bloomPulseSearched;
@@ -234,8 +235,11 @@ namespace RingFlow.Gameplay
                         float localZ = targetWidth / F.PoleScale.z;
                         Vector3 normalScale = new Vector3(localX, localY, localZ);
 
+                        DOTween.Kill(movedRing.transform);
+
                         movedRing.transform.DOLocalJump(targetLocal, F.MoveJumpPower, 1, duration)
                             .SetEase(Ease.InOutQuad)
+                            .SetAutoKill(true)
                             .OnComplete(() =>
                             {
                                 _animatingTargetPoleId = -1;
@@ -245,9 +249,10 @@ namespace RingFlow.Gameplay
                                 DOTween.Kill(movedRing.transform);
                                 movedRing.transform.DOScale(new Vector3(localX * 1.25f, localY * 0.6f, localZ * 1.25f), 0.08f)
                                     .SetEase(Ease.OutQuad)
+                                    .SetAutoKill(true)
                                     .OnComplete(() =>
                                     {
-                                        movedRing.transform.DOScale(normalScale, 0.18f).SetEase(Ease.OutBack);
+                                        movedRing.transform.DOScale(normalScale, 0.18f).SetEase(Ease.OutBack).SetAutoKill(true);
                                     });
 
                                 ApplySelection();
@@ -255,9 +260,10 @@ namespace RingFlow.Gameplay
 
                         movedRing.transform.DOScale(new Vector3(localX * 0.85f, localY * 1.35f, localZ * 0.85f), duration * 0.4f)
                             .SetEase(Ease.OutQuad)
+                            .SetAutoKill(true)
                             .OnComplete(() =>
                             {
-                                movedRing.transform.DOScale(normalScale, duration * 0.4f).SetEase(Ease.InQuad);
+                                movedRing.transform.DOScale(normalScale, duration * 0.4f).SetEase(Ease.InQuad).SetAutoKill(true);
                             });
                     }
                 }
@@ -504,13 +510,15 @@ namespace RingFlow.Gameplay
                     else
                     {
                         topRing.transform.DOLocalMoveY(targetY, duration).SetEase(Ease.OutQuad)
+                            .SetAutoKill(true)
                             .OnComplete(() =>
                             {
                                 if (isSelected)
                                 {
                                     topRing.transform.DOLocalMoveY(targetY + F.TutorialArrowBobHeight * 0.4f, 0.6f)
                                         .SetEase(Ease.InOutSine)
-                                        .SetLoops(-1, LoopType.Yoyo);
+                                        .SetLoops(-1, LoopType.Yoyo)
+                                        .SetAutoKill(true);
                                 }
                             });
                     }
@@ -580,62 +588,20 @@ namespace RingFlow.Gameplay
                 return;
             }
 
-            if (_tutorialArrowGo == null)
-            {
-                _tutorialArrowGo = new GameObject("TutorialArrow");
-                var meshFilter = _tutorialArrowGo.AddComponent<MeshFilter>();
-                if (_proceduralConeMesh == null)
-                {
-                    _proceduralConeMesh = CreateProceduralConeMesh();
-                }
-                meshFilter.sharedMesh = _proceduralConeMesh;
-
-                var renderer = _tutorialArrowGo.AddComponent<MeshRenderer>();
-                var mat = new Material(GetDefaultShader());
-                mat.color = F.TutorialArrowColor;
-                if (mat.HasProperty("_BaseColor"))
-                    mat.SetColor("_BaseColor", F.TutorialArrowColor);
-                mat.SetFloat("_Metallic", 0.1f);
-                mat.SetFloat("_Smoothness", 0.8f);
-                mat.EnableKeyword("_EMISSION");
-                mat.SetColor("_EmissionColor", F.TutorialArrowColor * 0.4f);
-                renderer.sharedMaterial = mat;
-
-                _tutorialArrowGo.transform.localScale = F.TutorialArrowScale;
-
-                var labelGo = new GameObject("Label", typeof(TextMesh));
-                labelGo.transform.SetParent(_tutorialArrowGo.transform, false);
-                labelGo.transform.localPosition = new Vector3(0f, 1.3f, 0f);
-                labelGo.transform.localScale = new Vector3(0.18f, 0.18f, 0.18f);
-                labelGo.transform.rotation = Quaternion.Euler(30f, 0f, 0f);
-                
-                var textMesh = labelGo.GetComponent<TextMesh>();
-                textMesh.fontSize = 48;
-                textMesh.anchor = TextAnchor.MiddleCenter;
-                textMesh.alignment = TextAlignment.Center;
-                textMesh.color = Color.white;
-                textMesh.fontStyle = FontStyle.Bold;
-
-                _tutorialArrowGo.transform.DOLocalMoveY(F.TutorialArrowBobHeight, F.TutorialArrowBobSpeed)
-                    .SetRelative(true)
-                    .SetEase(Ease.InOutSine)
-                    .SetLoops(-1, LoopType.Yoyo);
-
-                _tutorialArrowGo.transform.DOLocalRotate(new Vector3(0f, 360f, 0f), 2.5f, RotateMode.FastBeyond360)
-                    .SetEase(Ease.Linear)
-                    .SetLoops(-1, LoopType.Restart);
-            }
+            EnsureTutorialArrowCreated();
 
             var targetPole = _spawnedPoles[poleId];
             _tutorialArrowGo.transform.SetParent(targetPole.transform, false);
-            float startY = F.PoleScale.y + 0.6f;
-            _tutorialArrowGo.transform.localPosition = new Vector3(0f, startY, 0f);
+            // Position above the pole cap, offset along +Z so it sits in front of the pole
+            // facing the camera (camera looks down -Z).
+            float startY = F.PoleScale.y + 0.55f;
+            float forwardOffset = 0.35f;
+            _tutorialArrowGo.transform.localPosition = new Vector3(0f, startY, forwardOffset);
             _tutorialArrowGo.SetActive(true);
 
-            var label = _tutorialArrowGo.transform.Find("Label")?.GetComponent<TextMesh>();
-            if (label != null)
+            if (_tutorialLabelText != null)
             {
-                label.text = labelText;
+                _tutorialLabelText.text = labelText;
             }
         }
 
@@ -643,41 +609,136 @@ namespace RingFlow.Gameplay
         {
             if (_tutorialArrowGo != null)
             {
+                DOTween.Kill(_tutorialArrowGo.transform);
+                DOTween.Kill(_tutorialCanvasGo != null ? _tutorialCanvasGo.transform : null);
                 _tutorialArrowGo.SetActive(false);
                 _tutorialArrowGo.transform.SetParent(null);
             }
         }
 
-        private Mesh CreateProceduralConeMesh()
+        private void EnsureTutorialArrowCreated()
         {
-            Mesh mesh = new Mesh();
-            mesh.name = "ProceduralCone";
-            int segments = 16;
-            int numVertices = segments + 2;
-            Vector3[] vertices = new Vector3[numVertices];
-            int[] triangles = new int[segments * 6];
+            if (_tutorialArrowGo != null) return;
 
-            vertices[0] = new Vector3(0f, 0f, 0f);
-            vertices[numVertices - 1] = new Vector3(0f, -1f, 0f);
+            _tutorialArrowGo = new GameObject("TutorialMarker");
+            _tutorialArrowGo.transform.localScale = F.TutorialArrowScale;
 
-            for (int i = 0; i < segments; i++)
+            // Downward-pointing arrow (3D quad mesh, ▼ shape)
+            var arrowGo = new GameObject("Arrow");
+            arrowGo.transform.SetParent(_tutorialArrowGo.transform, false);
+            arrowGo.transform.localPosition = Vector3.zero;
+
+            var meshFilter = arrowGo.AddComponent<MeshFilter>();
+            meshFilter.sharedMesh = CreateTutorialArrowMesh();
+
+            var renderer = arrowGo.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = GetTutorialArrowMaterial();
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+
+            // World-space canvas label — always faces camera, readable on any device.
+            _tutorialCanvasGo = new GameObject("LabelCanvas",
+                typeof(RectTransform), typeof(Canvas), typeof(UnityEngine.UI.CanvasScaler), typeof(UnityEngine.UI.GraphicRaycaster));
+            _tutorialCanvasGo.transform.SetParent(_tutorialArrowGo.transform, false);
+            _tutorialCanvasGo.transform.localPosition = new Vector3(0f, 0.9f, 0f);
+
+            var canvas = _tutorialCanvasGo.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+            canvas.sortingOrder = 100;
+
+            var canvasRt = _tutorialCanvasGo.GetComponent<RectTransform>();
+            canvasRt.sizeDelta = new Vector2(2.2f, 0.7f);
+            canvasRt.localScale = new Vector3(0.22f, 0.22f, 0.22f);
+
+            var labelGo = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer),
+                typeof(UnityEngine.UI.Text), typeof(UnityEngine.UI.Outline));
+            labelGo.transform.SetParent(_tutorialCanvasGo.transform, false);
+            var labelRt = labelGo.GetComponent<RectTransform>();
+            labelRt.anchorMin = Vector2.zero;
+            labelRt.anchorMax = Vector2.one;
+            labelRt.offsetMin = Vector2.zero;
+            labelRt.offsetMax = Vector2.zero;
+
+            _tutorialLabelText = labelGo.GetComponent<UnityEngine.UI.Text>();
+            _tutorialLabelText.alignment = TextAnchor.MiddleCenter;
+            _tutorialLabelText.fontSize = 36;
+            _tutorialLabelText.fontStyle = FontStyle.Bold;
+            _tutorialLabelText.color = Color.white;
+            _tutorialLabelText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            _tutorialLabelText.verticalOverflow = VerticalWrapMode.Overflow;
+            _tutorialLabelText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
+                                    ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
+
+            var labelOutline = labelGo.GetComponent<UnityEngine.UI.Outline>();
+            labelOutline.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            labelOutline.effectDistance = new Vector2(1.5f, -1.5f);
+
+            // Subtle dark backing panel behind the label for readability on any background.
+            var panelGo = new GameObject("Panel", typeof(RectTransform), typeof(CanvasRenderer),
+                typeof(UnityEngine.UI.Image));
+            panelGo.transform.SetParent(_tutorialCanvasGo.transform, false);
+            panelGo.transform.SetAsFirstSibling();
+            var panelRt = panelGo.GetComponent<RectTransform>();
+            panelRt.anchorMin = Vector2.zero;
+            panelRt.anchorMax = Vector2.one;
+            panelRt.offsetMin = new Vector2(8f, 6f);
+            panelRt.offsetMax = new Vector2(-8f, -6f);
+            var panelImg = panelGo.GetComponent<UnityEngine.UI.Image>();
+            panelImg.color = new Color(0f, 0f, 0f, 0.55f);
+            panelImg.raycastTarget = false;
+
+            // Pulse + bob — two local tweens, both auto-kill, no Sequence to leak.
+            _tutorialArrowGo.transform.DOScale(F.TutorialArrowScale * 1.2f, F.TutorialArrowBobSpeed)
+                .SetEase(Ease.InOutSine)
+                .SetLoops(-1, LoopType.Yoyo)
+                .SetAutoKill(true);
+
+            float tutorialBaseY = F.PoleScale.y + 0.55f;
+            _tutorialArrowGo.transform.DOLocalMoveY(tutorialBaseY + F.TutorialArrowBobHeight, F.TutorialArrowBobSpeed)
+                .SetEase(Ease.InOutSine)
+                .SetLoops(-1, LoopType.Yoyo)
+                .SetAutoKill(true);
+        }
+
+        private Material _tutorialArrowMaterial;
+
+        private Material GetTutorialArrowMaterial()
+        {
+            if (_tutorialArrowMaterial != null) return _tutorialArrowMaterial;
+            _tutorialArrowMaterial = new Material(GetDefaultShader()) { name = "TutorialArrowMat" };
+            _tutorialArrowMaterial.color = F.TutorialArrowColor;
+            if (_tutorialArrowMaterial.HasProperty("_BaseColor"))
+                _tutorialArrowMaterial.SetColor("_BaseColor", F.TutorialArrowColor);
+            _tutorialArrowMaterial.SetFloat("_Metallic", 0f);
+            _tutorialArrowMaterial.SetFloat("_Smoothness", 0.4f);
+            _tutorialArrowMaterial.EnableKeyword("_EMISSION");
+            _tutorialArrowMaterial.SetColor("_EmissionColor", F.TutorialArrowColor * 1.2f);
+            return _tutorialArrowMaterial;
+        }
+
+        private Mesh CreateTutorialArrowMesh()
+        {
+            // A flat downward-pointing arrow (▼) in the XZ plane, slightly raised at center
+            // so it reads as a proper 3D marker rather than a flat decal.
+            Mesh mesh = new Mesh { name = "TutorialArrowMesh" };
+            Vector3[] vertices = new Vector3[]
             {
-                float angle = (float)i / segments * Mathf.PI * 2f;
-                vertices[i + 1] = new Vector3(Mathf.Cos(angle) * 0.4f, 0f, Mathf.Sin(angle) * 0.4f);
-            }
-
-            int tIdx = 0;
-            for (int i = 0; i < segments; i++)
+                new Vector3( 0.00f, 0.10f,  0.00f), // 0 tip (slightly forward, raised)
+                new Vector3(-0.55f, 0.10f, -0.30f), // 1 left wing
+                new Vector3( 0.55f, 0.10f, -0.30f), // 2 right wing
+                new Vector3(-0.30f, 0.10f, -0.80f), // 3 left tail
+                new Vector3( 0.30f, 0.10f, -0.80f), // 4 right tail
+            };
+            int[] triangles = new int[]
             {
-                int next = (i == segments - 1) ? 1 : i + 2;
-                triangles[tIdx++] = 0;
-                triangles[tIdx++] = next;
-                triangles[tIdx++] = i + 1;
-                triangles[tIdx++] = i + 1;
-                triangles[tIdx++] = next;
-                triangles[tIdx++] = numVertices - 1;
-            }
-
+                0, 2, 1, // front face
+                1, 2, 4,
+                1, 4, 3,
+                // back face (winding flipped for double-sided)
+                0, 1, 2,
+                1, 4, 2,
+                1, 3, 4,
+            };
             mesh.vertices = vertices;
             mesh.triangles = triangles;
             mesh.RecalculateNormals();
@@ -689,13 +750,16 @@ namespace RingFlow.Gameplay
         {
             if (_tutorialArrowGo != null)
             {
+                DOTween.Kill(_tutorialArrowGo.transform);
                 Destroy(_tutorialArrowGo);
                 _tutorialArrowGo = null;
             }
-            if (_proceduralConeMesh != null)
+            _tutorialCanvasGo = null;
+            _tutorialLabelText = null;
+            if (_tutorialArrowMaterial != null)
             {
-                Destroy(_proceduralConeMesh);
-                _proceduralConeMesh = null;
+                Destroy(_tutorialArrowMaterial);
+                _tutorialArrowMaterial = null;
             }
             if (_proceduralTorusMesh != null)
             {
@@ -998,7 +1062,8 @@ namespace RingFlow.Gameplay
             DOTween.Kill(ringObj.transform);
             ringObj.transform.localScale = ringObj.transform.localScale * f.RingPlacePulseScale;
             ringObj.transform.DOScale(ringObj.transform.localScale / f.RingPlacePulseScale, f.RingPlacePulseDuration)
-                .SetEase(Ease.OutBack);
+                .SetEase(Ease.OutBack)
+                .SetAutoKill(true);
         }
 
         private bool TryGetMainCamera(out Camera cam)

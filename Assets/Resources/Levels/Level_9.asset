@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.LevelDataSO
   Data:
     LevelIndex: 9
-    Seed: 109
-    TargetMoves: 9
+    Seed: 113
+    TargetMoves: 8
     Poles:
     - RingCapacity: 4
       Rings: []
@@ -25,10 +25,10 @@ MonoBehaviour:
       - Color: 1
         Type: 0
         AdditionalData: 0
-      - Color: 3
+      - Color: 2
         Type: 0
         AdditionalData: 0
-      - Color: 3
+      - Color: 1
         Type: 0
         AdditionalData: 0
       - Color: 1
@@ -46,7 +46,7 @@ MonoBehaviour:
       - Color: 2
         Type: 0
         AdditionalData: 0
-      - Color: 2
+      - Color: 3
         Type: 0
         AdditionalData: 0
       - Color: 2
@@ -61,7 +61,7 @@ MonoBehaviour:
       - Color: 3
         Type: 0
         AdditionalData: 0
-      - Color: 1
+      - Color: 3
         Type: 0
         AdditionalData: 0
       - Color: 2

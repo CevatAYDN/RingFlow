@@ -720,5 +720,16 @@ namespace RingFlow.Tests
 
             Assert.AreEqual(RingType.Standard, board.GetRingType(0, 0));
         }
+
+        [Test]
+        public void LevelGenerator_DifficultyScore_FollowsMonotonicProgression()
+        {
+            float scoreLevel10 = DifficultyCurve.ComputeDifficultyScore(10, minMoves: 5, specialCount: 0);
+            float scoreLevel150 = DifficultyCurve.ComputeDifficultyScore(150, minMoves: 14, specialCount: 2);
+            float scoreLevel500 = DifficultyCurve.ComputeDifficultyScore(500, minMoves: 25, specialCount: 5);
+
+            Assert.Greater(scoreLevel150, scoreLevel10);
+            Assert.Greater(scoreLevel500, scoreLevel150);
+        }
     }
 }

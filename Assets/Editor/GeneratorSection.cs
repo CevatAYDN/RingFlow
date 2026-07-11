@@ -14,12 +14,10 @@ namespace RingFlow.Editor
         private int _colorCount = 3;
         private int _maxCapacity = 4;
         private int _minEmptyPoles = 1;
-        private bool _lockMinEmptyPoles = true;
         private bool _autoSave = true;
         private bool _generateInProgress;
         private int _batchStartLevel = 1;
         private int _batchEndLevel = 50;
-        private bool _manualMode = false;
 
         [System.NonSerialized] private LevelData _generatedLevel;
         private string _solveStatus = "Seviye yüklenmedi / üretilmedi.";
@@ -39,11 +37,10 @@ namespace RingFlow.Editor
             _poleCount = EditorPrefs.GetInt(EditorPrefsKeys.Poles, 4);
             _colorCount = EditorPrefs.GetInt(EditorPrefsKeys.Colors, 3);
             _maxCapacity = EditorPrefs.GetInt(EditorPrefsKeys.MaxCap, 4);
-            _minEmptyPoles = Mathf.Max(1, EditorPrefs.GetInt("RF_MinEmptyPoles", 1));
-            _lockMinEmptyPoles = EditorPrefs.GetBool("RF_LockMinEmptyPoles", true);
-            _batchStartLevel = EditorPrefs.GetInt("RF_BatchStartLevel", 1);
-            _batchEndLevel = EditorPrefs.GetInt("RF_BatchEndLevel", 50);
-            _manualMode = EditorPrefs.GetBool("RF_GeneratorManualMode", false);
+            _minEmptyPoles = Mathf.Max(1, EditorPrefs.GetInt(EditorPrefsKeys.MinEmptyPoles, 1));
+            _batchStartLevel = EditorPrefs.GetInt(EditorPrefsKeys.BatchStartLevel, 1);
+            _batchEndLevel = EditorPrefs.GetInt(EditorPrefsKeys.BatchEndLevel, 50);
+            _autoSave = EditorPrefs.GetBool(EditorPrefsKeys.AutoSave, true);
         }
 
         public void OnDisable()
@@ -53,9 +50,10 @@ namespace RingFlow.Editor
             EditorPrefs.SetInt(EditorPrefsKeys.Poles, _poleCount);
             EditorPrefs.SetInt(EditorPrefsKeys.Colors, _colorCount);
             EditorPrefs.SetInt(EditorPrefsKeys.MaxCap, _maxCapacity);
-            EditorPrefs.SetInt("RF_BatchStartLevel", _batchStartLevel);
-            EditorPrefs.SetInt("RF_BatchEndLevel", _batchEndLevel);
-            EditorPrefs.SetBool("RF_GeneratorManualMode", _manualMode);
+            EditorPrefs.SetInt(EditorPrefsKeys.MinEmptyPoles, _minEmptyPoles);
+            EditorPrefs.SetInt(EditorPrefsKeys.BatchStartLevel, _batchStartLevel);
+            EditorPrefs.SetInt(EditorPrefsKeys.BatchEndLevel, _batchEndLevel);
+            EditorPrefs.SetBool(EditorPrefsKeys.AutoSave, _autoSave);
         }
 
         public override void OnGUI()
@@ -74,24 +72,10 @@ namespace RingFlow.Editor
             }
             EditorGUILayout.Space(2f);
 
-            // Üretim Modu Seçici
-            EditorGUI.BeginChangeCheck();
-            _manualMode = EditorGUILayout.Popup("Üretim Modu", _manualMode ? 1 : 0, 
-                new[] { "Veri Odaklı (Otomatik - GDD Kuralları)", "Serbest Tasarım (Manuel - Özel Tweak)" }) == 1;
-            if (EditorGUI.EndChangeCheck())
-            {
-                EditorPrefs.SetBool("RF_GeneratorManualMode", _manualMode);
-            }
-
-            if (!_manualMode)
-            {
-                // Sync values automatically with GDD curves/database
-                _poleCount = db.GetPoleCountForLevel(_levelIndex);
-                _colorCount = db.GetColorCountForLevel(_levelIndex);
-                _maxCapacity = db.GetMaxCapacityForLevel(_levelIndex);
-                _minEmptyPoles = db.GetMinEmptyPolesForLevel(_levelIndex);
-                _lockMinEmptyPoles = true;
-            }
+            _poleCount = db.GetPoleCountForLevel(_levelIndex);
+            _colorCount = db.GetColorCountForLevel(_levelIndex);
+            _maxCapacity = db.GetMaxCapacityForLevel(_levelIndex);
+            _minEmptyPoles = db.GetMinEmptyPolesForLevel(_levelIndex);
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
@@ -101,27 +85,16 @@ namespace RingFlow.Editor
                 _levelIndex  = EditorGUILayout.IntSlider("Seviye Endeksi", _levelIndex, 1, db.TotalLevels);
                 _seed        = EditorGUILayout.IntField("Rastgele Tohum (Seed)", _seed);
 
-                if (!_manualMode)
+                // GDD’den gelen parametreler (manuel tweak yok)
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
-                    // Otomatik Mod Kart Görünümü (Daha temiz ve anlaşılır)
-                    using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-                    {
-                        var titleStyle = new GUIStyle(EditorStyles.label) { fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.2f, 0.7f, 1.0f) } };
-                        EditorGUILayout.LabelField("🤖 Otomatik GDD Parametreleri:", titleStyle);
-                        EditorGUILayout.LabelField($"• Direk Sayısı: {_poleCount}");
-                        EditorGUILayout.LabelField($"• Renk Sayısı: {_colorCount}");
-                        EditorGUILayout.LabelField($"• Maks. Kapasite: {_maxCapacity}");
-                        EditorGUILayout.LabelField($"• Min. Boş Direk: {_minEmptyPoles}");
-                    }
-                }
-                else
-                {
-                    EditorGUILayout.HelpBox("Manuel Mod: GDD zorluk eğrilerini geçersiz kılarak özel değerlerle test üretimi yaparsınız.", MessageType.Warning);
-                    _poleCount   = EditorGUILayout.IntSlider("Direk Sayısı", _poleCount, 3, 12);
-                    _colorCount  = EditorGUILayout.IntSlider("Renk Sayısı", _colorCount, 2, 10);
-                    _maxCapacity = EditorGUILayout.IntSlider("Maks. Halka Kapasitesi", _maxCapacity, 2, 8);
-                    _minEmptyPoles = EditorGUILayout.IntSlider("Boş Direk", _minEmptyPoles, 1, 3);
-                    _lockMinEmptyPoles = EditorGUILayout.Toggle("Boş Direk Kilitle", _lockMinEmptyPoles);
+                    var titleStyle = new GUIStyle(EditorStyles.label)
+                        { fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.2f, 0.7f, 1.0f) } };
+                    EditorGUILayout.LabelField("GDD Parametreleri:", titleStyle);
+                    EditorGUILayout.LabelField($"• Direk Sayısı: {_poleCount}");
+                    EditorGUILayout.LabelField($"• Renk Sayısı: {_colorCount}");
+                    EditorGUILayout.LabelField($"• Maks. Kapasite: {_maxCapacity}");
+                    EditorGUILayout.LabelField($"• Min. Boş Direk: {_minEmptyPoles}");
                 }
 
                 DrawDifficultyPreview(_levelIndex);
@@ -133,8 +106,7 @@ namespace RingFlow.Editor
                     EditorPrefs.SetInt(EditorPrefsKeys.Poles, _poleCount);
                     EditorPrefs.SetInt(EditorPrefsKeys.Colors, _colorCount);
                     EditorPrefs.SetInt(EditorPrefsKeys.MaxCap, _maxCapacity);
-                    EditorPrefs.SetInt("RF_MinEmptyPoles", _minEmptyPoles);
-                    EditorPrefs.SetBool("RF_LockMinEmptyPoles", _lockMinEmptyPoles);
+                    EditorPrefs.SetInt(EditorPrefsKeys.MinEmptyPoles, _minEmptyPoles);
                 }
 
                 EditorGUILayout.Space(6f);
@@ -143,9 +115,6 @@ namespace RingFlow.Editor
                 {
                     if (GUILayout.Button("Tek Seviye Üret", GUILayout.Height(30)))
                         Generate();
-
-                    if (GUILayout.Button("GDD Eğrisini Uygula (Sıfırla)", GUILayout.Height(30)))
-                        ApplyGddCurveParams();
                 }
 
                 _autoSave = EditorGUILayout.Toggle("Üretileni Otomatik Kaydet (Asset)", _autoSave);
@@ -238,7 +207,7 @@ namespace RingFlow.Editor
             EditorGUILayout.LabelField($"Açık Mekanikler: {string.Join(", ", allowed)}");
             EditorGUILayout.LabelField($"Hedef Hamle Sayısı: {_generatedLevel.TargetMoves} (Yapay Zeka Doğruladı)");
 
-            DrawLevelVisual(_generatedLevel);
+            LevelVisualRenderer.Draw(_generatedLevel);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Yapay Zeka Çözüm Yolu:", EditorStyles.boldLabel);
@@ -251,95 +220,6 @@ namespace RingFlow.Editor
             EditorGUILayout.EndScrollView();
         }
 
-        public static void DrawLevelVisual(LevelData levelData)
-        {
-            if (levelData == null || levelData.Poles == null || levelData.Poles.Count == 0)
-            {
-                EditorGUILayout.HelpBox("Gösterilecek seviye verisi yok.", MessageType.Info);
-                return;
-            }
-
-            EditorGUILayout.Space(5f);
-            EditorGUILayout.LabelField("Seviye Önizleme Görseli:", EditorStyles.boldLabel);
-
-            float poleWidth = 60f;
-            float ringHeight = 18f;
-            float poleGap = 8f;
-
-            using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
-            {
-                for (int p = 0; p < levelData.Poles.Count; p++)
-                {
-                    var pole = levelData.Poles[p];
-                    int poleMaxCap = pole.RingCapacity;
-
-                    using (new EditorGUILayout.VerticalScope(GUILayout.Width(poleWidth)))
-                    {
-                        EditorGUILayout.LabelField($"Direk {p}", RingFlowEditorUtils.CenteredMiniLabel, GUILayout.Width(poleWidth));
-
-                        float height = poleMaxCap * (ringHeight + 2f) + 12f;
-                        Rect rect = GUILayoutUtility.GetRect(poleWidth, height);
-
-                        Color colBg = pole.IsLocked ? new Color(0.18f, 0.12f, 0.12f, 1f) : new Color(0.16f, 0.16f, 0.18f, 1f);
-                        Color borderCol = pole.IsLocked ? new Color(0.8f, 0.2f, 0.2f) : new Color(0.35f, 0.35f, 0.38f);
-
-                        EditorGUI.DrawRect(rect, colBg);
-                        RingFlowEditorUtils.DrawRectBorder(rect, borderCol, 1);
-
-                        for (int r = 0; r < pole.Rings.Count; r++)
-                        {
-                            var ring = pole.Rings[r];
-                            float ringY = rect.yMax - 6f - (r + 1) * (ringHeight + 2f);
-                            Rect ringRect = new Rect(rect.x + 4f, ringY, poleWidth - 8f, ringHeight);
-
-                            Color ringColor = RingPalette.Get(ring.Color);
-                            EditorGUI.DrawRect(ringRect, ringColor);
-                            RingFlowEditorUtils.DrawRectBorder(ringRect, Color.black, 1);
-
-                            string ringLabel = RingFlowEditorUtils.GetRingShortLabel(ring.Type);
-                            if (ring.AdditionalData > 0 && ring.Type == RingType.Bomb)
-                                ringLabel += ring.AdditionalData;
-
-                            var textStyle = new GUIStyle(RingFlowEditorUtils.CenteredMiniLabel)
-                            {
-                                fontStyle = FontStyle.Bold,
-                                normal = { textColor = RingFlowEditorUtils.GetContrastColor(ringColor) }
-                            };
-                            GUI.Label(ringRect, ringLabel, textStyle);
-                        }
-
-                        if (pole.IsLocked)
-                        {
-                            Rect lockRect = new Rect(rect.x + 3f, rect.y + 4f, poleWidth - 6f, 13f);
-                            EditorGUI.DrawRect(lockRect, new Color(0.8f, 0.1f, 0.1f, 0.9f));
-                            var lockStyle = new GUIStyle(EditorStyles.miniBoldLabel)
-                                { alignment = TextAnchor.MiddleCenter, normal = { textColor = Color.white } };
-                            GUI.Label(lockRect, "KİLİTLİ", lockStyle);
-                        }
-                    }
-
-                    if (p < levelData.Poles.Count - 1)
-                        GUILayout.Space(poleGap);
-                }
-            }
-            EditorGUILayout.Space(5f);
-        }
-
-        private void ApplyGddCurveParams()
-        {
-            _poleCount   = DifficultyCurve.PoleCountForLevel(_levelIndex);
-            _colorCount  = DifficultyCurve.ColorCountForLevel(_levelIndex);
-            _maxCapacity = DifficultyCurve.MaxCapacityForLevel(_levelIndex);
-            if (_poleCount < _colorCount + 1) _poleCount = _colorCount + 1;
-            if (_poleCount > 12) _poleCount = 12;
-
-            EditorPrefs.SetInt(EditorPrefsKeys.Poles, _poleCount);
-            EditorPrefs.SetInt(EditorPrefsKeys.Colors, _colorCount);
-            EditorPrefs.SetInt(EditorPrefsKeys.MaxCap, _maxCapacity);
-
-            NexusLog.Info("RingFlowEditor", nameof(ApplyGddCurveParams), _levelIndex.ToString(),
-                $"GDD eğrisi uygulandı: Direkler={_poleCount}, Renkler={_colorCount}, Kapasite={_maxCapacity}");
-        }
 
         public void GenerateFromDashboard() { Generate(); }
 
@@ -356,10 +236,9 @@ namespace RingFlow.Editor
             }
             _colorCount = Mathf.Max(_colorCount, db.GetColorCountForLevel(_levelIndex));
             _poleCount = Mathf.Max(_colorCount + 1, db.GetPoleCountForLevel(_levelIndex));
-            if (_lockMinEmptyPoles)
-                _minEmptyPoles = db.GetMinEmptyPolesForLevel(_levelIndex);
-            _minEmptyPoles = Mathf.Max(1, _minEmptyPoles);
-            if (_poleCount > 12) _poleCount = 12;
+            _minEmptyPoles = db.GetMinEmptyPolesForLevel(_levelIndex);
+                    _minEmptyPoles = Mathf.Max(1, _minEmptyPoles);
+                    if (_poleCount > 12) _poleCount = 12;
 
             NexusLog.Info("RingFlowEditor", nameof(Generate), _levelIndex.ToString(),
                 $"Seviye {_levelIndex} üretiliyor: Seed={_seed}, Direkler={_poleCount}, Renkler={_colorCount}, Kapasite={_maxCapacity}, BoşDirek={_minEmptyPoles}");
@@ -423,7 +302,7 @@ namespace RingFlow.Editor
             _generateInProgress = true;
             var db = GameConfigDatabaseSO.Instance;
 
-            string folderPath = "Assets/Resources/Levels";
+            string folderPath = EditorPaths.LevelsFolder;
             EnsureLevelsFolder(folderPath);
 
             int okCount = 0;
@@ -450,8 +329,12 @@ namespace RingFlow.Editor
                     if (levelData == null)
                     {
                         failed++;
-                        NexusLog.Warn("RingFlowEditor", nameof(GenerateAllLevels), level.ToString(),
-                            $"Level {level} üretilemedi (tohumlar tükendi). Atlanıyor.");
+                        EditorUtility.ClearProgressBar();
+                        EditorUtility.DisplayDialog("Toplu Üretim Başarısız", 
+                            $"Seviye {level} üretilemedi (50 tohum denendi ve çözülebilir bir seviye bulunamadı).\n" +
+                            "Toplu seviye üretimi durduruldu. Lütfen veritabanındaki boş direk / kilitli direk dengesini veya mekanikleri kontrol edin.", "Tamam");
+                        _generateInProgress = false;
+                        return;
                     }
                     else
                     {
@@ -517,7 +400,7 @@ namespace RingFlow.Editor
         {
             if (levelData == null) return;
 
-            string folderPath = "Assets/Resources/Levels";
+            string folderPath = EditorPaths.LevelsFolder;
             EnsureLevelsFolder(folderPath);
 
             string assetPath = $"{folderPath}/Level_{levelData.LevelIndex}.asset";

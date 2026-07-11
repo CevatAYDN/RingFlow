@@ -15,7 +15,7 @@ MonoBehaviour:
   Data:
     LevelIndex: 15
     Seed: 115
-    TargetMoves: 10
+    TargetMoves: 7
     Poles:
     - RingCapacity: 4
       Rings: []
@@ -25,22 +25,22 @@ MonoBehaviour:
       - Color: 1
         Type: 0
         AdditionalData: 0
+      - Color: 3
+        Type: 0
+        AdditionalData: 0
+      - Color: 3
+        Type: 0
+        AdditionalData: 0
       - Color: 1
-        Type: 0
-        AdditionalData: 0
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
-      - Color: 2
         Type: 0
         AdditionalData: 0
       IsLocked: 0
     - RingCapacity: 4
       Rings:
-      - Color: 3
+      - Color: 2
         Type: 0
         AdditionalData: 0
-      - Color: 1
+      - Color: 2
         Type: 0
         AdditionalData: 0
       - Color: 2
@@ -55,13 +55,16 @@ MonoBehaviour:
       - Color: 1
         Type: 0
         AdditionalData: 0
-      - Color: 3
-        Type: 0
-        AdditionalData: 0
-      - Color: 3
+      - Color: 1
         Type: 0
         AdditionalData: 0
       - Color: 2
         Type: 0
         AdditionalData: 0
+      - Color: 3
+        Type: 0
+        AdditionalData: 0
+      IsLocked: 0
+    - RingCapacity: 4
+      Rings: []
       IsLocked: 0
