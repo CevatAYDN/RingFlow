@@ -28,7 +28,8 @@ namespace RingFlow.Tests
             _signalBus = new MockSignalBus();
             _economyService = new MockEconomyService();
             _adService = new MockAdService();
-            _progressionService = new RingFlow.Gameplay.ProgressionService(_progressModel);
+            var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            _progressionService = new RingFlow.Gameplay.ProgressionService(_progressModel, db);
 
             _progressModel.Coins.Value = 100;
             _progressModel.FreeUndosUsedThisSession.Value = 0;
@@ -670,6 +671,99 @@ namespace RingFlow.Tests
             bool canAdd = board.CanAddRing(0, RingColor.Red, RingType.Chain, 4, 10);
             Assert.IsFalse(canAdd);
         }
+
+        // ── Portal Pole Tests (GDD §41) ──────────────────────────────────────
+
+        [Test]
+        public void MoveRingCommand_PortalTeleport_MovesRingToPartner()
+        {
+            var command = new MoveRingCommand();
+            InjectDependencies(command);
+
+            var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };
+            var pole1 = new PoleState { Id = 1, MaxCapacity = 4, PortalPartnerId = 2 };
+            var pole2 = new PoleState { Id = 2, MaxCapacity = 4 };
+
+            pole0.AddRing(new RingData(RingColor.Red, RingType.Standard));
+
+            _gameplayModel.Poles.Add(pole0);
+            _gameplayModel.Poles.Add(pole1);
+            _gameplayModel.Poles.Add(pole2);
+
+            command.Execute(new MoveRingSignal(0, 1));
+
+            // Ring should have teleported from pole1 to pole2
+            Assert.AreEqual(0, pole0.Rings.Count);
+            Assert.AreEqual(0, pole1.Rings.Count);
+            Assert.AreEqual(1, pole2.Rings.Count);
+            Assert.AreEqual(RingColor.Red, pole2.TopRing.Color);
+            Assert.IsTrue(_signalBus.HasFiredPortalTeleport);
+        }
+
+        [Test]
+        public void MoveRingCommand_PortalTeleport_UndoRestoresState()
+        {
+            var moveCommand = new MoveRingCommand();
+            InjectDependencies(moveCommand);
+
+            var undoCommand = new UndoCommand();
+            InjectDependencies(undoCommand);
+
+            var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };
+            var pole1 = new PoleState { Id = 1, MaxCapacity = 4, PortalPartnerId = 2 };
+            var pole2 = new PoleState { Id = 2, MaxCapacity = 4 };
+
+            pole0.AddRing(new RingData(RingColor.Red, RingType.Standard));
+
+            _gameplayModel.Poles.Add(pole0);
+            _gameplayModel.Poles.Add(pole1);
+            _gameplayModel.Poles.Add(pole2);
+
+            // Execute portal move
+            moveCommand.Execute(new MoveRingSignal(0, 1));
+            Assert.AreEqual(1, _gameplayModel.MoveHistory.Count);
+            Assert.AreEqual(1, pole2.Rings.Count);
+
+            // Undo should restore original state
+            undoCommand.Execute(new UndoSignal());
+
+            Assert.AreEqual(1, pole0.Rings.Count);
+            Assert.AreEqual(0, pole1.Rings.Count);
+            Assert.AreEqual(0, pole2.Rings.Count);
+            Assert.AreEqual(RingColor.Red, pole0.TopRing.Color);
+            Assert.AreEqual(0, _gameplayModel.MoveHistory.Count);
+        }
+
+        [Test]
+        public void MoveRingCommand_PortalTeleport_FullPartner_DoesNotTeleport()
+        {
+            var command = new MoveRingCommand();
+            InjectDependencies(command);
+
+            var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };
+            var pole1 = new PoleState { Id = 1, MaxCapacity = 4, PortalPartnerId = 2 };
+            var pole2 = new PoleState { Id = 2, MaxCapacity = 1 };
+
+            // Fill partner pole to capacity
+            pole2.AddRing(new RingData(RingColor.Blue, RingType.Standard));
+
+            pole0.AddRing(new RingData(RingColor.Red, RingType.Standard));
+
+            _gameplayModel.Poles.Add(pole0);
+            _gameplayModel.Poles.Add(pole1);
+            _gameplayModel.Poles.Add(pole2);
+
+            // Execute move - ring should NOT teleport because partner is full
+            command.Execute(new MoveRingSignal(0, 1));
+
+            // Ring remains on the portal pole since partner is full
+            Assert.AreEqual(0, pole0.Rings.Count);
+            Assert.AreEqual(1, pole1.Rings.Count);
+            Assert.AreEqual(RingColor.Red, pole1.TopRing.Color);
+            Assert.AreEqual(1, pole2.Rings.Count);
+            Assert.IsFalse(_signalBus.HasFiredPortalTeleport);
+        }
+
     }
 
     // --- Minimal Mocks for Unit Testing ---
@@ -681,6 +775,7 @@ namespace RingFlow.Tests
         public bool HasFiredBombExploded { get; private set; }
         public bool HasFiredBreakIce { get; private set; }
         public bool HasFiredUnlockPole { get; private set; }
+        public bool HasFiredPortalTeleport { get; private set; }
 
         private readonly System.Collections.Generic.Dictionary<Type, System.Collections.Generic.List<Delegate>> _handlers
             = new System.Collections.Generic.Dictionary<Type, System.Collections.Generic.List<Delegate>>();
@@ -709,6 +804,8 @@ namespace RingFlow.Tests
                 HasFiredBreakIce = true;
             else if (typeof(T) == typeof(UnlockPoleSignal))
                 HasFiredUnlockPole = true;
+            else if (typeof(T) == typeof(PortalTeleportSignal))
+                HasFiredPortalTeleport = true;
 
             if (_handlers.TryGetValue(typeof(T), out var list))
             {

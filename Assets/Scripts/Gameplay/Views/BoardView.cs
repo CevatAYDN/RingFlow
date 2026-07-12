@@ -12,8 +12,6 @@ namespace RingFlow.Gameplay
         [UnityEngine.Scripting.Preserve]
         [SerializeField] private GameObject _torusPrefab;
 
-        private const int RingPoolPrewarmCount = 100;
-
         public void SetTorusPrefab(GameObject prefab) { _torusPrefab = prefab; }
 
         private static Shader _cachedShader;
@@ -112,8 +110,8 @@ namespace RingFlow.Gameplay
                 poleObj.transform.localPosition = new Vector3(startX + p * spacing, F.PoleYPosition, 0f);
                 poleObj.transform.localRotation = Quaternion.identity;
                 var poleScale = F.PoleScale;
-                int poleCap = poleData.RingCapacity > 0 ? poleData.RingCapacity : 4;
-                poleScale.y = F.PoleScale.y * (poleCap / 4f);
+                int poleCap = poleData.RingCapacity > 0 ? poleData.RingCapacity : F.DefaultPoleCapacity;
+                poleScale.y = F.PoleScale.y * (poleCap / (float)F.PoleScaleFullCapacity);
                 poleObj.transform.localScale = poleScale;
 
 
@@ -168,13 +166,9 @@ namespace RingFlow.Gameplay
                     ringObj.transform.localPosition = new Vector3(0f, targetY, 0f);
                     ringObj.transform.localRotation = Quaternion.identity;
 
-                    // Uniform World Scale Compensation (1.5f width, 0.44f height)
-                    float targetWidth = 1.5f;
-                    float targetHeight = 0.44f;
-                    float meshHeight = 0.26f;
-                    float localX = targetWidth / poleObj.transform.localScale.x;
-                    float localY = (targetHeight / meshHeight) / poleObj.transform.localScale.y;
-                    float localZ = targetWidth / poleObj.transform.localScale.z;
+                    float localX = F.RingTargetWidth / poleObj.transform.localScale.x;
+                    float localY = (F.RingTargetHeight / F.RingMeshHeight) / poleObj.transform.localScale.y;
+                    float localZ = F.RingTargetWidth / poleObj.transform.localScale.z;
                     ringObj.transform.localScale = new Vector3(localX, localY, localZ);
 
                     var ringRenderer = ringObj.GetComponentInChildren<Renderer>();
@@ -245,12 +239,9 @@ namespace RingFlow.Gameplay
                     }
                     else
                     {
-                        float targetWidth = 1.5f;
-                        float targetHeight = 0.44f;
-                        float meshHeight = 0.26f;
-                        float localX = targetWidth / F.PoleScale.x;
-                        float localY = (targetHeight / meshHeight) / F.PoleScale.y;
-                        float localZ = targetWidth / F.PoleScale.z;
+                        float localX = F.RingTargetWidth / F.PoleScale.x;
+                        float localY = (F.RingTargetHeight / F.RingMeshHeight) / F.PoleScale.y;
+                        float localZ = F.RingTargetWidth / F.PoleScale.z;
                         Vector3 normalScale = new Vector3(localX, localY, localZ);
 
                         DOTween.Kill(movedRing.transform);
@@ -1145,8 +1136,8 @@ namespace RingFlow.Gameplay
                 if (col != null) Destroy(col);
             }
 
-            _floorPlane.transform.position = new Vector3(0f, -0.51f, 0f);
-            _floorPlane.transform.localScale = new Vector3(10f, 1f, 10f); // 100x100 units
+            _floorPlane.transform.position = new Vector3(0f, F.FloorYPosition, 0f);
+            _floorPlane.transform.localScale = F.FloorScale;
             
             var renderer = _floorPlane.GetComponent<MeshRenderer>();
             renderer.receiveShadows = true;
@@ -1166,7 +1157,7 @@ namespace RingFlow.Gameplay
         {
             if (_proceduralTorusMesh == null)
             {
-                _proceduralTorusMesh = CreateProceduralTorusMesh(0.37f, 0.13f, 32, 24);
+                _proceduralTorusMesh = CreateProceduralTorusMesh(F.TorusMajorRadius, F.TorusMinorRadius, F.TorusRadialSegments, F.TorusTubularSegments);
             }
             return _proceduralTorusMesh;
         }

@@ -7,9 +7,8 @@ namespace RingFlow.Gameplay
 {
     public class HintCommand : IAsyncCommand<HintRequestedSignal>
     {
-        public const long HintCostCoins = 50;
-
         [Inject] private GameplayModel _model;
+        [Inject] private GameConfigDatabaseSO _dbConfig;
         [Inject] private IEconomyService _economy;
         [Inject] private IAdService _ads;
         [Inject] private ISignalBus _signalBus;
@@ -76,7 +75,8 @@ namespace RingFlow.Gameplay
                 return;
             }
 
-            if (_economy != null && _economy.CanAfford(CurrencyIds.Coins, HintCostCoins))
+            long hintCoinCost = _dbConfig != null ? _dbConfig.BalanceConfig.HintCoinCost : 50;
+            if (_economy != null && _economy.CanAfford(CurrencyIds.Coins, hintCoinCost))
             {
                 ResolveAndFire(firstMove, false);
                 return;
@@ -115,7 +115,8 @@ namespace RingFlow.Gameplay
             }
             else
             {
-                if (_economy == null || !_economy.Spend(CurrencyIds.Coins, HintCostCoins, "Hint"))
+                long hintCoinCost = _dbConfig != null ? _dbConfig.BalanceConfig.HintCoinCost : 50;
+                if (_economy == null || !_economy.Spend(CurrencyIds.Coins, hintCoinCost, "Hint"))
                 {
                     NexusLog.Warn("HintCommand", nameof(ResolveAndFire), "",
                         "Coins spend failed (insufficient balance or economy unbound).");

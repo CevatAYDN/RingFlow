@@ -11,6 +11,7 @@ namespace RingFlow.Gameplay.UI
     public class ChestPopupMediator : Mediator<ChestPopupView>
     {
         [Inject] private PlayerProgressModel _progress;
+        [Inject] private GameConfigDatabaseSO _dbConfig;
         [Inject] private ILocalizationService _loc;
         [Inject] private IGameDiagnostics _diag;
         [Inject] private IViewMediatorTracker _tracker;
@@ -38,11 +39,23 @@ namespace RingFlow.Gameplay.UI
         private void RefreshDisplay()
         {
             if (_progress == null) return;
+            if (_dbConfig == null)
+            {
+                NexusLog.Error("ChestPopupMediator", nameof(RefreshDisplay), "",
+                    "GameConfigDatabaseSO not bound.");
+                View.ShowChestCounts(0, 0, 0, 0);
+                return;
+            }
+            var cfg = _dbConfig.BalanceConfig;
             View.ShowChestCounts(
                 _progress.ChestBronze.Value,
                 _progress.ChestSilver.Value,
                 _progress.ChestGold.Value,
-                _progress.ChestDiamond.Value);
+                _progress.ChestDiamond.Value,
+                cfg.ChestXpBronze,
+                cfg.ChestXpSilver,
+                cfg.ChestXpGold,
+                cfg.ChestXpDiamond);
         }
 
         private void OnClaimClicked()

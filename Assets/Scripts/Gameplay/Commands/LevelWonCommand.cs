@@ -63,8 +63,8 @@ namespace RingFlow.Gameplay
             int newLevel = _progressionService != null ? _progressionService.CurrentLevel.Value : prevLevel;
 
             int newWorldIndex = _dbConfig.GetWorldForLevel(newLevel);
-            bool isBoss = WorldConfigSO.IsBossLevel(prevLevel);
-            int coinReward = isBoss ? Cfg.BossCoinReward : Cfg.NormalCoinReward + (prevLevel % 11) * 10;
+            bool isBoss = WorldConfigSO.IsBossLevel(_dbConfig, prevLevel);
+            int coinReward = isBoss ? Cfg.BossCoinReward : Cfg.NormalCoinReward + (prevLevel % Cfg.LevelUpBonusDivisor) * Cfg.LevelUpBonusMultiplier;
             _economyService?.Earn(CurrencyIds.Coins, coinReward, isBoss ? "Boss Win Reward" : "Level Win Reward");
 
             int xpEarned = isBoss ? Cfg.BossXpReward : Cfg.NormalXpReward;
@@ -72,7 +72,7 @@ namespace RingFlow.Gameplay
             {
                 _progress.Xp.Value += xpEarned;
 
-                int xpRequired = _progress.XpToNextLevel(_progress.PlayerLevel.Value);
+                int xpRequired = _progress.XpToNextLevel(_dbConfig, _progress.PlayerLevel.Value);
                 while (_progress.Xp.Value >= xpRequired)
                 {
                     int oldLevel = _progress.PlayerLevel.Value;
@@ -81,7 +81,7 @@ namespace RingFlow.Gameplay
                     _economyService?.Earn(CurrencyIds.Coins, Cfg.LevelUpCoinReward, "Player Level Up Reward");
                     NexusLog.Info("LevelWonCommand", "Execute", "",
                         $"Player leveled up: {oldLevel} → {_progress.PlayerLevel.Value}. XP remaining={_progress.Xp.Value}.");
-                    xpRequired = _progress.XpToNextLevel(_progress.PlayerLevel.Value);
+                    xpRequired = _progress.XpToNextLevel(_dbConfig, _progress.PlayerLevel.Value);
                 }
             }
 

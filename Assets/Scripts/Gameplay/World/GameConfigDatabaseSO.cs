@@ -18,6 +18,7 @@ namespace RingFlow.Gameplay
         Magnet = 9,
         Paint = 10,
         Ghost = 11,
+        Portal = 15, // Portal pole pairs — ring placed on portal teleports to linked partner
         RandomPool1 = 12, // 1 random type from advanced pool
         RandomPool2 = 13, // 2 random types from advanced pool
         RandomPool3 = 14  // 3 random types from advanced pool
@@ -34,11 +35,21 @@ namespace RingFlow.Gameplay
     }
 
     [System.Serializable]
+    public struct DailyRewardEntry
+    {
+        public string CurrencyId;
+        public int Amount;
+    }
+
+    [System.Serializable]
     public struct GameBalanceConfig
     {
         [Header("Undo")]
         public int FreeUndosPerSession;
         public int UndoCoinCost;
+
+        [Header("Hint")]
+        public int HintCoinCost;
 
         [Header("Level Completion Rewards")]
         public int NormalCoinReward;
@@ -46,15 +57,31 @@ namespace RingFlow.Gameplay
         public int NormalXpReward;
         public int BossXpReward;
         public int LevelUpCoinReward;
+        public int LevelUpBonusDivisor;
+        public int LevelUpBonusMultiplier;
 
         [Header("Star Thresholds")]
         public int ThreeStarTargetRatioPercent; // e.g. 100 → ≤target, 130 → ≤target*1.3
         public int TwoStarTargetRatioPercent;
 
-        [Header("Chest Drop Rates")]
+        [Header("Chest Values & Drop Rates")]
+        public int ChestXpBronze;
+        public int ChestXpSilver;
+        public int ChestXpGold;
+        public int ChestXpDiamond;
         public float SilverChestChance;
         public float GoldChestChance;
         public float DiamondChestChance;
+
+        [Header("Player XP Thresholds")]
+        public int XpThresholdLevel1;
+        public int XpThresholdLevel2;
+        public int XpThresholdLevel3;
+        public int XpThresholdDefault;
+
+        [Header("Daily Rewards")]
+        public int MinClaimIntervalMinutes;
+        public List<DailyRewardEntry> DailyRewards;
 
         [Header("Ad Intervals")]
         public int InterstitialAdInterval;
@@ -88,6 +115,13 @@ namespace RingFlow.Gameplay
     }
 
     [System.Serializable]
+    public struct SolverLimitBucket
+    {
+        public int MaxColorCount;
+        public int StateLimit;
+    }
+
+    [System.Serializable]
     public struct LevelGenConfig
     {
         public int MaxScrambleAttempts;
@@ -98,12 +132,28 @@ namespace RingFlow.Gameplay
         public int BombCountdown;
         public int MaxMechanicTypesPerLevel;
         public int MinSolverMoves;
+        public int DefaultMaxMovesLimit;
+        public int MaxSolverStatesLimit;
+        public int PoleCountClamp;
+        public int BaseGenerationSeedMultiplier;
+        public int EmptyPolesCompactAttempts;
+        public int PoleScaleCapacityDenominator;
+        public float TargetScoreBase;
+        public float TargetScoreLevelDenominator;
+        public float TargetScoreMultiplier;
+        public int ScrambleMinEmptyPolesFloor;
+        public List<SolverLimitBucket> SolverLimitBuckets;
+        public List<int> RetrySeedMultipliers;
+        public List<int> MechanicPriorityOrder; // RingType enum values in priority order
     }
 
     [CreateAssetMenu(fileName = "GameConfigDatabase", menuName = "RingFlow/Game Config Database")]
     public class GameConfigDatabaseSO : ScriptableObject
     {
         public int TotalLevels = 2000;
+        public int LevelsPerWorld = 50;
+        public int TotalWorlds = 40;
+        public int BossLevelModulo = 50;
         public int LevelsPerThemeStep = 5;
         public int MinimumEmptyPoles = 1;
         public List<DifficultyBandData> DifficultyBands = new();
@@ -120,7 +170,27 @@ namespace RingFlow.Gameplay
             MaxCandidates = 5,
             BombCountdown = 5,
             MaxMechanicTypesPerLevel = 4,
-            MinSolverMoves = 2
+            MinSolverMoves = 2,
+            DefaultMaxMovesLimit = 200,
+            MaxSolverStatesLimit = 100000,
+            PoleCountClamp = 12,
+            BaseGenerationSeedMultiplier = 12345,
+            EmptyPolesCompactAttempts = 10,
+            PoleScaleCapacityDenominator = 4,
+            TargetScoreBase = 15f,
+            TargetScoreLevelDenominator = 2000f,
+            TargetScoreMultiplier = 125f,
+            ScrambleMinEmptyPolesFloor = 1,
+            SolverLimitBuckets = new()
+            {
+                new() { MaxColorCount = 3, StateLimit = 20000 },
+                new() { MaxColorCount = 5, StateLimit = 30000 },
+                new() { MaxColorCount = 7, StateLimit = 20000 },
+                new() { MaxColorCount = 9, StateLimit = 12000 },
+                new() { MaxColorCount = 99, StateLimit = 8000 }
+            },
+            RetrySeedMultipliers = new() { 27779, 31415, 16180 },
+            MechanicPriorityOrder = new() { 3, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 15 }
         };
 
         private void OnEnable()
@@ -140,16 +210,38 @@ namespace RingFlow.Gameplay
             {
                 FreeUndosPerSession = 5,
                 UndoCoinCost = 5,
+                HintCoinCost = 50,
                 NormalCoinReward = 50,
                 BossCoinReward = 500,
                 NormalXpReward = 10,
                 BossXpReward = 50,
                 LevelUpCoinReward = 100,
+                LevelUpBonusDivisor = 11,
+                LevelUpBonusMultiplier = 10,
                 ThreeStarTargetRatioPercent = 100,
                 TwoStarTargetRatioPercent = 130,
+                ChestXpBronze = 100,
+                ChestXpSilver = 250,
+                ChestXpGold = 500,
+                ChestXpDiamond = 1000,
                 SilverChestChance = 0.40f,
                 GoldChestChance = 0.10f,
                 DiamondChestChance = 0.01f,
+                XpThresholdLevel1 = 100,
+                XpThresholdLevel2 = 250,
+                XpThresholdLevel3 = 500,
+                XpThresholdDefault = 1000,
+                MinClaimIntervalMinutes = 5,
+                DailyRewards = new List<DailyRewardEntry>
+                {
+                    new() { CurrencyId = "Coins", Amount = 100 },
+                    new() { CurrencyId = "Coins", Amount = 150 },
+                    new() { CurrencyId = "Coins", Amount = 200 },
+                    new() { CurrencyId = "Hint", Amount = 1 },
+                    new() { CurrencyId = "Coins", Amount = 300 },
+                    new() { CurrencyId = "Theme", Amount = 1 },
+                    new() { CurrencyId = "Diamonds", Amount = 25 }
+                },
                 InterstitialAdInterval = 3
             };
 
@@ -234,7 +326,8 @@ namespace RingFlow.Gameplay
                         WorldMechanicType.Glass,
                         WorldMechanicType.Rainbow,
                         WorldMechanicType.Bomb,
-                        WorldMechanicType.Chain
+                        WorldMechanicType.Chain,
+                        WorldMechanicType.Portal
                     }
                 },
                 new()
@@ -255,7 +348,8 @@ namespace RingFlow.Gameplay
                         WorldMechanicType.Rainbow,
                         WorldMechanicType.Bomb,
                         WorldMechanicType.Chain,
-                        WorldMechanicType.Magnet
+                        WorldMechanicType.Magnet,
+                        WorldMechanicType.Portal
                     }
                 },
                 new()
@@ -279,6 +373,7 @@ namespace RingFlow.Gameplay
                         WorldMechanicType.Magnet,
                         WorldMechanicType.Paint,
                         WorldMechanicType.Ghost,
+                        WorldMechanicType.Portal,
                         WorldMechanicType.RandomPool1,
                         WorldMechanicType.RandomPool2,
                         WorldMechanicType.RandomPool3
@@ -326,8 +421,9 @@ namespace RingFlow.Gameplay
                 else if (i == 9) w.MechanicType = WorldMechanicType.Magnet;
                 else if (i == 10) w.MechanicType = WorldMechanicType.Paint;
                 else if (i == 11) w.MechanicType = WorldMechanicType.Ghost;
-                else if (i >= 25) w.MechanicType = WorldMechanicType.RandomPool3;
-                else if (i >= 18) w.MechanicType = WorldMechanicType.RandomPool2;
+                else if (i == 12) w.MechanicType = WorldMechanicType.Portal;
+                else if (i >= 26) w.MechanicType = WorldMechanicType.RandomPool3;
+                else if (i >= 19) w.MechanicType = WorldMechanicType.RandomPool2;
                 else w.MechanicType = WorldMechanicType.RandomPool1;
 
                 Worlds.Add(w);
@@ -528,8 +624,7 @@ namespace RingFlow.Gameplay
 
         public int GetWorldForLevel(int level)
         {
-            int levelsPerWorld = TotalLevels <= 50 ? 10 : 50;
-            int world = (level - 1) / levelsPerWorld;
+            int world = (level - 1) / LevelsPerWorld;
             return Mathf.Clamp(world, 0, Worlds.Count - 1);
         }
 

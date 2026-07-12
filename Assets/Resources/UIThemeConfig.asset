@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1bc199d42e4ed94eab6a0b168bc39aa, type: 3}
+  m_Name: UIThemeConfig
+  m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.UIThemeConfigSO
+  PrimaryColor: {r: 0.22, g: 0.51, b: 0.91, a: 1}
+  PrimaryPressed: {r: 0.16, g: 0.4, b: 0.75, a: 1}
+  AccentColor: {r: 1, g: 0.76, b: 0.03, a: 1}
+  BgColor: {r: 0.96, g: 0.98, b: 1, a: 1}
+  SurfaceColor: {r: 0.9, g: 0.93, b: 0.97, a: 1}
+  PanelColor: {r: 0.88, g: 0.92, b: 0.96, a: 1}
+  TextColor: {r: 0.15, g: 0.2, b: 0.28, a: 1}
+  MutedText: {r: 0.4, g: 0.45, b: 0.52, a: 1}
+  DangerColor: {r: 0.78, g: 0.2, b: 0.2, a: 1}
+  SuccessColor: {r: 0.27, g: 0.74, b: 0.4, a: 1}
+  PanelElevation: 4
+  ButtonHeight: 56
+  ButtonWidth: 240
+  ButtonFontSize: 22
+  PrimaryButtonColors:
+    NormalColor: {r: 0.22, g: 0.51, b: 0.91, a: 1}
+    HighlightedColor: {r: 0.3, g: 0.62, b: 1, a: 1}
+    PressedColor: {r: 0.16, g: 0.4, b: 0.75, a: 1}
+    SelectedColor: {r: 0.3, g: 0.62, b: 1, a: 1}
+    DisabledColor: {r: 0.3, g: 0.3, b: 0.35, a: 1}
+  OutlineButtonColors:
+    NormalColor: {r: 0.9, g: 0.93, b: 0.97, a: 1}
+    HighlightedColor: {r: 0.8, g: 0.84, b: 0.9, a: 1}
+    PressedColor: {r: 0.7, g: 0.74, b: 0.8, a: 1}
+    SelectedColor: {r: 0.8, g: 0.84, b: 0.9, a: 1}
+    DisabledColor: {r: 0.85, g: 0.87, b: 0.9, a: 1}
+  DangerButtonColors:
+    NormalColor: {r: 0.78, g: 0.2, b: 0.2, a: 1}
+    HighlightedColor: {r: 0.88, g: 0.32, b: 0.32, a: 1}
+    PressedColor: {r: 0.6, g: 0.15, b: 0.15, a: 1}
+    SelectedColor: {r: 0.88, g: 0.32, b: 0.32, a: 1}
+    DisabledColor: {r: 0.3, g: 0.3, b: 0.35, a: 1}
+  TextButtonColors:
+    NormalColor: {r: 0, g: 0, b: 0, a: 0}
+    HighlightedColor: {r: 0.15, g: 0.2, b: 0.28, a: 0.08}
+    PressedColor: {r: 0.15, g: 0.2, b: 0.28, a: 0.15}
+    SelectedColor: {r: 0, g: 0, b: 0, a: 0}
+    DisabledColor: {r: 0, g: 0, b: 0, a: 0}
+  IconButtonColors:
+    NormalColor: {r: 0.88, g: 0.92, b: 0.96, a: 1}
+    HighlightedColor: {r: 0.8, g: 0.84, b: 0.9, a: 1}
+    PressedColor: {r: 0.7, g: 0.74, b: 0.8, a: 1}
+    SelectedColor: {r: 0.8, g: 0.84, b: 0.9, a: 1}
+    DisabledColor: {r: 0.85, g: 0.87, b: 0.9, a: 1}

@@ -1,35 +1,26 @@
 using System;
+using System.Collections.Generic;
 using Nexus.Core.Services;
 
 namespace RingFlow.Gameplay
 {
-    /// <summary>
-    /// GDD §9 — Daily 7-day reward cycle (100 → 150 → 200 → Hint → 300 → Tema → Diamond).
-    /// Implemented as a static table + claim method so it survives zero-config and avoids any platform clock dependency for unit tests.
-    /// </summary>
     public static class DailyRewardTable
     {
-        public const int CycleLength = 7;
-
-        /// <summary>Reward for each day index 0..6.</summary>
-        public static CurrencyAmount RewardForDayIndex(int dayIndex)
+        /// <summary>Reward for each day index from GameBalanceConfig.DailyRewards list.</summary>
+        public static CurrencyAmount RewardForDayIndex(List<DailyRewardEntry> dailyRewards, int dayIndex)
         {
-            // Normalize wraps around at 7 (cycle repeats).
-            int d = ((dayIndex % CycleLength) + CycleLength) % CycleLength;
-            return d switch
-            {
-                0 => new CurrencyAmount("Coins", 100),
-                1 => new CurrencyAmount("Coins", 150),
-                2 => new CurrencyAmount("Coins", 200),
-                3 => new CurrencyAmount("Hint", 1),       // virtual currency — gives 1 free undo via UndoCommand
-                4 => new CurrencyAmount("Coins", 300),
-                5 => new CurrencyAmount("Theme", 1),      // unlocks a random theme (caller picks)
-                6 => new CurrencyAmount("Diamonds", 25),
-                _ => new CurrencyAmount("Coins", 0)
-            };
+            if (dailyRewards == null || dailyRewards.Count == 0)
+                return new CurrencyAmount("Coins", 0);
+            int d = ((dayIndex % dailyRewards.Count) + dailyRewards.Count) % dailyRewards.Count;
+            var entry = dailyRewards[d];
+            return new CurrencyAmount(entry.CurrencyId, entry.Amount);
         }
 
-        /// <summary>True if the local day has changed since last claim given 24h reset semantics.</summary>
+        public static int CycleLength(GameConfigDatabaseSO db)
+        {
+            return db?.BalanceConfig.DailyRewards?.Count ?? 7;
+        }
+
         public static bool IsDailyRewardClaimable(long lastClaimUtcTicks, DateTime nowUtc)
         {
             if (lastClaimUtcTicks <= 0) return true;
@@ -49,16 +40,25 @@ namespace RingFlow.Gameplay
 
     public sealed class DailyRewardService
     {
-        private const long MinClaimIntervalTicks = TimeSpan.TicksPerMinute * 5;
         private readonly PlayerProgressModel _progress;
+        private readonly GameConfigDatabaseSO _dbConfig;
 
-        public DailyRewardService(PlayerProgressModel progress)
+        public DailyRewardService(PlayerProgressModel progress, GameConfigDatabaseSO dbConfig)
         {
             _progress = progress;
+            _dbConfig = dbConfig;
         }
 
-        /// <summary>The day index that the NEXT claim will reward (read-only preview for UI).</summary>
         public int DayIndexPreview => _progress.DailyDayIndex.Value + 1;
+
+        private long MinClaimIntervalTicks
+        {
+            get
+            {
+                int minutes = _dbConfig != null ? _dbConfig.BalanceConfig.MinClaimIntervalMinutes : 5;
+                return TimeSpan.TicksPerMinute * minutes;
+            }
+        }
 
         public bool CanClaimNow()
         {
@@ -70,10 +70,6 @@ namespace RingFlow.Gameplay
             var nowTicks = DateTime.UtcNow.Ticks;
             var lastTicks = _progress.DailyLastClaimUtcTicks.Value;
 
-            // FIX P2.DailyRewardTamper — reject rollback and ultra-fast reclaims.
-            // The original day-based gating is preserved, but we additionally ensure the
-            // monotonic timestamp never moves backward and that a minimum interval passes
-            // before any repeated claim can occur.
             if (lastTicks > 0 && nowTicks < lastTicks)
             {
                 reason = "clock_rollback";
@@ -96,7 +92,6 @@ namespace RingFlow.Gameplay
             return true;
         }
 
-        /// <summary>Returns the next day's reward after this claim. Updates stamp + index.</summary>
         public CurrencyAmount Claim()
         {
             if (!CanClaimNow(out var reason))
@@ -107,7 +102,8 @@ namespace RingFlow.Gameplay
             }
 
             int nextIndex = _progress.DailyDayIndex.Value + 1;
-            var reward = DailyRewardTable.RewardForDayIndex(nextIndex);
+            var reward = DailyRewardTable.RewardForDayIndex(
+                _dbConfig?.BalanceConfig.DailyRewards, nextIndex);
 
             if (reward.Amount <= 0)
             {
@@ -115,11 +111,12 @@ namespace RingFlow.Gameplay
                     $"Reward table returned zero for day index {nextIndex}.");
             }
 
-            _progress.DailyDayIndex.Value = nextIndex % DailyRewardTable.CycleLength;
+            int cycle = DailyRewardTable.CycleLength(_dbConfig);
+            _progress.DailyDayIndex.Value = nextIndex % cycle;
             _progress.DailyLastClaimUtcTicks.Value = DateTime.UtcNow.Ticks;
 
             NexusLog.Info("DailyRewardService", nameof(Claim), nextIndex.ToString(),
-                $"Daily reward claimed — day {nextIndex % DailyRewardTable.CycleLength}, reward: {reward.CurrencyId} x{reward.Amount}.");
+                $"Daily reward claimed — day {nextIndex % cycle}, reward: {reward.CurrencyId} x{reward.Amount}.");
 
             return reward;
         }

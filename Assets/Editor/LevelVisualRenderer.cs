@@ -22,6 +22,8 @@ namespace RingFlow.Editor
         private static readonly Color PoleBorder = new(0.35f, 0.35f, 0.38f);
         private static readonly Color PoleBorderLocked = new(0.8f, 0.2f, 0.2f);
         private static readonly Color LockLabelBackground = new(0.8f, 0.1f, 0.1f, 0.9f);
+        private static readonly Color PortalBadgeBackground = new(0.0f, 0.6f, 0.8f, 0.9f);
+        private static readonly Color PortalPoleBorder = new(0.0f, 0.6f, 0.8f);
 
         public static void Draw(LevelData levelData)
         {
@@ -84,6 +86,18 @@ namespace RingFlow.Editor
                         normal = { textColor = Color.white }
                     };
                     GUI.Label(lockRect, "KİLİTLİ", lockStyle);
+                }
+
+                if (pole.PortalTargetId >= 0)
+                {
+                    Rect portalRect = new(rect.x + 3f, rect.yMax - 16f, PoleWidth - 6f, 13f);
+                    EditorGUI.DrawRect(portalRect, PortalBadgeBackground);
+                    var portalStyle = new GUIStyle(EditorStyles.miniBoldLabel)
+                    {
+                        alignment = TextAnchor.MiddleCenter,
+                        normal = { textColor = Color.white }
+                    };
+                    GUI.Label(portalRect, $"PORTAL → {pole.PortalTargetId}", portalStyle);
                 }
             }
         }

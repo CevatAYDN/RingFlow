@@ -13,6 +13,9 @@ MonoBehaviour:
   m_Name: GameConfigDatabase
   m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.GameConfigDatabaseSO
   TotalLevels: 2000
+  LevelsPerWorld: 50
+  TotalWorlds: 40
+  BossLevelModulo: 50
   LevelsPerThemeStep: 5
   MinimumEmptyPoles: 1
   DifficultyBands:
@@ -20,36 +23,43 @@ MonoBehaviour:
     MaxLevel: 20
     MinEmptyPoles: 2
     MaxCapacity: 4
+    MechanicIntensity: 1
     AllowedMechanics: 0000000001000000
   - Band: 1
     MaxLevel: 100
     MinEmptyPoles: 2
     MaxCapacity: 4
+    MechanicIntensity: 1
     AllowedMechanics: 000000000100000002000000
   - Band: 2
     MaxLevel: 350
     MinEmptyPoles: 1
     MaxCapacity: 4
+    MechanicIntensity: 2
     AllowedMechanics: 0000000001000000020000000300000004000000
   - Band: 3
     MaxLevel: 600
     MinEmptyPoles: 1
     MaxCapacity: 4
+    MechanicIntensity: 2
     AllowedMechanics: 00000000010000000200000003000000040000000500000006000000
   - Band: 4
     MaxLevel: 1000
     MinEmptyPoles: 1
     MaxCapacity: 4
+    MechanicIntensity: 3
     AllowedMechanics: 000000000100000002000000030000000400000005000000060000000700000008000000
   - Band: 5
     MaxLevel: 1500
     MinEmptyPoles: 1
     MaxCapacity: 4
+    MechanicIntensity: 3
     AllowedMechanics: 00000000010000000200000003000000040000000500000006000000070000000800000009000000
   - Band: 6
     MaxLevel: 2000
     MinEmptyPoles: 1
     MaxCapacity: 4
+    MechanicIntensity: 4
     AllowedMechanics: 000000000100000002000000030000000400000005000000060000000700000008000000090000000a0000000b0000000c0000000d0000000e000000
   ColorCurve:
   - LevelThreshold: 1
@@ -1873,14 +1883,49 @@ MonoBehaviour:
   BalanceConfig:
     FreeUndosPerSession: 5
     UndoCoinCost: 5
+    HintCoinCost: 0
     NormalCoinReward: 50
     BossCoinReward: 500
     NormalXpReward: 10
     BossXpReward: 50
     LevelUpCoinReward: 100
+    LevelUpBonusDivisor: 0
+    LevelUpBonusMultiplier: 0
     ThreeStarTargetRatioPercent: 100
     TwoStarTargetRatioPercent: 130
+    ChestXpBronze: 0
+    ChestXpSilver: 0
+    ChestXpGold: 0
+    ChestXpDiamond: 0
     SilverChestChance: 0.4
     GoldChestChance: 0.1
     DiamondChestChance: 0.01
+    XpThresholdLevel1: 0
+    XpThresholdLevel2: 0
+    XpThresholdLevel3: 0
+    XpThresholdDefault: 0
+    MinClaimIntervalMinutes: 0
+    DailyRewards: []
     InterstitialAdInterval: 3
+  LevelGen:
+    MaxScrambleAttempts: 1500
+    ScrambleTargetBase: 150
+    ScrambleTargetRandomRange: 80
+    MaxGenerationSeeds: 50
+    MaxCandidates: 5
+    BombCountdown: 5
+    MaxMechanicTypesPerLevel: 4
+    MinSolverMoves: 2
+    DefaultMaxMovesLimit: 0
+    MaxSolverStatesLimit: 0
+    PoleCountClamp: 0
+    BaseGenerationSeedMultiplier: 0
+    EmptyPolesCompactAttempts: 0
+    PoleScaleCapacityDenominator: 0
+    TargetScoreBase: 0
+    TargetScoreLevelDenominator: 0
+    TargetScoreMultiplier: 0
+    ScrambleMinEmptyPolesFloor: 0
+    SolverLimitBuckets: []
+    RetrySeedMultipliers: 
+    MechanicPriorityOrder: 

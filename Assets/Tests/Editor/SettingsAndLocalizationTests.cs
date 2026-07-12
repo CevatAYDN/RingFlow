@@ -67,7 +67,8 @@ namespace RingFlow.Tests
         [Test]
         public void DailyRewardService_BlocksClockRollbackAndRapidReplay()
         {
-            var service = new DailyRewardService(_progress);
+            var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var service = new DailyRewardService(_progress, db);
             _progress.DailyDayIndex.Value = 0;
             _progress.DailyLastClaimUtcTicks.Value = DateTime.UtcNow.AddMinutes(-1).Ticks;
 

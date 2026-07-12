@@ -26,6 +26,12 @@ namespace RingFlow.Gameplay
         }
         public bool IsLocked { get; set; }
 
+        /// <summary>
+        /// Portal partner pole ID. -1 means this pole is not a portal pole.
+        /// When a ring is placed on a portal pole, it immediately teleports to the linked partner pole.
+        /// </summary>
+        public int PortalPartnerId { get; set; } = -1;
+
         private int _ringCapacity = 4;
         public int RingCapacity
         {

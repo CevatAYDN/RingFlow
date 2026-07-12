@@ -198,6 +198,27 @@ namespace RingFlow.Editor
             EditorGUILayout.LabelField($"Açık Mekanikler: {string.Join(", ", allowed)}");
             EditorGUILayout.LabelField($"Hedef Hamle Sayısı: {_generatedLevel.TargetMoves} (Yapay Zeka Doğruladı)");
 
+            var portalPairs = new System.Collections.Generic.List<string>();
+            for (int p = 0; p < _generatedLevel.Poles.Count; p++)
+            {
+                int partnerId = _generatedLevel.Poles[p].PortalTargetId;
+                if (partnerId >= 0 && partnerId > p)
+                {
+                    portalPairs.Add($"Direk {p} ↔ Direk {partnerId}");
+                }
+            }
+
+            if (portalPairs.Count > 0)
+            {
+                EditorGUILayout.Space(2f);
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                {
+                    EditorGUILayout.LabelField("Portal Çiftleri:", EditorStyles.boldLabel);
+                    foreach (var pair in portalPairs)
+                        EditorGUILayout.LabelField($"  • {pair}");
+                }
+            }
+
             LevelVisualRenderer.Draw(_generatedLevel);
 
             EditorGUILayout.Space();
@@ -413,7 +434,7 @@ namespace RingFlow.Editor
 
             foreach (var p in source.Poles)
             {
-                var poleClone = new PoleData(p.RingCapacity) { IsLocked = p.IsLocked, Rings = new List<RingData>() };
+                var poleClone = new PoleData(p.RingCapacity) { IsLocked = p.IsLocked, PortalTargetId = p.PortalTargetId, Rings = new List<RingData>() };
                 foreach (var r in p.Rings)
                     poleClone.Rings.Add(new RingData(r.Color, r.Type, r.AdditionalData));
                 clone.Poles.Add(poleClone);

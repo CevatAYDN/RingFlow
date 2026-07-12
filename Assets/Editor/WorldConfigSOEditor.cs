@@ -10,6 +10,7 @@ namespace RingFlow.Editor
         public override void OnInspectorGUI()
         {
             var config = (WorldConfigSO)target;
+            var database = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
 
             EditorGUILayout.LabelField("World Configuration", RingFlowEditorUtils.HeaderStyle);
             EditorGUILayout.Space(4f);
@@ -37,12 +38,19 @@ namespace RingFlow.Editor
             EditorGUILayout.LabelField("Level Info", EditorStyles.boldLabel);
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                int startLevel = WorldConfigSO.ToAbsoluteLevel(config.WorldIndex, 0);
-                int endLevel = WorldConfigSO.ToAbsoluteLevel(config.WorldIndex, WorldConfigSO.LevelsPerWorld - 1);
-                EditorGUILayout.LabelField("Level Range", $"{startLevel} – {endLevel}");
+                if (database != null)
+                {
+                    int startLevel = WorldConfigSO.ToAbsoluteLevel(database, config.WorldIndex, 0);
+                    int endLevel = WorldConfigSO.ToAbsoluteLevel(database, config.WorldIndex, database.LevelsPerWorld - 1);
+                    EditorGUILayout.LabelField("Level Range", $"{startLevel} – {endLevel}");
 
-                bool isBoss = WorldConfigSO.IsBossLevel(endLevel);
-                EditorGUILayout.LabelField("Last Level is Boss", isBoss ? "Yes" : "No");
+                    bool isBoss = WorldConfigSO.IsBossLevel(database, endLevel);
+                    EditorGUILayout.LabelField("Last Level is Boss", isBoss ? "Yes" : "No");
+                }
+                else
+                {
+                    EditorGUILayout.HelpBox("GameConfigDatabase.asset not found in Resources!", MessageType.Warning);
+                }
             }
 
             EditorGUILayout.Space(8f);
@@ -50,8 +58,11 @@ namespace RingFlow.Editor
             EditorGUILayout.LabelField("Mechanic Assignment", EditorStyles.boldLabel);
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                int startLevel = WorldConfigSO.ToAbsoluteLevel(config.WorldIndex, 0);
-                var database = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+                int startLevel = 0;
+                if (database != null)
+                {
+                    startLevel = WorldConfigSO.ToAbsoluteLevel(database, config.WorldIndex, 0);
+                }
                 WorldMechanicType worldMechanic = WorldMechanicType.None;
                 DifficultyBand band = DifficultyBand.Tutorial;
                 var allowedMechanics = new System.Collections.Generic.List<WorldMechanicType>();
@@ -70,7 +81,7 @@ namespace RingFlow.Editor
                 }
                 else
                 {
-                    EditorGUILayout.HelpBox("Zorluk Veritabanı (GameConfigDatabase.asset) bulunamadı!", MessageType.Warning);
+                    EditorGUILayout.HelpBox("GameConfigDatabase.asset not found in Resources!", MessageType.Warning);
                 }
 
                 // Show mechanic injection preview
@@ -91,9 +102,10 @@ namespace RingFlow.Editor
                 }
                 else
                 {
+                    int levelsPerWorld = database != null ? database.LevelsPerWorld : 8;
                     EditorGUILayout.HelpBox(
                         $"This world's primary mechanic ({worldMechanic}) always injects, bypassing band gating. " +
-                        $"The world teaches this mechanic to the player over {WorldConfigSO.LevelsPerWorld} levels.",
+                        $"The world teaches this mechanic to the player over {levelsPerWorld} levels.",
                         MessageType.Info);
                 }
             }

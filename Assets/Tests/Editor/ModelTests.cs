@@ -113,11 +113,12 @@ namespace RingFlow.Tests
         public void PlayerProgressModel_XpToNextLevel_ReturnsCorrectValues()
         {
             var model = new PlayerProgressModel();
-            Assert.AreEqual(100, model.XpToNextLevel(1));
-            Assert.AreEqual(250, model.XpToNextLevel(2));
-            Assert.AreEqual(500, model.XpToNextLevel(3));
-            Assert.AreEqual(1000, model.XpToNextLevel(4));
-            Assert.AreEqual(1000, model.XpToNextLevel(10));
+            var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            Assert.AreEqual(100, model.XpToNextLevel(db, 1));
+            Assert.AreEqual(250, model.XpToNextLevel(db, 2));
+            Assert.AreEqual(500, model.XpToNextLevel(db, 3));
+            Assert.AreEqual(1000, model.XpToNextLevel(db, 4));
+            Assert.AreEqual(1000, model.XpToNextLevel(db, 10));
         }
 
         [Test]
@@ -229,6 +230,28 @@ namespace RingFlow.Tests
         // ── WinReward Tests ──────────────────────────────────────────────────
 
         [Test]
+        public void PoleState_PortalPartnerId_DefaultsToMinusOne()
+        {
+            var pole = new PoleState();
+            Assert.AreEqual(-1, pole.PortalPartnerId);
+        }
+
+        [Test]
+        public void PoleState_PortalPartnerId_CanBeSet()
+        {
+            var pole = new PoleState { PortalPartnerId = 3 };
+            Assert.AreEqual(3, pole.PortalPartnerId);
+        }
+
+        [Test]
+        public void PoleState_PortalPartnerId_IgnoresSelfReference()
+        {
+            var pole = new PoleState { Id = 0, PortalPartnerId = 0 };
+            pole.PortalPartnerId = 0;
+            Assert.AreEqual(0, pole.PortalPartnerId);
+        }
+
+        [Test]
         public void WinReward_From_CreatesCorrectStruct()
         {
             var reward = WinReward.From(moves: 10, targetMoves: 12, coins: 50, xp: 100, stars: 3);
@@ -334,6 +357,35 @@ namespace RingFlow.Tests
             Assert.AreEqual(-1, record.FromPoleId);
             Assert.AreEqual(0, record.SubMoves.Count);
             Assert.AreEqual(0, record.BombCountersBeforeTick.Count);
+        }
+
+        [Test]
+        public void MoveRecord_PortalFields_DefaultToFalse()
+        {
+            var record = new MoveRecord();
+            Assert.IsFalse(record.WasPortalTeleported);
+            Assert.AreEqual(-1, record.PortalTeleportTargetPoleId);
+        }
+
+        [Test]
+        public void MoveRecord_PortalFields_CanBeSet()
+        {
+            var record = new MoveRecord(0, 1, new RingData(RingColor.Red));
+            record.WasPortalTeleported = true;
+            record.PortalTeleportTargetPoleId = 2;
+            Assert.IsTrue(record.WasPortalTeleported);
+            Assert.AreEqual(2, record.PortalTeleportTargetPoleId);
+        }
+
+        [Test]
+        public void MoveRecord_PortalFields_AreCleared()
+        {
+            var record = new MoveRecord(0, 1, new RingData(RingColor.Red));
+            record.WasPortalTeleported = true;
+            record.PortalTeleportTargetPoleId = 2;
+            record.Clear();
+            Assert.IsFalse(record.WasPortalTeleported);
+            Assert.AreEqual(-1, record.PortalTeleportTargetPoleId);
         }
 
         // ── MoveRecordPool Tests ─────────────────────────────────────────────

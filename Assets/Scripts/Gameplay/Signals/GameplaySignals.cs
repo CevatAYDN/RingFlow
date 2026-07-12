@@ -104,6 +104,17 @@ namespace RingFlow.Gameplay
         }
     }
 
+    public readonly struct PortalTeleportSignal
+    {
+        public readonly int FromPoleId;
+        public readonly int ToPoleId;
+        public PortalTeleportSignal(int fromPoleId, int toPoleId)
+        {
+            FromPoleId = fromPoleId;
+            ToPoleId = toPoleId;
+        }
+    }
+
     public readonly struct MoveBlockedSignal
     {
         public readonly int FromPoleId;

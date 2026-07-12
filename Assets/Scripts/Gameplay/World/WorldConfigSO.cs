@@ -17,12 +17,13 @@ namespace RingFlow.Gameplay
     }
 
     /// <summary>
-    /// GDD §5 — Per-world configuration. 40 worlds × 50 levels = 2000 levels.
+    /// GDD §5 — Per-world configuration.
+    /// World/level counts come from GameConfigDatabaseSO.
     /// </summary>
     [CreateAssetMenu(fileName = "WorldConfig", menuName = "RingFlow/World Config")]
     public class WorldConfigSO : ScriptableObject
     {
-        [Tooltip("Zero-based world index 0..39")]
+        [Tooltip("Zero-based world index")]
         public int WorldIndex;
 
         [Tooltip("Display name (e.g. Grass Valley). Localized via ILocalizationService.")]
@@ -31,39 +32,25 @@ namespace RingFlow.Gameplay
         [Tooltip("World-unlock world index. 0 = always unlocked.")]
         public int UnlockedByWorldIndex = -1;
 
-        [Tooltip("Boss level occurs every 50 levels (always the 50th).")]
+        [Tooltip("Boss level occurs every N levels (the Nth in each world).")]
         public bool IsEventWorld;
 
-        private void OnValidate()
+        /// <summary>1-based absolute level index. Level 1 = World 0 / Level 1.</summary>
+        public static int ToAbsoluteLevel(GameConfigDatabaseSO db, int worldIndex, int levelInWorld)
         {
-            if (WorldIndex < 0) WorldIndex = 0;
-            if (WorldIndex > 39) WorldIndex = 39;
+            return worldIndex * db.LevelsPerWorld + levelInWorld + 1;
         }
 
-        public const int LevelsPerWorld = 50;
-        public const int TotalWorlds = 40;
-        public const int TotalLevels = TotalWorlds * LevelsPerWorld; // 2000
-
-        /// <summary>1-based absolute level index (1..2000). Level 1 = World 0 / Level 1.</summary>
-        public static int ToAbsoluteLevel(int worldIndex, int levelInWorld)
-        {
-            return worldIndex * LevelsPerWorld + levelInWorld + 1;
-        }
-
-
-
-        public static int LevelInWorldFromAbsoluteLevel(int absoluteLevel)
+        public static int LevelInWorldFromAbsoluteLevel(GameConfigDatabaseSO db, int absoluteLevel)
         {
             if (absoluteLevel < 1) absoluteLevel = 1;
-            int lvl = (absoluteLevel - 1) % LevelsPerWorld;
-            return lvl;
+            return (absoluteLevel - 1) % db.LevelsPerWorld;
         }
 
-        public static bool IsBossLevel(int absoluteLevel)
+        public static bool IsBossLevel(GameConfigDatabaseSO db, int absoluteLevel)
         {
-            // Boss every 50 levels (last in each world) — GDD §5
-            int levelInWorld = LevelInWorldFromAbsoluteLevel(absoluteLevel);
-            return levelInWorld == LevelsPerWorld - 1;
+            int levelInWorld = LevelInWorldFromAbsoluteLevel(db, absoluteLevel);
+            return levelInWorld == db.LevelsPerWorld - 1;
         }
     }
 }

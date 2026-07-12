@@ -1,6 +1,6 @@
+using System.Collections.Generic;
 using Nexus.Core;
 using Nexus.Core.Services;
-using UnityEngine;
 
 namespace RingFlow.Gameplay
 {
@@ -51,12 +51,13 @@ namespace RingFlow.Gameplay
             int poleCount = db.GetPoleCountForLevel(currentLevel);
             int colorCount = db.GetColorCountForLevel(currentLevel);
             int maxCapacity = db.GetMaxCapacityForLevel(currentLevel);
+            int poleClamp = db.LevelGen.PoleCountClamp > 0 ? db.LevelGen.PoleCountClamp : 12;
             if (poleCount < colorCount + 1) poleCount = colorCount + 1;
-            if (poleCount > 12)
+            if (poleCount > poleClamp)
             {
                 NexusLog.Warn("InitLevelCommand", "Execute", currentLevel.ToString(),
-                    $"Computed pole count exceeded 12; clamping from {poleCount}.");
-                poleCount = 12;
+                    $"Computed pole count exceeded {poleClamp}; clamping from {poleCount}.");
+                poleCount = poleClamp;
             }
 
             if (savedLevel != null && savedLevel.Data != null)
@@ -71,8 +72,10 @@ namespace RingFlow.Gameplay
                         "Progression service not bound and no level index specified — defaulting to level 1.");
                 }
 
+                int baseSeedMultiplier = db.LevelGen.BaseGenerationSeedMultiplier > 0
+                    ? db.LevelGen.BaseGenerationSeedMultiplier : 12345;
                 levelData = LevelGenerator.GenerateLevel(
-                    db, currentLevel, currentLevel * 12345, poleCount, colorCount, maxCapacity);
+                    db, currentLevel, currentLevel * baseSeedMultiplier, poleCount, colorCount, maxCapacity);
             }
 
             if (levelData != null)
@@ -81,12 +84,13 @@ namespace RingFlow.Gameplay
             }
             else
             {
-                // P0 fix: retry with alternate seeds before giving up.
-                var retrySeeds = new[] { currentLevel * 27779, currentLevel * 31415, currentLevel * 16180 };
-                foreach (var retrySeed in retrySeeds)
+                var retryMultipliers = db.LevelGen.RetrySeedMultipliers != null && db.LevelGen.RetrySeedMultipliers.Count > 0
+                    ? db.LevelGen.RetrySeedMultipliers
+                    : new List<int> { 27779, 31415, 16180 };
+                foreach (var retryMultiplier in retryMultipliers)
                 {
                     levelData = LevelGenerator.GenerateLevel(
-                        db, currentLevel, retrySeed, poleCount, colorCount, maxCapacity);
+                        db, currentLevel, currentLevel * retryMultiplier, poleCount, colorCount, maxCapacity);
                     if (levelData != null) break;
                 }
 
@@ -137,6 +141,8 @@ namespace RingFlow.Gameplay
                 var pData = levelData.Poles[i];
                 var poleState = new PoleState { Id = i, IsLocked = pData.IsLocked };
                 poleState.SetCapacity(pData.RingCapacity);
+                if (pData.PortalTargetId >= 0)
+                    poleState.PortalPartnerId = pData.PortalTargetId;
                 for (int r = 0; r < pData.Rings.Count; r++)
                     poleState.AddRing(pData.Rings[r].Clone());
                 _model.Poles.Add(poleState);

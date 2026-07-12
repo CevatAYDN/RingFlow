@@ -9,10 +9,12 @@ namespace RingFlow.Gameplay
     public sealed class ProgressionService : Nexus.Core.Services.IProgressionService, INexusService
     {
         private readonly PlayerProgressModel _progress;
+        private readonly GameConfigDatabaseSO _dbConfig;
 
-        public ProgressionService(PlayerProgressModel progress)
+        public ProgressionService(PlayerProgressModel progress, GameConfigDatabaseSO dbConfig)
         {
             _progress = progress;
+            _dbConfig = dbConfig;
             CurrentLevel = _progress.CurrentLevel;
             MaxUnlockedLevel = _progress.MaxUnlockedLevel;
         }
@@ -37,11 +39,14 @@ namespace RingFlow.Gameplay
                 levelIndex = 1;
             }
 
-            if (levelIndex > WorldConfigSO.TotalLevels)
+            int totalLevels = _dbConfig != null
+                ? _dbConfig.LevelsPerWorld * _dbConfig.TotalWorlds
+                : 40;
+            if (levelIndex > totalLevels)
             {
                 NexusLog.Warn("ProgressionService", nameof(SetLevel), levelIndex.ToString(),
-                    $"Requested level above cap {WorldConfigSO.TotalLevels}; clamping to TotalLevels.");
-                levelIndex = WorldConfigSO.TotalLevels;
+                    $"Requested level above cap {totalLevels}; clamping to TotalLevels.");
+                levelIndex = totalLevels;
             }
 
             CurrentLevel.Value = levelIndex;

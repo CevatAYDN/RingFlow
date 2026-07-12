@@ -55,34 +55,43 @@ namespace RingFlow.Gameplay
         // Non-persisted; resets each session. Tracks levels since last interstitial.
         public int LevelsSinceLastInterstitial { get; set; } = 0;
 
-        /// <summary>0..39 — unlocked state per world.</summary>
-        public List<bool> UnlockedWorlds { get; } = new(40);
+        /// <summary>Unlocked state per world. Count set externally via SetTotalWorldCount().</summary>
+        public List<bool> UnlockedWorlds { get; } = new();
+
+        /// <summary>The total number of worlds (set from GameConfigDatabaseSO at bootstrap).</summary>
+        public int TotalWorldCount { get; private set; } = 40;
+
         /// <summary>themes owned (by ID, arbitrary strings managed outside).</summary>
         public List<string> OwnedThemes { get; } = new();
 
         /// <summary>Achievements achieved (id, timestampUtc).</summary>
         public List<string> Achievements { get; } = new();
 
-        // XP thresholds per player level — GDD §9: Bronze 100 / Silver 250 / Gold 500 / Diamond 1000
-        // Cumulative XP to next level grows; we use a simple curve.
-        public int XpToNextLevel(int playerLevel)
+        public void SetTotalWorldCount(int totalWorlds)
         {
-            // 100 cumulative at level 1, 250 at 2, 500 at 3, etc. — staircase that mirrors chest values.
+            TotalWorldCount = totalWorlds > 0 ? totalWorlds : 40;
+        }
+
+        // XP thresholds — data-driven via GameBalanceConfig fields.
+        public int XpToNextLevel(GameConfigDatabaseSO db, int playerLevel)
+        {
+            if (db == null) return 100;
+            var cfg = db.BalanceConfig;
             return playerLevel switch
             {
-                1 => 100,
-                2 => 250,
-                3 => 500,
-                _ => 1000
+                1 => cfg.XpThresholdLevel1,
+                2 => cfg.XpThresholdLevel2,
+                3 => cfg.XpThresholdLevel3,
+                _ => cfg.XpThresholdDefault
             };
         }
 
         public ValueTask OnBind(System.Threading.CancellationToken ct)
         {
-            // Initialize unlocked worlds with all false, then mark world 0 as unlocked.
+            // Initialize unlocked worlds — uses externally set TotalWorldCount.
             if (UnlockedWorlds.Count == 0)
             {
-                for (int i = 0; i < 40; i++) UnlockedWorlds.Add(false);
+                for (int i = 0; i < TotalWorldCount; i++) UnlockedWorlds.Add(false);
                 UnlockedWorlds[0] = true;
             }
             return default;
@@ -90,7 +99,6 @@ namespace RingFlow.Gameplay
 
         public void Reset()
         {
-            // Reset does NOT clear persisted data; use SaveSystem.Restore explicitly.
             Coins.Value = 0;
             Diamonds.Value = 0;
             Xp.Value = 0;
@@ -107,7 +115,7 @@ namespace RingFlow.Gameplay
             HintCount.Value = 0;
             RemoveAds.Value = false;
             UnlockedWorlds.Clear();
-            for (int i = 0; i < 40; i++) UnlockedWorlds.Add(i == 0);
+            for (int i = 0; i < TotalWorldCount; i++) UnlockedWorlds.Add(i == 0);
             OwnedThemes.Clear();
             Achievements.Clear();
         }
@@ -199,7 +207,7 @@ namespace RingFlow.Gameplay
             m.RemoveAds.Value = prefs.GetBool(PlayerProgressModel.KeyRemoveAds, false);
 
             m.UnlockedWorlds.Clear();
-            LoadBoolList(prefs, PlayerProgressModel.KeyWorlds, m.UnlockedWorlds, 40, true, 0);
+            LoadBoolList(prefs, PlayerProgressModel.KeyWorlds, m.UnlockedWorlds, m.TotalWorldCount, true, 0);
             m.OwnedThemes.Clear();
             LoadStringList(prefs, PlayerProgressModel.KeyThemes, m.OwnedThemes);
             m.Achievements.Clear();
@@ -209,7 +217,7 @@ namespace RingFlow.Gameplay
             {
                 if (m.UnlockedWorlds.Count == 0)
                 {
-                    for (int i = 0; i < 40; i++) m.UnlockedWorlds.Add(i == 0);
+                    for (int i = 0; i < m.TotalWorldCount; i++) m.UnlockedWorlds.Add(i == 0);
                 }
                 if (m.CurrentLevel.Value < 1) m.CurrentLevel.Value = 1;
                 if (m.MaxUnlockedLevel.Value < 1) m.MaxUnlockedLevel.Value = 1;

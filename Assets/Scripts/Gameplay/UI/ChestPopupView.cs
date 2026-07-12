@@ -10,7 +10,7 @@ namespace RingFlow.Gameplay.UI
     /// Shows accumulated Bronze/Silver/Gold/Diamond chest counts and a claim button.
     /// Self-building when the prefab lacks authored children.
     /// </summary>
-    [Mediator(typeof(ChestPopupMediator))]
+        [Mediator(typeof(ChestPopupMediator))]
     public class ChestPopupView : View
     {
         public Button ClaimButton { get; private set; }
@@ -22,11 +22,6 @@ namespace RingFlow.Gameplay.UI
         public Text DiamondText { get; private set; }
         public Text TotalXpText { get; private set; }
         private GameObject _claimBtn, _closeBtn;
-
-        private const int XpBronze = 100;
-        private const int XpSilver = 250;
-        private const int XpGold = 500;
-        private const int XpDiamond = 1000;
 
         private void Awake()
         {
@@ -147,14 +142,15 @@ namespace RingFlow.Gameplay.UI
             }
         }
 
-        public void ShowChestCounts(int bronze, int silver, int gold, int diamond)
+        public void ShowChestCounts(int bronze, int silver, int gold, int diamond, 
+            int xpBronze = 100, int xpSilver = 250, int xpGold = 500, int xpDiamond = 1000)
         {
-            if (BronzeText != null) BronzeText.text = $"Bronze: x{bronze}  (+{bronze * XpBronze} XP)";
-            if (SilverText != null) SilverText.text = $"Silver: x{silver}  (+{silver * XpSilver} XP)";
-            if (GoldText != null) GoldText.text = $"Gold: x{gold}  (+{gold * XpGold} XP)";
-            if (DiamondText != null) DiamondText.text = $"Diamond: x{diamond}  (+{diamond * XpDiamond} XP)";
+            if (BronzeText != null) BronzeText.text = $"Bronze: x{bronze}  (+{bronze * xpBronze} XP)";
+            if (SilverText != null) SilverText.text = $"Silver: x{silver}  (+{silver * xpSilver} XP)";
+            if (GoldText != null) GoldText.text = $"Gold: x{gold}  (+{gold * xpGold} XP)";
+            if (DiamondText != null) DiamondText.text = $"Diamond: x{diamond}  (+{diamond * xpDiamond} XP)";
 
-            int totalXp = bronze * XpBronze + silver * XpSilver + gold * XpGold + diamond * XpDiamond;
+            int totalXp = bronze * xpBronze + silver * xpSilver + gold * xpGold + diamond * xpDiamond;
             if (TotalXpText != null) TotalXpText.text = $"Total XP: +{totalXp}";
 
             bool hasAny = (bronze + silver + gold + diamond) > 0;

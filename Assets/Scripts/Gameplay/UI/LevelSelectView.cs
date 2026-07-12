@@ -14,8 +14,6 @@ namespace RingFlow.Gameplay.UI
     [Mediator(typeof(LevelSelectMediator))]
     public class LevelSelectView : View
     {
-        public const int ButtonsPerWorld = 8;
-
         public List<Button> LevelButtons { get; } = new();
         public Button BackButton { get; private set; }
         public Text TitleText { get; private set; }

@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Nexus.Core;
 using Nexus.Core.Services;
 
 namespace RingFlow.Gameplay
@@ -93,6 +92,9 @@ namespace RingFlow.Gameplay
 
             var board = new BoardState();
             board.Initialize(poleCount, maxCapacity, levelData.Poles.Count);
+            int[] portalTargets = new int[poleCount];
+            for (int pi = 0; pi < poleCount; pi++) portalTargets[pi] = -1;
+
             for (int p = 0; p < levelData.Poles.Count; p++)
             {
                 var poleData = levelData.Poles[p];
@@ -104,6 +106,8 @@ namespace RingFlow.Gameplay
                     board.SetRingAdditional(p, r, poleData.Rings[r].AdditionalData);
                 }
                 board.SetRingCount(p, poleData.Rings.Count);
+                if (poleData.PortalTargetId >= 0)
+                    portalTargets[p] = poleData.PortalTargetId;
             }
 
             int failures = 0;
@@ -127,6 +131,16 @@ namespace RingFlow.Gameplay
                 }
 
                 board.AddRing(record.ToPoleId, ring);
+
+                if (portalTargets[record.ToPoleId] >= 0)
+                {
+                    int partner = portalTargets[record.ToPoleId];
+                    if (board.GetRingCount(partner) < board.MaxCapacity)
+                    {
+                        var portalRing = board.PopRing(record.ToPoleId);
+                        board.AddRing(partner, portalRing);
+                    }
+                }
             }
 
             return new ReplayResult
@@ -152,6 +166,8 @@ namespace RingFlow.Gameplay
             to.WasRainbowTargetConverted = from.WasRainbowTargetConverted;
             to.RainbowTargetRingIndex = from.RainbowTargetRingIndex;
             to.RainbowTargetOriginalColor = from.RainbowTargetOriginalColor;
+            to.WasPortalTeleported = from.WasPortalTeleported;
+            to.PortalTeleportTargetPoleId = from.PortalTeleportTargetPoleId;
 
             to.IceBrokenRingIndices.Clear();
             to.IceBrokenRingIndices.AddRange(from.IceBrokenRingIndices);

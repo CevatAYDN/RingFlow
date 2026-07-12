@@ -11,17 +11,19 @@ namespace RingFlow.Gameplay
     /// </summary>
     public static class DoTweenCapacityBootstrap
     {
-        public const int TweensCapacity = 1500;
-        public const int SequencesCapacity = 200;
-
         private static bool s_initialized;
 
-        public static void EnsureInitialized()
+        public static void EnsureInitialized(int tweensCapacity = 1500, int sequencesCapacity = 200)
         {
             if (s_initialized) return;
             s_initialized = true;
 
-            DOTween.SetTweensCapacity(TweensCapacity, SequencesCapacity);
+            DOTween.SetTweensCapacity(tweensCapacity, sequencesCapacity);
+        }
+
+        public static void ResetForTests()
+        {
+            s_initialized = false;
         }
     }
 }

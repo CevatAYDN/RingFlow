@@ -63,6 +63,8 @@ namespace RingFlow.Gameplay
         public bool WasRainbowTargetConverted;
         public int RainbowTargetRingIndex;
         public RingColor RainbowTargetOriginalColor;
+        public bool WasPortalTeleported;
+        public int PortalTeleportTargetPoleId;
         public readonly List<MoveRecord> SubMoves = new(4);
 
         /// <summary>Snapshot of every bomb's counter BEFORE this move's TickAllBombs() ran.
@@ -130,6 +132,8 @@ namespace RingFlow.Gameplay
             WasRainbowTargetConverted = false;
             RainbowTargetRingIndex = -1;
             RainbowTargetOriginalColor = RingColor.None;
+            WasPortalTeleported = false;
+            PortalTeleportTargetPoleId = -1;
 
             for (int i = 0; i < SubMoves.Count; i++)
             {

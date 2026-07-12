@@ -33,7 +33,7 @@ namespace RingFlow.Gameplay
                     if (_audio != null)
                     {
                         int currentLevel = _progression?.CurrentLevel.Value ?? 1;
-                        bool isBoss = WorldConfigSO.IsBossLevel(currentLevel);
+                        bool isBoss = WorldConfigSO.IsBossLevel(_dbConfig, currentLevel);
                         // FIX P0.3: use the transient state multiplier so the player's saved
                         // BGM slider stays at whatever they last set in Settings.
                         _audio.BgmStateMultiplier = isBoss ? 0.80f : 0.40f;
@@ -55,19 +55,19 @@ namespace RingFlow.Gameplay
             // GDD §12: oyun %40 (Boss seviyesiyse %80)
             if (_audio != null)
             {
-                bool isBoss = WorldConfigSO.IsBossLevel(targetLevel);
+                if (_dbConfig == null) throw new System.InvalidOperationException("[PlayingState] GameConfigDatabaseSO not injected!");
+                bool isBoss = WorldConfigSO.IsBossLevel(_dbConfig, targetLevel);
                 // FIX P0.3: push the transient state multiplier; the user's saved BgmVolume is
                 // preserved untouched across level transitions.
                 _audio.BgmStateMultiplier = isBoss ? 0.80f : 0.40f;
 
-                if (_dbConfig == null) throw new System.InvalidOperationException("[PlayingState] GameConfigDatabaseSO not injected!");
                 int worldIdx = _dbConfig.GetWorldForLevel(targetLevel);
                 var bgm = ProceduralAudio.GetOrCreateBgmClip(worldIdx);
                 _audio.PlayBgm(bgm, true);
             }
 
             // Start level initialization
-            _diag?.Log("PlayingState", $"Starting level {targetLevel} (resume={isResume}, boss={WorldConfigSO.IsBossLevel(targetLevel)}).");
+            _diag?.Log("PlayingState", $"Starting level {targetLevel} (resume={isResume}, boss={WorldConfigSO.IsBossLevel(_dbConfig, targetLevel)}).");
             _signalBus?.Fire(new InitLevelSignal(targetLevel));
 
             return default;

@@ -13,6 +13,7 @@ namespace RingFlow.Gameplay.UI
     public class DailyRewardPopupMediator : Mediator<DailyRewardPopupView>
     {
         [Inject] private PlayerProgressModel _progress;
+        [Inject] private GameConfigDatabaseSO _dbConfig;
         [Inject] private DailyRewardService _dailyReward;
         [Inject] private ILocalizationService _loc;
         [Inject] private IGameDiagnostics _diag;
@@ -36,7 +37,8 @@ namespace RingFlow.Gameplay.UI
             if (_dailyReward != null && _progress != null)
             {
                 int previewDay = _dailyReward.DayIndexPreview;
-                var reward = DailyRewardTable.RewardForDayIndex(previewDay);
+                var rewardList = _dbConfig?.BalanceConfig.DailyRewards ?? new System.Collections.Generic.List<DailyRewardEntry>();
+                var reward = DailyRewardTable.RewardForDayIndex(rewardList, previewDay);
                 string rewardText = reward.Amount > 0
                     ? $"+{reward.Amount} {reward.CurrencyId}"
                     : reward.CurrencyId;

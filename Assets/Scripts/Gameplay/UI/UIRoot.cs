@@ -50,7 +50,7 @@ namespace RingFlow.Gameplay.UI
         private readonly Stack<ScreenType> _popupStack = new();
         private readonly List<ISignalSubscription> _subscriptions = new();
 
-        private const float ScreenFadeDuration = 0.3f;
+        [SerializeField] private float _screenFadeDuration = 0.3f;
 
         private void Awake()
         {
@@ -644,7 +644,7 @@ namespace RingFlow.Gameplay.UI
 
             go.SetActive(true);
             cg.alpha = 0f;
-            DOTween.To(() => cg.alpha, v => cg.alpha = v, 1f, ScreenFadeDuration)
+            DOTween.To(() => cg.alpha, v => cg.alpha = v, 1f, _screenFadeDuration)
                 .SetEase(Ease.OutCubic)
                 .SetTarget(cg)
                 .SetAutoKill(true);
@@ -663,7 +663,7 @@ namespace RingFlow.Gameplay.UI
                 return;
             }
 
-            DOTween.To(() => cg.alpha, v => cg.alpha = v, 0f, ScreenFadeDuration)
+            DOTween.To(() => cg.alpha, v => cg.alpha = v, 0f, _screenFadeDuration)
                 .SetEase(Ease.InCubic)
                 .SetTarget(cg)
                 .SetAutoKill(true)

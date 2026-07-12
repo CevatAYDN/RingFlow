@@ -150,6 +150,37 @@ namespace RingFlow.Editor
                 {
                     warnings.Add($"• GDD uyarınca bir seviyede en fazla 4 farklı özel mekanik bulunabilir. Mevcut seviyede {uniqueMechanics.Count} farklı mekanik var.");
                 }
+
+                // 5. Portal çifti doğrulama
+                var portalPoles = new System.Collections.Generic.List<int>();
+                for (int p = 0; p < levelSO.Data.Poles.Count; p++)
+                {
+                    if (levelSO.Data.Poles[p].PortalTargetId >= 0)
+                        portalPoles.Add(p);
+                }
+
+                if (portalPoles.Count > 0)
+                {
+                    if (portalPoles.Count % 2 != 0)
+                    {
+                        warnings.Add($"• Tek sayıda ({portalPoles.Count}) portal direği var. Portal direkleri çiftler halinde olmalıdır.");
+                    }
+
+                    for (int i = 0; i < portalPoles.Count; i++)
+                    {
+                        int pid = portalPoles[i];
+                        int partner = levelSO.Data.Poles[pid].PortalTargetId;
+
+                        if (partner < 0 || partner >= levelSO.Data.Poles.Count)
+                        {
+                            warnings.Add($"• Direk {pid} portalPartnerId={partner} geçersiz (0-{levelSO.Data.Poles.Count - 1} olmalı).");
+                        }
+                        else if (levelSO.Data.Poles[partner].PortalTargetId != pid)
+                        {
+                            warnings.Add($"• Direk {pid} ↔ {partner} portal çifti karşılıklı değil (Direk {partner}'in PortalTargetId={levelSO.Data.Poles[partner].PortalTargetId}, beklenen={pid}).");
+                        }
+                    }
+                }
             }
 
             if (warnings.Count > 0)
@@ -575,6 +606,15 @@ namespace RingFlow.Editor
                             var lockStyle = new GUIStyle(EditorStyles.miniBoldLabel)
                                 { alignment = TextAnchor.MiddleCenter, normal = { textColor = Color.white } };
                             GUI.Label(lockRect, "KİLİTLİ", lockStyle);
+                        }
+
+                        if (pole.PortalTargetId >= 0)
+                        {
+                            Rect portalRect = new Rect(rect.x + 3f, rect.yMax - 16f, poleWidth - 6f, 13f);
+                            EditorGUI.DrawRect(portalRect, new Color(0.0f, 0.6f, 0.8f, 0.9f));
+                            var portalStyle = new GUIStyle(EditorStyles.miniBoldLabel)
+                                { alignment = TextAnchor.MiddleCenter, normal = { textColor = Color.white } };
+                            GUI.Label(portalRect, $"PORTAL → {pole.PortalTargetId}", portalStyle);
                         }
 
                         GUI.backgroundColor = prevColor;

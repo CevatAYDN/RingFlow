@@ -35,8 +35,6 @@ namespace RingFlow.Gameplay
 
         public void OnConfigure(IContextBuilder builder)
         {
-            DoTweenCapacityBootstrap.EnsureInitialized();
-
             NexusLog.Info("GameplayLifecycle", nameof(OnConfigure), "Gameplay", "Configuring gameplay context.");
             
             // -------------------- VFX Prefab Registration --------------------
@@ -57,6 +55,8 @@ namespace RingFlow.Gameplay
             var feel = Resources.Load<GameFeelConfigSO>("GameFeelConfig");
             if (feel == null) throw new System.InvalidOperationException("GameFeelConfig.asset not found in Resources!");
             builder.BindInstance<GameFeelConfigSO>(feel);
+
+            DoTweenCapacityBootstrap.EnsureInitialized(feel.DoTweenTweensCapacity, feel.DoTweenSequencesCapacity);
 
             var palette = Resources.Load<RingColorPaletteSO>("RingColorPalette");
             if (palette == null) throw new System.InvalidOperationException("RingColorPalette.asset not found in Resources!");

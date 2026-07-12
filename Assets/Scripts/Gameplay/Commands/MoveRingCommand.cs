@@ -112,6 +112,7 @@ namespace RingFlow.Gameplay
             ApplyChainSubMove(ref context, mainRecord);
             ApplyMagnetPull(ref context, mainRecord);
             TryBreakIceOnTarget(ref context, mainRecord);
+            ApplyPortalTeleport(ref context, mainRecord);
         }
 
         private void CompleteMove(MoveContext context, MoveRecord mainRecord)
@@ -260,6 +261,39 @@ namespace RingFlow.Gameplay
                 NexusLog.Info("MoveRingCommand", "ApplyMagnetPull", context.ToPoleId.ToString(),
                     $"Magnet pulled {pullCount} matching ring(s) from all poles to pole {context.ToPoleId}, color={context.MovingRing.Color}.");
             }
+        }
+
+        private void ApplyPortalTeleport(ref MoveContext context, MoveRecord mainRecord)
+        {
+            int portalPartnerId = context.ToPole.PortalPartnerId;
+            if (portalPartnerId < 0) return;
+
+            var partner = _model.Poles.GetPoleById(portalPartnerId);
+            if (partner == null) return;
+            if (partner.IsFull) return;
+
+            var ring = context.ToPole.PopRing();
+            if (!partner.CanAddRing(ring))
+            {
+                context.ToPole.AddRing(ring);
+                return;
+            }
+
+            partner.AddRing(ring);
+
+            var subRecord = MoveRecordPool.Rent();
+            subRecord.FromPoleId = context.ToPoleId;
+            subRecord.ToPoleId = portalPartnerId;
+            subRecord.Ring = ring;
+            mainRecord.SubMoves.Add(subRecord);
+
+            mainRecord.WasPortalTeleported = true;
+            mainRecord.PortalTeleportTargetPoleId = portalPartnerId;
+
+            _signalBus.Fire(new PortalTeleportSignal(context.ToPoleId, portalPartnerId));
+
+            NexusLog.Info("MoveRingCommand", nameof(ApplyPortalTeleport), $"portal{context.ToPoleId}->{portalPartnerId}",
+                $"Ring teleported from portal pole {context.ToPoleId} to partner pole {portalPartnerId}, color={ring.Color}.");
         }
 
         private void TickAllBombsAndCapture(MoveRecord mainRecord)

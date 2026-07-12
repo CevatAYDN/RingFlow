@@ -28,8 +28,9 @@ namespace RingFlow.Tests
             typeof(RingFlow.Gameplay.EconomyService).GetField("_progress", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(_economyService, _progress);
             _economyService.InitializeAsync(CancellationToken.None);
 
-            _progressionService = new RingFlow.Gameplay.ProgressionService(_progress);
-            _dailyRewardService = new DailyRewardService(_progress);
+            var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            _progressionService = new RingFlow.Gameplay.ProgressionService(_progress, db);
+            _dailyRewardService = new DailyRewardService(_progress, db);
         }
 
         [Test]
@@ -107,18 +108,20 @@ namespace RingFlow.Tests
         [Test]
         public void DailyRewardService_GrantCycleAndResetLogic()
         {
+            var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var dailyRewards = db?.BalanceConfig.DailyRewards ?? new System.Collections.Generic.List<DailyRewardEntry>();
             // Day 0 reward is 100 Coins
-            var reward0 = DailyRewardTable.RewardForDayIndex(0);
+            var reward0 = DailyRewardTable.RewardForDayIndex(dailyRewards, 0);
             Assert.AreEqual("Coins", reward0.CurrencyId);
             Assert.AreEqual(100, reward0.Amount);
 
             // Day 3 reward is 1 Hint
-            var reward3 = DailyRewardTable.RewardForDayIndex(3);
+            var reward3 = DailyRewardTable.RewardForDayIndex(dailyRewards, 3);
             Assert.AreEqual("Hint", reward3.CurrencyId);
             Assert.AreEqual(1, reward3.Amount);
 
             // Day 6 reward is 25 Diamonds
-            var reward6 = DailyRewardTable.RewardForDayIndex(6);
+            var reward6 = DailyRewardTable.RewardForDayIndex(dailyRewards, 6);
             Assert.AreEqual("Diamonds", reward6.CurrencyId);
             Assert.AreEqual(25, reward6.Amount);
 

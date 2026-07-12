@@ -41,12 +41,10 @@ namespace RingFlow.Gameplay.UI
         public static Color DangerColor     => Theme.DangerColor;
         public static Color SuccessColor    => Theme.SuccessColor;
 
-        // ── Layout tokens ────────────────────────────────────────────────
-        public const float PanelElevation   = 4f;
-        public const float ButtonHeight     = 56f;
-        public const float ButtonWidth      = 240f;
+        public static float PanelElevation => Theme.PanelElevation;
+        public static float ButtonHeight => Theme.ButtonHeight;
+        public static float ButtonWidth => Theme.ButtonWidth;
 
-        // ── Font (cached) ────────────────────────────────────────────────
         private static Font s_font;
         public static Font GetFont()
         {
@@ -54,7 +52,6 @@ namespace RingFlow.Gameplay.UI
             return s_font;
         }
 
-        // ── Panel ────────────────────────────────────────────────────────
         public static GameObject CreatePanel(string name, Transform parent)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
@@ -68,7 +65,6 @@ namespace RingFlow.Gameplay.UI
             return go;
         }
 
-        // ── Safe-Area-aware panel ────────────────────────────────────────
         public static GameObject CreateSafeAreaPanel(string name, Transform parent)
         {
             var go = CreatePanel(name, parent);
@@ -76,7 +72,17 @@ namespace RingFlow.Gameplay.UI
             return go;
         }
 
-        // ── Button (with proper Selectable feedback) ─────────────────────
+        private static void ApplyButtonColors(Button button, ButtonColorConfig colorCfg)
+        {
+            var colors = button.colors;
+            colors.normalColor = colorCfg.NormalColor;
+            colors.highlightedColor = colorCfg.HighlightedColor;
+            colors.pressedColor = colorCfg.PressedColor;
+            colors.selectedColor = colorCfg.SelectedColor;
+            colors.disabledColor = colorCfg.DisabledColor;
+            button.colors = colors;
+        }
+
         public static GameObject CreateButton(string label, Transform parent, float width, float height)
         {
             var go = new GameObject($"Btn_{label}", typeof(RectTransform), typeof(Image), typeof(Button));
@@ -86,13 +92,7 @@ namespace RingFlow.Gameplay.UI
             go.GetComponent<Image>().color = PrimaryColor;
 
             var button = go.GetComponent<Button>();
-            var colors = button.colors;
-            colors.normalColor = PrimaryColor;
-            colors.highlightedColor = new Color(0.30f, 0.62f, 1.00f);
-            colors.pressedColor = PrimaryPressed;
-            colors.selectedColor = colors.highlightedColor;
-            colors.disabledColor = new Color(0.30f, 0.30f, 0.35f);
-            button.colors = colors;
+            ApplyButtonColors(button, Theme.PrimaryButtonColors);
 
             var textGo = new GameObject("Text", typeof(RectTransform), typeof(Text));
             textGo.transform.SetParent(go.transform, false);
@@ -103,16 +103,15 @@ namespace RingFlow.Gameplay.UI
             textRect.offsetMax = Vector2.zero;
             var text = textGo.GetComponent<Text>();
             text.font = GetFont();
-            text.fontSize = 22;
+            text.fontSize = Theme.ButtonFontSize;
             text.alignment = TextAnchor.MiddleCenter;
-            text.color = Color.white; // Primary button has white text for contrast
+            text.color = Color.white;
             text.text = label;
             text.fontStyle = FontStyle.Bold;
 
             return go;
         }
 
-        // ── Text ─────────────────────────────────────────────────────────
         public static GameObject CreateText(string content, Transform parent, int fontSize, TextAnchor align, Color color)
         {
             var go = new GameObject("Text", typeof(RectTransform), typeof(Text));
@@ -131,18 +130,12 @@ namespace RingFlow.Gameplay.UI
             return go;
         }
 
-        // ── Button style presets ─────────────────────────────────────────
         public static void ApplyOutlineStyle(GameObject btn)
         {
             var image = btn.GetComponent<Image>();
             image.color = SurfaceColor;
             var button = btn.GetComponent<Button>();
-            var colors = button.colors;
-            colors.normalColor = SurfaceColor;
-            colors.highlightedColor = new Color(0.80f, 0.84f, 0.90f);
-            colors.pressedColor = new Color(0.70f, 0.74f, 0.80f);
-            colors.disabledColor = new Color(0.85f, 0.87f, 0.90f);
-            button.colors = colors;
+            ApplyButtonColors(button, Theme.OutlineButtonColors);
 
             var text = btn.GetComponentInChildren<Text>();
             if (text != null) text.color = TextColor;
@@ -150,11 +143,7 @@ namespace RingFlow.Gameplay.UI
 
         public static void ApplyIconStyle(Button button)
         {
-            var colors = button.colors;
-            colors.normalColor = PanelColor;
-            colors.highlightedColor = new Color(0.80f, 0.84f, 0.90f);
-            colors.pressedColor = new Color(0.70f, 0.74f, 0.80f);
-            button.colors = colors;
+            ApplyButtonColors(button, Theme.IconButtonColors);
         }
 
         public static void ApplyPrimaryStyle(GameObject btn)
@@ -162,11 +151,7 @@ namespace RingFlow.Gameplay.UI
             var image = btn.GetComponent<Image>();
             image.color = PrimaryColor;
             var button = btn.GetComponent<Button>();
-            var colors = button.colors;
-            colors.normalColor = PrimaryColor;
-            colors.highlightedColor = new Color(0.30f, 0.62f, 1.00f);
-            colors.pressedColor = PrimaryPressed;
-            button.colors = colors;
+            ApplyButtonColors(button, Theme.PrimaryButtonColors);
 
             var text = btn.GetComponentInChildren<Text>();
             if (text != null) text.color = Color.white;
@@ -177,11 +162,7 @@ namespace RingFlow.Gameplay.UI
             var image = btn.GetComponent<Image>();
             image.color = DangerColor;
             var button = btn.GetComponent<Button>();
-            var colors = button.colors;
-            colors.normalColor = DangerColor;
-            colors.highlightedColor = new Color(0.88f, 0.32f, 0.32f);
-            colors.pressedColor = new Color(0.60f, 0.15f, 0.15f);
-            button.colors = colors;
+            ApplyButtonColors(button, Theme.DangerButtonColors);
 
             var text = btn.GetComponentInChildren<Text>();
             if (text != null) text.color = Color.white;
@@ -192,11 +173,7 @@ namespace RingFlow.Gameplay.UI
             var image = btn.GetComponent<Image>();
             image.color = SurfaceColor;
             var button = btn.GetComponent<Button>();
-            var colors = button.colors;
-            colors.normalColor = SurfaceColor;
-            colors.highlightedColor = new Color(0.80f, 0.84f, 0.90f);
-            colors.pressedColor = new Color(0.70f, 0.74f, 0.80f);
-            button.colors = colors;
+            ApplyButtonColors(button, Theme.OutlineButtonColors);
 
             var text = btn.GetComponentInChildren<Text>();
             if (text != null) text.color = TextColor;
@@ -207,11 +184,7 @@ namespace RingFlow.Gameplay.UI
             var image = btn.GetComponent<Image>();
             if (image != null) image.color = Color.clear;
             var button = btn.GetComponent<Button>();
-            var colors = button.colors;
-            colors.normalColor = Color.clear;
-            colors.highlightedColor = new Color(0.15f, 0.20f, 0.28f, 0.08f);
-            colors.pressedColor = new Color(0.15f, 0.20f, 0.28f, 0.15f);
-            button.colors = colors;
+            ApplyButtonColors(button, Theme.TextButtonColors);
 
             var text = btn.GetComponentInChildren<Text>();
             if (text != null) text.color = TextColor;

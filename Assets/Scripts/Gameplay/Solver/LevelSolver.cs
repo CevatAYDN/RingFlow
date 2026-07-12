@@ -30,11 +30,14 @@ namespace RingFlow.Gameplay
     /// </summary>
     public static class LevelSolver
     {
+        /// <summary>Portal pole target IDs. Set before Solve() and cleared after. index = -1 means no portal.</summary>
+        public static int[] s_portalTargets;
+
         private class SolverContext
         {
             public readonly Dictionary<BoardState, int> TranspositionTable = new(80000);
             public int StatesSearched = 0;
-            public int MaxStatesLimit = 100000;
+            public int MaxStatesLimit;
         }
 
         private struct MoveWithHeuristic : IComparable<MoveWithHeuristic>
@@ -48,12 +51,10 @@ namespace RingFlow.Gameplay
             }
         }
 
-        public static SolverResult Solve(BoardState initialState, int maxCapacity, int maxStatesLimit = 100000)
+        public static SolverResult Solve(BoardState initialState, int maxCapacity, int maxStatesLimit = 100000, int maxMovesLimit = 200)
         {
             initialState.MaxCapacity = maxCapacity;
             int threshold = CalculateHeuristic(initialState, maxCapacity);
-            
-            int maxMovesLimit = 200;
             
             var path = new List<Move>(maxMovesLimit);
             var context = new SolverContext { MaxStatesLimit = maxStatesLimit };
@@ -72,6 +73,7 @@ namespace RingFlow.Gameplay
                         var m = path[i];
                         movesList.Add(new MoveRecord(m.From, m.To, new RingData(RingColor.None)));
                     }
+                    s_portalTargets = null;
                     return new SolverResult
                     {
                         IsSolvable = true,
@@ -88,6 +90,7 @@ namespace RingFlow.Gameplay
                 threshold = nextThreshold;
             }
 
+            s_portalTargets = null;
             return new SolverResult
             {
                 IsSolvable = false,
@@ -155,6 +158,18 @@ namespace RingFlow.Gameplay
                 var nextState = state;
                 var ring = nextState.PopRing(move.From);
                 nextState.AddRing(move.To, ring);
+
+                // Portal teleport: if target is a portal pole, forward the ring to its partner
+                if (s_portalTargets != null && s_portalTargets[move.To] >= 0)
+                {
+                    int partner = s_portalTargets[move.To];
+                    if (nextState.GetRingCount(partner) < nextState.MaxCapacity)
+                    {
+                        var portalRing = nextState.PopRing(move.To);
+                        nextState.AddRing(partner, portalRing);
+                    }
+                }
+
                 // Tick all bombs — if any explodes, prune this branch
                 if (TickBombsAndCheckExplosion(ref nextState)) continue;
 
@@ -250,15 +265,20 @@ namespace RingFlow.Gameplay
                 {
                     if (i == j) continue;
 
+                    // Resolve portal target: if j is a portal pole, check the partner instead
+                    int effectiveTarget = j;
+                    if (s_portalTargets != null && s_portalTargets[j] >= 0)
+                        effectiveTarget = s_portalTargets[j];
+
                     // Chain: check if target has room for main ring + linked partners
                     if (topRing.Type == RingType.Chain && topRing.AdditionalData > 0)
                     {
                         int linked = CountChainLinkedPartners(state, topRing.AdditionalData, i);
                         int requiredSlots = 1 + linked;
-                        if (!CanAddRingWithExtraCapacity(state, j, topRing.Color, topRing.Type, maxCapacity, requiredSlots))
+                        if (!CanAddRingWithExtraCapacity(state, effectiveTarget, topRing.Color, topRing.Type, maxCapacity, requiredSlots))
                             continue;
                     }
-                    else if (!state.CanAddRing(j, topRing.Color, topRing.Type, maxCapacity))
+                    else if (!state.CanAddRing(effectiveTarget, topRing.Color, topRing.Type, maxCapacity))
                     {
                         continue;
                     }
@@ -325,10 +345,11 @@ namespace RingFlow.Gameplay
             BoardState initialState,
             int maxCapacity,
             int maxStatesLimit = 100000,
+            int maxMovesLimit = 200,
             CancellationToken cancellationToken = default)
         {
             return new ValueTask<SolverResult>(Task.Run(
-                () => Solve(initialState, maxCapacity, maxStatesLimit),
+                () => Solve(initialState, maxCapacity, maxStatesLimit, maxMovesLimit),
                 cancellationToken));
         }
     }

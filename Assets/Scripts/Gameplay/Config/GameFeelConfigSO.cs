@@ -191,5 +191,80 @@ namespace RingFlow.Gameplay
         public int RingPopPoolSize = 50;
         public int ConfettiPoolSize = 30;
         public int MergeEffectPoolSize = 20;
+
+        [Header("Ring Mesh Compensation")]
+        [Tooltip("World-space target width for ring visuals.")]
+        public float RingTargetWidth = 1.5f;
+        [Tooltip("World-space target height for ring visuals.")]
+        public float RingTargetHeight = 0.44f;
+        [Tooltip("Actual mesh height of the ring prefab (used for scale compensation).")]
+        public float RingMeshHeight = 0.26f;
+
+        [Header("Board Layout")]
+        [Tooltip("Y position of the floor plane.")]
+        public float FloorYPosition = -0.51f;
+        [Tooltip("Scale of the floor plane.")]
+        public Vector3 FloorScale = new(10f, 1f, 10f);
+        [Tooltip("Capacity value that maps to full pole scale (for pole Y scaling).")]
+        public int PoleScaleFullCapacity = 4;
+        [Tooltip("Default capacity fallback when pole data has none.")]
+        public int DefaultPoleCapacity = 4;
+
+        [Header("Tutorial Arrow")]
+        [Tooltip("Forward offset from pole center for tutorial arrow.")]
+        public float TutorialForwardOffset = 0.35f;
+        [Tooltip("Tutorial label Y offset above arrow base.")]
+        public float TutorialLabelYOffset = 0.9f;
+        [Tooltip("Tutorial label canvas scale.")]
+        public Vector3 TutorialLabelCanvasScale = new(0.22f, 0.22f, 0.22f);
+        [Tooltip("Tutorial label canvas size.")]
+        public Vector2 TutorialLabelCanvasSize = new(2.2f, 0.7f);
+        [Tooltip("Tutorial label font size.")]
+        public int TutorialLabelFontSize = 36;
+        [Tooltip("Tutorial label panel padding (xMin, yMin, xMax, yMax correction).")]
+        public Vector2 TutorialPanelPaddingMin = new(8f, 6f);
+        public Vector2 TutorialPanelPaddingMax = new(-8f, -6f);
+        [Tooltip("Tutorial label outline color.")]
+        public Color TutorialLabelOutlineColor = new(0f, 0f, 0f, 0.85f);
+        [Tooltip("Tutorial label outline effect distance.")]
+        public Vector2 TutorialLabelOutlineDistance = new(1.5f, -1.5f);
+        [Tooltip("Tutorial label panel background color.")]
+        public Color TutorialPanelColor = new(0f, 0f, 0f, 0.55f);
+        [Tooltip("Final pole celebration ring bounce height.")]
+        public float FinalPoleBounceHeight = 0.5f;
+        [Tooltip("Normal pole celebration ring bounce height.")]
+        public float PoleBounceHeight = 0.35f;
+        [Tooltip("Tier-2 final pole confetti burst count.")]
+        public int FinalPoleConfettiCount = 24;
+        [Tooltip("Tier-1 medium confetti burst count.")]
+        public int MediumConfettiCount = 8;
+
+        [Header("Procedural Torus Mesh")]
+        [Tooltip("Major radius of procedural torus mesh.")]
+        public float TorusMajorRadius = 0.37f;
+        [Tooltip("Minor radius of procedural torus mesh.")]
+        public float TorusMinorRadius = 0.13f;
+        [Tooltip("Radial segments of procedural torus mesh.")]
+        public int TorusRadialSegments = 32;
+        [Tooltip("Tubular segments of procedural torus mesh.")]
+        public int TorusTubularSegments = 24;
+
+        [Header("DOTween Capacity")]
+        [Tooltip("DOTween tween pool capacity (pre-allocated at startup).")]
+        public int DoTweenTweensCapacity = 1500;
+        [Tooltip("DOTween sequence pool capacity (pre-allocated at startup).")]
+        public int DoTweenSequencesCapacity = 200;
+
+        [Header("UI")]
+        [Tooltip("Duration for screen fade in/out transitions.")]
+        public float UiScreenFadeDuration = 0.3f;
+
+        [Header("Audio Volume Limits")]
+        [Tooltip("Default SFX volume multiplier.")]
+        public float DefaultSfxVolume = 1.0f;
+        [Tooltip("Default SFX pitch variation min.")]
+        public float DefaultSfxPitchMin = 0.92f;
+        [Tooltip("Default SFX pitch variation max.")]
+        public float DefaultSfxPitchMax = 1.08f;
     }
 }

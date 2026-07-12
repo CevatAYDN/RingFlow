@@ -12,18 +12,12 @@ namespace RingFlow.Gameplay
         [Inject] private PlayerProgressModel _progress;
         [Inject] private IEconomyService _economy;
         [Inject] private ISignalBus _signalBus;
-
-        /// <summary>
-        /// GDD §9 — XP values per chest type.
-        /// </summary>
-        public const int XpBronze = 100;
-        public const int XpSilver = 250;
-        public const int XpGold = 500;
-        public const int XpDiamond = 1000;
+        [Inject] private GameConfigDatabaseSO _dbConfig;
 
         public void Execute(ChestClaimAllSignal signal)
         {
             if (_progress == null) return;
+            var cfg = _dbConfig != null ? _dbConfig.BalanceConfig : default;
 
             int bronze = _progress.ChestBronze.Value;
             int silver = _progress.ChestSilver.Value;
@@ -38,10 +32,10 @@ namespace RingFlow.Gameplay
             }
 
             int totalXp = 0;
-            totalXp += bronze * XpBronze;
-            totalXp += silver * XpSilver;
-            totalXp += gold * XpGold;
-            totalXp += diamond * XpDiamond;
+            totalXp += bronze * cfg.ChestXpBronze;
+            totalXp += silver * cfg.ChestXpSilver;
+            totalXp += gold * cfg.ChestXpGold;
+            totalXp += diamond * cfg.ChestXpDiamond;
 
             // Reset chest counters
             _progress.ChestBronze.Value = 0;
@@ -53,16 +47,16 @@ namespace RingFlow.Gameplay
             _progress.Xp.Value += totalXp;
 
             // Check for player level ups
-            int xpRequired = _progress.XpToNextLevel(_progress.PlayerLevel.Value);
+            int xpRequired = _progress.XpToNextLevel(_dbConfig, _progress.PlayerLevel.Value);
             while (_progress.Xp.Value >= xpRequired)
             {
                 int oldLevel = _progress.PlayerLevel.Value;
                 _progress.Xp.Value -= xpRequired;
                 _progress.PlayerLevel.Value++;
-                _economy?.Earn(CurrencyIds.Coins, 100, "Player Level Up Reward (Chest)");
+                _economy?.Earn(CurrencyIds.Coins, cfg.LevelUpCoinReward, "Player Level Up Reward (Chest)");
                 NexusLog.Info("ChestClaimCommand", "Execute", "",
                     $"Player leveled up: {oldLevel} → {_progress.PlayerLevel.Value} (from chests). XP remaining={_progress.Xp.Value}.");
-                xpRequired = _progress.XpToNextLevel(_progress.PlayerLevel.Value);
+                xpRequired = _progress.XpToNextLevel(_dbConfig, _progress.PlayerLevel.Value);
             }
 
             NexusLog.Info("ChestClaimCommand", "Execute", "",

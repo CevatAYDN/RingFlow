@@ -144,8 +144,8 @@ namespace RingFlow.Editor
                 using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
                     var w = db.Worlds[_selectedWorldIndex];
-                    int startLevel = _selectedWorldIndex * WorldConfigSO.LevelsPerWorld + 1;
-                    int endLevel = startLevel + WorldConfigSO.LevelsPerWorld - 1;
+                    int startLevel = _selectedWorldIndex * db.LevelsPerWorld + 1;
+                    int endLevel = startLevel + db.LevelsPerWorld - 1;
 
                     EditorGUILayout.LabelField($"Seviye Aralığı: {startLevel} – {endLevel}", EditorStyles.miniLabel);
 

@@ -55,6 +55,7 @@ namespace RingFlow.Gameplay
         public int RingCapacity = 4;
         public List<RingData> Rings = new(4);
         public bool IsLocked;
+        public int PortalTargetId = -1;
         public string CapacityText => $"{RingCapacity}";
 
         public PoleData() { }

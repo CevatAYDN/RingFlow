@@ -30,6 +30,7 @@ namespace RingFlow.Tests
         private RingFlow.Gameplay.ProgressionService _progressionService;
         private MockEconomyService _economyService;
         private RingMoveStrategyManager _strategyManager;
+        private GameConfigDatabaseSO _db;
 
         [SetUp]
         public void Setup()
@@ -38,11 +39,10 @@ namespace RingFlow.Tests
             _progressModel = new PlayerProgressModel();
             _fsm = new MockGameStateMachine();
             _signalBus = new LoggingSignalBus();
-            _progressionService = new RingFlow.Gameplay.ProgressionService(_progressModel);
+            _db = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            _progressionService = new RingFlow.Gameplay.ProgressionService(_progressModel, _db);
             _economyService = new MockEconomyService();
-
-            var db = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
-            _strategyManager = new RingMoveStrategyManager(db);
+            _strategyManager = new RingMoveStrategyManager(_db);
             RingValidationStrategyManager validationManager = new RingValidationStrategyManager();
             PoleState.SetValidationManager(validationManager);
 
@@ -289,7 +289,7 @@ namespace RingFlow.Tests
             InjectFields(cmd);
             InjectField(cmd, "_signalBus", _signalBus);
             InjectField(cmd, "_progressionService",
-                new RingFlow.Gameplay.ProgressionService(_progressModel));
+                new RingFlow.Gameplay.ProgressionService(_progressModel, _db));
 
             // Act: level 999 with high difficulty (unlikely to fail, but retry logic covered)
             cmd.Execute(new InitLevelSignal(999));
@@ -311,7 +311,7 @@ namespace RingFlow.Tests
             InjectFields(cmd);
             InjectField(cmd, "_signalBus", _signalBus);
             InjectField(cmd, "_progressionService",
-                new RingFlow.Gameplay.ProgressionService(_progressModel));
+                new RingFlow.Gameplay.ProgressionService(_progressModel, _db));
             cmd.Execute(new InitLevelSignal(level));
         }
 

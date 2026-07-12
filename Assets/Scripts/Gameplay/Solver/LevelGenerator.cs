@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Nexus.Core;
 using Nexus.Core.Services;
 
 namespace RingFlow.Gameplay
@@ -29,7 +28,7 @@ namespace RingFlow.Gameplay
             int currentSeed = seed;
             int attempts = 0;
             var candidates = new List<(LevelData level, float diff)>();
-            float targetScore = 15f + (levelIndex / 2000f) * 125f;
+            float targetScore = cfg.TargetScoreBase + (levelIndex / cfg.TargetScoreLevelDenominator) * cfg.TargetScoreMultiplier;
 
             while (attempts < cfg.MaxGenerationSeeds && candidates.Count < cfg.MaxCandidates)
             {
@@ -127,8 +126,15 @@ namespace RingFlow.Gameplay
 
                 var scrambledState = board;
 
+                // Portal pole pair array — all -1 by default
+                int[] portalTargets = new int[poleCount];
+                for (int pi = 0; pi < poleCount; pi++) portalTargets[pi] = -1;
+
                 // GDD §4 & §5 Kuralları uyarınca özel halka mekaniklerini enjekte et
                 InjectSpecialMechanics(db, ref scrambledState, levelIndex, rand);
+
+                // GDD §41: Portal pole çiftlerini enjekte et
+                InjectPortalPoles(db, ref scrambledState, portalTargets, levelIndex, rand, minEmptyPoles);
 
                 // Enforce that we successfully reached the minEmptyPoles count
                 int finalEmptyCount = 0;
@@ -142,18 +148,23 @@ namespace RingFlow.Gameplay
                     continue;
                 }
 
-                // 3. Çözülebilirliği ve optimal hamle sayısını test et.
-                // Solver budget scales with color count: deeper color spaces need
-                // proportionally more IDA* states before a path is found. 4–5 colors
-                // were under-budgeted (15000) which caused every seed in the 50-iteration
-                // window to abort — see level-21 cluster failure. Doubled here.
-                int solverLimit = colorCount <= 3 ? 20000
-                                : colorCount <= 5 ? 30000
-                                : colorCount <= 7 ? 20000
-                                : colorCount <= 9 ? 12000
-                                : 8000;
+                // Solver budget from LevelGenConfig.SolverLimitBuckets — data-driven.
+                int solverLimit = cfg.MaxSolverStatesLimit;
+                if (cfg.SolverLimitBuckets != null)
+                {
+                    for (int b = 0; b < cfg.SolverLimitBuckets.Count; b++)
+                    {
+                        if (colorCount <= cfg.SolverLimitBuckets[b].MaxColorCount)
+                        {
+                            solverLimit = cfg.SolverLimitBuckets[b].StateLimit;
+                            break;
+                        }
+                    }
+                }
                 int solverCapacity = maxCapacity;
-                var solveResult = LevelSolver.Solve(scrambledState, solverCapacity, maxStatesLimit: solverLimit);
+                LevelSolver.s_portalTargets = portalTargets;
+                var solveResult = LevelSolver.Solve(scrambledState, solverCapacity,
+                    maxStatesLimit: solverLimit, maxMovesLimit: cfg.DefaultMaxMovesLimit);
 
                 if (solveResult.IsSolvable && solveResult.MoveCount >= 2)
                 {
@@ -168,7 +179,8 @@ namespace RingFlow.Gameplay
                     {
                         var poleData = new PoleData(maxCapacity)
                         {
-                            IsLocked = scrambledState.IsPoleLocked(p)
+                            IsLocked = scrambledState.IsPoleLocked(p),
+                            PortalTargetId = portalTargets[p]
                         };
 
                         int count = scrambledState.GetRingCount(p);
@@ -489,27 +501,17 @@ namespace RingFlow.Gameplay
                 return;
             }
 
-            var priority = new[]
-            {
-                RingType.Locked,
-                RingType.Mystery,
-                RingType.Frozen,
-                RingType.Stone,
-                RingType.Glass,
-                RingType.Rainbow,
-                RingType.Bomb,
-                RingType.Chain,
-                RingType.Magnet,
-                RingType.Paint,
-                RingType.Ghost
-            };
+            var priorityOrder = db != null && db.LevelGen.MechanicPriorityOrder != null
+                ? db.LevelGen.MechanicPriorityOrder
+                : new List<int> { 3, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11 };
 
             var allowed = new List<RingType>(maxTypes);
-            for (int i = 0; i < priority.Length && allowed.Count < maxTypes; i++)
+            for (int i = 0; i < priorityOrder.Count && allowed.Count < maxTypes; i++)
             {
-                if (uniqueTypes.Contains(priority[i]))
+                var ringType = (RingType)priorityOrder[i];
+                if (uniqueTypes.Contains(ringType))
                 {
-                    allowed.Add(priority[i]);
+                    allowed.Add(ringType);
                 }
             }
 
@@ -554,6 +556,45 @@ namespace RingFlow.Gameplay
                         }
                     }
                 }
+            }
+        }
+
+        private static void InjectPortalPoles(GameConfigDatabaseSO db, ref BoardState board,
+            int[] portalTargets, int levelIndex, Random rand, int minEmptyPoles)
+        {
+            int worldIndex = db.GetWorldForLevel(levelIndex);
+            var mechanic = db.GetMechanicForWorld(worldIndex);
+            if (mechanic != WorldMechanicType.Portal) return;
+
+            int intensity = db.GetMechanicIntensityForLevel(levelIndex);
+            int poleCount = board.PoleCount;
+
+            // Her portal çifti için 2 pole gerekir. intensity kadar çift üret.
+            int pairCount = Math.Min(intensity, poleCount / 2);
+            if (pairCount < 1) return;
+
+            // Kullanılabilir pole'lar: portal olmayan, tercihen boş
+            var available = new List<int>();
+            for (int p = 0; p < poleCount; p++)
+            {
+                if (portalTargets[p] >= 0) continue;
+                available.Add(p);
+            }
+
+            if (available.Count < pairCount * 2) return;
+
+            for (int i = 0; i < pairCount; i++)
+            {
+                int idxA = rand.Next(available.Count);
+                int poleA = available[idxA];
+                available.RemoveAt(idxA);
+
+                int idxB = rand.Next(available.Count);
+                int poleB = available[idxB];
+                available.RemoveAt(idxB);
+
+                portalTargets[poleA] = poleB;
+                portalTargets[poleB] = poleA;
             }
         }
 

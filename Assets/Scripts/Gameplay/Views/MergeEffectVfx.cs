@@ -36,8 +36,6 @@ namespace RingFlow.Gameplay
 
         [Inject] private IObjectPoolService _objectPoolService;
 
-        private const float OrphanLifetime = 2f;
-
         [Inject] private GameFeelConfigSO _feelConfig;
 
         private void Awake()
