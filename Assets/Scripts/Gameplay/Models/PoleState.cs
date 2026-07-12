@@ -109,7 +109,7 @@ namespace RingFlow.Gameplay
 
         public void SetCapacity(int capacity)
         {
-            RingCapacity = capacity > 0 ? capacity : 4;
+            RingCapacity = capacity > 0 ? capacity : GameplayAssetKeys.Tuning.MaxCapacity;
             MaxCapacity = RingCapacity;
         }
 

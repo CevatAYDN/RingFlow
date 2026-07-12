@@ -17,6 +17,7 @@ namespace RingFlow.Gameplay
         public const string RingColorPalette = "RingColorPalette";
         public const string GameFeelConfig = "GameFeelConfig";
         public const string UIThemeConfig = "UIThemeConfig";
+        public const string AudioConfig = "AudioConfig";
         public const string Localization = "Localization";
         public const string UiScreenPrefix = "UI/";
 
@@ -91,6 +92,15 @@ namespace RingFlow.Gameplay
 
             /// <summary>Default DOTween sequence capacity used by the lifecycle bootstrap.</summary>
             public const int SequenceCapacityDefault = 200;
+
+            /// <summary>Default total world count when the database does not supply one.</summary>
+            public const int DefaultWorldCount = 40;
+
+            /// <summary>Default minimum empty poles when the database does not supply one.</summary>
+            public const int DefaultMinEmptyPoles = 1;
+
+            /// <summary>Default mechanic intensity when the database does not supply one.</summary>
+            public const int DefaultMechanicIntensity = 1;
         }
     }
 }

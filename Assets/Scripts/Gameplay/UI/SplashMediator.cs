@@ -14,7 +14,7 @@ namespace RingFlow.Gameplay.UI
 
         protected override void OnBind()
         {
-            Debug.Log("[SplashMediator] OnBind called");
+            NexusLog.Info("SplashMediator", nameof(OnBind), "", "OnBind called");
             if (View == null)
             {
                 NexusLog.Error("SplashMediator", nameof(OnBind), "", "View not bound.");
@@ -34,11 +34,11 @@ namespace RingFlow.Gameplay.UI
 
         private async void TransitionAfterDelay()
         {
-            Debug.Log("[SplashMediator] TransitionAfterDelay started");
+            NexusLog.Info("SplashMediator", nameof(TransitionAfterDelay), "", "TransitionAfterDelay started");
             try
             {
                 await Awaitable.WaitForSecondsAsync(0.8f);
-                Debug.Log("[SplashMediator] TransitionAfterDelay delay completed");
+                NexusLog.Info("SplashMediator", nameof(TransitionAfterDelay), "", "TransitionAfterDelay delay completed");
             }
             catch (System.Exception ex)
             {
@@ -48,7 +48,7 @@ namespace RingFlow.Gameplay.UI
 
             if (!IsViewValid)
             {
-                Debug.Log("[SplashMediator] TransitionAfterDelay failed: IsViewValid is false");
+                NexusLog.Info("SplashMediator", nameof(TransitionAfterDelay), "", "TransitionAfterDelay aborted: IsViewValid is false");
                 return; // View was disabled/unbound before the delay completed
             }
 

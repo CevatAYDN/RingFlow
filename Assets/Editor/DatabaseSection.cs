@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using Nexus.Core.Services;
 using RingFlow.Gameplay;
 
 namespace RingFlow.Editor
@@ -251,7 +252,7 @@ namespace RingFlow.Editor
             }
             if (_database == null)
             {
-                Debug.LogError("[DatabaseSection] GameConfigDatabase not loaded!");
+                NexusLog.Error("DatabaseSection", "ValidateAllLevels", "LoadDatabase", "[DatabaseSection] GameConfigDatabase not loaded!");
                 return;
             }
 

@@ -105,6 +105,27 @@ namespace RingFlow.Editor
         }
 
         // -----------------------------------------------------------------
+        //  Foldout section (shared by dashboard + SO editors)
+        // -----------------------------------------------------------------
+
+        /// <summary>
+        /// Draws a persistent (EditorPrefs-backed) collapsible section. The
+        /// fold state survives domain reloads and editor restarts, so large
+        /// inspector/dashboard blocks stay collapsed between sessions.
+        /// </summary>
+        public static void FoldoutSection(string foldKey, string title, System.Action drawContent)
+        {
+            bool expanded = EditorPrefs.GetBool(foldKey, true);
+            var prevBg = GUI.backgroundColor;
+            GUI.backgroundColor = EditorPaths.EditorColors.HeaderAccent;
+            expanded = EditorGUILayout.Foldout(expanded, title, true, EditorStyles.foldoutHeader);
+            GUI.backgroundColor = prevBg;
+            EditorPrefs.SetBool(foldKey, expanded);
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionSpacing);
+            if (expanded) drawContent();
+        }
+
+        // -----------------------------------------------------------------
         //  Scene / Mode helpers
         // -----------------------------------------------------------------
 

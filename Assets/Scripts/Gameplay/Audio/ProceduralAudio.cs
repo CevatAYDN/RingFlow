@@ -1,3 +1,5 @@
+using Nexus.Core;
+using Nexus.Core.Services;
 using UnityEngine;
 
 namespace RingFlow.Gameplay
@@ -17,6 +19,10 @@ namespace RingFlow.Gameplay
         public static void Initialize(AudioConfigSO config)
         {
             _config = config;
+            if (config == null)
+                NexusLog.Warn("ProceduralAudio", nameof(Initialize), "", "AudioConfigSO is null; audio will use fallback defaults.");
+            else
+                NexusLog.Info("ProceduralAudio", nameof(Initialize), "", $"Initialized with AudioConfigSO '{config.name}' (sampleRate={config.SampleRate}).");
         }
 
         private static int SampleRate => _config != null ? _config.SampleRate : 44100;

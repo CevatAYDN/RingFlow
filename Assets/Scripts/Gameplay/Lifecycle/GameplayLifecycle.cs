@@ -67,6 +67,14 @@ namespace RingFlow.Gameplay
             GameUIResources.Bind(theme);
             builder.BindInstance<UIThemeConfigSO>(theme);
 
+            var audioConfig = Resources.Load<AudioConfigSO>(GameplayAssetKeys.AudioConfig);
+            if (audioConfig == null) throw new System.InvalidOperationException("AudioConfig.asset not found in Resources!");
+            ProceduralAudio.Initialize(audioConfig);
+            builder.BindInstance<AudioConfigSO>(audioConfig);
+
+            var mainCamera = Camera.main ?? Object.FindAnyObjectByType<Camera>(FindObjectsInactive.Include);
+            if (mainCamera != null) builder.BindInstance<Camera>(mainCamera);
+
             // -------------------- Storage --------------------
             builder.Bind<IPlayerPrefsService, EncryptedStorageService>();
             builder.Bind<ILocalizationTableProvider, CSVLocalizationTableProvider>();
@@ -313,8 +321,6 @@ namespace RingFlow.Gameplay
             var vfxRegistry = context.TryResolve<VfxPrefabRegistry>();
             if (vfxRegistry != null)
             {
-                vfxRegistry.Validate();
-                
                 if (vfxRegistry.RingPopPrefab == null)
                 {
                     var ringPopObj = new GameObject("RingPopVfxPrefab", typeof(RingPopVfx));
@@ -333,6 +339,8 @@ namespace RingFlow.Gameplay
                     Object.DontDestroyOnLoad(mergeObj);
                     vfxRegistry.MergeEffectPrefab = mergeObj;
                 }
+
+                vfxRegistry.Validate();
 
                 var pool = context.TryResolve<IObjectPoolService>();
                 var feelConfig = context.Resolve<GameFeelConfigSO>();
@@ -385,7 +393,7 @@ namespace RingFlow.Gameplay
             }
 
             // P0 fix: force camera to correct position/angle regardless of scene defaults.
-            var mainCam = Camera.main ?? Object.FindAnyObjectByType<Camera>(FindObjectsInactive.Include);
+            var mainCam = context.TryResolve<Camera>();
             if (mainCam != null)
             {
                 var feel = context.Resolve<GameFeelConfigSO>();

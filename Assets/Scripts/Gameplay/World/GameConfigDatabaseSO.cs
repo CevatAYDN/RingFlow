@@ -556,7 +556,7 @@ namespace RingFlow.Gameplay
 
             NexusLog.Warn("GameConfigDatabaseSO", nameof(GetMinEmptyPolesForLevel), level.ToString(),
                 "DifficultyBands boş veya band bulunamadı. MinimumEmptyPools field değeri kullanılıyor.");
-            return MinimumEmptyPoles > 0 ? MinimumEmptyPoles : 1;
+            return MinimumEmptyPoles > 0 ? MinimumEmptyPoles : GameplayAssetKeys.Tuning.DefaultMinEmptyPoles;
         }
 
         public int GetMaxCapacityForLevel(int level)
@@ -611,7 +611,7 @@ namespace RingFlow.Gameplay
                 {
                     if (b.Band == band)
                     {
-                        return b.MechanicIntensity > 0 ? b.MechanicIntensity : 1;
+                        return b.MechanicIntensity > 0 ? b.MechanicIntensity : GameplayAssetKeys.Tuning.DefaultMechanicIntensity;
                     }
                 }
             }
@@ -656,5 +656,58 @@ namespace RingFlow.Gameplay
             if (Worlds == null || worldIndex < 0 || worldIndex >= Worlds.Count) return WorldMechanicType.None;
             return Worlds[worldIndex].MechanicType;
         }
+
+        #region Static Progression Helpers (shared)
+        public static int ToAbsoluteLevel(int worldIndex, int levelInWorld, GameConfigDatabaseSO dbConfig)
+        {
+            int count = 0;
+            for (int w = 0; w < worldIndex; w++)
+                count += dbConfig.LevelsPerWorld;
+            return count + levelInWorld;
+        }
+
+        public static int LevelInWorldFromAbsoluteLevel(int absoluteLevel, GameConfigDatabaseSO dbConfig, out int worldIndex)
+        {
+            int acc = 0;
+            for (int w = 0; w < dbConfig.Worlds.Count; w++)
+            {
+                int c = dbConfig.LevelsPerWorld;
+                if (absoluteLevel < acc + c)
+                {
+                    worldIndex = w;
+                    return absoluteLevel - acc;
+                }
+                acc += c;
+            }
+            worldIndex = dbConfig.Worlds.Count - 1;
+            return absoluteLevel - acc;
+        }
+
+        public static bool IsBossLevel(GameConfigDatabaseSO dbConfig, int absoluteLevel)
+        {
+            int acc = 0;
+            for (int w = 0; w < dbConfig.Worlds.Count; w++)
+            {
+                int c = dbConfig.LevelsPerWorld;
+                if (absoluteLevel < acc + c)
+                    return absoluteLevel == acc + c - 1;
+                acc += c;
+            }
+            return false;
+        }
+        #endregion
+    }
+
+    public enum DifficultyBand
+    {
+        Tutorial,
+        Easy,
+        Medium,
+        Hard,
+        Expert,
+        Master,
+        Legend,
+        Insane,
+        Boss,
     }
 }

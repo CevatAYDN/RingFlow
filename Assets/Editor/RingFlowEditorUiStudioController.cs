@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using RingFlow.Gameplay;
 using RingFlow.Gameplay.UI;
 using Nexus.Core;
+using Nexus.Core.Services;
 using System.Text;
 
 namespace RingFlow.Editor
@@ -184,7 +185,7 @@ namespace RingFlow.Editor
                 if (GUILayout.Button("Sahneyi Kaydet", GUILayout.Height(24)))
                 {
                     UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
-                    Debug.Log("[RingFlow] Sahne mevcut durumla kaydedildi.");
+                    NexusLog.Info("RingFlowEditorUiStudioController", "DrawPersistence", "SaveScene", "[RingFlow] Sahne mevcut durumla kaydedildi.");
                 }
                 if (GUILayout.Button("Prefab Ekranlarını Yenile", GUILayout.Height(24)))
                 {
@@ -195,7 +196,7 @@ namespace RingFlow.Editor
                     }
                     catch (System.Exception ex)
                     {
-                        Debug.LogException(ex);
+                        NexusLog.Error("RingFlowEditorUiStudioController", "DrawPersistence", "RefreshPrefabScreens", ex.ToString());
                         EditorUtility.DisplayDialog("Prefab Ekranlarını Yenile", ex.Message, "Tamam");
                     }
                 }
@@ -270,7 +271,7 @@ namespace RingFlow.Editor
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
                 UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
 
-            Debug.Log($"[RingFlow] ReloadPrefabScreens: {loadedCount} screens. Missing: {missingScreens.Count}");
+            NexusLog.Info("RingFlowEditorUiStudioController", "ReloadPrefabScreens", "Reload", $"[RingFlow] ReloadPrefabScreens: {loadedCount} screens. Missing: {missingScreens.Count}");
             if (!showDialog) return;
 
             string msg = $"Loaded {loadedCount} screen(s) as Prefab Links.";

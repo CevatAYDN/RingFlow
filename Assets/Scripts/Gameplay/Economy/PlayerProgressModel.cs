@@ -69,7 +69,7 @@ namespace RingFlow.Gameplay
 
         public void SetTotalWorldCount(int totalWorlds)
         {
-            TotalWorldCount = totalWorlds > 0 ? totalWorlds : 40;
+            TotalWorldCount = totalWorlds > 0 ? totalWorlds : GameplayAssetKeys.Tuning.DefaultWorldCount;
         }
 
         // XP thresholds — data-driven via GameBalanceConfig fields.

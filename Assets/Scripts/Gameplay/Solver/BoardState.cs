@@ -389,7 +389,7 @@ namespace RingFlow.Gameplay
             // Mıknatıs (Magnet) kuralı: Aynı renkteki diğer halkaları çek
             if (ring.Type == RingType.Magnet)
             {
-                int capacityLimit = MaxCapacity > 0 ? MaxCapacity : 4;
+                int capacityLimit = MaxCapacity > 0 ? MaxCapacity : GameplayAssetKeys.Tuning.MaxCapacity;
                 for (int p = 0; p < PoleCount; p++)
                 {
                     if (p == poleIndex) continue;
@@ -406,7 +406,7 @@ namespace RingFlow.Gameplay
             // Chain Kontrolü — Zincir halkası hareket ettiğinde eşini de yanına çeker
             if (ring.Type == RingType.Chain)
             {
-                int capacityLimit = MaxCapacity > 0 ? MaxCapacity : 4;
+                int capacityLimit = MaxCapacity > 0 ? MaxCapacity : GameplayAssetKeys.Tuning.MaxCapacity;
                 if (GetRingCount(poleIndex) < capacityLimit)
                 {
                     for (int p = 0; p < PoleCount; p++)

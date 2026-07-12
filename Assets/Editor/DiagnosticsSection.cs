@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System.Linq;
 using Nexus.Core;
+using Nexus.Core.Services;
 using RingFlow.Gameplay.Diagnostics;
 using UnityEditor;
 using UnityEngine;
@@ -130,7 +131,7 @@ namespace RingFlow.Editor
 
             writer.Flush();
             EditorUtility.RevealInFinder(path);
-            Debug.Log($"[Diagnostics] Report exported to: {path}");
+            NexusLog.Info("DiagnosticsSection", "ExportReport", "Report", $"[Diagnostics] Report exported to: {path}");
         }
     }
 }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using Nexus.Core.Services;
 using RingFlow.Gameplay;
 
 namespace RingFlow.Editor
@@ -15,7 +16,7 @@ namespace RingFlow.Editor
             var database = AssetDatabase.LoadAssetAtPath<GameConfigDatabaseSO>(assetPath);
             if (database == null)
             {
-                Debug.LogError(
+                NexusLog.Error("AssetMigrationTools", nameof(SyncGameConfigDatabaseAllowedMechanics), "LoadDatabase",
                     $"[AssetMigrationTools] GameConfigDatabaseSO not found at '{assetPath}'.");
                 return;
             }
@@ -37,7 +38,7 @@ namespace RingFlow.Editor
 
             if (patched == 0)
             {
-                Debug.Log(
+                NexusLog.Info("AssetMigrationTools", nameof(SyncGameConfigDatabaseAllowedMechanics), "Sync",
                     "[AssetMigrationTools] All DifficultyBands already have AllowedMechanics. Nothing to sync.");
                 return;
             }
@@ -46,7 +47,7 @@ namespace RingFlow.Editor
             AssetDatabase.SaveAssetIfDirty(database);
             AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
 
-            Debug.Log(
+            NexusLog.Info("AssetMigrationTools", nameof(SyncGameConfigDatabaseAllowedMechanics), "Sync",
                 $"[AssetMigrationTools] Patched AllowedMechanics for {patched} DifficultyBand(s). Asset saved and reimported.");
         }
 

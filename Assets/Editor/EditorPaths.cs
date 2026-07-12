@@ -21,8 +21,11 @@ namespace RingFlow.Editor
         // ── Asset paths (derived from the canonical keys where applicable) ──
         public const string ScenePath             = "Assets/Scenes/RingFlow.unity";
         public const string ContextDataPath       = "Assets/Settings/GameplayContextData.asset";
-        public const string GameConfigDbPath      = "Assets/Resources/" + GameplayAssetKeys.GameConfigDatabase + ".asset";
-        public const string GameFeelConfigPath    = "Assets/Resources/" + GameplayAssetKeys.GameFeelConfig + ".asset";
+        public const string GameConfigDbPath = "Assets/Resources/" + GameplayAssetKeys.GameConfigDatabase + ".asset";
+        public const string GameFeelConfigPath = "Assets/Resources/" + GameplayAssetKeys.GameFeelConfig + ".asset";
+        public const string RingColorPalettePath = "Assets/Resources/" + GameplayAssetKeys.RingColorPalette + ".asset";
+        public const string AudioConfigPath = "Assets/Resources/" + GameplayAssetKeys.AudioConfig + ".asset";
+        public const string UIThemeConfigPath = "Assets/Resources/" + GameplayAssetKeys.UIThemeConfig + ".asset";
         public const string TorusPrefabPath       = "Assets/Resources/Torus.obj";
         public const string LevelsFolder          = "Assets/Resources/Levels";
         public const string ResourcesFolder        = "Assets/Resources";
@@ -32,8 +35,9 @@ namespace RingFlow.Editor
         public const string GameConfigDatabaseKey = GameplayAssetKeys.GameConfigDatabase;
         public const string RingColorPaletteKey   = GameplayAssetKeys.RingColorPalette;
         public const string GameFeelConfigKey     = GameplayAssetKeys.GameFeelConfig;
-        public const string UIThemeConfigKey      = GameplayAssetKeys.UIThemeConfig;
-        public const string LocalizationKey       = GameplayAssetKeys.Localization;
+        public const string UIThemeConfigKey = GameplayAssetKeys.UIThemeConfig;
+        public const string AudioConfigKey = GameplayAssetKeys.AudioConfig;
+        public const string LocalizationKey = GameplayAssetKeys.Localization;
         public const string UiScreenPrefix        = GameplayAssetKeys.UiScreenPrefix;
 
         // ── Persistence keys (raw strings consolidated here) ──

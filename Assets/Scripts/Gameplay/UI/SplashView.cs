@@ -14,7 +14,7 @@ namespace RingFlow.Gameplay.UI
 
         private void Awake()
         {
-            Debug.Log("[SplashView] Awake called");
+            NexusLog.Info("SplashView", nameof(Awake), "", "Awake called");
             BindReferencesFromChildren();
         }
 

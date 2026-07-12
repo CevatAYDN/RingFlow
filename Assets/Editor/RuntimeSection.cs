@@ -98,7 +98,7 @@ namespace RingFlow.Editor
             var diag = context.TryResolve<RingFlow.Gameplay.Diagnostics.IGameDiagnostics>();
             if (diag == null)
             {
-                Debug.LogError("[Diagnostics] IGameDiagnostics is not registered!");
+                NexusLog.Error("RuntimeSection", "RunHealthCheck", "Diagnostics", "[Diagnostics] IGameDiagnostics is not registered!");
                 return;
             }
 
@@ -224,18 +224,18 @@ namespace RingFlow.Editor
                 try
                 {
                     Directory.Delete(secureFolder, true);
-                    Debug.Log($"[Editor] Deleted secure storage folder: {secureFolder}");
+                    NexusLog.Info("RuntimeSection", "ResetAllPlayerData", "SecureFolder", $"[Editor] Deleted secure storage folder: {secureFolder}");
                 }
                 catch (System.Exception ex)
                 {
-                    Debug.LogWarning($"[Editor] Failed to delete secure folder: {ex.Message}");
+                    NexusLog.Warn("RuntimeSection", "ResetAllPlayerData", "SecureFolder", $"[Editor] Failed to delete secure folder: {ex.Message}");
                 }
             }
 
             PlayerPrefs.DeleteKey(EditorPaths.PlayerPrefsStorageSeed);
             PlayerPrefs.DeleteAll();
             PlayerPrefs.Save();
-            Debug.Log("[Editor] Cleared PlayerPrefs.");
+            NexusLog.Info("RuntimeSection", "ResetAllPlayerData", "PlayerPrefs", "[Editor] Cleared PlayerPrefs.");
         }
     }
 }

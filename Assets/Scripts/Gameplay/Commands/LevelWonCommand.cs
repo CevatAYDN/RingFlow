@@ -63,7 +63,7 @@ namespace RingFlow.Gameplay
             int newLevel = _progressionService != null ? _progressionService.CurrentLevel.Value : prevLevel;
 
             int newWorldIndex = _dbConfig.GetWorldForLevel(newLevel);
-            bool isBoss = WorldConfigSO.IsBossLevel(_dbConfig, prevLevel);
+            bool isBoss = GameConfigDatabaseSO.IsBossLevel(_dbConfig, prevLevel);
             int coinReward = isBoss ? Cfg.BossCoinReward : Cfg.NormalCoinReward + (prevLevel % Cfg.LevelUpBonusDivisor) * Cfg.LevelUpBonusMultiplier;
             _economyService?.Earn(CurrencyIds.Coins, coinReward, isBoss ? "Boss Win Reward" : "Level Win Reward");
 

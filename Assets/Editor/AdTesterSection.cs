@@ -89,7 +89,7 @@ namespace RingFlow.Editor
             try { action?.Invoke(); }
             catch (System.Exception ex)
             {
-                Debug.LogWarning($"[AdTester] {ex.GetType().Name}: {ex.Message}");
+                NexusLog.Warn("AdTesterSection", nameof(SafeInvoke), "AdInvoke", $"[AdTester] {ex.GetType().Name}: {ex.Message}");
             }
         }
     }

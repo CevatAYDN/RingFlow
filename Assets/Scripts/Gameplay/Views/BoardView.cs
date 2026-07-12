@@ -15,6 +15,7 @@ namespace RingFlow.Gameplay
         public void SetTorusPrefab(GameObject prefab) { _torusPrefab = prefab; }
 
         private static Shader _cachedShader;
+        private static Font _cachedBuiltinFont;
         private GameObject _polePrefab;
 
         [Inject] private IObjectPoolService _objectPoolService;
@@ -26,7 +27,7 @@ namespace RingFlow.Gameplay
         [Inject] private GameFeelConfigSO _feelConfig;
         [Inject] private RingColorPaletteSO _colorPalette;
 
-        private Camera _mainCamera;
+        [Inject] private Camera _mainCamera;
         private GameFeelConfigSO F => _feelConfig;
 
         private Color GetRingColor(RingColor color)
@@ -675,8 +676,7 @@ namespace RingFlow.Gameplay
             _tutorialLabelText.color = Color.white;
             _tutorialLabelText.horizontalOverflow = HorizontalWrapMode.Overflow;
             _tutorialLabelText.verticalOverflow = VerticalWrapMode.Overflow;
-            _tutorialLabelText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
-                                    ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
+            _tutorialLabelText.font = GetBuiltinLabelFont();
 
             var labelOutline = labelGo.GetComponent<UnityEngine.UI.Outline>();
             labelOutline.effectColor = new Color(0f, 0f, 0f, 0.85f);
@@ -785,6 +785,14 @@ namespace RingFlow.Gameplay
                          ?? Shader.Find("Universal Render Pipeline/Simple Lit")
                          ?? Shader.Find("Standard");
             return _cachedShader;
+        }
+
+        private static Font GetBuiltinLabelFont()
+        {
+            if (_cachedBuiltinFont != null) return _cachedBuiltinFont;
+            _cachedBuiltinFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
+                                 ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
+            return _cachedBuiltinFont;
         }
 
         private void EnsurePolePrefabCreated()
@@ -1079,8 +1087,6 @@ namespace RingFlow.Gameplay
 
         private bool TryGetMainCamera(out Camera cam)
         {
-            if (_mainCamera != null) { cam = _mainCamera; return true; }
-            _mainCamera = Camera.main ?? Object.FindAnyObjectByType<Camera>(FindObjectsInactive.Include);
             cam = _mainCamera;
             return cam != null;
         }

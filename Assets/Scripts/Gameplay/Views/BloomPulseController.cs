@@ -1,4 +1,6 @@
 using DG.Tweening;
+using Nexus.Core;
+using Nexus.Core.Services;
 using UnityEngine;
 using System;
 using System.Reflection;
@@ -43,7 +45,7 @@ namespace RingFlow.Gameplay
             Type volumeType = Type.GetType("UnityEngine.Rendering.Volume, Unity.RenderPipelines.Core.Runtime");
             if (volumeType == null)
             {
-                Debug.LogWarning("[BloomPulse] Volume type not found. URP may not be available. Bloom pulse disabled.");
+                NexusLog.Warn("BloomPulse", nameof(Initialize), "", "Volume type not found. URP may not be available. Bloom pulse disabled.");
                 return;
             }
 
@@ -51,7 +53,7 @@ namespace RingFlow.Gameplay
             var volumes = FindObjectsByType(volumeType, FindObjectsInactive.Include);
             if (volumes == null || volumes.Length == 0)
             {
-                Debug.LogWarning("[BloomPulse] No Volume components found. Bloom pulse disabled.");
+                NexusLog.Warn("BloomPulse", nameof(Initialize), "", "No Volume components found. Bloom pulse disabled.");
                 return;
             }
 
@@ -84,7 +86,7 @@ namespace RingFlow.Gameplay
 
             if (selectedVolume == null)
             {
-                Debug.LogWarning("[BloomPulse] No suitable Volume found. Bloom pulse disabled.");
+                NexusLog.Warn("BloomPulse", nameof(Initialize), "", "No suitable Volume found. Bloom pulse disabled.");
                 return;
             }
 
@@ -95,7 +97,7 @@ namespace RingFlow.Gameplay
             _bloomType = Type.GetType("UnityEngine.Rendering.Universal.Bloom, Unity.RenderPipelines.Universal.Runtime");
             if (_bloomType == null)
             {
-                Debug.LogWarning("[BloomPulse] Bloom type not found. URP Bloom override may not be available.");
+                NexusLog.Warn("BloomPulse", nameof(Initialize), "", "Bloom type not found. URP Bloom override may not be available.");
                 return;
             }
 
@@ -105,7 +107,7 @@ namespace RingFlow.Gameplay
                 object profile = profileProp.GetValue(_volume);
                 if (profile == null)
                 {
-                    Debug.LogWarning("[BloomPulse] Volume has no profile. Bloom pulse disabled.");
+                    NexusLog.Warn("BloomPulse", nameof(Initialize), "", "Volume has no profile. Bloom pulse disabled.");
                     return;
                 }
 
@@ -113,7 +115,7 @@ namespace RingFlow.Gameplay
                 _tryGetMethod = profileType.GetMethod("TryGet", new[] { _bloomType.MakeByRefType() });
                 if (_tryGetMethod == null)
                 {
-                    Debug.LogWarning("[BloomPulse] VolumeProfile.TryGet not found. Bloom pulse disabled.");
+                    NexusLog.Warn("BloomPulse", nameof(Initialize), "", "VolumeProfile.TryGet not found. Bloom pulse disabled.");
                     return;
                 }
 
@@ -121,7 +123,7 @@ namespace RingFlow.Gameplay
                 bool found = (bool)_tryGetMethod.Invoke(profile, parameters);
                 if (!found || parameters[0] == null)
                 {
-                    Debug.LogWarning("[BloomPulse] Volume has no Bloom override. Add a Bloom override to the Volume profile.");
+                    NexusLog.Warn("BloomPulse", nameof(Initialize), "", "Volume has no Bloom override. Add a Bloom override to the Volume profile.");
                     return;
                 }
 
@@ -130,7 +132,7 @@ namespace RingFlow.Gameplay
 
             if (_bloom == null)
             {
-                Debug.LogWarning("[BloomPulse] Could not resolve Bloom override. Bloom pulse disabled.");
+                NexusLog.Warn("BloomPulse", nameof(Initialize), "", "Could not resolve Bloom override. Bloom pulse disabled.");
                 return;
             }
 
@@ -148,7 +150,7 @@ namespace RingFlow.Gameplay
 
             if (_intensityField == null || _thresholdField == null)
             {
-                Debug.LogWarning("[BloomPulse] Could not find intensity/threshold fields on Bloom. Bloom pulse disabled.");
+                NexusLog.Warn("BloomPulse", nameof(Initialize), "", "Could not find intensity/threshold fields on Bloom. Bloom pulse disabled.");
                 return;
             }
 
@@ -157,6 +159,7 @@ namespace RingFlow.Gameplay
             _originalThreshold = ReadFloatValue(_thresholdField);
 
             _isReady = true;
+            NexusLog.Info("BloomPulse", nameof(Initialize), "", "Bloom pulse controller ready.");
         }
 
         private float ReadFloatValue(FieldInfo field)

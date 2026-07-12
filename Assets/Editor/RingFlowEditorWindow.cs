@@ -21,6 +21,7 @@ namespace RingFlow.Editor
         private DiagnosticsSection _diagnostics;
         private DatabaseSection _databaseSection;
         private GameFeelSection _gameFeel;
+        private ConfigSection _configSection;
         private RingFlowEditorUiStudioController _uiStudio;
 
         private Vector2 _scroll;
@@ -106,10 +107,11 @@ namespace RingFlow.Editor
             _diagnostics = new DiagnosticsSection();
             _databaseSection = new DatabaseSection();
             _gameFeel = new GameFeelSection();
+            _configSection = new ConfigSection();
             _uiStudio = new RingFlowEditorUiStudioController();
 
             foreach (var s in new EditorSection[]
-                { _generator, _visualBuilder, _runtime, _settings, _adTester, _diagnostics, _databaseSection, _gameFeel })
+                { _generator, _visualBuilder, _runtime, _settings, _adTester, _diagnostics, _databaseSection, _gameFeel, _configSection })
                 s.HideHeader = true;
 
             _generator.OnEnable();
@@ -204,6 +206,9 @@ namespace RingFlow.Editor
         // ──────────────────────────────────────────────────────────────
         //  Status Bar
         // ──────────────────────────────────────────────────────────────
+
+        private void DrawFoldableSection(string foldKey, string title, System.Action drawContent)
+            => RingFlowEditorUtils.FoldoutSection(foldKey, title, drawContent);
 
         private void DrawStatusBar()
         {
@@ -385,14 +390,11 @@ namespace RingFlow.Editor
 
         private void DrawLevelsTab()
         {
-            EditorGUILayout.LabelField("Seviye Üretici & Çözücü Ayarları", EditorStyles.boldLabel);
-            _generator.OnGUI();
+            DrawFoldableSection(EditorPrefsKeys.FoldGenerator, "Seviye Üretici & Çözücü Ayarları", _generator.OnGUI);
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionBreak);
-            EditorGUILayout.LabelField("Seviye Denetleyici", EditorStyles.boldLabel);
-            _databaseSection.OnGUI();
+            DrawFoldableSection(EditorPrefsKeys.FoldDatabase, "Seviye Denetleyici", _databaseSection.OnGUI);
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionBreak);
-            EditorGUILayout.LabelField("Sahne Tahtası Oluşturucu", EditorStyles.boldLabel);
-            _visualBuilder.OnGUI();
+            DrawFoldableSection(EditorPrefsKeys.FoldBuilder, "Sahne Tahtası Oluşturucu", _visualBuilder.OnGUI);
         }
 
         // ──────────────────────────────────────────────────────────────
@@ -401,20 +403,16 @@ namespace RingFlow.Editor
 
         private void DrawToolsTab()
         {
-            EditorGUILayout.LabelField("PlayMode Çalışma Modları", EditorStyles.boldLabel);
-            _runtime.OnGUI();
+            DrawFoldableSection(EditorPrefsKeys.FoldRuntime, "PlayMode Çalışma Modları", _runtime.OnGUI);
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
-            EditorGUILayout.LabelField("Reklam ve Ödüllendirme Test Cihazı", EditorStyles.boldLabel);
-            _adTester.OnGUI();
+            DrawFoldableSection(EditorPrefsKeys.FoldAdTester, "Reklam ve Ödüllendirme Test Cihazı", _adTester.OnGUI);
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
-            EditorGUILayout.LabelField("Genel Ayarlar", EditorStyles.boldLabel);
-            _settings.OnGUI();
+            DrawFoldableSection(EditorPrefsKeys.FoldSettings, "Genel Ayarlar", _settings.OnGUI);
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
-            EditorGUILayout.LabelField("Analiz ve Sinyal İnceleyici", EditorStyles.boldLabel);
-            _diagnostics.OnGUI();
+            DrawFoldableSection(EditorPrefsKeys.FoldDiagnostics, "Analiz ve Sinyal İnceleyici", _diagnostics.OnGUI);
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
-            EditorGUILayout.LabelField("Oyun Hissiyatı (Game Feel) & Kamera", EditorStyles.boldLabel);
-            _gameFeel.OnGUI();
+            DrawFoldableSection(EditorPrefsKeys.FoldGameFeel, "Oyun Hissiyatı (Game Feel) & Kamera", _gameFeel.OnGUI);
+            DrawFoldableSection(EditorPrefsKeys.FoldConfigAssets, "Yapılandırma Varlıkları (Config Assets)", _configSection.OnGUI);
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
         }
     }

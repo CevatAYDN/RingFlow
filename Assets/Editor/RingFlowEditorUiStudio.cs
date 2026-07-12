@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
+using Nexus.Core.Services;
 using RingFlow.Gameplay;
 using RingFlow.Gameplay.UI;
 
@@ -55,7 +56,7 @@ namespace RingFlow.Editor
             }
             catch (Exception ex)
             {
-                Debug.LogException(ex);
+                NexusLog.Error("RingFlowEditorUiStudio", "CreateMissingUiScreens", "CreateScreens", ex.ToString());
                 EditorUtility.DisplayDialog("Create Missing UI Screens", ex.Message, "OK");
             }
         }

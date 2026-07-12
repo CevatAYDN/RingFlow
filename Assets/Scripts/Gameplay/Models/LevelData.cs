@@ -62,7 +62,7 @@ namespace RingFlow.Gameplay
 
         public PoleData(int ringCapacity)
         {
-            RingCapacity = ringCapacity > 0 ? ringCapacity : 4;
+            RingCapacity = ringCapacity > 0 ? ringCapacity : GameplayAssetKeys.Tuning.MaxCapacity;
         }
     }
 

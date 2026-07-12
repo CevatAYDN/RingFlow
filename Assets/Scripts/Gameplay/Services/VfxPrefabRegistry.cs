@@ -1,3 +1,5 @@
+using Nexus.Core;
+using Nexus.Core.Services;
 using UnityEngine;
 
 namespace RingFlow.Gameplay
@@ -22,19 +24,19 @@ namespace RingFlow.Gameplay
 
             if (RingPopPrefab == null)
             {
-                UnityEngine.Debug.LogWarning("[VfxPrefabRegistry] RingPopPrefab is not assigned. VFX for ring moves will be disabled.");
+                NexusLog.Warn("VfxPrefabRegistry", nameof(Validate), "", "RingPopPrefab is not assigned. VFX for ring moves will be disabled.");
                 isValid = false;
             }
 
             if (ConfettiPrefab == null)
             {
-                UnityEngine.Debug.LogWarning("[VfxPrefabRegistry] ConfettiPrefab is not assigned. Win celebration VFX will be disabled.");
+                NexusLog.Warn("VfxPrefabRegistry", nameof(Validate), "", "ConfettiPrefab is not assigned. Win celebration VFX will be disabled.");
                 isValid = false;
             }
 
             if (MergeEffectPrefab == null)
             {
-                UnityEngine.Debug.LogWarning("[VfxPrefabRegistry] MergeEffectPrefab is not assigned. Pole complete merge VFX will fall back to legacy.");
+                NexusLog.Warn("VfxPrefabRegistry", nameof(Validate), "", "MergeEffectPrefab is not assigned. Pole complete merge VFX will fall back to legacy.");
                 isValid = false;
             }
 
@@ -45,7 +47,7 @@ namespace RingFlow.Gameplay
         {
             if (RingPopPrefab == null)
             {
-                UnityEngine.Debug.LogWarning("[VfxPrefabRegistry] RingPopPrefab requested but not assigned.");
+                NexusLog.Warn("VfxPrefabRegistry", nameof(GetRingPopPrefab), "", "RingPopPrefab requested but not assigned.");
                 return null;
             }
             return RingPopPrefab;
@@ -55,7 +57,7 @@ namespace RingFlow.Gameplay
         {
             if (ConfettiPrefab == null)
             {
-                UnityEngine.Debug.LogWarning("[VfxPrefabRegistry] ConfettiPrefab requested but not assigned.");
+                NexusLog.Warn("VfxPrefabRegistry", nameof(GetConfettiPrefab), "", "ConfettiPrefab requested but not assigned.");
                 return null;
             }
             return ConfettiPrefab;
@@ -65,7 +67,7 @@ namespace RingFlow.Gameplay
         {
             if (MergeEffectPrefab == null)
             {
-                UnityEngine.Debug.LogWarning("[VfxPrefabRegistry] MergeEffectPrefab requested but not assigned.");
+                NexusLog.Warn("VfxPrefabRegistry", nameof(GetMergeEffectPrefab), "", "MergeEffectPrefab requested but not assigned.");
                 return null;
             }
             return MergeEffectPrefab;

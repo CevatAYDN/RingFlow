@@ -17,6 +17,8 @@ namespace RingFlow.Gameplay
         private MeshRenderer[] _renderers;
         private MaterialPropertyBlock _propBlock;
 
+        private static Shader s_unlitShader;
+
         private void Awake()
         {
             _propBlock = new MaterialPropertyBlock();
@@ -57,9 +59,7 @@ namespace RingFlow.Gameplay
 
         private Material CreateGradientMaterial()
         {
-            var shader = Shader.Find("Universal Render Pipeline/Unlit")
-                ?? Shader.Find("Unlit/Texture")
-                ?? Shader.Find("Standard");
+            var shader = GetUnlitShader();
             var mat = new Material(shader);
             var texture = CreateGradientTexture(_topColor, _bottomColor);
             
@@ -122,9 +122,7 @@ namespace RingFlow.Gameplay
 
         private static Material CreateParticleMaterial(Color baseColor)
         {
-            var mat = new Material(Shader.Find("Universal Render Pipeline/Unlit")
-                ?? Shader.Find("Unlit/Color")
-                ?? Shader.Find("Standard"));
+            var mat = new Material(GetUnlitShader());
             mat.color = baseColor;
             if (mat.HasProperty("_BaseColor"))
                 mat.SetColor("_BaseColor", baseColor);
@@ -137,6 +135,18 @@ namespace RingFlow.Gameplay
             mat.EnableKeyword("_ALPHABLEND_ON");
             mat.renderQueue = 3000;
             return mat;
+        }
+
+        private static Shader GetUnlitShader()
+        {
+            if (s_unlitShader == null)
+            {
+                s_unlitShader = Shader.Find("Universal Render Pipeline/Unlit")
+                             ?? Shader.Find("Unlit/Color")
+                             ?? Shader.Find("Unlit/Texture")
+                             ?? Shader.Find("Standard");
+            }
+            return s_unlitShader;
         }
 
         private void Update()
