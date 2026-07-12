@@ -18,7 +18,7 @@ namespace RingFlow.Gameplay
         {
             if (_loaded) return;
 
-            var csvAsset = Resources.Load<TextAsset>("Localization");
+            var csvAsset = Resources.Load<TextAsset>(GameplayAssetKeys.Localization);
             if (csvAsset == null)
             {
                 NexusLog.Error("CSVLocalizationTableProvider", nameof(LoadCSVIfNeeded), "",

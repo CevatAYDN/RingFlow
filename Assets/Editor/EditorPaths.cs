@@ -1,3 +1,4 @@
+using RingFlow.Gameplay;
 using UnityEngine;
 
 namespace RingFlow.Editor
@@ -6,17 +7,29 @@ namespace RingFlow.Editor
     /// Central registry for every hardcoded asset path, magic color, and key
     /// the dashboard touches. Keep this in sync whenever a new editor workflow
     /// needs to reference on-disk data.
+    ///
+    /// Resource keys are a dashboard-managed facade over <see cref="GameplayAssetKeys"/>,
+    /// the single source of truth in the runtime assembly, so a key rename
+    /// happens in exactly one place.
     /// </summary>
     internal static class EditorPaths
     {
-        // ── Asset paths ──
+        // ── Asset paths (derived from the canonical keys where applicable) ──
         public const string ScenePath             = "Assets/Scenes/RingFlow.unity";
         public const string ContextDataPath       = "Assets/Settings/GameplayContextData.asset";
-        public const string GameConfigDbPath      = "Assets/Resources/GameConfigDatabase.asset";
-        public const string GameFeelConfigPath    = "Assets/Resources/GameFeelConfig.asset";
+        public const string GameConfigDbPath      = "Assets/Resources/" + GameplayAssetKeys.GameConfigDatabase + ".asset";
+        public const string GameFeelConfigPath    = "Assets/Resources/" + GameplayAssetKeys.GameFeelConfig + ".asset";
         public const string TorusPrefabPath       = "Assets/Resources/Torus.obj";
         public const string LevelsFolder          = "Assets/Resources/Levels";
         public const string UiScreensFolder       = "Assets/Resources/UI";
+
+        // ── Resource keys (dashboard-managed facade over GameplayAssetKeys) ──
+        public const string GameConfigDatabaseKey = GameplayAssetKeys.GameConfigDatabase;
+        public const string RingColorPaletteKey   = GameplayAssetKeys.RingColorPalette;
+        public const string GameFeelConfigKey     = GameplayAssetKeys.GameFeelConfig;
+        public const string UIThemeConfigKey      = GameplayAssetKeys.UIThemeConfig;
+        public const string LocalizationKey       = GameplayAssetKeys.Localization;
+        public const string UiScreenPrefix        = GameplayAssetKeys.UiScreenPrefix;
 
         // ── Persistence keys (raw strings consolidated here) ──
         public const string PlayerPrefsStorageSeed = "NT_StorageSeed";

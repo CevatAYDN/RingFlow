@@ -113,7 +113,7 @@ namespace RingFlow.Tests
         public void PlayerProgressModel_XpToNextLevel_ReturnsCorrectValues()
         {
             var model = new PlayerProgressModel();
-            var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase);
             Assert.AreEqual(100, model.XpToNextLevel(db, 1));
             Assert.AreEqual(250, model.XpToNextLevel(db, 2));
             Assert.AreEqual(500, model.XpToNextLevel(db, 3));

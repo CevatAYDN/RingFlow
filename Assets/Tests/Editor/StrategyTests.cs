@@ -203,7 +203,7 @@ namespace RingFlow.Tests
         [Test]
         public void MysteryRingStrategy_PreMove_AlwaysReturnsTrue()
         {
-            var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase);
             var strategy = new MysteryRingStrategy(db);
             var context = new MoveContext();
             Assert.IsTrue(strategy.PreMoveValidation(ref context));
@@ -228,7 +228,7 @@ namespace RingFlow.Tests
             context.FromPole.PopRing();
 
             // Now pole has: [Standard Red, Mystery (now top)]
-            var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase);
             var strategy = new MysteryRingStrategy(db);
             strategy.PostMoveExecution(ref context);
 
@@ -241,7 +241,7 @@ namespace RingFlow.Tests
         [Test]
         public void MysteryRingStrategy_CanHandle_Mystery_ReturnsTrue()
         {
-            var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase);
             var strategy = new MysteryRingStrategy(db);
             Assert.IsTrue(strategy.CanHandle(RingType.Mystery));
             Assert.IsFalse(strategy.CanHandle(RingType.Standard));

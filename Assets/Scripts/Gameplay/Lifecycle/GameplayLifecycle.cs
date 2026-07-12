@@ -48,21 +48,21 @@ namespace RingFlow.Gameplay
             builder.BindInstance<VfxPrefabRegistry>(vfxRegistry);
             
             // -------------------- Config Databases & Themes --------------------
-            var db = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var db = Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase);
             if (db == null) throw new System.InvalidOperationException("GameConfigDatabase.asset not found in Resources!");
             builder.BindInstance<GameConfigDatabaseSO>(db);
 
-            var feel = Resources.Load<GameFeelConfigSO>("GameFeelConfig");
+            var feel = Resources.Load<GameFeelConfigSO>(GameplayAssetKeys.GameFeelConfig);
             if (feel == null) throw new System.InvalidOperationException("GameFeelConfig.asset not found in Resources!");
             builder.BindInstance<GameFeelConfigSO>(feel);
 
             DoTweenCapacityBootstrap.EnsureInitialized(feel.DoTweenTweensCapacity, feel.DoTweenSequencesCapacity);
 
-            var palette = Resources.Load<RingColorPaletteSO>("RingColorPalette");
+            var palette = Resources.Load<RingColorPaletteSO>(GameplayAssetKeys.RingColorPalette);
             if (palette == null) throw new System.InvalidOperationException("RingColorPalette.asset not found in Resources!");
             builder.BindInstance<RingColorPaletteSO>(palette);
 
-            var theme = Resources.Load<UIThemeConfigSO>("UIThemeConfig");
+            var theme = Resources.Load<UIThemeConfigSO>(GameplayAssetKeys.UIThemeConfig);
             if (theme == null) throw new System.InvalidOperationException("UIThemeConfig.asset not found in Resources!");
             GameUIResources.Bind(theme);
             builder.BindInstance<UIThemeConfigSO>(theme);

@@ -28,7 +28,7 @@ namespace RingFlow.Tests
             typeof(RingFlow.Gameplay.EconomyService).GetField("_progress", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(_economyService, _progress);
             _economyService.InitializeAsync(CancellationToken.None);
 
-            var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase);
             _progressionService = new RingFlow.Gameplay.ProgressionService(_progress, db);
             _dailyRewardService = new DailyRewardService(_progress, db);
         }
@@ -108,7 +108,7 @@ namespace RingFlow.Tests
         [Test]
         public void DailyRewardService_GrantCycleAndResetLogic()
         {
-            var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase);
             var dailyRewards = db?.BalanceConfig.DailyRewards ?? new System.Collections.Generic.List<DailyRewardEntry>();
             // Day 0 reward is 100 Coins
             var reward0 = DailyRewardTable.RewardForDayIndex(dailyRewards, 0);

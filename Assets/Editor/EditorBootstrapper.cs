@@ -134,7 +134,7 @@ namespace RingFlow.Editor
                 camera = camObj.AddComponent<Camera>();
             }
 
-            var feel = Resources.Load<Gameplay.GameFeelConfigSO>("GameFeelConfig");
+            var feel = Resources.Load<Gameplay.GameFeelConfigSO>(EditorPaths.GameFeelConfigKey);
             if (feel == null)
             {
                 feel = ScriptableObject.CreateInstance<Gameplay.GameFeelConfigSO>();

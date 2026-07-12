@@ -28,7 +28,7 @@ namespace RingFlow.Tests
             _signalBus = new MockSignalBus();
             _economyService = new MockEconomyService();
             _adService = new MockAdService();
-            var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase);
             _progressionService = new RingFlow.Gameplay.ProgressionService(_progressModel, db);
 
             _progressModel.Coins.Value = 100;
@@ -67,14 +67,14 @@ namespace RingFlow.Tests
                         f.SetValue(target, _progressionService);
                     else if (f.FieldType == typeof(RingMoveStrategyManager))
                     {
-                        var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+                        var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase);
                         f.SetValue(target, new RingMoveStrategyManager(db));
                     }
                     else if (f.FieldType == typeof(Nexus.Core.FSM.IGameStateMachine))
                         f.SetValue(target, new MockGameStateMachine());
                     else if (f.FieldType == typeof(GameConfigDatabaseSO))
                     {
-                        var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+                        var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase);
                         f.SetValue(target, db);
                     }
                     else if (f.FieldType == typeof(IAnalyticsService))

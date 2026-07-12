@@ -179,7 +179,7 @@ namespace RingFlow.Editor
             }
             if (GUILayout.Button("Unlock All Levels"))
             {
-                var db = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+                var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
                 int totalLevels = db != null ? db.LevelsPerWorld * db.TotalWorlds : 40;
                 progress.MaxUnlockedLevel.Value = totalLevels;
                 int worldCount = progress.UnlockedWorlds?.Count ?? 0;

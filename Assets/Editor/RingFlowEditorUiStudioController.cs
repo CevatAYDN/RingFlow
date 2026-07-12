@@ -247,7 +247,7 @@ namespace RingFlow.Editor
                 var path = RingFlowEditorUiStudio.GetPrefabPathForScreen(screen);
                 var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
                 if (prefab == null)
-                    prefab = Resources.Load<GameObject>($"UI/{screen}");
+                    prefab = Resources.Load<GameObject>($"{EditorPaths.UiScreenPrefix}{screen}");
                 if (prefab == null)
                 {
                     missingScreens.Add(screen.ToString());

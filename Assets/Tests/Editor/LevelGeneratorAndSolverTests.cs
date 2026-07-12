@@ -12,7 +12,7 @@ namespace RingFlow.Tests
         [SetUp]
         public void SetUp()
         {
-            _db = UnityEngine.Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase"); if (_db == null) { _db = UnityEngine.ScriptableObject.CreateInstance<GameConfigDatabaseSO>(); _db.InitializeDefaults(); }
+            _db = UnityEngine.Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase); if (_db == null) { _db = UnityEngine.ScriptableObject.CreateInstance<GameConfigDatabaseSO>(); _db.InitializeDefaults(); }
         }
 
         private static void AssertLevelContainsOnlyAllowedMechanics(LevelData levelData, System.Collections.Generic.List<WorldMechanicType> allowedMechanics,

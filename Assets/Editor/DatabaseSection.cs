@@ -247,7 +247,7 @@ namespace RingFlow.Editor
 
             if (_database == null)
             {
-                _database = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+                _database = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
             }
             if (_database == null)
             {

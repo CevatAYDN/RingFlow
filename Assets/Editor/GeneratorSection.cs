@@ -54,7 +54,7 @@ namespace RingFlow.Editor
             DrawFoldoutHeader();
             if (!IsFoldedOut) return;
 
-            var db = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
             if (db == null)
             {
                 EditorGUILayout.HelpBox("Zorluk Veritabanı (GameConfigDatabase.asset) bulunamadı!", MessageType.Error);
@@ -148,7 +148,7 @@ namespace RingFlow.Editor
 
         private void DrawDifficultyPreview(int levelIndex)
         {
-            var db = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
             var band = db.GetBandForLevel(levelIndex);
             int intensity = db.GetMechanicIntensityForLevel(levelIndex);
             var allowed = db.GetAllowedMechanicsForLevel(levelIndex);
@@ -187,7 +187,7 @@ namespace RingFlow.Editor
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Üretilen Seviye Bilgileri:", EditorStyles.boldLabel);
-            var db = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
             int level = _generatedLevel.LevelIndex;
             var band = db.GetBandForLevel(level);
             int intensity = db.GetMechanicIntensityForLevel(level);
@@ -238,7 +238,7 @@ namespace RingFlow.Editor
 
         private void Generate()
         {
-            var db = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
             if (db == null) return;
             if (_levelIndex < 1 || _levelIndex > db.TotalLevels)
             {
@@ -308,7 +308,7 @@ namespace RingFlow.Editor
         private void GenerateAllLevels()
         {
             _generateInProgress = true;
-            var db = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
             if (db == null) return;
 
             string folderPath = EditorPaths.LevelsFolder;

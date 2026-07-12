@@ -362,7 +362,7 @@ namespace RingFlow.Gameplay.UI
             {
                 try
                 {
-                    loaded = await assets.LoadAssetAsync<GameObject>($"UI/{screen}").ConfigureAwait(true);
+                    loaded = await assets.LoadAssetAsync<GameObject>($"{GameplayAssetKeys.UiScreenPrefix}{screen}").ConfigureAwait(true);
                 }
                 catch (System.Exception ex)
                 {
@@ -474,12 +474,12 @@ namespace RingFlow.Gameplay.UI
                 var asset = _root.Context.TryResolve<Services.IAssetService>();
                 if (asset != null)
                 {
-                    var task = asset.LoadAsync<GameObject>($"UI/{screen}");
+                    var task = asset.LoadAsync<GameObject>($"{GameplayAssetKeys.UiScreenPrefix}{screen}");
                     task.Wait();
                     return task.Result;
                 }
             }
-            return Resources.Load<GameObject>($"UI/{screen}");
+            return Resources.Load<GameObject>($"{GameplayAssetKeys.UiScreenPrefix}{screen}");
         }
 
         private void DestroyScreenInstance(GameObject go)

@@ -39,7 +39,7 @@ namespace RingFlow.Tests
             _progressModel = new PlayerProgressModel();
             _fsm = new MockGameStateMachine();
             _signalBus = new LoggingSignalBus();
-            _db = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            _db = Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase);
             _progressionService = new RingFlow.Gameplay.ProgressionService(_progressModel, _db);
             _economyService = new MockEconomyService();
             _strategyManager = new RingMoveStrategyManager(_db);
@@ -195,7 +195,7 @@ namespace RingFlow.Tests
             int maxCap = 4;
             int level = 5;
 
-            var db = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var db = Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase);
             var levelData = LevelGenerator.GenerateLevel(db, level, level * 12345, poleCount, colorCount, maxCap);
             Assert.That(levelData, Is.Not.Null, "LevelGenerator should produce valid level.");
 
@@ -329,7 +329,7 @@ namespace RingFlow.Tests
             InjectField(target, "_economy", _economyService);
 
             // Data-driven dependencies
-            var db = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var db = Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase);
             InjectField(target, "_dbConfig", db);
             InjectField(target, "_assetService", new RingFlow.Gameplay.Services.ResourcesAssetService());
             InjectField(target, "_analyticsService", new MockAnalyticsService());

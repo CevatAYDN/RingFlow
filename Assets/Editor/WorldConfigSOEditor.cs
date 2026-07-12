@@ -10,7 +10,7 @@ namespace RingFlow.Editor
         public override void OnInspectorGUI()
         {
             var config = (WorldConfigSO)target;
-            var database = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var database = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
 
             EditorGUILayout.LabelField("World Configuration", RingFlowEditorUtils.HeaderStyle);
             EditorGUILayout.Space(4f);

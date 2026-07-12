@@ -241,7 +241,7 @@ namespace RingFlow.Editor
                         {
                             int ringCapacity = levelSO.Data.Poles.Count > 0 
                                 ? levelSO.Data.Poles[0].RingCapacity 
-                                : (Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase")?.GetMaxCapacityForLevel(levelSO.Data.LevelIndex) ?? 4);
+                                : (Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey)?.GetMaxCapacityForLevel(levelSO.Data.LevelIndex) ?? 4);
                             Undo.RecordObject(levelSO, "Direk Ekle");
                             levelSO.Data.Poles.Add(new PoleData(ringCapacity));
                             EditorUtility.SetDirty(levelSO);
@@ -279,7 +279,7 @@ namespace RingFlow.Editor
                     board.AddRing(p, pole.Rings[r]);
             }
 
-            var database = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var database = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
             if (database == null) throw new System.InvalidOperationException("GameConfigDatabase not found!");
             int maxCapacity = levelSO.Data.Poles.Count > 0 
                 ? levelSO.Data.Poles[0].RingCapacity 
@@ -324,7 +324,7 @@ namespace RingFlow.Editor
                 return;
             }
 
-            var database = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var database = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
             int levelIndex = levelSO.Data.LevelIndex;
             var band = database.GetBandForLevel(levelIndex);
             int intensity = database.GetMechanicIntensityForLevel(levelIndex);
@@ -385,7 +385,7 @@ namespace RingFlow.Editor
                 return;
             }
 
-            var database = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var database = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
             if (database == null) return;
             int levelIndex = levelData.LevelIndex;
             var band = database.GetBandForLevel(levelIndex);
@@ -434,7 +434,7 @@ namespace RingFlow.Editor
                 for (int i = 1; i < colors.Length; i++)
                 {
                     var color = colors[i];
-                    Color c = Resources.Load<RingColorPaletteSO>("RingColorPalette")?.GetColor(color, RingColorPaletteSO.ColorBlindMode.Off) ?? Color.grey;
+                    Color c = Resources.Load<RingColorPaletteSO>(EditorPaths.RingColorPaletteKey)?.GetColor(color, RingColorPaletteSO.ColorBlindMode.Off) ?? Color.grey;
 
                     bool isSelected = (!s_eraserMode && s_brushColor == color);
                     GUI.backgroundColor = c;
@@ -552,7 +552,7 @@ namespace RingFlow.Editor
                             if (hasRing)
                             {
                                 var ring = pole.Rings[r];
-                                var palette = Resources.Load<RingColorPaletteSO>("RingColorPalette");
+                                var palette = Resources.Load<RingColorPaletteSO>(EditorPaths.RingColorPaletteKey);
                                 Color ringColor = palette != null ? palette.GetColor(ring.Color, RingColorPaletteSO.ColorBlindMode.Off) : Color.grey;
                                 GUI.backgroundColor = ringColor;
 
