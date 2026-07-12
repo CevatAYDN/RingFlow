@@ -6,14 +6,16 @@ using Nexus.Core.Services;
 
 namespace RingFlow.Editor
 {
+    /// <summary>
+    /// Seviye üretici bölümü — yalnızca GDD veritabanı (GameConfigDatabaseSO)
+    /// üzerinden data-driven üretim yapar. Manuel tweak / fallback yok.
+    /// UI yalnızca "Seviye Endeksi" ve "Seed" ister; geri kalan tüm
+    /// parametreler DB'den.Commands ile aynı fonksiyonları kullanır.
+    /// </summary>
     public sealed class GeneratorSection : EditorSection
     {
         private int _levelIndex = 1;
         private int _seed = 100;
-        private int _poleCount = 4;
-        private int _colorCount = 3;
-        private int _maxCapacity = 4;
-        private int _minEmptyPoles = 1;
         private bool _autoSave = true;
         private bool _generateInProgress;
         private int _batchStartLevel = 1;
@@ -31,13 +33,8 @@ namespace RingFlow.Editor
 
         public void OnEnable()
         {
-            var db = GameConfigDatabaseSO.Instance;
             _levelIndex = EditorPrefs.GetInt(EditorPrefsKeys.LevelIndex, 1);
             _seed = EditorPrefs.GetInt(EditorPrefsKeys.Seed, 100);
-            _poleCount = EditorPrefs.GetInt(EditorPrefsKeys.Poles, 4);
-            _colorCount = EditorPrefs.GetInt(EditorPrefsKeys.Colors, 3);
-            _maxCapacity = EditorPrefs.GetInt(EditorPrefsKeys.MaxCap, 4);
-            _minEmptyPoles = Mathf.Max(1, EditorPrefs.GetInt(EditorPrefsKeys.MinEmptyPoles, 1));
             _batchStartLevel = EditorPrefs.GetInt(EditorPrefsKeys.BatchStartLevel, 1);
             _batchEndLevel = EditorPrefs.GetInt(EditorPrefsKeys.BatchEndLevel, 50);
             _autoSave = EditorPrefs.GetBool(EditorPrefsKeys.AutoSave, true);
@@ -47,10 +44,6 @@ namespace RingFlow.Editor
         {
             EditorPrefs.SetInt(EditorPrefsKeys.LevelIndex, _levelIndex);
             EditorPrefs.SetInt(EditorPrefsKeys.Seed, _seed);
-            EditorPrefs.SetInt(EditorPrefsKeys.Poles, _poleCount);
-            EditorPrefs.SetInt(EditorPrefsKeys.Colors, _colorCount);
-            EditorPrefs.SetInt(EditorPrefsKeys.MaxCap, _maxCapacity);
-            EditorPrefs.SetInt(EditorPrefsKeys.MinEmptyPoles, _minEmptyPoles);
             EditorPrefs.SetInt(EditorPrefsKeys.BatchStartLevel, _batchStartLevel);
             EditorPrefs.SetInt(EditorPrefsKeys.BatchEndLevel, _batchEndLevel);
             EditorPrefs.SetBool(EditorPrefsKeys.AutoSave, _autoSave);
@@ -61,40 +54,44 @@ namespace RingFlow.Editor
             DrawFoldoutHeader();
             if (!IsFoldedOut) return;
 
-            var db = GameConfigDatabaseSO.Instance;
+            var db = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            if (db == null)
+            {
+                EditorGUILayout.HelpBox("Zorluk Veritabanı (GameConfigDatabase.asset) bulunamadı!", MessageType.Error);
+                return;
+            }
             using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
             {
                 EditorGUILayout.ObjectField("Zorluk Veritabanı (Database)", db, typeof(GameConfigDatabaseSO), false);
                 if (GUILayout.Button("Düzenle", GUILayout.Width(80f)))
-                {
                     Selection.activeObject = db;
-                }
             }
             EditorGUILayout.Space(2f);
 
-            _poleCount = db.GetPoleCountForLevel(_levelIndex);
-            _colorCount = db.GetColorCountForLevel(_levelIndex);
-            _maxCapacity = db.GetMaxCapacityForLevel(_levelIndex);
-            _minEmptyPoles = db.GetMinEmptyPolesForLevel(_levelIndex);
+            // Tüm parametreler DB'den — yerel olarak okunur, UI'da yalnızca görüntülenir
+            int poleCount = db.GetPoleCountForLevel(_levelIndex);
+            int colorCount = db.GetColorCountForLevel(_levelIndex);
+            int maxCapacity = db.GetMaxCapacityForLevel(_levelIndex);
+            int minEmptyPoles = db.GetMinEmptyPolesForLevel(_levelIndex);
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 EditorGUILayout.LabelField("Seviye Parametreleri", EditorStyles.boldLabel);
 
                 EditorGUI.BeginChangeCheck();
-                _levelIndex  = EditorGUILayout.IntSlider("Seviye Endeksi", _levelIndex, 1, db.TotalLevels);
-                _seed        = EditorGUILayout.IntField("Rastgele Tohum (Seed)", _seed);
+                _levelIndex = EditorGUILayout.IntSlider("Seviye Endeksi", _levelIndex, 1, db.TotalLevels);
+                _seed = EditorGUILayout.IntField("Rastgele Tohum (Seed)", _seed);
 
-                // GDD’den gelen parametreler (manuel tweak yok)
+                // GDD'den gelen parametreler — salt okunur, manuel tweak yok
                 using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
                     var titleStyle = new GUIStyle(EditorStyles.label)
                         { fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.2f, 0.7f, 1.0f) } };
                     EditorGUILayout.LabelField("GDD Parametreleri:", titleStyle);
-                    EditorGUILayout.LabelField($"• Direk Sayısı: {_poleCount}");
-                    EditorGUILayout.LabelField($"• Renk Sayısı: {_colorCount}");
-                    EditorGUILayout.LabelField($"• Maks. Kapasite: {_maxCapacity}");
-                    EditorGUILayout.LabelField($"• Min. Boş Direk: {_minEmptyPoles}");
+                    EditorGUILayout.LabelField($"• Direk Sayısı: {poleCount}");
+                    EditorGUILayout.LabelField($"• Renk Sayısı: {colorCount}");
+                    EditorGUILayout.LabelField($"• Maks. Kapasite: {maxCapacity}");
+                    EditorGUILayout.LabelField($"• Min. Boş Direk: {minEmptyPoles}");
                 }
 
                 DrawDifficultyPreview(_levelIndex);
@@ -103,10 +100,6 @@ namespace RingFlow.Editor
                 {
                     EditorPrefs.SetInt(EditorPrefsKeys.LevelIndex, _levelIndex);
                     EditorPrefs.SetInt(EditorPrefsKeys.Seed, _seed);
-                    EditorPrefs.SetInt(EditorPrefsKeys.Poles, _poleCount);
-                    EditorPrefs.SetInt(EditorPrefsKeys.Colors, _colorCount);
-                    EditorPrefs.SetInt(EditorPrefsKeys.MaxCap, _maxCapacity);
-                    EditorPrefs.SetInt(EditorPrefsKeys.MinEmptyPoles, _minEmptyPoles);
                 }
 
                 EditorGUILayout.Space(6f);
@@ -140,7 +133,7 @@ namespace RingFlow.Editor
                 {
                     if (EditorUtility.DisplayDialog("Toplu Üretim",
                         $"{_batchStartLevel} ile {_batchEndLevel} arasındaki {count} seviye GDD eğrilerine göre üretilecek. " +
-                        "Mevcut el yapımı seviyelerinizin üzerine yazılabilir. Emin misiniz?", "Evet, Üret", "İptal"))
+                        "Mevcut seviyelerinizin üzerine yazılabilir. Emin misiniz?", "Evet, Üret", "İptal"))
                     {
                         GenerateAllLevels();
                     }
@@ -148,16 +141,14 @@ namespace RingFlow.Editor
             }
 
             if (_generateInProgress)
-            {
                 EditorGUILayout.HelpBox("Toplu seviye üretimi devam ediyor... Lütfen bekleyin.", MessageType.Info);
-            }
 
             DrawGenerationResults();
         }
 
         private void DrawDifficultyPreview(int levelIndex)
         {
-            var db = GameConfigDatabaseSO.Instance;
+            var db = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
             var band = db.GetBandForLevel(levelIndex);
             int intensity = db.GetMechanicIntensityForLevel(levelIndex);
             var allowed = db.GetAllowedMechanicsForLevel(levelIndex);
@@ -196,12 +187,12 @@ namespace RingFlow.Editor
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Üretilen Seviye Bilgileri:", EditorStyles.boldLabel);
-            var db = GameConfigDatabaseSO.Instance;
+            var db = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
             int level = _generatedLevel.LevelIndex;
             var band = db.GetBandForLevel(level);
             int intensity = db.GetMechanicIntensityForLevel(level);
             var allowed = db.GetAllowedMechanicsForLevel(level);
-            
+
             EditorGUILayout.LabelField($"Seviye: {_generatedLevel.LevelIndex} | Direkler: {_generatedLevel.Poles.Count}");
             EditorGUILayout.LabelField($"Band: {band} | Yoğunluk: {intensity}");
             EditorGUILayout.LabelField($"Açık Mekanikler: {string.Join(", ", allowed)}");
@@ -220,34 +211,36 @@ namespace RingFlow.Editor
             EditorGUILayout.EndScrollView();
         }
 
-
         public void GenerateFromDashboard() { Generate(); }
 
         public void GenerateFromDashboardAll() { GenerateAllLevels(); }
 
         private void Generate()
         {
-            var db = GameConfigDatabaseSO.Instance;
+            var db = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            if (db == null) return;
             if (_levelIndex < 1 || _levelIndex > db.TotalLevels)
             {
                 NexusLog.Warn("RingFlowEditor", nameof(Generate), _levelIndex.ToString(),
                     "Seviye endeksi sınırların dışında, düzeltiliyor.");
                 _levelIndex = Mathf.Clamp(_levelIndex, 1, db.TotalLevels);
             }
-            _colorCount = Mathf.Max(_colorCount, db.GetColorCountForLevel(_levelIndex));
-            _poleCount = Mathf.Max(_colorCount + 1, db.GetPoleCountForLevel(_levelIndex));
-            _minEmptyPoles = db.GetMinEmptyPolesForLevel(_levelIndex);
-                    _minEmptyPoles = Mathf.Max(1, _minEmptyPoles);
-                    if (_poleCount > 12) _poleCount = 12;
+
+            // Tüm parametreler DB'den — yerel değişkenler
+            int poleCount = db.GetPoleCountForLevel(_levelIndex);
+            int colorCount = db.GetColorCountForLevel(_levelIndex);
+            int maxCapacity = db.GetMaxCapacityForLevel(_levelIndex);
+            int minEmptyPoles = Mathf.Max(1, db.GetMinEmptyPolesForLevel(_levelIndex));
+            if (poleCount > 12) poleCount = 12;
 
             NexusLog.Info("RingFlowEditor", nameof(Generate), _levelIndex.ToString(),
-                $"Seviye {_levelIndex} üretiliyor: Seed={_seed}, Direkler={_poleCount}, Renkler={_colorCount}, Kapasite={_maxCapacity}, BoşDirek={_minEmptyPoles}");
+                $"Seviye {_levelIndex} üretiliyor: Seed={_seed}, Direkler={poleCount}, Renkler={colorCount}, Kapasite={maxCapacity}, BoşDirek={minEmptyPoles}");
 
-            _generatedLevel = LevelGenerator.GenerateLevel(_levelIndex, _seed, _poleCount, _colorCount, _maxCapacity);
+            _generatedLevel = LevelGenerator.GenerateLevel(db, _levelIndex, _seed, poleCount, colorCount, maxCapacity);
 
             if (_generatedLevel == null)
             {
-                _solveStatus = "Üretim başarısız (50 tohum denendi ve tükendi).";
+                _solveStatus = "Üretim başarısız (50 tohum denendi ve tükendi). DB yapılandırmasını kontrol edin.";
                 _solutionSteps.Clear();
                 return;
             }
@@ -266,23 +259,17 @@ namespace RingFlow.Editor
                 board.SetRingCount(p, pole.Rings.Count);
             }
 
-            var solveResult = LevelSolver.Solve(board, _maxCapacity);
-            var summary = new ValidationSummary
-            {
-                Solvable = solveResult.IsSolvable,
-                MoveCount = solveResult.MoveCount,
-                EmptyPoles = CountEmptyPoles(_generatedLevel),
-                MaxEmptyAllowed = 1
-            };
+            var solveResult = LevelSolver.Solve(board, maxCapacity);
+            int emptyPoleCount = CountEmptyPoles(_generatedLevel);
 
-            if (summary.EmptyPoles > summary.MaxEmptyAllowed)
+            if (emptyPoleCount > 1)
             {
-                _solveStatus = $"Geçersiz: en fazla {summary.MaxEmptyAllowed} boş direk olmalı, bulunan: {summary.EmptyPoles}.";
+                _solveStatus = $"Geçersiz: en fazla 1 boş direk olmalı, bulunan: {emptyPoleCount}.";
                 _solutionSteps.Clear();
             }
-            else if (summary.Solvable && summary.MoveCount > 0)
+            else if (solveResult.IsSolvable && solveResult.MoveCount > 0)
             {
-                _solveStatus = $"Yapay zeka çözümü bulundu: {summary.MoveCount} hamle.";
+                _solveStatus = $"Yapay zeka çözümü bulundu: {solveResult.MoveCount} hamle.";
                 _solutionSteps.Clear();
                 foreach (var move in solveResult.Moves)
                     _solutionSteps.Add($"Halkayı Direk {move.FromPoleId}'den Direk {move.ToPoleId}'ye taşı.");
@@ -300,7 +287,8 @@ namespace RingFlow.Editor
         private void GenerateAllLevels()
         {
             _generateInProgress = true;
-            var db = GameConfigDatabaseSO.Instance;
+            var db = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            if (db == null) return;
 
             string folderPath = EditorPaths.LevelsFolder;
             EnsureLevelsFolder(folderPath);
@@ -309,38 +297,31 @@ namespace RingFlow.Editor
             int failed = 0;
             int total = _batchEndLevel - _batchStartLevel + 1;
 
-            int originalPoleCount = _poleCount;
-            int originalColorCount = _colorCount;
-            int originalMaxCapacity = _maxCapacity;
-            int originalMinEmptyPoles = _minEmptyPoles;
-
             try
             {
                 for (int level = _batchStartLevel; level <= _batchEndLevel; level++)
                 {
-                    int poles = DifficultyCurve.PoleCountForLevel(level);
-                    int colors = DifficultyCurve.ColorCountForLevel(level);
-                    int maxCap = DifficultyCurve.MaxCapacityForLevel(level);
+                    int poles = db.GetPoleCountForLevel(level);
+                    int colors = db.GetColorCountForLevel(level);
+                    int maxCap = db.GetMaxCapacityForLevel(level);
                     int minEmpty = db.GetMinEmptyPolesForLevel(level);
                     if (poles < colors + minEmpty) poles = colors + minEmpty;
                     if (poles > 12) poles = 12;
 
-                    var levelData = LevelGenerator.GenerateLevel(level, 100 + level, poles, colors, maxCap);
+                    var levelData = LevelGenerator.GenerateLevel(db, level, 100 + level, poles, colors, maxCap);
                     if (levelData == null)
                     {
                         failed++;
                         EditorUtility.ClearProgressBar();
-                        EditorUtility.DisplayDialog("Toplu Üretim Başarısız", 
+                        EditorUtility.DisplayDialog("Toplu Üretim Başarısız",
                             $"Seviye {level} üretilemedi (50 tohum denendi ve çözülebilir bir seviye bulunamadı).\n" +
                             "Toplu seviye üretimi durduruldu. Lütfen veritabanındaki boş direk / kilitli direk dengesini veya mekanikleri kontrol edin.", "Tamam");
                         _generateInProgress = false;
                         return;
                     }
-                    else
-                    {
-                        SaveLevelAssetSilent(levelData, folderPath);
-                        okCount++;
-                    }
+
+                    SaveLevelAssetSilent(levelData, folderPath);
+                    okCount++;
 
                     if (level % 10 == 0 || level == _batchEndLevel)
                     {
@@ -364,11 +345,6 @@ namespace RingFlow.Editor
 
             EditorUtility.DisplayDialog("Toplu Üretim Tamamlandı",
                 $"{okCount}/{total} seviye şuraya kaydedildi: {folderPath}\n{failed} başarısız.", "Tamam");
-
-            _poleCount = originalPoleCount;
-            _colorCount = originalColorCount;
-            _maxCapacity = originalMaxCapacity;
-            _minEmptyPoles = originalMinEmptyPoles;
         }
 
         private static void EnsureLevelsFolder(string folderPath)
@@ -456,15 +432,6 @@ namespace RingFlow.Editor
                     empty++;
             }
             return empty;
-        }
-
-        [System.Serializable]
-        private struct ValidationSummary
-        {
-            public bool Solvable;
-            public int EmptyPoles;
-            public int MaxEmptyAllowed;
-            public int MoveCount;
         }
     }
 }

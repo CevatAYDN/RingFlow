@@ -19,10 +19,25 @@ namespace RingFlow.Gameplay
 
         public System.Action OnClicked;
 
-        // Read from GameFeelConfigSO at first use; falls back to static defaults when SO not available.
-        private static Color GetSelectedTint() => GameFeelConfigSO.Instance?.SelectedTint ?? new Color(0.30f, 0.85f, 1f, 1f);
-        private static Color GetErrorTint() => GameFeelConfigSO.Instance?.ErrorTint ?? new Color(1f, 0.30f, 0.30f, 1f);
-        private static Color GetLockedTint() => GameFeelConfigSO.Instance?.LockedTint ?? Color.black;
+        [Inject] private GameFeelConfigSO _feelConfig;
+
+        private Color GetSelectedTint()
+        {
+            if (_feelConfig == null) throw new System.InvalidOperationException("[PoleView] GameFeelConfigSO not injected!");
+            return _feelConfig.SelectedTint;
+        }
+
+        private Color GetErrorTint()
+        {
+            if (_feelConfig == null) throw new System.InvalidOperationException("[PoleView] GameFeelConfigSO not injected!");
+            return _feelConfig.ErrorTint;
+        }
+
+        private Color GetLockedTint()
+        {
+            if (_feelConfig == null) throw new System.InvalidOperationException("[PoleView] GameFeelConfigSO not injected!");
+            return _feelConfig.LockedTint;
+        }
 
         private Renderer[] _renderers;
         private Color _baseColor = Color.white;

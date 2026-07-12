@@ -25,9 +25,21 @@ namespace RingFlow.Gameplay
         [Inject] private IHapticService _hapticService;
         [Inject] private SettingsModel _settingsModel;
         [Inject] private GameplayModel _model;
+        [Inject] private GameFeelConfigSO _feelConfig;
+        [Inject] private RingColorPaletteSO _colorPalette;
 
         private Camera _mainCamera;
-        private GameFeelConfigSO F => GameFeelConfigSO.Instance;
+        private GameFeelConfigSO F => _feelConfig;
+
+        private Color GetRingColor(RingColor color)
+        {
+            if (_colorPalette == null)
+            {
+                throw new System.InvalidOperationException("[BoardView] RingColorPaletteSO is not injected!");
+            }
+            var mode = _settingsModel != null ? (RingColorPaletteSO.ColorBlindMode)_settingsModel.ColorBlindMode.Value : RingColorPaletteSO.ColorBlindMode.Off;
+            return _colorPalette.GetColor(color, mode);
+        }
 
         private readonly Dictionary<(RingColor, RingType), Material> _ringMaterialCache = new();
 
@@ -48,8 +60,14 @@ namespace RingFlow.Gameplay
         public void EnsureRingPoolPrewarmed()
         {
             if (_ringPrewarmed) return;
-            if (_torusPrefab == null) _torusPrefab = Resources.Load<GameObject>("Torus");
-            if (_torusPrefab != null && _objectPoolService != null)
+            if (_torusPrefab == null)
+            {
+                NexusLog.Error("BoardView", nameof(EnsureRingPoolPrewarmed), "",
+                    "_torusPrefab null — Torus prefab DI ile enjekte edilmemis. " +
+                    "Ring havuzu ön ısıtması iptal.");
+                return;
+            }
+            if (_objectPoolService != null)
             {
                 _objectPoolService.Prewarm(_torusPrefab, F.RingPoolSize);
                 _ringPrewarmed = true;
@@ -378,7 +396,7 @@ namespace RingFlow.Gameplay
 
             // ----- Tier 0/1: Merge effect (replaces legacy RingPop burst) -----
             Vector3 poleTopPos = pv.transform.position + Vector3.up * 1.5f;
-            Color mergeColor = isFinalPole ? RingPalette.Get(RingColor.Yellow) : Color.white;
+            Color mergeColor = isFinalPole ? GetRingColor(RingColor.Yellow) : Color.white;
             SpawnMergeEffect(poleTopPos, mergeColor, ringCount, isFinalPole);
 
             // ----- Tier 1: Extra sparkle for medium-tier completions -----
@@ -843,13 +861,20 @@ namespace RingFlow.Gameplay
 
         private GameObject AcquireRing()
         {
+            if (_torusPrefab == null)
+            {
+                NexusLog.Error("BoardView", nameof(AcquireRing), "",
+                    "_torusPrefab null — Torus prefab DI ile enjekte edilmemis. " +
+                    "Ring acquire iptal.");
+                return null;
+            }
+
             GameObject ringObj = null;
-            if (_torusPrefab == null) _torusPrefab = Resources.Load<GameObject>("Torus");
-            if (_torusPrefab != null && _objectPoolService != null)
+            if (_objectPoolService != null)
             {
                 ringObj = _objectPoolService.Spawn(_torusPrefab, Vector3.zero, Quaternion.identity);
             }
-            else if (_torusPrefab != null)
+            else
             {
                 ringObj = Instantiate(_torusPrefab);
             }
@@ -899,9 +924,13 @@ namespace RingFlow.Gameplay
         private static Material _openPoleMaterial;
         private static Material _lockedPoleMaterial;
 
-        private static Material GetPoleMaterial(bool locked)
+        private Material GetPoleMaterial(bool locked)
         {
-            var feel = GameFeelConfigSO.Instance;
+            var feel = F;
+            if (feel == null)
+            {
+                throw new System.InvalidOperationException("[BoardView] GameFeelConfigSO is not injected!");
+            }
             if (locked)
             {
                 if (_lockedPoleMaterial == null)
@@ -932,7 +961,7 @@ namespace RingFlow.Gameplay
             var key = (color, type);
             if (_ringMaterialCache.TryGetValue(key, out var cached) && cached != null) return cached;
             var mat = new Material(GetDefaultShader());
-            Color baseColor = RingPalette.Get(color);
+            Color baseColor = GetRingColor(color);
             mat.color = baseColor;
             if (mat.HasProperty("_BaseColor"))
                 mat.SetColor("_BaseColor", baseColor);
@@ -1008,7 +1037,7 @@ namespace RingFlow.Gameplay
                 if (prefab != null)
                 {
                     var popInstance = _objectPoolService.Spawn(prefab, position, Quaternion.identity);
-                    popInstance?.GetComponent<RingPopVfx>()?.Initialize(RingPalette.Get(color));
+                    popInstance?.GetComponent<RingPopVfx>()?.Initialize(GetRingColor(color));
                 }
             }
         }
@@ -1036,7 +1065,7 @@ namespace RingFlow.Gameplay
             {
                 var cycle = new GameObject("RainbowCycle");
                 cycle.transform.SetParent(ringObj.transform, false);
-                cycle.AddComponent<RainbowCycle>();
+                cycle.AddComponent<RainbowCycle>().Initialize(F);
             }
 
             if (string.IsNullOrEmpty(text)) return;
@@ -1055,16 +1084,7 @@ namespace RingFlow.Gameplay
             textMesh.fontStyle = FontStyle.Bold;
         }
 
-        private static void PlayRingPlacePulse(GameObject ringObj)
-        {
-            if (ringObj == null) return;
-            var f = GameFeelConfigSO.Instance;
-            DOTween.Kill(ringObj.transform);
-            ringObj.transform.localScale = ringObj.transform.localScale * f.RingPlacePulseScale;
-            ringObj.transform.DOScale(ringObj.transform.localScale / f.RingPlacePulseScale, f.RingPlacePulseDuration)
-                .SetEase(Ease.OutBack)
-                .SetAutoKill(true);
-        }
+
 
         private bool TryGetMainCamera(out Camera cam)
         {
@@ -1099,8 +1119,18 @@ namespace RingFlow.Gameplay
         private void EnsureFloorPlaneCreated()
         {
             if (_floorPlane != null) return;
-            _floorPlane = GameObject.Find("ShadowFloorPlane");
-            if (_floorPlane != null) return;
+
+            // DI ile enjekte edilmiş FloorPlane referansı kullanılır.
+            // GameObject.Find runtime'da yasaktır — sahne referansı üzerinden çözülür.
+            if (transform.parent != null)
+            {
+                var existing = transform.parent.Find("ShadowFloorPlane");
+                if (existing != null)
+                {
+                    _floorPlane = existing.gameObject;
+                    return;
+                }
+            }
 
             if (F.FloorMesh != null)
             {
@@ -1209,19 +1239,24 @@ namespace RingFlow.Gameplay
     {
         private Renderer _renderer;
         private MaterialPropertyBlock _propBlock;
+        private GameFeelConfigSO _feel;
 
+        public void Initialize(GameFeelConfigSO feel)
+        {
+            _feel = feel;
+        }
+ 
         private void Start()
         {
             _renderer = GetComponentInParent<Renderer>();
             _propBlock = new MaterialPropertyBlock();
         }
-
+ 
         private void Update()
         {
-            if (_renderer == null) return;
-            var f = GameFeelConfigSO.Instance;
-            float hue = (Time.time * f.RainbowHueSpeed) % 1f;
-            Color color = Color.HSVToRGB(hue, f.RainbowSaturation, f.RainbowValue);
+            if (_renderer == null || _feel == null) return;
+            float hue = (Time.time * _feel.RainbowHueSpeed) % 1f;
+            Color color = Color.HSVToRGB(hue, _feel.RainbowSaturation, _feel.RainbowValue);
             _renderer.GetPropertyBlock(_propBlock);
             _propBlock.SetColor("_Color", color);
             _propBlock.SetColor("_BaseColor", color);

@@ -210,7 +210,7 @@ namespace RingFlow.Editor
                         {
                             int ringCapacity = levelSO.Data.Poles.Count > 0 
                                 ? levelSO.Data.Poles[0].RingCapacity 
-                                : GameConfigDatabaseSO.Instance.GetMaxCapacityForLevel(levelSO.Data.LevelIndex);
+                                : (Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase")?.GetMaxCapacityForLevel(levelSO.Data.LevelIndex) ?? 4);
                             Undo.RecordObject(levelSO, "Direk Ekle");
                             levelSO.Data.Poles.Add(new PoleData(ringCapacity));
                             EditorUtility.SetDirty(levelSO);
@@ -248,10 +248,11 @@ namespace RingFlow.Editor
                     board.AddRing(p, pole.Rings[r]);
             }
 
+            var database = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            if (database == null) throw new System.InvalidOperationException("GameConfigDatabase not found!");
             int maxCapacity = levelSO.Data.Poles.Count > 0 
                 ? levelSO.Data.Poles[0].RingCapacity 
-                : GameConfigDatabaseSO.Instance.GetMaxCapacityForLevel(levelSO.Data.LevelIndex);
-            var database = GameConfigDatabaseSO.Instance;
+                : database.GetMaxCapacityForLevel(levelSO.Data.LevelIndex);
             int levelIndex = levelSO.Data.LevelIndex;
             var band = database.GetBandForLevel(levelIndex);
             var allowedMechanics = database.GetAllowedMechanicsForLevel(levelIndex);
@@ -292,7 +293,7 @@ namespace RingFlow.Editor
                 return;
             }
 
-            var database = GameConfigDatabaseSO.Instance;
+            var database = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
             int levelIndex = levelSO.Data.LevelIndex;
             var band = database.GetBandForLevel(levelIndex);
             int intensity = database.GetMechanicIntensityForLevel(levelIndex);
@@ -304,7 +305,7 @@ namespace RingFlow.Editor
             {
                 Undo.RecordObject(levelSO, "Seviyeyi Yeniden Karıştır");
                 var generated = LevelGenerator.GenerateLevel(
-                    levelSO.Data.LevelIndex, levelSO.Data.Seed,
+                    database, levelSO.Data.LevelIndex, levelSO.Data.Seed,
                     levelSO.Data.Poles.Count, colorCount, maxCap);
 
                 if (generated != null)
@@ -353,7 +354,8 @@ namespace RingFlow.Editor
                 return;
             }
 
-            var database = GameConfigDatabaseSO.Instance;
+            var database = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            if (database == null) return;
             int levelIndex = levelData.LevelIndex;
             var band = database.GetBandForLevel(levelIndex);
             var allowed = database.GetAllowedMechanicsForLevel(levelIndex);
@@ -401,7 +403,7 @@ namespace RingFlow.Editor
                 for (int i = 1; i < colors.Length; i++)
                 {
                     var color = colors[i];
-                    Color c = RingPalette.Get(color);
+                    Color c = Resources.Load<RingColorPaletteSO>("RingColorPalette")?.GetColor(color, RingColorPaletteSO.ColorBlindMode.Off) ?? Color.grey;
 
                     bool isSelected = (!s_eraserMode && s_brushColor == color);
                     GUI.backgroundColor = c;
@@ -519,7 +521,8 @@ namespace RingFlow.Editor
                             if (hasRing)
                             {
                                 var ring = pole.Rings[r];
-                                Color ringColor = RingPalette.Get(ring.Color);
+                                var palette = Resources.Load<RingColorPaletteSO>("RingColorPalette");
+                                Color ringColor = palette != null ? palette.GetColor(ring.Color, RingColorPaletteSO.ColorBlindMode.Off) : Color.grey;
                                 GUI.backgroundColor = ringColor;
 
                                 string label = RingFlowEditorUtils.GetRingShortLabel(ring.Type);

@@ -9,6 +9,7 @@ using UnityEngine.EventSystems;
 using RingFlow.Gameplay.Diagnostics;
 using RingFlow.Gameplay.Services;
 using RingFlow.Gameplay.Strategies;
+using RingFlow.Gameplay.UI;
 
 namespace RingFlow.Gameplay
 {
@@ -48,6 +49,24 @@ namespace RingFlow.Gameplay
             };
             builder.BindInstance<VfxPrefabRegistry>(vfxRegistry);
             
+            // -------------------- Config Databases & Themes --------------------
+            var db = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            if (db == null) throw new System.InvalidOperationException("GameConfigDatabase.asset not found in Resources!");
+            builder.BindInstance<GameConfigDatabaseSO>(db);
+
+            var feel = Resources.Load<GameFeelConfigSO>("GameFeelConfig");
+            if (feel == null) throw new System.InvalidOperationException("GameFeelConfig.asset not found in Resources!");
+            builder.BindInstance<GameFeelConfigSO>(feel);
+
+            var palette = Resources.Load<RingColorPaletteSO>("RingColorPalette");
+            if (palette == null) throw new System.InvalidOperationException("RingColorPalette.asset not found in Resources!");
+            builder.BindInstance<RingColorPaletteSO>(palette);
+
+            var theme = Resources.Load<UIThemeConfigSO>("UIThemeConfig");
+            if (theme == null) throw new System.InvalidOperationException("UIThemeConfig.asset not found in Resources!");
+            GameUIResources.Bind(theme);
+            builder.BindInstance<UIThemeConfigSO>(theme);
+
             // -------------------- Storage --------------------
             builder.Bind<IPlayerPrefsService, EncryptedStorageService>();
             builder.Bind<ILocalizationTableProvider, CSVLocalizationTableProvider>();
@@ -131,21 +150,16 @@ namespace RingFlow.Gameplay
             diag?.Checkpoint("GameplayLifecycle.OnInitializeAsync");
             diag?.Log("Lifecycle", "GameplayLifecycle.OnInitializeAsync started");
 
-            // Load and bind the configured RingColorPaletteSO ScriptableObject
-            var palette = Resources.Load<RingColorPaletteSO>("RingColorPalette");
-            if (palette != null)
-            {
-                RingPalette.Bind(palette);
-                diag?.Log("Lifecycle", "RingColorPalette bound successfully.");
-            }
-
+            // Hook palette
+            var palette = context.Resolve<RingColorPaletteSO>();
+            diag?.Log("Lifecycle", "RingColorPalette resolved successfully.");
+ 
             var settings = context.TryResolve<SettingsModel>();
             var audio = context.TryResolve<IAudioService>();
             var haptics = context.TryResolve<IHapticService>();
             var progress = context.TryResolve<PlayerProgressModel>();
-
+ 
             HookSettingsToServices(context, settings, audio, haptics);
-            AnalyticsEvents.SetService(context.TryResolve<IAnalyticsService>());
 
             var fsm = context.Resolve<IGameStateMachine>();
             RegisterFsmAndStates(fsm, context);
@@ -157,12 +171,11 @@ namespace RingFlow.Gameplay
 
             var prefs = context.TryResolve<IPlayerPrefsService>();
             InitializePlayerPrefsService(prefs, progress, settings);
-            InitializeSessionAnalytics(prefs, progress);
-            InitializeColorBlindMode(settings);
+            InitializeSessionAnalytics(context, prefs, progress);
             InitializeHapticState(settings, haptics);
             RegisterIapProducts(context);
             InitializeVfxAndPools(context);
-            InitializeAudio(audio, progress);
+            InitializeAudio(context, audio, progress);
 
             diag?.Log("Lifecycle", "GameplayLifecycle.OnInitializeAsync completed");
         }
@@ -238,7 +251,7 @@ namespace RingFlow.Gameplay
             if (settings != null) SettingsSaveSystem.Load(prefs, settings);
         }
 
-        private static void InitializeSessionAnalytics(IPlayerPrefsService prefs, PlayerProgressModel progress)
+        private static void InitializeSessionAnalytics(IContext context, IPlayerPrefsService prefs, PlayerProgressModel progress)
         {
             s_sessionStartTime = Time.realtimeSinceStartup;
             s_sessionEndTracked = false;
@@ -258,21 +271,18 @@ namespace RingFlow.Gameplay
             }
 
             int daysSinceFirstLaunch = (System.DateTime.UtcNow - firstLaunch).Days;
-            AnalyticsEvents.Track(AnalyticsEvents.EventSessionStart, new[] 
-            { 
-                ("days_since_first_launch", daysSinceFirstLaunch.ToString()),
-                ("player_level", (progress?.PlayerLevel.Value ?? 1).ToString())
-            });
+            var analytics = context.TryResolve<IAnalyticsService>();
+            if (analytics != null)
+            {
+                analytics.LogEvent("session_start", new[] 
+                { 
+                    ("days_since_first_launch", daysSinceFirstLaunch.ToString()),
+                    ("player_level", (progress?.PlayerLevel.Value ?? 1).ToString())
+                });
+            }
         }
 
-        private static void InitializeColorBlindMode(SettingsModel settings)
-        {
-            if (settings == null) return;
-            settings.ColorBlindMode.OnChanged((_, n) => {
-                RingPalette.SetColorBlindMode((RingColorPaletteSO.ColorBlindMode)n);
-            });
-            RingPalette.SetColorBlindMode((RingColorPaletteSO.ColorBlindMode)settings.ColorBlindMode.Value);
-        }
+
 
         private static void InitializeHapticState(SettingsModel settings, IHapticService haptics)
         {
@@ -325,7 +335,7 @@ namespace RingFlow.Gameplay
                 }
 
                 var pool = context.TryResolve<IObjectPoolService>();
-                var feelConfig = GameFeelConfigSO.Instance;
+                var feelConfig = context.Resolve<GameFeelConfigSO>();
                 if (pool != null)
                 {
                     pool.Prewarm(vfxRegistry.RingPopPrefab, feelConfig?.RingPopPoolSize ?? 50);
@@ -340,12 +350,13 @@ namespace RingFlow.Gameplay
             }
         }
 
-        private static void InitializeAudio(IAudioService audio, PlayerProgressModel progress)
+        private static void InitializeAudio(IContext context, IAudioService audio, PlayerProgressModel progress)
         {
             if (audio != null)
             {
+                var db = context.Resolve<GameConfigDatabaseSO>();
                 int currentLvl = progress?.CurrentLevel.Value ?? 1;
-                int worldIdx = WorldConfigSO.WorldFromAbsoluteLevel(currentLvl);
+                int worldIdx = db.GetWorldForLevel(currentLvl);
                 var bgm = ProceduralAudio.GetOrCreateBgmClip(worldIdx);
                 audio.PlayBgm(bgm, true);
             }
@@ -358,13 +369,13 @@ namespace RingFlow.Gameplay
             diag?.Checkpoint("GameplayLifecycle.OnStartAsync");
             diag?.Log("Lifecycle", "GameplayLifecycle.OnStartAsync started");
 
-            EnsureInputSetup();
+            EnsureInputSetup(context);
 
             diag?.Log("Lifecycle", "GameplayLifecycle.OnStartAsync completed");
             return default;
         }
 
-        private static void EnsureInputSetup()
+        private static void EnsureInputSetup(IContext context)
         {
             if (EventSystem.current == null)
             {
@@ -377,7 +388,7 @@ namespace RingFlow.Gameplay
             var mainCam = Camera.main ?? Object.FindAnyObjectByType<Camera>(FindObjectsInactive.Include);
             if (mainCam != null)
             {
-                var feel = GameFeelConfigSO.Instance;
+                var feel = context.Resolve<GameFeelConfigSO>();
                 mainCam.gameObject.tag = "MainCamera";
                 mainCam.orthographic = true;
                 mainCam.orthographicSize = feel.CameraBaseOrtho;
@@ -410,20 +421,25 @@ namespace RingFlow.Gameplay
 
         private static void FlushSave()
         {
+            var context = NexusRuntime.CurrentContext;
+            if (context == null) return;
+
             // Prevent double-tracking: OnApplicationPause + OnDispose can fire back-to-back
             if (!s_sessionEndTracked)
             {
                 s_sessionEndTracked = true;
                 float sessionLen = Time.realtimeSinceStartup - s_sessionStartTime;
-                AnalyticsEvents.Track(AnalyticsEvents.EventSessionEnd, new[]
+                var analytics = context.TryResolve<IAnalyticsService>();
+                if (analytics != null)
                 {
-                    ("session_length", ((int)sessionLen).ToString())
-                });
+                    analytics.LogEvent("session_end", new[]
+                    {
+                        ("session_length", ((int)sessionLen).ToString())
+                    });
+                }
             }
 
             // Auto-flush save on dispose — ensure no loss when player quits to main menu.
-            var context = NexusRuntime.CurrentContext;
-            if (context == null) return;
             var prefs = context.TryResolve<IPlayerPrefsService>();
             if (prefs != null)
             {

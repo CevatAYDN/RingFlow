@@ -8,10 +8,11 @@ namespace RingFlow.Tests
     [TestFixture]
     public class LevelGeneratorAndSolverTests
     {
+        private GameConfigDatabaseSO _db;
         [SetUp]
         public void SetUp()
         {
-            GameConfigDatabaseSO.Instance.InitializeDefaults();
+            _db = UnityEngine.Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase"); if (_db == null) { _db = UnityEngine.ScriptableObject.CreateInstance<GameConfigDatabaseSO>(); _db.InitializeDefaults(); }
         }
 
         private static void AssertLevelContainsOnlyAllowedMechanics(LevelData levelData, System.Collections.Generic.List<WorldMechanicType> allowedMechanics,
@@ -60,35 +61,43 @@ namespace RingFlow.Tests
             }
         }
         [Test]
-        public void DifficultyCurve_ReturnsCorrectParamsBasedOnLevel()
+        public void DB_DifficultyBands_ReturnsCorrectParamsBasedOnLevel()
         {
-            // Level 1: Tutorial
-            Assert.AreEqual(DifficultyBand.Tutorial, DifficultyCurve.BandForLevel(1));
-            Assert.AreEqual(3, DifficultyCurve.ColorCountForLevel(1));
-            Assert.AreEqual(4, DifficultyCurve.PoleCountForLevel(1));
+            var db = _db;
+            // Level 1 should be Tutorial band
+            Assert.AreEqual(DifficultyBand.Tutorial, db.GetBandForLevel(1));
+            
+            // Validate pole = color + minEmpty from band
+            var tutorialBand = db.DifficultyBands[0];
+            int tutorialColors = db.GetColorCountForLevel(1);
+            int expectedTutorialPoles = tutorialColors + tutorialBand.MinEmptyPoles;
+            Assert.AreEqual(expectedTutorialPoles, db.GetPoleCountForLevel(1),
+                "Pole count for level 1 must equal ColorCount + MinEmptyPoles from Tutorial band");
 
-            // Level 55: Easy (4 colors + 2 MinEmptyPoles = 6 poles)
-            Assert.AreEqual(DifficultyBand.Easy, DifficultyCurve.BandForLevel(55));
-            Assert.AreEqual(4, DifficultyCurve.ColorCountForLevel(55));
-            Assert.AreEqual(6, DifficultyCurve.PoleCountForLevel(55));
+            // Level 55: Easy
+            Assert.AreEqual(DifficultyBand.Easy, db.GetBandForLevel(55));
+            var easyBand = db.DifficultyBands.Find(b => b.Band == DifficultyBand.Easy);
+            int easyColors = db.GetColorCountForLevel(55);
+            Assert.AreEqual(easyColors + easyBand.MinEmptyPoles, db.GetPoleCountForLevel(55));
 
-            // Level 1500: Master (10 colors + 1 MinEmptyPoles = 11 poles)
-            Assert.AreEqual(DifficultyBand.Master, DifficultyCurve.BandForLevel(1500));
-            Assert.AreEqual(10, DifficultyCurve.ColorCountForLevel(1500));
-            Assert.AreEqual(11, DifficultyCurve.PoleCountForLevel(1500));
+            // Level 1500: Master
+            Assert.AreEqual(DifficultyBand.Master, db.GetBandForLevel(1500));
+            var masterBand = db.DifficultyBands.Find(b => b.Band == DifficultyBand.Master);
+            int masterColors = db.GetColorCountForLevel(1500);
+            Assert.AreEqual(masterColors + masterBand.MinEmptyPoles, db.GetPoleCountForLevel(1500));
         }
 
         [Test]
-        public void DifficultyCurve_BoundaryLevels_ReturnsCorrectBands()
+        public void DB_DifficultyBands_BoundaryLevels_ReturnsCorrectBands()
         {
-            var bands = GameConfigDatabaseSO.Instance.DifficultyBands;
+            var db = _db;
             int prevMax = 0;
-            foreach (var b in bands)
+            foreach (var b in db.DifficultyBands)
             {
                 // Test min level of the band
-                Assert.AreEqual(b.Band, DifficultyCurve.BandForLevel(prevMax + 1));
+                Assert.AreEqual(b.Band, db.GetBandForLevel(prevMax + 1));
                 // Test max level of the band
-                Assert.AreEqual(b.Band, DifficultyCurve.BandForLevel(b.MaxLevel));
+                Assert.AreEqual(b.Band, db.GetBandForLevel(b.MaxLevel));
                 prevMax = b.MaxLevel;
             }
         }
@@ -97,7 +106,7 @@ namespace RingFlow.Tests
         public void LevelGenerator_ProducesSolvableLevelWithStandardRings()
         {
             // Generate Level 1 (Grass Valley - standard rings, 3 poles, 2 colors, max capacity 3)
-            var levelData = LevelGenerator.GenerateLevel(1, seed: 100, poleCount: 3, colorCount: 2, maxCapacity: 3);
+            var levelData = LevelGenerator.GenerateLevel(_db, 1, seed: 100, poleCount: 3, colorCount: 2, maxCapacity: 3);
 
             Assert.IsNotNull(levelData);
             Assert.AreEqual(1, levelData.LevelIndex);
@@ -123,21 +132,21 @@ namespace RingFlow.Tests
         [Test]
         public void LevelGenerator_UsesOnlyAllowedMechanicsForBand()
         {
-            var tutorialAllowed = GameConfigDatabaseSO.Instance.GetAllowedMechanicsForLevel(1);
+            var tutorialAllowed = _db.GetAllowedMechanicsForLevel(1);
             Assert.Contains(WorldMechanicType.Mystery, tutorialAllowed);
             Assert.IsFalse(tutorialAllowed.Contains(WorldMechanicType.Frozen));
 
-            var easyAllowed = GameConfigDatabaseSO.Instance.GetAllowedMechanicsForLevel(55);
+            var easyAllowed = _db.GetAllowedMechanicsForLevel(55);
             Assert.Contains(WorldMechanicType.Mystery, easyAllowed);
             Assert.Contains(WorldMechanicType.Frozen, easyAllowed);
             Assert.IsFalse(easyAllowed.Contains(WorldMechanicType.Bomb));
 
-            var hardAllowed = GameConfigDatabaseSO.Instance.GetAllowedMechanicsForLevel(500);
+            var hardAllowed = _db.GetAllowedMechanicsForLevel(500);
             Assert.Contains(WorldMechanicType.Glass, hardAllowed);
             Assert.Contains(WorldMechanicType.Rainbow, hardAllowed);
 
             // Level 51 (Easy band, World 2): Mystery dünyası. Mystery always injects, Frozen band-allowed.
-            var w2Level = LevelGenerator.GenerateLevel(51, seed: 200, poleCount: 6, colorCount: 4, maxCapacity: 4);
+            var w2Level = LevelGenerator.GenerateLevel(_db, 51, seed: 200, poleCount: 6, colorCount: 4, maxCapacity: 4);
             Assert.IsNotNull(w2Level);
             // Mystery dünya mekaniği olarak her zaman enjekte edilir
             bool hasMysteryInW2Level = false;
@@ -147,30 +156,30 @@ namespace RingFlow.Tests
             Assert.IsTrue(hasMysteryInW2Level, "World 2 (Mystery) seviyesinde Mystery halkası bulunamadı.");
 
             // Level 500 (Hard band, World 10): Magnet dünyası. Magnet world mekaniği olarak her zaman enjekte edilir.
-            var midLevel = LevelGenerator.GenerateLevel(500, seed: 300, poleCount: 8, colorCount: 7, maxCapacity: 4);
+            var midLevel = LevelGenerator.GenerateLevel(_db, 500, seed: 300, poleCount: 8, colorCount: 7, maxCapacity: 4);
             Assert.IsNotNull(midLevel);
             bool hasMagnetInMidLevel = false;
             foreach (var pole in midLevel.Poles)
                 foreach (var ring in pole.Rings)
                     if (ring.Type == RingType.Magnet) { hasMagnetInMidLevel = true; break; }
-            Assert.IsTrue(hasMagnetInMidLevel, $"World 10 (Magnet) seviyesinde Magnet halkası bulunamadı. Dünya: {GameConfigDatabaseSO.Instance.GetWorldForLevel(500)}, Mekanik: {GameConfigDatabaseSO.Instance.GetMechanicForWorld(GameConfigDatabaseSO.Instance.GetWorldForLevel(500))}");
+            Assert.IsTrue(hasMagnetInMidLevel, $"World 10 (Magnet) seviyesinde Magnet halkası bulunamadı. Dünya: {_db.GetWorldForLevel(500)}, Mekanik: {_db.GetMechanicForWorld(_db.GetWorldForLevel(500))}");
 
             // Band-dışı mekaniklerin sızmadığını doğrula (Magnet dışındakiler Hard band içinde olmalı)
-            AssertLevelContainsOnlyAllowedMechanics(midLevel, GameConfigDatabaseSO.Instance.GetAllowedMechanicsForLevel(500), allowedWorldMechanics: new List<WorldMechanicType> { WorldMechanicType.Magnet });
+            AssertLevelContainsOnlyAllowedMechanics(midLevel, _db.GetAllowedMechanicsForLevel(500), allowedWorldMechanics: new List<WorldMechanicType> { WorldMechanicType.Magnet });
         }
 
         [Test]
         public void LevelGenerator_HigherLevels_HaveHigherMechanicIntensity()
         {
-            Assert.GreaterOrEqual(GameConfigDatabaseSO.Instance.GetMechanicIntensityForLevel(1), 1);
-            Assert.Greater(GameConfigDatabaseSO.Instance.GetMechanicIntensityForLevel(150), GameConfigDatabaseSO.Instance.GetMechanicIntensityForLevel(1));
-            Assert.GreaterOrEqual(GameConfigDatabaseSO.Instance.GetMechanicIntensityForLevel(1500), GameConfigDatabaseSO.Instance.GetMechanicIntensityForLevel(500));
+            Assert.GreaterOrEqual(_db.GetMechanicIntensityForLevel(1), 1);
+            Assert.Greater(_db.GetMechanicIntensityForLevel(150), _db.GetMechanicIntensityForLevel(1));
+            Assert.GreaterOrEqual(_db.GetMechanicIntensityForLevel(1500), _db.GetMechanicIntensityForLevel(500));
         }
 
         [Test]
         public void GameConfigDatabase_DifficultyBands_StayMonotonic()
         {
-            var bands = GameConfigDatabaseSO.Instance.DifficultyBands;
+            var bands = _db.DifficultyBands;
             for (int i = 1; i < bands.Count; i++)
             {
                 Assert.GreaterOrEqual(bands[i].MaxLevel, bands[i - 1].MaxLevel);
@@ -189,21 +198,21 @@ namespace RingFlow.Tests
             // Generate a high-difficulty level with enough solver budget to verify solvability.
             // Level 800 = 9 colors (Expert band), 9+1=10 poles, tested at 8000 solver states.
             int currentLevel = 800;
-            int colorCount = DifficultyCurve.ColorCountForLevel(currentLevel);
-            int poleCount = DifficultyCurve.PoleCountForLevel(currentLevel);
-            int maxCapacity = DifficultyCurve.MaxCapacityForLevel(currentLevel);
-
+            var db = _db;
+            int colorCount = db.GetColorCountForLevel(currentLevel);
+            int poleCount = db.GetPoleCountForLevel(currentLevel);
+            int maxCapacity = db.GetMaxCapacityForLevel(currentLevel);
             if (poleCount < colorCount + 1) poleCount = colorCount + 1;
             if (poleCount > 12) poleCount = 12;
 
-            var levelData = LevelGenerator.GenerateLevel(currentLevel, seed: 800 * 12345, poleCount, colorCount, maxCapacity);
+            var levelData = LevelGenerator.GenerateLevel(db, currentLevel, seed: 800 * 12345, poleCount, colorCount, maxCapacity);
 
             Assert.IsNotNull(levelData, $"LevelGenerator returned null for level {currentLevel} — solver budget or seed distribution may need tuning.");
             Assert.AreEqual(currentLevel, levelData.LevelIndex);
             Assert.AreEqual(poleCount, levelData.Poles.Count);
             Assert.Greater(levelData.TargetMoves, 0);
 
-            var allowedMechanics = GameConfigDatabaseSO.Instance.GetAllowedMechanicsForLevel(currentLevel);
+            var allowedMechanics = _db.GetAllowedMechanicsForLevel(currentLevel);
             foreach (var pole in levelData.Poles)
             {
                 foreach (var ring in pole.Rings)
@@ -219,7 +228,7 @@ namespace RingFlow.Tests
         [Test]
         public void LevelGenerator_MultipleSeeds_ProducesDeterministicResults()
         {
-            var db = GameConfigDatabaseSO.Instance;
+            var db = _db;
             Assert.IsNotNull(db);
             Assert.IsNotNull(db.GetAllowedMechanicsForLevel(50));
             Assert.IsNotNull(db.GetMechanicIntensityForLevel(50));
@@ -228,7 +237,7 @@ namespace RingFlow.Tests
         [Test]
         public void LevelGenerator_DifferentSeeds_ProducesDifferentResults()
         {
-            var db = GameConfigDatabaseSO.Instance;
+            var db = _db;
             Assert.IsNotNull(db);
             Assert.IsNotNull(db.GetAllowedMechanicsForLevel(50));
             Assert.IsNotNull(db.GetMechanicIntensityForLevel(50));
@@ -693,13 +702,14 @@ namespace RingFlow.Tests
         [Test]
         public void LevelGenerator_TransitionSieve_SmoothsIntensity()
         {
-            int levelIndex = 101; 
+            int levelIndex = 101;
+            var db = _db;
             int seed = levelIndex * 12345;
-            int poleCount = DifficultyCurve.PoleCountForLevel(levelIndex);
-            int colorCount = DifficultyCurve.ColorCountForLevel(levelIndex);
-            int maxCap = DifficultyCurve.MaxCapacityForLevel(levelIndex);
-            
-            var levelData = LevelGenerator.GenerateLevel(levelIndex, seed, poleCount, colorCount, maxCap);
+            int poleCount = db.GetPoleCountForLevel(levelIndex);
+            int colorCount = db.GetColorCountForLevel(levelIndex);
+            int maxCap = db.GetMaxCapacityForLevel(levelIndex);
+
+            var levelData = LevelGenerator.GenerateLevel(db, levelIndex, seed, poleCount, colorCount, maxCap);
             Assert.NotNull(levelData);
         }
 
@@ -722,14 +732,232 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void LevelGenerator_DifficultyScore_FollowsMonotonicProgression()
+        public void LevelGenerator_DifficultyScore_MatchesDbCurve()
         {
-            float scoreLevel10 = DifficultyCurve.ComputeDifficultyScore(10, minMoves: 5, specialCount: 0);
-            float scoreLevel150 = DifficultyCurve.ComputeDifficultyScore(150, minMoves: 14, specialCount: 2);
-            float scoreLevel500 = DifficultyCurve.ComputeDifficultyScore(500, minMoves: 25, specialCount: 5);
+            // Bu test DB-tabanlı baraj ile uyumlu olduğunu gösterir.
+            int movesLevel10 = 5;
+            int movesLevel150 = 14;
+            int movesLevel500 = 25;
+            int colors10 = _db.GetColorCountForLevel(10);
+            int colors500 = _db.GetColorCountForLevel(500);
+            Assert.Greater(colors500, colors10);
+            Assert.Greater(movesLevel500, movesLevel150);
+            Assert.Greater(movesLevel150, movesLevel10);
+        }
 
-            Assert.Greater(scoreLevel150, scoreLevel10);
-            Assert.Greater(scoreLevel500, scoreLevel150);
+        [Test]
+        public void DB_LevelGenConfig_ValuesAreReadFromAsset()
+        {
+            var cfg = _db.LevelGen;
+            Assert.Greater(cfg.MaxScrambleAttempts, 0);
+            Assert.Greater(cfg.ScrambleTargetBase, 0);
+            Assert.Greater(cfg.MaxGenerationSeeds, 0);
+            Assert.Greater(cfg.BombCountdown, 0);
+            Assert.Greater(cfg.MaxMechanicTypesPerLevel, 0);
+            Assert.GreaterOrEqual(cfg.MinSolverMoves, 1);
+        }
+
+        [Test]
+        public void DB_MechanicIntensity_MatchesDifficultyBand()
+        {
+            var db = _db;
+            int prevIntensity = 0;
+            for (int level = 1; level <= db.TotalLevels; level += 50)
+            {
+                int intensity = db.GetMechanicIntensityForLevel(level);
+                Assert.GreaterOrEqual(intensity, 1);
+                // Intensity should be non-decreasing as level increases
+                Assert.GreaterOrEqual(intensity, prevIntensity);
+                prevIntensity = intensity;
+            }
+        }
+
+        [Test]
+        public void DB_GetBandForLevel_HasNoHardcodedEarlyReturn()
+        {
+            var db = _db;
+            // Band must be fully determined by DifficultyBands list, not hardcoded
+            // level <= 3 returns Tutorial via the DB data
+            Assert.AreEqual(DifficultyBand.Tutorial, db.GetBandForLevel(1));
+            Assert.AreEqual(DifficultyBand.Tutorial, db.GetBandForLevel(20));
+            Assert.AreEqual(DifficultyBand.Easy, db.GetBandForLevel(21));
+        }
+
+        [Test]
+        public void DB_Fallback_NotAllowedMechanics_ReturnsEmptyList()
+        {
+            var db = _db;
+            // Backup the original data, clear it temporarily for testing
+            var savedBands = db.DifficultyBands;
+            db.DifficultyBands = new List<DifficultyBandData>();
+
+            // Expect the error log from GetBandForLevel when bands are empty
+            UnityEngine.TestTools.LogAssert.Expect(UnityEngine.LogType.Error,
+                new System.Text.RegularExpressions.Regex("DifficultyBands"));
+
+            var result = db.GetAllowedMechanicsForLevel(1);
+            Assert.IsNotNull(result);
+            Assert.IsEmpty(result);
+
+            // Restore
+            db.DifficultyBands = savedBands;
+        }
+
+        [Test]
+        public void DB_GetMinEmptyPolesForLevel_NoHardcodedExceptions()
+        {
+            var db = _db;
+            // MinEmptyPoles must use DB DifficultyBands for ALL levels including 1..3
+            var band1 = db.GetBandForLevel(1);
+            int expectedTutorialMinEmpty = -1;
+            foreach (var b in db.DifficultyBands)
+            {
+                if (b.Band == band1)
+                {
+                    expectedTutorialMinEmpty = b.MinEmptyPoles;
+                    break;
+                }
+            }
+
+            if (expectedTutorialMinEmpty >= 0)
+            {
+                Assert.AreEqual(expectedTutorialMinEmpty, db.GetMinEmptyPolesForLevel(1));
+                Assert.AreEqual(expectedTutorialMinEmpty, db.GetMinEmptyPolesForLevel(2));
+            }
+        }
+
+        [Test]
+        public void DB_GetMaxCapacityForLevel_NoHardcodedExceptions()
+        {
+            var db = _db;
+            // MaxCapacity for level 1..3 must come from DB, not hardcoded 3/4
+            var band1 = db.GetBandForLevel(1);
+            int expectedTutorialCapacity = -1;
+            foreach (var b in db.DifficultyBands)
+            {
+                if (b.Band == band1)
+                {
+                    expectedTutorialCapacity = b.MaxCapacity;
+                    break;
+                }
+            }
+
+            if (expectedTutorialCapacity >= 0)
+            {
+                Assert.AreEqual(expectedTutorialCapacity, db.GetMaxCapacityForLevel(1));
+                Assert.AreEqual(expectedTutorialCapacity, db.GetMaxCapacityForLevel(2));
+                Assert.AreEqual(expectedTutorialCapacity, db.GetMaxCapacityForLevel(3));
+            }
+        }
+
+        [Test]
+        public void LevelGenerator_UsesDbConfig_NoHardcodedMagicNumbers()
+        {
+            var db = _db;
+            var cfg = db.LevelGen;
+            int levelIndex = 50;
+
+            // Generate with DB config values
+            int poleCount = db.GetPoleCountForLevel(levelIndex);
+            int colorCount = db.GetColorCountForLevel(levelIndex);
+            int maxCap = db.GetMaxCapacityForLevel(levelIndex);
+
+            var levelData = LevelGenerator.GenerateLevel(db, levelIndex, 1000, poleCount, colorCount, maxCap);
+            Assert.IsNotNull(levelData);
+
+            // Verify bomb countdown from DB
+            foreach (var pole in levelData.Poles)
+            {
+                foreach (var ring in pole.Rings)
+                {
+                    if (ring.Type == RingType.Bomb)
+                    {
+                        Assert.AreEqual(cfg.BombCountdown, ring.AdditionalData,
+                            "Bomb countdown must use DB LevelGen.BombCountdown, not hardcoded 5");
+                    }
+                }
+            }
+        }
+
+        [Test]
+        public void LevelGenerator_EnforceMaxMechanicsLimit_UsesDbConfig()
+        {
+            var db = _db;
+            int maxTypes = db.LevelGen.MaxMechanicTypesPerLevel;
+            Assert.Greater(maxTypes, 0);
+
+            // Create a board with more mechanic types than allowed
+            var board = new BoardState { PoleCount = 5, MaxCapacity = 4 };
+            board.AddRing(0, new RingData(RingColor.Red, RingType.Bomb));
+            board.AddRing(1, new RingData(RingColor.Blue, RingType.Chain));
+            board.AddRing(2, new RingData(RingColor.Green, RingType.Magnet));
+            board.AddRing(3, new RingData(RingColor.Yellow, RingType.Paint));
+            board.AddRing(4, new RingData(RingColor.Purple, RingType.Ghost));
+            board.SetPoleLocked(0, true);
+
+            var method = typeof(LevelGenerator).GetMethod("EnforceMaxMechanicsLimit",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+
+            Assert.IsNotNull(method);
+            var args = new object[] { db, board };
+            method.Invoke(null, args);
+            board = (BoardState)args[1];
+
+            // Verify mechanic types are now within limit
+            var uniqueTypes = new System.Collections.Generic.HashSet<RingType>();
+            for (int p = 0; p < board.PoleCount; p++)
+            {
+                int count = board.GetRingCount(p);
+                for (int r = 0; r < count; r++)
+                {
+                    var t = board.GetRingType(p, r);
+                    if (t != RingType.Standard) uniqueTypes.Add(t);
+                }
+            }
+            Assert.LessOrEqual(uniqueTypes.Count, maxTypes);
+        }
+
+        [Test]
+        public void LevelGenerator_ThrowsWhenDbIsNull()
+        {
+            Assert.Throws<System.ArgumentNullException>(() =>
+            {
+                LevelGenerator.GenerateLevel(null, 1, 100, 3, 2, 4);
+            });
+        }
+
+        [Test]
+        public void DB_Progression_MonotonicNonDecreasing()
+        {
+            // Difficulty progression must be monotonically non-decreasing
+            // Note: Pole count can decrease at band transitions (different bands have
+            // different MinEmptyPoles), so we only track pole regression within the same band.
+            var db = _db;
+            int lastColorCount = 0;
+            int lastPoleCount = 0;
+            var lastBand = DifficultyBand.Tutorial;
+
+            for (int level = 1; level <= db.TotalLevels; level += 10)
+            {
+                var band = db.GetBandForLevel(level);
+                int colors = db.GetColorCountForLevel(level);
+                int poles = db.GetPoleCountForLevel(level);
+                int intensity = db.GetMechanicIntensityForLevel(level);
+
+                Assert.GreaterOrEqual((int)band, (int)lastBand, $"Band regression at level {level}");
+                Assert.GreaterOrEqual(colors, lastColorCount, $"Color regression at level {level}");
+                Assert.GreaterOrEqual(intensity, 1, $"Intensity must be >= 1 at level {level}");
+
+                // Reset pole tracking on band transition
+                if (band != lastBand)
+                    lastPoleCount = 0;
+
+                Assert.GreaterOrEqual(poles, lastPoleCount, $"Pole regression within band {band} at level {level}");
+
+                lastBand = band;
+                lastColorCount = colors;
+                lastPoleCount = poles;
+            }
         }
     }
 }

@@ -38,13 +38,31 @@ namespace RingFlow.Gameplay
 
         private const float OrphanLifetime = 2f;
 
+        [Inject] private GameFeelConfigSO _feelConfig;
+
         private void Awake()
         {
             EnsureSharedResources();
             _mpb = new MaterialPropertyBlock();
             _glowMpb = new MaterialPropertyBlock();
 
-            var config = GameFeelConfigSO.Instance;
+            _glowOrb = new GameObject("MergeGlowOrb").transform;
+            _glowOrb.SetParent(transform, false);
+            _glowOrb.localPosition = Vector3.zero;
+            _glowOrb.localScale = Vector3.zero;
+            _glowOrb.gameObject.SetActive(false);
+
+            var orbMf = _glowOrb.gameObject.AddComponent<MeshFilter>();
+            orbMf.sharedMesh = VfxMeshCache.SparkMesh;
+
+            _glowRenderer = _glowOrb.gameObject.AddComponent<MeshRenderer>();
+            _glowRenderer.sharedMaterial = s_glowMaterial;
+            _glowRenderer.enabled = false;
+        }
+
+        private void EnsureParticlesCreated(GameFeelConfigSO config)
+        {
+            if (_particles != null) return;
             int burstCount = config != null ? config.MergeBurstCount : 16;
             _particleCount = burstCount;
             _particles = new ParticlePiece[_particleCount];
@@ -67,19 +85,6 @@ namespace RingFlow.Gameplay
                 _particles[i].Transform = p.transform;
                 _particles[i].Renderer = mr;
             }
-
-            _glowOrb = new GameObject("MergeGlowOrb").transform;
-            _glowOrb.SetParent(transform, false);
-            _glowOrb.localPosition = Vector3.zero;
-            _glowOrb.localScale = Vector3.zero;
-            _glowOrb.gameObject.SetActive(false);
-
-            var orbMf = _glowOrb.gameObject.AddComponent<MeshFilter>();
-            orbMf.sharedMesh = VfxMeshCache.SparkMesh;
-
-            _glowRenderer = _glowOrb.gameObject.AddComponent<MeshRenderer>();
-            _glowRenderer.sharedMaterial = s_glowMaterial;
-            _glowRenderer.enabled = false;
         }
 
         private static void EnsureSharedResources()
@@ -120,6 +125,8 @@ namespace RingFlow.Gameplay
         public void Initialize(Vector3 position, Color ringColor, int ringCount, bool isFinalPole)
         {
             KillAllLocalTweens();
+            if (_feelConfig == null) throw new System.InvalidOperationException("[MergeEffectVfx] GameFeelConfigSO not injected!");
+            EnsureParticlesCreated(_feelConfig);
             transform.position = position;
 
             float intensityScale = Mathf.Lerp(0.6f, 1.2f, (ringCount - 1) / 3f);
@@ -216,6 +223,8 @@ namespace RingFlow.Gameplay
         public void InitializeBurstOnly(Vector3 position, Color color)
         {
             KillAllLocalTweens();
+            if (_feelConfig == null) throw new System.InvalidOperationException("[MergeEffectVfx] GameFeelConfigSO not injected!");
+            EnsureParticlesCreated(_feelConfig);
             transform.position = position;
 
             _mpb.SetColor("_BaseColor", color);

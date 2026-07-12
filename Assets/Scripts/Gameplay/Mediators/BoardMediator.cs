@@ -17,6 +17,7 @@ namespace RingFlow.Gameplay
 
         [Inject] private Diagnostics.IGameDiagnostics _diag;
         [Inject] private Diagnostics.IViewMediatorTracker _tracker;
+        [Inject] private GameFeelConfigSO _feelConfig;
 
         private Action<int, int> _selectedPoleHandler;
         private Action<int, int> _movesCountHandler;
@@ -110,7 +111,8 @@ namespace RingFlow.Gameplay
         {
             _logger?.Log($"[BoardMediator] Move blocked: {signal.FromPoleId}->{signal.ToPoleId} ({signal.Reason}).");
             View?.FlashPoleError(signal.ToPoleId);
-            var f = Gameplay.GameFeelConfigSO.Instance;
+            var f = _feelConfig;
+            if (f == null) throw new System.InvalidOperationException("[BoardMediator] GameFeelConfigSO not injected!");
             View?.ShakeCamera(f.ShakeErrorIntensity, f.ShakeErrorDuration);
         }
 
@@ -140,7 +142,8 @@ namespace RingFlow.Gameplay
         {
             _logger?.Log($"[BoardMediator] Bomb exploded on pole {signal.PoleId}.");
             RebuildBoard();
-            var f = Gameplay.GameFeelConfigSO.Instance;
+            var f = _feelConfig;
+            if (f == null) throw new System.InvalidOperationException("[BoardMediator] GameFeelConfigSO not injected!");
             View?.ShakeCamera(f.ShakeExplosionIntensity, f.ShakeExplosionDuration);
         }
 

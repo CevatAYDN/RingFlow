@@ -21,6 +21,12 @@ namespace RingFlow.Gameplay
     /// </summary>
     public sealed class ReplayEngine
     {
+        private readonly GameConfigDatabaseSO _db;
+
+        public ReplayEngine(GameConfigDatabaseSO db)
+        {
+            _db = db;
+        }
         public struct ReplaySession
         {
             public int LevelIndex;
@@ -71,7 +77,8 @@ namespace RingFlow.Gameplay
         public ReplayResult Replay(ReplaySession session)
         {
             // Rebuild initial board from seed using LevelGenerator
-            var db = GameConfigDatabaseSO.Instance;
+            if (_db == null) throw new System.InvalidOperationException("[ReplayEngine] GameConfigDatabaseSO not injected/passed!");
+            var db = _db;
             int colorCount = db.GetColorCountForLevel(session.LevelIndex);
             int poleCount = db.GetPoleCountForLevel(session.LevelIndex);
             int maxCapacity = db.GetMaxCapacityForLevel(session.LevelIndex);
@@ -79,7 +86,7 @@ namespace RingFlow.Gameplay
             if (poleCount > 12) poleCount = 12;
 
             var levelData = LevelGenerator.GenerateLevel(
-                session.LevelIndex, session.LevelSeed, poleCount, colorCount, maxCapacity);
+                db, session.LevelIndex, session.LevelSeed, poleCount, colorCount, maxCapacity);
 
             if (levelData == null)
                 return new ReplayResult { IsValid = false };

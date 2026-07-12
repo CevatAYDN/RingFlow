@@ -14,6 +14,7 @@ namespace RingFlow.Gameplay
         [Inject] private IAdService _ads;
         [Inject] private ISignalBus _signalBus;
         [Inject] private IProgressionService _progressionService;
+        [Inject] private IAnalyticsService _analyticsService;
 
         public async ValueTask ExecuteAsync(HintRequestedSignal signal, CancellationToken ct)
         {
@@ -124,7 +125,10 @@ namespace RingFlow.Gameplay
             }
 
             int level = _progressionService?.CurrentLevel.Value ?? 0;
-            AnalyticsEvents.HintUse(level);
+            if (_analyticsService != null)
+            {
+                _analyticsService.HintUse(level);
+            }
 
             _signalBus?.Fire(new HintResolvedSignal(firstMove.From, firstMove.To, true));
         }

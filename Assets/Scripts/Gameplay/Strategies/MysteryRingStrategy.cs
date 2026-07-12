@@ -5,6 +5,12 @@ namespace RingFlow.Gameplay.Strategies
 {
     public sealed class MysteryRingStrategy : IRingMoveStrategy
     {
+        private readonly GameConfigDatabaseSO _db;
+
+        public MysteryRingStrategy(GameConfigDatabaseSO db)
+        {
+            _db = db;
+        }
         public bool CanHandle(RingType ringType) => ringType == RingType.Mystery;
 
         public bool PreMoveValidation(ref MoveContext context) => true;
@@ -36,7 +42,8 @@ namespace RingFlow.Gameplay.Strategies
             // in a way that is *reproducible per level/pole*, independent of the player's move
             // count. The previous implementation included MovesCount.Value in the seed, which
             // broke the QA reproducibility invariant ("same seed → same level").
-            int colorCount = GameConfigDatabaseSO.Instance.GetColorCountForLevel(
+            if (_db == null) throw new System.InvalidOperationException("[MysteryRingStrategy] GameConfigDatabaseSO not injected!");
+            int colorCount = _db.GetColorCountForLevel(
                 context.Progression?.CurrentLevel.Value ?? 1);
 
             // FIX P2.MysteryDeterminism — derive the seed purely from level+pole identity.
@@ -46,8 +53,10 @@ namespace RingFlow.Gameplay.Strategies
             int seed = unchecked((int)((long)level * 2654435761L) ^ (context.FromPoleId * 31));
             int colorIndex = 1 + (System.Math.Abs(seed) % colorCount); // Skip None (index 0)
 
-            // Clamp into the palette — palette size is colour-count, but we degrade gracefully.
-            if (colorIndex > 10) colorIndex = 3; // Fallback to basic colours
+            // Clamp into the palette — use RingColor enum count (minus None) as the upper bound.
+            var colors = (RingColor[])System.Enum.GetValues(typeof(RingColor));
+            int maxColorIndex = colors.Length - 1; // Skip None (index 0)
+            if (colorIndex > maxColorIndex) colorIndex = 1 + (colorIndex % maxColorIndex);
 
             return (RingColor)colorIndex;
         }

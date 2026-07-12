@@ -1,10 +1,12 @@
 using UnityEngine;
+using Nexus.Core;
 
 namespace RingFlow.Gameplay
 {
-    public class AmbientBackground : MonoBehaviour
+    public class AmbientBackground : View
     {
-        private GameFeelConfigSO Feel => GameFeelConfigSO.Instance;
+        [Inject] private GameFeelConfigSO _feelConfig;
+        private GameFeelConfigSO Feel => _feelConfig;
 
         [SerializeField] private Color _topColor = new(0.96f, 0.98f, 1.0f);
         [SerializeField] private Color _bottomColor = new(0.88f, 0.92f, 0.97f);

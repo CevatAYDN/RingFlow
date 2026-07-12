@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using Nexus.Core.Services;
 
 namespace RingFlow.Gameplay
 {
@@ -66,6 +67,7 @@ namespace RingFlow.Gameplay
         public int MaxLevel;
         public int MinEmptyPoles;
         public int MaxCapacity;
+        public int MechanicIntensity;
         public List<WorldMechanicType> AllowedMechanics;
     }
 
@@ -85,6 +87,19 @@ namespace RingFlow.Gameplay
         public List<WorldMechanicType> ForcedMechanics;
     }
 
+    [System.Serializable]
+    public struct LevelGenConfig
+    {
+        public int MaxScrambleAttempts;
+        public int ScrambleTargetBase;
+        public int ScrambleTargetRandomRange;
+        public int MaxGenerationSeeds;
+        public int MaxCandidates;
+        public int BombCountdown;
+        public int MaxMechanicTypesPerLevel;
+        public int MinSolverMoves;
+    }
+
     [CreateAssetMenu(fileName = "GameConfigDatabase", menuName = "RingFlow/Game Config Database")]
     public class GameConfigDatabaseSO : ScriptableObject
     {
@@ -96,47 +111,26 @@ namespace RingFlow.Gameplay
         public List<LevelThemeData> LevelThemes = new();
         public List<WorldConfigData> Worlds = new();
         public GameBalanceConfig BalanceConfig = new();
+        public LevelGenConfig LevelGen = new()
+        {
+            MaxScrambleAttempts = 1500,
+            ScrambleTargetBase = 150,
+            ScrambleTargetRandomRange = 80,
+            MaxGenerationSeeds = 50,
+            MaxCandidates = 5,
+            BombCountdown = 5,
+            MaxMechanicTypesPerLevel = 4,
+            MinSolverMoves = 2
+        };
 
         private void OnEnable()
         {
-            if (BalanceConfig.ThreeStarTargetRatioPercent == 0)
-            {
-                BalanceConfig = new GameBalanceConfig
-                {
-                    FreeUndosPerSession = 5,
-                    UndoCoinCost = 5,
-                    NormalCoinReward = 50,
-                    BossCoinReward = 500,
-                    NormalXpReward = 10,
-                    BossXpReward = 50,
-                    LevelUpCoinReward = 100,
-                    ThreeStarTargetRatioPercent = 100,
-                    TwoStarTargetRatioPercent = 130,
-                    SilverChestChance = 0.40f,
-                    GoldChestChance = 0.20f,
-                    DiamondChestChance = 0.05f,
-                    InterstitialAdInterval = 3
-                };
-            }
+            // Data-driven: asset üzerinde kayıtlı değerler kullanılır.
+            // OnEnable'da varsayılan değer ataması yok — InitializeDefaults()
+            // yalnızca test/editor ortamında manuel çağrılır.
         }
 
-        private static GameConfigDatabaseSO _instance;
-        public static GameConfigDatabaseSO Instance
-        {
-            get
-            {
-                if (_instance == null)
-                {
-                    _instance = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
-                    if (_instance == null)
-                    {
-                        _instance = CreateInstance<GameConfigDatabaseSO>();
-                        _instance.InitializeDefaults();
-                    }
-                }
-                return _instance;
-            }
-        }
+
 
         public void InitializeDefaults()
         {
@@ -168,6 +162,7 @@ namespace RingFlow.Gameplay
                     MaxLevel = 20,
                     MinEmptyPoles = 2,
                     MaxCapacity = 4,
+                    MechanicIntensity = 1,
                     AllowedMechanics = new List<WorldMechanicType>
                     {
                         WorldMechanicType.None,
@@ -180,6 +175,7 @@ namespace RingFlow.Gameplay
                     MaxLevel = 100,
                     MinEmptyPoles = 2,
                     MaxCapacity = 4,
+                    MechanicIntensity = 1,
                     AllowedMechanics = new List<WorldMechanicType>
                     {
                         WorldMechanicType.None,
@@ -193,6 +189,7 @@ namespace RingFlow.Gameplay
                     MaxLevel = 350,
                     MinEmptyPoles = 1,
                     MaxCapacity = 4,
+                    MechanicIntensity = 2,
                     AllowedMechanics = new List<WorldMechanicType>
                     {
                         WorldMechanicType.None,
@@ -208,6 +205,7 @@ namespace RingFlow.Gameplay
                     MaxLevel = 600,
                     MinEmptyPoles = 1,
                     MaxCapacity = 4,
+                    MechanicIntensity = 2,
                     AllowedMechanics = new List<WorldMechanicType>
                     {
                         WorldMechanicType.None,
@@ -225,6 +223,7 @@ namespace RingFlow.Gameplay
                     MaxLevel = 1000,
                     MinEmptyPoles = 1,
                     MaxCapacity = 4,
+                    MechanicIntensity = 3,
                     AllowedMechanics = new List<WorldMechanicType>
                     {
                         WorldMechanicType.None,
@@ -244,6 +243,7 @@ namespace RingFlow.Gameplay
                     MaxLevel = 1500,
                     MinEmptyPoles = 1,
                     MaxCapacity = 4,
+                    MechanicIntensity = 3,
                     AllowedMechanics = new List<WorldMechanicType>
                     {
                         WorldMechanicType.None,
@@ -264,6 +264,7 @@ namespace RingFlow.Gameplay
                     MaxLevel = 2000,
                     MinEmptyPoles = 1,
                     MaxCapacity = 4,
+                    MechanicIntensity = 4,
                     AllowedMechanics = new List<WorldMechanicType>
                     {
                         WorldMechanicType.None,
@@ -394,16 +395,13 @@ namespace RingFlow.Gameplay
         // Helper search methods
         public DifficultyBand GetBandForLevel(int level)
         {
-            if (level <= 3) return DifficultyBand.Tutorial;
-            if (TotalLevels <= 50)
+            if (DifficultyBands == null || DifficultyBands.Count == 0)
             {
-                if (level <= 10) return DifficultyBand.Tutorial;
-                if (level <= 20) return DifficultyBand.Easy;
-                if (level <= 30) return DifficultyBand.Medium;
-                if (level <= 40) return DifficultyBand.Hard;
-                return DifficultyBand.Expert;
+                NexusLog.Error("GameConfigDatabaseSO", nameof(GetBandForLevel), level.ToString(),
+                    "DifficultyBands DB'de tanımlı değil. Lütfen DifficultyBands listesini doldurun.");
+                return DifficultyBand.Tutorial;
             }
-            if (DifficultyBands == null || DifficultyBands.Count == 0) return DifficultyBand.Tutorial;
+
             foreach (var b in DifficultyBands)
             {
                 if (level <= b.MaxLevel) return b.Band;
@@ -425,7 +423,14 @@ namespace RingFlow.Gameplay
                 }
             }
 
-            if (ColorCurve == null || ColorCurve.Count == 0) return 3;
+            // ColorCurve DB verisi kullanılır — hardcoded fallback yok.
+            if (ColorCurve == null || ColorCurve.Count == 0)
+            {
+                NexusLog.Warn("GameConfigDatabaseSO", nameof(GetColorCountForLevel), level.ToString(),
+                    "ColorCurve DB'de tanımlı değil. Varsayılan 3 renk kullanılıyor. Lütfen ColorCurve verisini doldurun.");
+                return 3;
+            }
+
             int count = ColorCurve[0].ColorCount;
             foreach (var pt in ColorCurve)
             {
@@ -442,9 +447,8 @@ namespace RingFlow.Gameplay
 
         public int GetMinEmptyPolesForLevel(int level)
         {
-            if (level == 1 || level == 2) return 1;
-            if (level == 3) return 1;
-
+            // Hardcoded dönüş yok — tüm değerler DifficultyBands DB verisinden gelir.
+            // Tutorial band'ında MinEmptyPoles, DifficultyBands tablosunda tanımlıdır.
             if (DifficultyBands != null && DifficultyBands.Count > 0)
             {
                 var band = GetBandForLevel(level);
@@ -454,15 +458,21 @@ namespace RingFlow.Gameplay
                 }
             }
 
+            NexusLog.Warn("GameConfigDatabaseSO", nameof(GetMinEmptyPolesForLevel), level.ToString(),
+                "DifficultyBands boş veya band bulunamadı. MinimumEmptyPools field değeri kullanılıyor.");
             return MinimumEmptyPoles > 0 ? MinimumEmptyPoles : 1;
         }
 
         public int GetMaxCapacityForLevel(int level)
         {
-            if (level == 1 || level == 2) return 3;
-            if (level == 3) return 4;
+            // Hardcoded dönüş yok — tüm kapasite değerleri DifficultyBands DB verisinden gelir.
+            if (DifficultyBands == null || DifficultyBands.Count == 0)
+            {
+                NexusLog.Warn("GameConfigDatabaseSO", nameof(GetMaxCapacityForLevel), level.ToString(),
+                    "DifficultyBands boş. Varsayılan kapasite 4 kullanılıyor.");
+                return 4;
+            }
 
-            if (DifficultyBands == null || DifficultyBands.Count == 0) return 4;
             var band = GetBandForLevel(level);
             foreach (var b in DifficultyBands)
             {
@@ -489,42 +499,31 @@ namespace RingFlow.Gameplay
                 }
             }
 
-            return GetDefaultAllowedMechanicsForBand(band);
-        }
-
-        private static List<WorldMechanicType> GetDefaultAllowedMechanicsForBand(DifficultyBand band)
-        {
-            switch (band)
-            {
-                case DifficultyBand.Tutorial:
-                    return new List<WorldMechanicType> { WorldMechanicType.None, WorldMechanicType.Mystery };
-                case DifficultyBand.Easy:
-                    return new List<WorldMechanicType> { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen };
-                case DifficultyBand.Medium:
-                    return new List<WorldMechanicType> { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen, WorldMechanicType.LockedPole, WorldMechanicType.Stone };
-                case DifficultyBand.Hard:
-                    return new List<WorldMechanicType> { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen, WorldMechanicType.LockedPole, WorldMechanicType.Stone, WorldMechanicType.Glass, WorldMechanicType.Rainbow };
-                case DifficultyBand.Expert:
-                    return new List<WorldMechanicType> { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen, WorldMechanicType.LockedPole, WorldMechanicType.Stone, WorldMechanicType.Glass, WorldMechanicType.Rainbow, WorldMechanicType.Bomb, WorldMechanicType.Chain };
-                case DifficultyBand.Master:
-                    return new List<WorldMechanicType> { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen, WorldMechanicType.LockedPole, WorldMechanicType.Stone, WorldMechanicType.Glass, WorldMechanicType.Rainbow, WorldMechanicType.Bomb, WorldMechanicType.Chain, WorldMechanicType.Magnet };
-                case DifficultyBand.Legend:
-                    return new List<WorldMechanicType> { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen, WorldMechanicType.LockedPole, WorldMechanicType.Stone, WorldMechanicType.Glass, WorldMechanicType.Rainbow, WorldMechanicType.Bomb, WorldMechanicType.Chain, WorldMechanicType.Magnet, WorldMechanicType.Paint, WorldMechanicType.Ghost, WorldMechanicType.RandomPool1, WorldMechanicType.RandomPool2, WorldMechanicType.RandomPool3 };
-                default:
-                    return new List<WorldMechanicType> { WorldMechanicType.None };
-            }
+            // Fail-loud: DB'de AllowedMechanics tanımlı değilse boş liste dön,
+            // hiçbir hardcoded fallback üretilmez.
+            NexusLog.Warn("GameConfigDatabaseSO", nameof(GetAllowedMechanicsForLevel), level.ToString(),
+                $"DifficultyBand '{band}' için AllowedMechanics DB'de tanımlı değil. DifficultyBands verisini güncelleyin.");
+            return new List<WorldMechanicType>();
         }
 
         public int GetMechanicIntensityForLevel(int level)
         {
             var band = GetBandForLevel(level);
-            if (band == DifficultyBand.Tutorial) return 1;
-            if (band == DifficultyBand.Easy) return 1;
-            if (band == DifficultyBand.Medium) return 2;
-            if (band == DifficultyBand.Hard) return 2;
-            if (band == DifficultyBand.Expert) return 3;
-            if (band == DifficultyBand.Master) return 3;
-            return 4;
+            if (DifficultyBands != null && DifficultyBands.Count > 0)
+            {
+                foreach (var b in DifficultyBands)
+                {
+                    if (b.Band == band)
+                    {
+                        return b.MechanicIntensity > 0 ? b.MechanicIntensity : 1;
+                    }
+                }
+            }
+
+            // Fallback fail-loud: DB'de MechanicIntensity tanımlı değil.
+            NexusLog.Warn("GameConfigDatabaseSO", nameof(GetMechanicIntensityForLevel), level.ToString(),
+                $"DifficultyBand '{band}' için MechanicIntensity DB'de tanımlı değil. Lütfen DifficultyBands verisine bu alanı ekleyin.");
+            return 1;
         }
 
         public int GetWorldForLevel(int level)

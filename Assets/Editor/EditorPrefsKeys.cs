@@ -19,14 +19,8 @@ namespace RingFlow.Editor
         // ── Generator state ──
         public const string LevelIndex       = "RingFlow.LevelIndex";
         public const string Seed             = "RingFlow.Seed";
-        public const string Poles            = "RingFlow.Poles";
-        public const string Colors           = "RingFlow.Colors";
-        public const string MaxCap           = "RingFlow.MaxCap";
-        public const string MinEmptyPoles    = "RingFlow.MinEmptyPoles";
-        public const string LockMinEmpty     = "RingFlow.LockMinEmpty";
         public const string BatchStartLevel  = "RingFlow.BatchStartLevel";
         public const string BatchEndLevel    = "RingFlow.BatchEndLevel";
-        public const string GeneratorManual  = "RingFlow.GeneratorManualMode";
         public const string AutoSave         = "RingFlow.AutoSave";
 
         // ── Window state ──

@@ -37,6 +37,7 @@ namespace RingFlow.Gameplay
         private int _count;
 
         [Inject] private IObjectPoolService _objectPoolService;
+        [Inject] private GameFeelConfigSO _feelConfig;
 
         private void Awake()
         {
@@ -54,8 +55,11 @@ namespace RingFlow.Gameplay
                     enableInstancing = true
                 };
             }
+        }
 
-            var config = GameFeelConfigSO.Instance;
+        private void EnsurePiecesCreated(GameFeelConfigSO config)
+        {
+            if (_pieces != null) return;
             _count = config != null ? config.ConfettiCount : 40;
             _pieces = new Piece[_count];
 
@@ -88,7 +92,10 @@ namespace RingFlow.Gameplay
         {
             KillAllPieces();
 
-            var config = GameFeelConfigSO.Instance;
+            if (_feelConfig == null) throw new System.InvalidOperationException("[ConfettiVfx] GameFeelConfigSO not injected!");
+            EnsurePiecesCreated(_feelConfig);
+
+            var config = _feelConfig;
             Vector2 fallDurRange = config != null ? config.ConfettiFallDuration : new Vector2(1.8f, 3.0f);
 
             for (int i = 0; i < _count; i++)

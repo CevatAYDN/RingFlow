@@ -65,9 +65,19 @@ namespace RingFlow.Tests
                     else if (f.FieldType == typeof(IProgressionService))
                         f.SetValue(target, _progressionService);
                     else if (f.FieldType == typeof(RingMoveStrategyManager))
-                        f.SetValue(target, new RingMoveStrategyManager());
+                    {
+                        var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+                        f.SetValue(target, new RingMoveStrategyManager(db));
+                    }
                     else if (f.FieldType == typeof(Nexus.Core.FSM.IGameStateMachine))
                         f.SetValue(target, new MockGameStateMachine());
+                    else if (f.FieldType == typeof(GameConfigDatabaseSO))
+                    {
+                        var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+                        f.SetValue(target, db);
+                    }
+                    else if (f.FieldType == typeof(IAnalyticsService))
+                        f.SetValue(target, new MockAnalyticsService());
                 }
             }
         }
@@ -809,5 +819,12 @@ namespace RingFlow.Tests
         public Task ChangeStateAsync<TState>(object args = null) where TState : class, Nexus.Core.FSM.IGameState => Task.CompletedTask;
         public Task ChangeStateAsync(Type stateType, object args = null) => Task.CompletedTask;
         public Task ChangeStateAsync(Type stateType, CancellationToken ct, object args = null) => Task.CompletedTask;
+    }
+
+    public class MockAnalyticsService : Nexus.Core.Services.IAnalyticsService
+    {
+        public void LogEvent(string eventName) { }
+        public void LogEvent(string eventName, System.Collections.Generic.Dictionary<string, object> parameters) { }
+        public void SetUserProperty(string key, string value) { }
     }
 }

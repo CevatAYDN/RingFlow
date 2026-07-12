@@ -245,16 +245,26 @@ namespace RingFlow.Editor
             float totalTime = 0;
             int totalMoves = 0;
 
+            if (_database == null)
+            {
+                _database = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            }
+            if (_database == null)
+            {
+                Debug.LogError("[DatabaseSection] GameConfigDatabase not loaded!");
+                return;
+            }
+
             for (int i = _valStartLevel; i <= _valEndLevel; i++)
             {
                 var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                 
-                int poleCount = DifficultyCurve.PoleCountForLevel(i);
-                int colorCount = DifficultyCurve.ColorCountForLevel(i);
-                int maxCap = DifficultyCurve.MaxCapacityForLevel(i);
+                int poleCount = _database.GetPoleCountForLevel(i);
+                int colorCount = _database.GetColorCountForLevel(i);
+                int maxCap = _database.GetMaxCapacityForLevel(i);
                 
                 int seed = i * 12345;
-                var levelData = LevelGenerator.GenerateLevel(i, seed, poleCount, colorCount, maxCap);
+                var levelData = LevelGenerator.GenerateLevel(_database, i, seed, poleCount, colorCount, maxCap);
                 
                 stopwatch.Stop();
                 float timeMs = (float)stopwatch.Elapsed.TotalMilliseconds;

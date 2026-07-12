@@ -10,6 +10,7 @@ namespace RingFlow.Gameplay.UI
         [Inject] private IProgressionService _progression;
         [Inject] private PlayerProgressModel _progress;
         [Inject] private ILocalizationService _loc;
+        [Inject] private IAnalyticsService _analytics;
 
         private Action<int, int> _movesHandler;
         private Action<int, int> _levelHandler;
@@ -33,7 +34,10 @@ namespace RingFlow.Gameplay.UI
             else View.RestartButton.onClick.AddListener(() =>
             {
                 int level = _progression?.CurrentLevel.Value ?? 1;
-                AnalyticsEvents.RestartUse(level);
+                if (_analytics != null)
+                {
+                    _analytics.RestartUse(level);
+                }
                 SignalBus.Fire(new InitLevelSignal(level));
             });
 

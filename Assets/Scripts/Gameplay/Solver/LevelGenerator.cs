@@ -13,22 +13,32 @@ namespace RingFlow.Gameplay
     {
         private static readonly int[] _sourcePoles = new int[12];
         private static readonly int[] _targetPoles = new int[12];
+        private static int s_bombCountdown = 5; // Default; overridden on each GenerateLevel call
+        private static int s_maxCapacity = 4;   // Default; overridden on each GenerateLevel call
 
-        public static LevelData GenerateLevel(int levelIndex, int seed, int poleCount, int colorCount, int maxCapacity)
+        public static LevelData GenerateLevel(GameConfigDatabaseSO db, int levelIndex, int seed, int poleCount, int colorCount, int maxCapacity)
         {
+            if (db == null)
+            {
+                throw new System.ArgumentNullException(nameof(db), "GameConfigDatabaseSO is null — cannot generate level.");
+            }
+
+            var cfg = db.LevelGen;
+            s_bombCountdown = cfg.BombCountdown;
+            s_maxCapacity = maxCapacity;
             int currentSeed = seed;
             int attempts = 0;
             var candidates = new List<(LevelData level, float diff)>();
             float targetScore = 15f + (levelIndex / 2000f) * 125f;
 
-            while (attempts < 50 && candidates.Count < 5)
+            while (attempts < cfg.MaxGenerationSeeds && candidates.Count < cfg.MaxCandidates)
             {
                 var rand = new Random(currentSeed);
                 var board = new BoardState { PoleCount = poleCount, MaxCapacity = maxCapacity };
 
                 // 1. Bitmiş hali oluştur (Her direğe tek renk dolacak şekilde)
                 var colors = (RingColor[])Enum.GetValues(typeof(RingColor));
-                
+
                 // Kullanılabilir renkleri belirle (None rengini atla, index 1'den başla)
                 var selectedColors = new List<RingColor>();
                 for (int i = 1; i < colors.Length && selectedColors.Count < colorCount; i++)
@@ -36,9 +46,13 @@ namespace RingFlow.Gameplay
                     selectedColors.Add(colors[i]);
                 }
 
-                // Renk sayısı yeterli değilse fallback
+                // DB-driven: Renk sayısı enum kapasitesini aşıyorsa hard hatayı logla
+                // (fail-loud — hiçbir silent fallback yok)
                 if (selectedColors.Count < colorCount)
                 {
+                    NexusLog.Error("LevelGenerator", nameof(GenerateLevel), levelIndex.ToString(),
+                        $"DB {colorCount} renk istiyor ama RingColor enum'ında yalnızca {selectedColors.Count} " +
+                        "renk kullanılabilir. RingColor enum'ını genişletin veya DB ColorCurve'u düşürün.");
                     colorCount = selectedColors.Count;
                 }
 
@@ -52,7 +66,7 @@ namespace RingFlow.Gameplay
                     }
                 }
 
-                int minEmptyPoles = DifficultyCurve.MinEmptyPolesForLevel(levelIndex);
+                int minEmptyPoles = db.GetMinEmptyPolesForLevel(levelIndex);
                 if (minEmptyPoles < 1) minEmptyPoles = 1;
                 if (minEmptyPoles > poleCount - colorCount)
                 {
@@ -65,8 +79,8 @@ namespace RingFlow.Gameplay
                 if (scramblePoleCount > poleCount) scramblePoleCount = poleCount;
 
                 int validScrambleMoves = 0;
-                int scrambleTarget = 150 + rand.Next(80);
-                const int maxScrambleAttempts = 1500;
+                int scrambleTarget = cfg.ScrambleTargetBase + rand.Next(cfg.ScrambleTargetRandomRange);
+                int maxScrambleAttempts = cfg.MaxScrambleAttempts;
                 int lastFrom = -1;
                 int[] validSources = new int[scramblePoleCount];
                 int[] validTargets = new int[scramblePoleCount];
@@ -114,7 +128,7 @@ namespace RingFlow.Gameplay
                 var scrambledState = board;
 
                 // GDD §4 & §5 Kuralları uyarınca özel halka mekaniklerini enjekte et
-                InjectSpecialMechanics(ref scrambledState, levelIndex, rand);
+                InjectSpecialMechanics(db, ref scrambledState, levelIndex, rand);
 
                 // Enforce that we successfully reached the minEmptyPoles count
                 int finalEmptyCount = 0;
@@ -165,7 +179,7 @@ namespace RingFlow.Gameplay
                             int additionalData = 0;
                             if (type == RingType.Bomb)
                             {
-                                additionalData = 5;
+                                additionalData = cfg.BombCountdown;
                             }
                             else if (type == RingType.Chain)
                             {
@@ -209,13 +223,8 @@ namespace RingFlow.Gameplay
             }
 
             NexusLog.Warn("LevelGenerator", nameof(GenerateLevel), levelIndex.ToString(),
-                $"Exhausted 50 seeds without solver-detected solvable level. Increase MaxStatesLimit or check seed distribution.");
-
-            // Son çare: tutorial override yapmadan, minimum parametrelerle deneme
-            if (levelIndex <= 3)
-            {
-                return GenerateFallbackLevel(levelIndex, poleCount, colorCount, maxCapacity);
-            }
+                $"Exhausted {cfg.MaxGenerationSeeds} seeds without solver-detected solvable level. " +
+                $"Increase MaxGenerationSeeds in DB LevelGen config or check seed distribution.");
 
             return null;
         }
@@ -230,74 +239,10 @@ namespace RingFlow.Gameplay
             return empty;
         }
 
-        private static LevelData GenerateFallbackLevel(int levelIndex, int poleCount, int colorCount, int maxCapacity)
+        private static void InjectSpecialMechanics(GameConfigDatabaseSO db, ref BoardState board, int levelIndex, Random rand)
         {
-            var board = new BoardState { PoleCount = poleCount, MaxCapacity = maxCapacity };
-            var colors = (RingColor[])Enum.GetValues(typeof(RingColor));
-            var selectedColors = new List<RingColor>();
-            for (int i = 1; i <= colorCount && i < colors.Length; i++)
-            {
-                selectedColors.Add(colors[i]);
-            }
-            if (selectedColors.Count < 1)
-            {
-                selectedColors.Add(RingColor.Red);
-                colorCount = 1;
-            }
-
-            for (int i = 0; i < colorCount; i++)
-            {
-                for (int r = 0; r < maxCapacity; r++)
-                {
-                    board.AddRingSimple(i, new RingData(selectedColors[i]));
-                }
-            }
-
-            // Basit karıştırma: ilk direkten son direğe tek hamle
-            if (board.GetRingCount(0) > 0)
-            {
-                var ring = board.PopRing(0);
-                board.AddRing(poleCount - 1, ring);
-            }
-
-            var solveResult = LevelSolver.Solve(board, maxCapacity, maxStatesLimit: 5000);
-            if (solveResult.IsSolvable && solveResult.MoveCount > 0)
-            {
-                var levelData = new LevelData
-                {
-                    LevelIndex = levelIndex,
-                    Seed = 0,
-                    TargetMoves = solveResult.MoveCount
-                };
-
-                for (int p = 0; p < poleCount; p++)
-                {
-                    var poleData = new PoleData(maxCapacity)
-                    {
-                        IsLocked = board.IsPoleLocked(p)
-                    };
-                    int count = board.GetRingCount(p);
-                    for (int r = 0; r < count; r++)
-                    {
-                        var color = board.GetRingColor(p, r);
-                        var type = board.GetRingType(p, r);
-                        int additionalData = 0;
-                        if (type == RingType.Bomb) additionalData = 5;
-                        else if (type == RingType.Chain) additionalData = (int)color;
-                        poleData.Rings.Add(new RingData(color, type, additionalData));
-                    }
-                    levelData.Poles.Add(poleData);
-                }
-                return levelData;
-            }
-
-            return null;
-        }
-
-        private static void InjectSpecialMechanics(ref BoardState board, int levelIndex, Random rand)
-        {
-            var db = GameConfigDatabaseSO.Instance;
-            int worldIndex = WorldConfigSO.WorldFromAbsoluteLevel(levelIndex);
+            if (db == null) throw new System.ArgumentNullException(nameof(db));
+            int worldIndex = db.GetWorldForLevel(levelIndex);
             var mechanic = db.GetMechanicForWorld(worldIndex);
             int intensity = db.GetMechanicIntensityForLevel(levelIndex);
             var allowedMechanics = db.GetAllowedMechanicsForLevel(levelIndex);
@@ -379,7 +324,7 @@ namespace RingFlow.Gameplay
                     InjectSingleType(ref board, chosenTypes[i], mechanicCount, rand);
             }
 
-            EnforceMaxMechanicsLimit(ref board);
+            EnforceMaxMechanicsLimit(db, ref board);
             EnforceMechanicCompatibility(ref board);
         }
 
@@ -403,7 +348,7 @@ namespace RingFlow.Gameplay
                         board.SetRingType(p, r, type);
                         if (type == RingType.Bomb)
                         {
-                            board.SetRingAdditional(p, r, 5);
+                            board.SetRingAdditional(p, r, s_bombCountdown);
                         }
                         else if (type == RingType.Chain)
                         {
@@ -475,7 +420,7 @@ namespace RingFlow.Gameplay
                     for (int target = 0; target < poleCount; target++)
                     {
                         if (target == bestPole) continue;
-                        if (board.GetRingCount(target) < 4)
+                        if (board.GetRingCount(target) < s_maxCapacity)
                         {
                             board.AddRing(target, ringToMove);
                             break;
@@ -516,8 +461,10 @@ namespace RingFlow.Gameplay
             }
         }
 
-        private static void EnforceMaxMechanicsLimit(ref BoardState board)
+        private static void EnforceMaxMechanicsLimit(GameConfigDatabaseSO db, ref BoardState board)
         {
+            int maxTypes = db != null ? db.LevelGen.MaxMechanicTypesPerLevel : 4;
+
             var uniqueTypes = new HashSet<RingType>();
             for (int p = 0; p < board.PoleCount; p++)
             {
@@ -537,7 +484,7 @@ namespace RingFlow.Gameplay
                 }
             }
 
-            if (uniqueTypes.Count <= 4)
+            if (uniqueTypes.Count <= maxTypes)
             {
                 return;
             }
@@ -557,8 +504,8 @@ namespace RingFlow.Gameplay
                 RingType.Ghost
             };
 
-            var allowed = new List<RingType>(4);
-            for (int i = 0; i < priority.Length && allowed.Count < 4; i++)
+            var allowed = new List<RingType>(maxTypes);
+            for (int i = 0; i < priority.Length && allowed.Count < maxTypes; i++)
             {
                 if (uniqueTypes.Contains(priority[i]))
                 {

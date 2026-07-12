@@ -18,7 +18,7 @@ namespace RingFlow.Gameplay.Strategies
         private readonly Dictionary<RingType, IRingMoveStrategy> _strategies;
         private readonly IRingMoveStrategy _defaultStrategy;
 
-        public RingMoveStrategyManager()
+        public RingMoveStrategyManager(GameConfigDatabaseSO db)
         {
             _strategies = new Dictionary<RingType, IRingMoveStrategy>();
 
@@ -28,9 +28,9 @@ namespace RingFlow.Gameplay.Strategies
             // second edit every time a new ring type was added. CanHandle() is now
             // the single source of truth for which ring types a strategy owns.
             RegisterStrategy(new StandardRingStrategy());
-            RegisterStrategy(new MysteryRingStrategy());
+            RegisterStrategy(new MysteryRingStrategy(db));
             RegisterStrategy(new PaintRingStrategy());
-            RegisterStrategy(new RainbowRingStrategy());
+            RegisterStrategy(new RainbowRingStrategy(db));
             // Future mechanics just drop in:
             //   RegisterStrategy(new BombRingStrategy());
             //   RegisterStrategy(new ChainRingStrategy());

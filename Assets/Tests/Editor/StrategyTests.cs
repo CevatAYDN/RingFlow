@@ -203,7 +203,8 @@ namespace RingFlow.Tests
         [Test]
         public void MysteryRingStrategy_PreMove_AlwaysReturnsTrue()
         {
-            var strategy = new MysteryRingStrategy();
+            var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var strategy = new MysteryRingStrategy(db);
             var context = new MoveContext();
             Assert.IsTrue(strategy.PreMoveValidation(ref context));
         }
@@ -227,7 +228,8 @@ namespace RingFlow.Tests
             context.FromPole.PopRing();
 
             // Now pole has: [Standard Red, Mystery (now top)]
-            var strategy = new MysteryRingStrategy();
+            var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var strategy = new MysteryRingStrategy(db);
             strategy.PostMoveExecution(ref context);
 
             // Without full SignalBus/Progression injection, PostMove won't modify ring type
@@ -239,7 +241,8 @@ namespace RingFlow.Tests
         [Test]
         public void MysteryRingStrategy_CanHandle_Mystery_ReturnsTrue()
         {
-            var strategy = new MysteryRingStrategy();
+            var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var strategy = new MysteryRingStrategy(db);
             Assert.IsTrue(strategy.CanHandle(RingType.Mystery));
             Assert.IsFalse(strategy.CanHandle(RingType.Standard));
         }

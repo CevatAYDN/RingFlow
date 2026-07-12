@@ -93,7 +93,8 @@ namespace RingFlow.Editor
             float ringY = poleRect.yMax - 6f - (ringIndex + 1) * (RingHeight + 2f);
             Rect ringRect = new(poleRect.x + 4f, ringY, PoleWidth - 8f, RingHeight);
 
-            Color ringColor = RingPalette.Get(ring.Color);
+            var palette = Resources.Load<RingColorPaletteSO>("RingColorPalette");
+            Color ringColor = palette != null ? palette.GetColor(ring.Color, RingColorPaletteSO.ColorBlindMode.Off) : Color.grey;
             EditorGUI.DrawRect(ringRect, ringColor);
             RingFlowEditorUtils.DrawRectBorder(ringRect, Color.black, 1);
 

@@ -13,6 +13,7 @@ namespace RingFlow.Gameplay
         [Inject] private IAudioService _audio;
         [Inject] private IProgressionService _progression;
         [Inject] private IGameDiagnostics _diag;
+        [Inject] private GameConfigDatabaseSO _dbConfig;
 
         public ValueTask OnEnterAsync(object args, CancellationToken ct)
         {
@@ -59,7 +60,8 @@ namespace RingFlow.Gameplay
                 // preserved untouched across level transitions.
                 _audio.BgmStateMultiplier = isBoss ? 0.80f : 0.40f;
 
-                int worldIdx = WorldConfigSO.WorldFromAbsoluteLevel(targetLevel);
+                if (_dbConfig == null) throw new System.InvalidOperationException("[PlayingState] GameConfigDatabaseSO not injected!");
+                int worldIdx = _dbConfig.GetWorldForLevel(targetLevel);
                 var bgm = ProceduralAudio.GetOrCreateBgmClip(worldIdx);
                 _audio.PlayBgm(bgm, true);
             }

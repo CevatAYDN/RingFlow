@@ -51,15 +51,27 @@ namespace RingFlow.Editor
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 int startLevel = WorldConfigSO.ToAbsoluteLevel(config.WorldIndex, 0);
-                var band = DifficultyCurve.BandForLevel(startLevel);
-                var intensity = GameConfigDatabaseSO.Instance.GetMechanicIntensityForLevel(startLevel);
-                var allowedMechanics = GameConfigDatabaseSO.Instance.GetAllowedMechanicsForLevel(startLevel);
-                var worldMechanic = GameConfigDatabaseSO.Instance.GetMechanicForWorld(config.WorldIndex);
+                var database = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+                WorldMechanicType worldMechanic = WorldMechanicType.None;
+                DifficultyBand band = DifficultyBand.Tutorial;
+                var allowedMechanics = new System.Collections.Generic.List<WorldMechanicType>();
+                
+                if (database != null)
+                {
+                    band = database.GetBandForLevel(startLevel);
+                    var intensity = database.GetMechanicIntensityForLevel(startLevel);
+                    allowedMechanics = database.GetAllowedMechanicsForLevel(startLevel);
+                    worldMechanic = database.GetMechanicForWorld(config.WorldIndex);
 
-                EditorGUILayout.LabelField($"Assigned Mechanic", $"{worldMechanic}");
-                EditorGUILayout.LabelField($"Difficulty Band", $"{band}");
-                EditorGUILayout.LabelField($"Mechanic Intensity", $"{intensity}");
-                EditorGUILayout.LabelField($"Band-Allowed Mechanics", $"{string.Join(", ", allowedMechanics)}");
+                    EditorGUILayout.LabelField($"Assigned Mechanic", $"{worldMechanic}");
+                    EditorGUILayout.LabelField($"Difficulty Band", $"{band}");
+                    EditorGUILayout.LabelField($"Mechanic Intensity", $"{intensity}");
+                    EditorGUILayout.LabelField($"Band-Allowed Mechanics", $"{string.Join(", ", allowedMechanics)}");
+                }
+                else
+                {
+                    EditorGUILayout.HelpBox("Zorluk Veritabanı (GameConfigDatabase.asset) bulunamadı!", MessageType.Warning);
+                }
 
                 // Show mechanic injection preview
                 if (worldMechanic == WorldMechanicType.None)

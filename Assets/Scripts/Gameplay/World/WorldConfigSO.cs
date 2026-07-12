@@ -50,10 +50,7 @@ namespace RingFlow.Gameplay
             return worldIndex * LevelsPerWorld + levelInWorld + 1;
         }
 
-        public static int WorldFromAbsoluteLevel(int absoluteLevel)
-        {
-            return GameConfigDatabaseSO.Instance.GetWorldForLevel(absoluteLevel);
-        }
+
 
         public static int LevelInWorldFromAbsoluteLevel(int absoluteLevel)
         {
@@ -67,92 +64,6 @@ namespace RingFlow.Gameplay
             // Boss every 50 levels (last in each world) — GDD §5
             int levelInWorld = LevelInWorldFromAbsoluteLevel(absoluteLevel);
             return levelInWorld == LevelsPerWorld - 1;
-        }
-    }
-
-    /// <summary>
-    /// GDD §5 — Difficulty curve mapping, now driven dynamically by GameConfigDatabaseSO.
-    /// GDD §8 — Difficulty Score formülü: poleCount×2.5 + colorCount×3.0 + minMoves×0.8
-    ///          + emptyPolePenalty×5.0 + specialCount×4.0 + branchFactor×1.5 − symmetry×2.0
-    /// </summary>
-    public static class DifficultyCurve
-    {
-        public static DifficultyBand BandForLevel(int absoluteLevel)
-        {
-            return GameConfigDatabaseSO.Instance.GetBandForLevel(absoluteLevel);
-        }
-
-        public static int ColorCountForLevel(int absoluteLevel)
-        {
-            return GameConfigDatabaseSO.Instance.GetColorCountForLevel(absoluteLevel);
-        }
-
-        public static int PoleCountForLevel(int absoluteLevel)
-        {
-            return GameConfigDatabaseSO.Instance.GetPoleCountForLevel(absoluteLevel);
-        }
-
-        public static int MinEmptyPolesForLevel(int absoluteLevel)
-        {
-            return GameConfigDatabaseSO.Instance.GetMinEmptyPolesForLevel(absoluteLevel);
-        }
-
-        public static int MaxCapacityForLevel(int absoluteLevel)
-        {
-            return GameConfigDatabaseSO.Instance.GetMaxCapacityForLevel(absoluteLevel);
-        }
-
-        // ── GDD §8 Difficulty Score ─────────────────────────────────────
-
-        /// <summary>
-        /// Compute a normalized difficulty score (0–1000) for a given level.
-        /// Formula: poleCount×2.5 + colorCount×3.0 + minMoves×0.8
-        ///          + emptyPolePenalty×5.0 + specialCount×4.0
-        ///          + branchFactor×1.5 − symmetry×2.0
-        /// </summary>
-        /// <param name="absoluteLevel">1-based level index (1..2000).</param>
-        /// <param name="minMoves">Expected minimum moves from level data.</param>
-        /// <param name="specialCount">Number of special rings (mystery, frozen, etc.) in the level.</param>
-        /// <param name="branchFactor">Branching complexity (1.0 = linear, 2.0+ = complex).</param>
-        /// <param name="symmetry">Symmetry bonus (0.0 = none, 1.0 = fully symmetric). Higher = easier.</param>
-        /// <returns>Difficulty score (0–1000).</returns>
-        public static float ComputeDifficultyScore(
-            int absoluteLevel,
-            int minMoves,
-            int specialCount = 0,
-            float branchFactor = 1.0f,
-            float symmetry = 0.0f)
-        {
-            int poleCount = PoleCountForLevel(absoluteLevel);
-            int colorCount = ColorCountForLevel(absoluteLevel);
-            int emptyPoles = MinEmptyPolesForLevel(absoluteLevel);
-
-            float score = 0f;
-            score += poleCount * 2.5f;
-            score += colorCount * 3.0f;
-            score += minMoves * 0.8f;
-            score += emptyPoles * -4.0f;
-            score += specialCount * 5.0f;
-            score += branchFactor * 1.5f;
-            score -= symmetry * 2.0f;
-
-            return Mathf.Clamp(score, 0f, 1000f);
-        }
-
-        /// <summary>
-        /// Returns a human-readable label (Easy / Medium / Hard / Expert / Master) based on score.
-        /// </summary>
-        public static string DifficultyLabel(float score)
-        {
-            return score switch
-            {
-                < 100 => "Tutorial",
-                < 250 => "Easy",
-                < 450 => "Medium",
-                < 650 => "Hard",
-                < 850 => "Expert",
-                _ => "Master"
-            };
         }
     }
 }

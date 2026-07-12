@@ -54,12 +54,13 @@ namespace RingFlow.Gameplay
         /// <summary>
         /// Validates if a ring can be added to this pole using Strategy pattern.
         /// Delegates to RingValidationStrategyManager for rule execution.
+        /// If validation manager is not set, uses direct validation rules.
         /// </summary>
         public bool CanAddRing(RingData ring)
         {
             if (s_validationManager == null)
             {
-                return LegacyCanAddRing(ring);
+                return DirectCanAddRing(ring);
             }
 
             if (ring.Type == RingType.Rainbow || ring.Type == RingType.Paint)
@@ -85,8 +86,8 @@ namespace RingFlow.Gameplay
 
             if (s_validationManager == null)
             {
-                // Fallback to legacy logic if manager not set (editor compatibility)
-                return LegacyCanPopRing();
+                // Use direct validation rules if manager not set (editor compatibility)
+                return DirectCanPopRing();
             }
 
             return s_validationManager.CanPopRing(TopRing, IsLocked);
@@ -114,9 +115,9 @@ namespace RingFlow.Gameplay
             return ring;
         }
 
-        #region Legacy Validation (Fallback for Editor Compatibility)
+        #region Direct Validation (Editor Compatibility)
 
-        private bool LegacyCanAddRing(RingData ring)
+        private bool DirectCanAddRing(RingData ring)
         {
             if (IsLocked)
             {
@@ -134,7 +135,7 @@ namespace RingFlow.Gameplay
             return TopRing.Color == ring.Color;
         }
 
-        private bool LegacyCanPopRing()
+        private bool DirectCanPopRing()
         {
             if (IsLocked) return false;
 

@@ -12,8 +12,17 @@ namespace RingFlow.Gameplay
         [Inject] private IAdService _ads;
         [Inject] private ISignalBus _signalBus;
         [Inject] private IProgressionService _progressionService;
-
-        private static GameBalanceConfig Cfg => GameConfigDatabaseSO.Instance.BalanceConfig;
+        [Inject] private GameConfigDatabaseSO _dbConfig;
+        [Inject] private IAnalyticsService _analyticsService;
+ 
+        private GameBalanceConfig Cfg
+        {
+            get
+            {
+                if (_dbConfig == null) throw new System.InvalidOperationException("[UndoRequestedCommand] GameConfigDatabaseSO not injected!");
+                return _dbConfig.BalanceConfig;
+            }
+        }
 
         public void Execute(UndoRequestedSignal signal)
         {
@@ -30,7 +39,10 @@ namespace RingFlow.Gameplay
                 _progress.FreeUndosUsedThisSession.Value++;
                 NexusLog.Info("UndoRequestedCommand", "Execute", "",
                     $"Free undo used ({_progress.FreeUndosUsedThisSession.Value}/{Cfg.FreeUndosPerSession} this session).");
-                AnalyticsEvents.UndoUse(level, wasFree: true);
+                if (_analyticsService != null)
+                {
+                    _analyticsService.UndoUse(level, wasFree: true);
+                }
                 _signalBus.Fire(new UndoSignal());
             }
             else if (_economy != null && _economy.CanAfford(CurrencyIds.Coins, Cfg.UndoCoinCost))
@@ -39,7 +51,10 @@ namespace RingFlow.Gameplay
                 {
                     NexusLog.Info("UndoRequestedCommand", "Execute", "",
                         $"Paid undo with {Cfg.UndoCoinCost} coins.");
-                    AnalyticsEvents.UndoUse(level, wasFree: false);
+                    if (_analyticsService != null)
+                    {
+                        _analyticsService.UndoUse(level, wasFree: false);
+                    }
                     _signalBus.Fire(new UndoSignal());
                 }
             }
@@ -53,8 +68,11 @@ namespace RingFlow.Gameplay
                     {
                         NexusLog.Info("UndoRequestedCommand", "Execute", "",
                             "Rewarded ad completed; applying undo.");
-                        AnalyticsEvents.UndoUse(level, wasFree: false);
-                        AnalyticsEvents.RewardedAd("Undo", true);
+                        if (_analyticsService != null)
+                        {
+                            _analyticsService.UndoUse(level, wasFree: false);
+                            _analyticsService.RewardedAd("Undo", true);
+                        }
                         _signalBus.Fire(new UndoSignal());
                     }
                     else

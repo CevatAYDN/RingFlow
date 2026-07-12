@@ -181,8 +181,9 @@ namespace RingFlow.Editor
             int poleCount = polesToBuild != null ? polesToBuild.Count : _generator.GeneratedLevel.Poles.Count;
             NexusLog.Info("RingFlowEditor", nameof(BuildInScene), "", $"Building visual board with {poleCount} poles.");
 
-            int defaultMaxCapacity = _generator.GeneratedLevel != null 
-                ? GameConfigDatabaseSO.Instance.GetMaxCapacityForLevel(_generator.GeneratedLevel.LevelIndex) 
+            var database = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            int defaultMaxCapacity = _generator.GeneratedLevel != null && database != null
+                ? database.GetMaxCapacityForLevel(_generator.GeneratedLevel.LevelIndex) 
                 : 4;
 
             var board = new BoardState { PoleCount = poleCount, MaxCapacity = defaultMaxCapacity };
@@ -254,7 +255,7 @@ namespace RingFlow.Editor
             var boardRoot = GameObject.Find("RingFlow_VisualBoard");
             if (boardRoot == null) return default;
 
-            var f = GameFeelConfigSO.Instance;
+            var f = Resources.Load<GameFeelConfigSO>("GameFeelConfig");
             var polesList = new List<Transform>();
             for (int i = 0; i < 12; i++)
             {
@@ -331,7 +332,7 @@ namespace RingFlow.Editor
             Undo.RegisterCreatedObjectUndo(boardRoot, "Build Visual Board");
 
             var torusModel = AssetDatabase.LoadAssetAtPath<GameObject>(EditorPaths.TorusPrefabPath);
-            var f = GameFeelConfigSO.Instance;
+            var f = Resources.Load<GameFeelConfigSO>("GameFeelConfig");
             float spacing = f != null ? f.PoleSpacing : 2.5f;
             float boardWidth = (board.PoleCount - 1) * spacing;
             float startX = -boardWidth * 0.5f;
@@ -444,7 +445,8 @@ namespace RingFlow.Editor
             if (ringRenderer != null)
             {
                 var mat = new Material(shader);
-                Color baseColor = RingPalette.Get(ringData.Color);
+                var palette = Resources.Load<RingColorPaletteSO>("RingColorPalette");
+                Color baseColor = palette != null ? palette.GetColor(ringData.Color, RingColorPaletteSO.ColorBlindMode.Off) : Color.grey;
                 mat.color = baseColor;
                 if (mat.HasProperty("_BaseColor"))
                     mat.SetColor("_BaseColor", baseColor);

@@ -6,23 +6,7 @@ namespace RingFlow.Gameplay
     [CreateAssetMenu(fileName = "GameFeelConfig", menuName = "RingFlow/Game Feel Config", order = 51)]
     public class GameFeelConfigSO : ScriptableObject
     {
-        private static GameFeelConfigSO s_instance;
 
-        public static GameFeelConfigSO Instance
-        {
-            get
-            {
-                if (s_instance == null)
-                    s_instance = Resources.Load<GameFeelConfigSO>("GameFeelConfig");
-                if (s_instance == null)
-                {
-                    s_instance = CreateInstance<GameFeelConfigSO>();
-                    NexusLog.Warn("GameFeelConfigSO", nameof(Instance), "",
-                        "Asset not found in Resources. Using default instance. Create from Dashboard → Tools → Game Feel & Camera.");
-                }
-                return s_instance;
-            }
-        }
 
         [Header("Board")]
         [Tooltip("Pole spacing on X axis (units).")]

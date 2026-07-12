@@ -29,13 +29,17 @@ namespace RingFlow.Gameplay
         private int _pieceCount;
 
         [Inject] private IObjectPoolService _objectPoolService;
+        [Inject] private GameFeelConfigSO _feelConfig;
 
         private void Awake()
         {
             EnsureSharedResources();
             _mpb = new MaterialPropertyBlock();
+        }
 
-            var config = GameFeelConfigSO.Instance;
+        private void EnsurePiecesCreated(GameFeelConfigSO config)
+        {
+            if (_pieces != null) return;
             _pieceCount = config != null ? config.RingPopCount : 12;
             _pieces = new PopPiece[_pieceCount];
 
@@ -84,7 +88,10 @@ namespace RingFlow.Gameplay
         {
             KillAllLocalTweens();
 
-            var config = GameFeelConfigSO.Instance;
+            if (_feelConfig == null) throw new System.InvalidOperationException("[RingPopVfx] GameFeelConfigSO not injected!");
+            EnsurePiecesCreated(_feelConfig);
+
+            var config = _feelConfig;
             float duration = config != null ? config.RingPopDuration : 0.5f;
 
             _mpb.SetColor("_BaseColor", color);

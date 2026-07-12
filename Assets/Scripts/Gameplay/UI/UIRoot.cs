@@ -467,8 +467,18 @@ namespace RingFlow.Gameplay.UI
         public static string GetPrefabAssetPath(ScreenType screen)
             => $"Assets/Resources/UI/{screen}.prefab";
 
-        private static GameObject LoadScreenPrefab(ScreenType screen)
+        private GameObject LoadScreenPrefab(ScreenType screen)
         {
+            if (_root != null && _root.Context != null)
+            {
+                var asset = _root.Context.TryResolve<Services.IAssetService>();
+                if (asset != null)
+                {
+                    var task = asset.LoadAsync<GameObject>($"UI/{screen}");
+                    task.Wait();
+                    return task.Result;
+                }
+            }
             return Resources.Load<GameObject>($"UI/{screen}");
         }
 

@@ -10,6 +10,8 @@ namespace RingFlow.Gameplay
         [Inject] private IProgressionService _progressionService;
         [Inject] private ISignalBus _signalBus;
         [Inject] private Services.IAssetService _assetService;
+        [Inject] private GameConfigDatabaseSO _dbConfig;
+        [Inject] private IAnalyticsService _analyticsService;
 
         public void Execute(InitLevelSignal signal)
         {
@@ -29,24 +31,26 @@ namespace RingFlow.Gameplay
             LevelData levelData = null;
 
             // Route through IAssetService so future Addressables migration is a one-line change.
-            // Falls back to Resources.Load if the service is not available (editor/test scenarios).
             LevelDataSO savedLevel = null;
             string levelKey = $"Levels/Level_{currentLevel}";
-            if (_assetService != null)
+            if (_assetService == null)
             {
-                var task = _assetService.LoadAsync<LevelDataSO>(levelKey);
-                task.Wait(); // Synchronous in command context; Addressables replacement can go async later
-                savedLevel = task.Result;
+                throw new System.InvalidOperationException("[InitLevelCommand] IAssetService not injected!");
             }
-            else
-            {
-                savedLevel = Resources.Load<LevelDataSO>(levelKey);
-            }
+            
+            var task = _assetService.LoadAsync<LevelDataSO>(levelKey);
+            task.Wait();
+            savedLevel = task.Result;
 
             // GDD curve params — always computed so retry logic can reuse them
-            int poleCount = DifficultyCurve.PoleCountForLevel(currentLevel);
-            int colorCount = DifficultyCurve.ColorCountForLevel(currentLevel);
-            int maxCapacity = DifficultyCurve.MaxCapacityForLevel(currentLevel);
+            if (_dbConfig == null)
+            {
+                throw new System.InvalidOperationException("[InitLevelCommand] GameConfigDatabaseSO not injected!");
+            }
+            var db = _dbConfig;
+            int poleCount = db.GetPoleCountForLevel(currentLevel);
+            int colorCount = db.GetColorCountForLevel(currentLevel);
+            int maxCapacity = db.GetMaxCapacityForLevel(currentLevel);
             if (poleCount < colorCount + 1) poleCount = colorCount + 1;
             if (poleCount > 12)
             {
@@ -68,7 +72,7 @@ namespace RingFlow.Gameplay
                 }
 
                 levelData = LevelGenerator.GenerateLevel(
-                    currentLevel, currentLevel * 12345, poleCount, colorCount, maxCapacity);
+                    db, currentLevel, currentLevel * 12345, poleCount, colorCount, maxCapacity);
             }
 
             if (levelData != null)
@@ -77,12 +81,12 @@ namespace RingFlow.Gameplay
             }
             else
             {
-                // P0 fix: retry with alternate seeds before falling back to tutorial.
+                // P0 fix: retry with alternate seeds before giving up.
                 var retrySeeds = new[] { currentLevel * 27779, currentLevel * 31415, currentLevel * 16180 };
                 foreach (var retrySeed in retrySeeds)
                 {
                     levelData = LevelGenerator.GenerateLevel(
-                        currentLevel, retrySeed, poleCount, colorCount, maxCapacity);
+                        db, currentLevel, retrySeed, poleCount, colorCount, maxCapacity);
                     if (levelData != null) break;
                 }
 
@@ -94,16 +98,18 @@ namespace RingFlow.Gameplay
                 }
                 else
                 {
+                    // Fail-loud: hiçbir fallback üretim yok. DB-driven kurallar çözülebilir
+                    // seviye üretemediyse bu bir konfigürasyon hatasıdır.
                     NexusLog.Error("InitLevelCommand", "Execute", currentLevel.ToString(),
-                        "All seed attempts exhausted — emergency fallback to hardcoded 3-pole tutorial level.");
-                    BuildFallbackTutorialLevel();
+                        "All seed attempts exhausted — no fallback level generated. " +
+                        "Check GameConfigDatabaseSO configuration for this level range.");
                 }
             }
 
             NexusLog.Info("InitLevelCommand", "Execute", currentLevel.ToString(),
                 $"Initialized level {currentLevel} with {_model.Poles.Count} poles. Target moves: {_model.TargetMovesCount.Value}.");
 
-            int worldIndex = WorldConfigSO.WorldFromAbsoluteLevel(currentLevel);
+            int worldIndex = _dbConfig.GetWorldForLevel(currentLevel);
 
             if (levelData != null)
             {
@@ -116,7 +122,10 @@ namespace RingFlow.Gameplay
                         $"Level has {glassCount} Glass ring(s) — treated as Standard (visual-only).");
             }
 
-            AnalyticsEvents.LevelStart(currentLevel, worldIndex);
+            if (_analyticsService != null)
+            {
+                _analyticsService.LevelStart(currentLevel, worldIndex);
+            }
 
             _signalBus?.Fire(new LevelLoadedSignal(currentLevel));
         }
@@ -133,21 +142,6 @@ namespace RingFlow.Gameplay
                 _model.Poles.Add(poleState);
             }
             _model.TargetMovesCount.Value = levelData.TargetMoves;
-        }
-
-        private void BuildFallbackTutorialLevel()
-        {
-            var p0 = new PoleState { Id = 0 };
-            p0.AddRing(new RingData(RingColor.Red));
-            p0.AddRing(new RingData(RingColor.Blue));
-            var p1 = new PoleState { Id = 1 };
-            p1.AddRing(new RingData(RingColor.Blue));
-            p1.AddRing(new RingData(RingColor.Red));
-            var p2 = new PoleState { Id = 2 };
-            _model.Poles.Add(p0);
-            _model.Poles.Add(p1);
-            _model.Poles.Add(p2);
-            _model.TargetMovesCount.Value = 2;
         }
     }
 }

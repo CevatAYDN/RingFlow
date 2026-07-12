@@ -5,6 +5,12 @@ namespace RingFlow.Gameplay.Strategies
 {
     public sealed class RainbowRingStrategy : IRingMoveStrategy
     {
+        private readonly GameConfigDatabaseSO _db;
+
+        public RainbowRingStrategy(GameConfigDatabaseSO db)
+        {
+            _db = db;
+        }
         public bool CanHandle(RingType ringType) => ringType == RingType.Rainbow;
 
         public bool PreMoveValidation(ref MoveContext context) => true;
@@ -47,7 +53,8 @@ namespace RingFlow.Gameplay.Strategies
             // P0 fix: derive seed from level + pole identity (deterministic), NOT from
             // MovesCount. Same as MysteryRingStrategy — guarantees reproducible color
             // for QA replay and undo consistency.
-            var colorCount = GameConfigDatabaseSO.Instance.GetColorCountForLevel(
+            if (_db == null) throw new System.InvalidOperationException("[RainbowRingStrategy] GameConfigDatabaseSO not injected!");
+            var colorCount = _db.GetColorCountForLevel(
                 context.Progression?.CurrentLevel.Value ?? 1);
 
             int level = context.Progression?.CurrentLevel.Value ?? 1;

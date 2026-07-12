@@ -41,7 +41,8 @@ namespace RingFlow.Tests
             _progressionService = new RingFlow.Gameplay.ProgressionService(_progressModel);
             _economyService = new MockEconomyService();
 
-            _strategyManager = new RingMoveStrategyManager();
+            var db = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            _strategyManager = new RingMoveStrategyManager(db);
             RingValidationStrategyManager validationManager = new RingValidationStrategyManager();
             PoleState.SetValidationManager(validationManager);
 
@@ -194,7 +195,8 @@ namespace RingFlow.Tests
             int maxCap = 4;
             int level = 5;
 
-            var levelData = LevelGenerator.GenerateLevel(level, level * 12345, poleCount, colorCount, maxCap);
+            var db = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            var levelData = LevelGenerator.GenerateLevel(db, level, level * 12345, poleCount, colorCount, maxCap);
             Assert.That(levelData, Is.Not.Null, "LevelGenerator should produce valid level.");
 
             // Act
@@ -325,6 +327,13 @@ namespace RingFlow.Tests
             InjectField(target, "_economyService", _economyService);
             InjectField(target, "_strategyManager", _strategyManager);
             InjectField(target, "_economy", _economyService);
+
+            // Data-driven dependencies
+            var db = Resources.Load<GameConfigDatabaseSO>("GameConfigDatabase");
+            InjectField(target, "_dbConfig", db);
+            InjectField(target, "_assetService", new RingFlow.Gameplay.Services.ResourcesAssetService());
+            InjectField(target, "_analyticsService", new MockAnalyticsService());
+            InjectField(target, "_ads", new MockAdService());
         }
 
         private static void InjectField(object target, string name, object value)
@@ -425,5 +434,25 @@ namespace RingFlow.Tests
 
         public string GetString(string key, string defaultValue = "") =>
             _store.TryGetValue(key, out var v) && v is string s ? s : defaultValue;
+    }
+
+    public class MockAdService : IAdService
+    {
+        public event Action<string, double, string> OnImpressionRecorded;
+        public void SetNetworkAdapter(IAdNetworkAdapter adapter) { }
+        public void SetInterstitialCooldown(float seconds) { }
+        public bool IsInterstitialAvailable(string placement) => false;
+        public bool IsRewardedAvailable(string placement) => false;
+        public void ShowInterstitial(string placement, Action onComplete = null) => onComplete?.Invoke();
+        public void ShowRewarded(string placement, Action<bool> onComplete) => onComplete?.Invoke(true);
+        public void ShowBanner(string placement = "default", string position = "bottom") { }
+        public void HideBanner() { }
+    }
+
+    public class MockAnalyticsService : IAnalyticsService
+    {
+        public void LogEvent(string eventName) { }
+        public void LogEvent(string eventName, Dictionary<string, object> parameters) { }
+        public void SetUserProperty(string key, string value) { }
     }
 }

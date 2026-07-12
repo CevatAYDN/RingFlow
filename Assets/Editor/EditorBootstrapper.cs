@@ -134,7 +134,11 @@ namespace RingFlow.Editor
                 camera = camObj.AddComponent<Camera>();
             }
 
-            var feel = Gameplay.GameFeelConfigSO.Instance;
+            var feel = Resources.Load<Gameplay.GameFeelConfigSO>("GameFeelConfig");
+            if (feel == null)
+            {
+                feel = ScriptableObject.CreateInstance<Gameplay.GameFeelConfigSO>();
+            }
             camera.orthographic = true;
             camera.orthographicSize = feel.CameraBaseOrtho;
             camera.clearFlags = CameraClearFlags.SolidColor;

@@ -14,8 +14,17 @@ namespace RingFlow.Gameplay
         [Inject] private PlayerProgressModel _progress;
         [Inject] private IGameStateMachine _fsm;
         [Inject] private IAdService _ads;
+        [Inject] private GameConfigDatabaseSO _dbConfig;
+        [Inject] private IAnalyticsService _analyticsService;
 
-        private static GameBalanceConfig Cfg => GameConfigDatabaseSO.Instance.BalanceConfig;
+        private GameBalanceConfig Cfg
+        {
+            get
+            {
+                if (_dbConfig == null) throw new System.InvalidOperationException("[LevelWonCommand] GameConfigDatabaseSO not injected!");
+                return _dbConfig.BalanceConfig;
+            }
+        }
 
         public void Execute(LevelWonSignal signal)
         {
@@ -53,7 +62,7 @@ namespace RingFlow.Gameplay
 
             int newLevel = _progressionService != null ? _progressionService.CurrentLevel.Value : prevLevel;
 
-            int newWorldIndex = WorldConfigSO.WorldFromAbsoluteLevel(newLevel);
+            int newWorldIndex = _dbConfig.GetWorldForLevel(newLevel);
             bool isBoss = WorldConfigSO.IsBossLevel(prevLevel);
             int coinReward = isBoss ? Cfg.BossCoinReward : Cfg.NormalCoinReward + (prevLevel % 11) * 10;
             _economyService?.Earn(CurrencyIds.Coins, coinReward, isBoss ? "Boss Win Reward" : "Level Win Reward");
@@ -81,7 +90,10 @@ namespace RingFlow.Gameplay
             NexusLog.Info("LevelWonCommand", "Execute", "",
                 $"Level {prevLevel} WON! Moves={prevMoves}, Target={prevTarget}, Stars={stars}, Coins+={coinReward}, XP+={xpEarned}");
 
-            AnalyticsEvents.LevelComplete(prevLevel, prevMoves, stars);
+            if (_analyticsService != null)
+            {
+                _analyticsService.LevelComplete(prevLevel, prevMoves, stars);
+            }
 
             if (_progress != null)
             {
@@ -119,7 +131,10 @@ namespace RingFlow.Gameplay
                         NexusLog.Info("LevelWonCommand", "Execute", "",
                             $"Showing interstitial (interval={Cfg.InterstitialAdInterval}).");
                         _ads.ShowInterstitial("LevelComplete");
-                        AnalyticsEvents.InterstitialAd("LevelComplete");
+                        if (_analyticsService != null)
+                        {
+                            _analyticsService.InterstitialAd("LevelComplete");
+                        }
                     }
                 }
             }
