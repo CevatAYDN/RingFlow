@@ -10,10 +10,10 @@ namespace RingFlow.Gameplay
     /// </summary>
     public static class LevelGenerator
     {
-        private static readonly int[] _sourcePoles = new int[12];
-        private static readonly int[] _targetPoles = new int[12];
-        private static int s_bombCountdown = 5; // Default; overridden on each GenerateLevel call
-        private static int s_maxCapacity = 4;   // Default; overridden on each GenerateLevel call
+        private static readonly int[] _sourcePoles = new int[GameplayAssetKeys.Tuning.MaxPoleCount];
+        private static readonly int[] _targetPoles = new int[GameplayAssetKeys.Tuning.MaxPoleCount];
+        private static int s_bombCountdown = GameplayAssetKeys.Tuning.BombCountdown; // Default; overridden on each GenerateLevel call
+        private static int s_maxCapacity = GameplayAssetKeys.Tuning.MaxCapacity;   // Default; overridden on each GenerateLevel call
 
         public static LevelData GenerateLevel(GameConfigDatabaseSO db, int levelIndex, int seed, int poleCount, int colorCount, int maxCapacity)
         {
@@ -414,7 +414,7 @@ namespace RingFlow.Gameplay
             if (lockedPole == -1)
             {
                 int bestPole = 0;
-                int minRings = 999;
+                int minRings = GameplayAssetKeys.Tuning.SentinelMinRings;
                 for (int p = 0; p < poleCount; p++)
                 {
                     int rc = board.GetRingCount(p);
@@ -609,7 +609,7 @@ namespace RingFlow.Gameplay
             {
                 attemptsToEmpty++;
                 int bestPoleToEmpty = -1;
-                int minRings = 999;
+                int minRings = GameplayAssetKeys.Tuning.SentinelMinRings;
                 for (int p = 0; p < board.PoleCount; p++)
                 {
                     if (board.IsEmpty(p) || board.IsPoleLocked(p)) continue;

@@ -27,7 +27,7 @@ namespace RingFlow.Gameplay.UI
             if (View.ValidateAnswer())
             {
                 // Save acceptance state locally (device bound)
-                PlayerPrefs.SetInt("RF_GdprAccepted", 1);
+                PlayerPrefs.SetInt(GameplayAssetKeys.PlayerPrefs.GdprAccepted, 1);
                 PlayerPrefs.Save();
 
                 NexusLog.Info("ParentalGatePopupMediator", "HandleAccept", "", "Parental gate verification passed. GDPR accepted.");

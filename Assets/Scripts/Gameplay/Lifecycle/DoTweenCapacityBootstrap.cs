@@ -13,7 +13,7 @@ namespace RingFlow.Gameplay
     {
         private static bool s_initialized;
 
-        public static void EnsureInitialized(int tweensCapacity = 1500, int sequencesCapacity = 200)
+        public static void EnsureInitialized(int tweensCapacity = GameplayAssetKeys.Tuning.TweenCapacityDefault, int sequencesCapacity = GameplayAssetKeys.Tuning.SequenceCapacityDefault)
         {
             if (s_initialized) return;
             s_initialized = true;

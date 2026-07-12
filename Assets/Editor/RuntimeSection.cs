@@ -191,7 +191,7 @@ namespace RingFlow.Editor
         private static void DrawResetButton()
         {
             Color originalColor = GUI.backgroundColor;
-            GUI.backgroundColor = new Color(0.9f, 0.35f, 0.35f);
+            GUI.backgroundColor = EditorPaths.EditorColors.Error;
             if (GUILayout.Button("RESET ALL PLAYER DATA (Progress & Settings)", GUILayout.Height(ButtonHeight + 10)))
             {
                 if (EditorUtility.DisplayDialog("Reset Player Data?",

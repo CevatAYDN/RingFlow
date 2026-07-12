@@ -86,7 +86,7 @@ namespace RingFlow.Editor
                 using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
                     var titleStyle = new GUIStyle(EditorStyles.label)
-                        { fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.2f, 0.7f, 1.0f) } };
+                        { fontStyle = FontStyle.Bold, normal = { textColor = EditorPaths.EditorColors.Info } };
                     EditorGUILayout.LabelField("GDD Parametreleri:", titleStyle);
                     EditorGUILayout.LabelField($"• Direk Sayısı: {poleCount}");
                     EditorGUILayout.LabelField($"• Renk Sayısı: {colorCount}");
@@ -370,9 +370,9 @@ namespace RingFlow.Editor
 
         private static void EnsureLevelsFolder(string folderPath)
         {
-            RingFlowEditorUtils.EnsureAssetFolders("Assets/Resources");
-            if (!AssetDatabase.IsValidFolder(folderPath))
-                AssetDatabase.CreateFolder("Assets/Resources", "Levels");
+            RingFlowEditorUtils.EnsureAssetFolders(EditorPaths.ResourcesFolder);
+            if (!AssetDatabase.IsValidFolder(EditorPaths.LevelsFolder))
+                AssetDatabase.CreateFolder(EditorPaths.ResourcesFolder, "Levels");
         }
 
         private static void SaveLevelAssetSilent(LevelData levelData, string folderPath)

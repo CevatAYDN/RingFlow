@@ -11,24 +11,24 @@ namespace RingFlow.Gameplay
     /// </summary>
     public class PlayerProgressModel : IReactiveModel, IResettableModel
     {
-        public const string KeyCoins         = "RF_Coins";
-        public const string KeyDiamonds      = "RF_Diamonds";
-        public const string KeyXp            = "RF_Xp";
-        public const string KeyCurrentLevel  = "RF_CurrentLevel";
-        public const string KeyMaxUnlocked   = "RF_MaxUnlocked";
-        public const string KeyWorlds        = "RF_Worlds";
-        public const string KeyThemes        = "RF_Themes";
-        public const string KeyChestsBronze  = "RF_Chest_Bronze";
-        public const string KeyChestsSilver  = "RF_Chest_Silver";
-        public const string KeyChestsGold    = "RF_Chest_Gold";
-        public const string KeyChestsDiamond = "RF_Chest_Diamond";
-        public const string KeyPlayerLvl     = "RF_PlayerLevel";
-        public const string KeyDailyDay      = "RF_DailyDayIndex";
-        public const string KeyDailyStamp    = "RF_DailyLastClaimUtc";
-        public const string KeyUndoUsed      = "RF_UndoUsedFree";
-        public const string KeyAchieves      = "RF_Achievements";
-        public const string KeyRemoveAds     = "RF_RemoveAds";
-        public const string KeyHintCount     = "RF_HintCount";
+        public const string KeyCoins         = GameplayAssetKeys.PlayerPrefs.Coins;
+        public const string KeyDiamonds      = GameplayAssetKeys.PlayerPrefs.Diamonds;
+        public const string KeyXp            = GameplayAssetKeys.PlayerPrefs.Xp;
+        public const string KeyCurrentLevel  = GameplayAssetKeys.PlayerPrefs.CurrentLevel;
+        public const string KeyMaxUnlocked   = GameplayAssetKeys.PlayerPrefs.MaxUnlocked;
+        public const string KeyWorlds        = GameplayAssetKeys.PlayerPrefs.Worlds;
+        public const string KeyThemes        = GameplayAssetKeys.PlayerPrefs.Themes;
+        public const string KeyChestsBronze  = GameplayAssetKeys.PlayerPrefs.ChestBronze;
+        public const string KeyChestsSilver  = GameplayAssetKeys.PlayerPrefs.ChestSilver;
+        public const string KeyChestsGold    = GameplayAssetKeys.PlayerPrefs.ChestGold;
+        public const string KeyChestsDiamond = GameplayAssetKeys.PlayerPrefs.ChestDiamond;
+        public const string KeyPlayerLvl     = GameplayAssetKeys.PlayerPrefs.PlayerLevel;
+        public const string KeyDailyDay      = GameplayAssetKeys.PlayerPrefs.DailyDayIndex;
+        public const string KeyDailyStamp    = GameplayAssetKeys.PlayerPrefs.DailyLastClaimUtc;
+        public const string KeyUndoUsed      = GameplayAssetKeys.PlayerPrefs.UndoUsedFree;
+        public const string KeyAchieves      = GameplayAssetKeys.PlayerPrefs.Achievements;
+        public const string KeyRemoveAds     = GameplayAssetKeys.PlayerPrefs.RemoveAds;
+        public const string KeyHintCount     = GameplayAssetKeys.PlayerPrefs.HintCount;
 
         public ObservableProperty<int> Coins { get; } = new(0);
         public ObservableProperty<int> Diamonds { get; } = new(0);
@@ -128,8 +128,8 @@ namespace RingFlow.Gameplay
     public static class PlayerProgressSaveSystem
     {
         private const int CurrentSchemaVersion = 2;
-        private const string KeySchemaVersion = "RF_SaveSchemaVersion";
-        private const string KeyChecksum = "RF_SaveChecksum";
+        private const string KeySchemaVersion = GameplayAssetKeys.PlayerPrefs.SaveSchemaVersion;
+        private const string KeyChecksum = GameplayAssetKeys.PlayerPrefs.SaveChecksum;
 
         public static void Save(IPlayerPrefsService prefs, PlayerProgressModel m)
         {

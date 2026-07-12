@@ -10,8 +10,8 @@ namespace RingFlow.Editor
     /// </summary>
     public abstract class EditorSection
     {
-        protected const float HeaderHeight = 22f;
-        protected const float ButtonHeight = 32f;
+        protected const float HeaderHeight = EditorPaths.EditorSizes.SectionHeaderHeight;
+        protected const float ButtonHeight = EditorPaths.EditorSizes.ButtonHeight;
         protected const float RowHeight = 26f;
 
         public abstract string DisplayName { get; }
@@ -30,7 +30,7 @@ namespace RingFlow.Editor
         {
             if (HideHeader) return;
             var bg = GUI.backgroundColor;
-            GUI.backgroundColor = new Color(0.4f, 0.7f, 1.0f, 0.3f);
+            GUI.backgroundColor = EditorPaths.EditorColors.HeaderAccent;
             IsFoldedOut = EditorGUILayout.Foldout(IsFoldedOut, DisplayName, true, EditorStyles.foldoutHeader);
             GUI.backgroundColor = bg;
             EditorGUILayout.Space(2f);

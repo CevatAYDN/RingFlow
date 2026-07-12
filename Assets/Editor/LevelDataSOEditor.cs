@@ -37,7 +37,7 @@ namespace RingFlow.Editor
                         alignment = TextAnchor.MiddleCenter,
                         fontSize = 11,
                         fontStyle = FontStyle.Bold,
-                        normal = { textColor = new Color(0.2f, 0.8f, 1.0f) }
+                        normal = { textColor = EditorPaths.EditorColors.Info }
                     };
                 }
                 return s_headerStyle;
@@ -187,7 +187,7 @@ namespace RingFlow.Editor
             {
                 using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
-                    var titleStyle = new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = new Color(0.9f, 0.3f, 0.3f) } };
+                    var titleStyle = new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = EditorPaths.EditorColors.Error } };
                     EditorGUILayout.LabelField("⚠️ GDD UYUMLULUK UYARILARI:", titleStyle);
                     foreach (var w in warnings)
                     {
@@ -483,7 +483,7 @@ namespace RingFlow.Editor
 
                             if (isSelected)
                             {
-                                GUI.backgroundColor = new Color(0.2f, 0.8f, 1.0f);
+                                GUI.backgroundColor = EditorPaths.EditorColors.Info;
                                 if (GUILayout.Button(type.ToString(), CompactButton, GUILayout.Height(20)))
                                     s_brushType = type;
                                 GUI.backgroundColor = prevBg;

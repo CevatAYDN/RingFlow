@@ -10,13 +10,13 @@ namespace RingFlow.Gameplay
     /// </summary>
     public class SettingsModel : IReactiveModel, IResettableModel
     {
-        public const string KeyMusic = "RF_Set_Music";
-        public const string KeySfx = "RF_Set_Sfx";
-        public const string KeyHaptic = "RF_Set_Haptic";
-        public const string KeyReduceMotion = "RF_Set_ReduceMotion";
-        public const string KeySlowMode = "RF_Set_SlowMode";
-        public const string KeyBigButtons = "RF_Set_BigButtons";
-        public const string KeyColorBlind = "RF_Set_ColorBlind";
+        public const string KeyMusic = GameplayAssetKeys.PlayerPrefs.Music;
+        public const string KeySfx = GameplayAssetKeys.PlayerPrefs.Sfx;
+        public const string KeyHaptic = GameplayAssetKeys.PlayerPrefs.Haptic;
+        public const string KeyReduceMotion = GameplayAssetKeys.PlayerPrefs.ReduceMotion;
+        public const string KeySlowMode = GameplayAssetKeys.PlayerPrefs.SlowMode;
+        public const string KeyBigButtons = GameplayAssetKeys.PlayerPrefs.BigButtons;
+        public const string KeyColorBlind = GameplayAssetKeys.PlayerPrefs.ColorBlind;
 
         public ObservableProperty<bool> MusicEnabled { get; } = new(true);
         public ObservableProperty<bool> SfxEnabled { get; } = new(true);

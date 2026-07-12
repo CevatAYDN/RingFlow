@@ -59,7 +59,7 @@ namespace RingFlow.Gameplay.UI
                 return;
             }
 
-            if (PlayerPrefs.GetInt("RF_GdprAccepted", 0) == 1)
+            if (PlayerPrefs.GetInt(GameplayAssetKeys.PlayerPrefs.GdprAccepted, 0) == 1)
             {
                 try
                 {

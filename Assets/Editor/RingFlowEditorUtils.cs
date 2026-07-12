@@ -116,10 +116,10 @@ namespace RingFlow.Editor
 
         public static Color GetEditorModeColor()
         {
-            if (!Application.isPlaying) return new Color(0.65f, 0.65f, 0.65f);
+            if (!Application.isPlaying) return EditorPaths.EditorColors.MutedText;
             return EditorApplication.isPaused
-                ? new Color(1f, 0.8f, 0.2f)
-                : new Color(0.3f, 0.85f, 0.3f);
+                ? EditorPaths.EditorColors.Warning
+                : EditorPaths.EditorColors.Success;
         }
 
         // -----------------------------------------------------------------

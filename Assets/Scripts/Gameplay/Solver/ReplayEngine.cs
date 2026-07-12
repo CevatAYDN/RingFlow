@@ -82,7 +82,7 @@ namespace RingFlow.Gameplay
             int poleCount = db.GetPoleCountForLevel(session.LevelIndex);
             int maxCapacity = db.GetMaxCapacityForLevel(session.LevelIndex);
             if (poleCount < colorCount + 1) poleCount = colorCount + 1;
-            if (poleCount > 12) poleCount = 12;
+            if (poleCount > GameplayAssetKeys.Tuning.MaxPoleCount) poleCount = GameplayAssetKeys.Tuning.MaxPoleCount;
 
             var levelData = LevelGenerator.GenerateLevel(
                 db, session.LevelIndex, session.LevelSeed, poleCount, colorCount, maxCapacity);

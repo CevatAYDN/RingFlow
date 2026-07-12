@@ -61,7 +61,7 @@ namespace RingFlow.Gameplay.Strategies
             int seed = unchecked((int)((long)level * 2654435761L) ^ (context.ToPoleId * 31));
             int colorIndex = 1 + (System.Math.Abs(seed) % colorCount);
 
-            if (colorIndex > 10) colorIndex = 3;
+            if (colorIndex > GameplayAssetKeys.Tuning.ColorIndexMax) colorIndex = GameplayAssetKeys.Tuning.ColorIndexFallback;
 
             return (RingColor)colorIndex;
         }

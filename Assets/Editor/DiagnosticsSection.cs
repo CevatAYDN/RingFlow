@@ -67,7 +67,7 @@ namespace RingFlow.Editor
                     var color = entry.Severity switch
                     {
                         DiagnosticSeverity.Critical => Color.red,
-                        DiagnosticSeverity.Error => new Color(1f, 0.5f, 0.5f),
+                        DiagnosticSeverity.Error => EditorPaths.EditorColors.Error,
                         DiagnosticSeverity.Warning => Color.yellow,
                         DiagnosticSeverity.Info => Color.white,
                         _ => Color.gray

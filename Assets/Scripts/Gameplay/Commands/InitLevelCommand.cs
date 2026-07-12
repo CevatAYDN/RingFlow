@@ -51,7 +51,7 @@ namespace RingFlow.Gameplay
             int poleCount = db.GetPoleCountForLevel(currentLevel);
             int colorCount = db.GetColorCountForLevel(currentLevel);
             int maxCapacity = db.GetMaxCapacityForLevel(currentLevel);
-            int poleClamp = db.LevelGen.PoleCountClamp > 0 ? db.LevelGen.PoleCountClamp : 12;
+            int poleClamp = db.LevelGen.PoleCountClamp > 0 ? db.LevelGen.PoleCountClamp : GameplayAssetKeys.Tuning.MaxPoleCount;
             if (poleCount < colorCount + 1) poleCount = colorCount + 1;
             if (poleCount > poleClamp)
             {

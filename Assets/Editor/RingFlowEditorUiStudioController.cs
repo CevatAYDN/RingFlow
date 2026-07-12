@@ -27,11 +27,11 @@ namespace RingFlow.Editor
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 DrawInitControls();
-                EditorGUILayout.Space(EditorSectionSpacing);
+                EditorGUILayout.Space(EditorPaths.EditorSizes.SectionSpacing);
                 DrawScreenTree();
-                EditorGUILayout.Space(EditorSectionSpacing);
+                EditorGUILayout.Space(EditorPaths.EditorSizes.SectionSpacing);
                 DrawSignalTester();
-                EditorGUILayout.Space(EditorSectionSpacing);
+                EditorGUILayout.Space(EditorPaths.EditorSizes.SectionSpacing);
                 DrawPersistence();
             }
         }
@@ -399,7 +399,5 @@ namespace RingFlow.Editor
             return string.Join(" → ", items);
         }
 
-        // We keep an alias so the controller shares the section's spacing constant.
-        private const float EditorSectionSpacing = 4f;
     }
 }

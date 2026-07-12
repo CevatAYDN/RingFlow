@@ -13,10 +13,6 @@ namespace RingFlow.Editor
     /// </summary>
     public class RingFlowEditorWindow : EditorWindow
     {
-        private const float HeaderHeight = 40f;
-        private const float ToolbarHeight = 28f;
-        private const float SectionSpacing = 4f;
-
         private GeneratorSection _generator;
         private VisualBuilderSection _visualBuilder;
         private RuntimeSection _runtime;
@@ -45,13 +41,13 @@ namespace RingFlow.Editor
             window.Show();
         }
 
-        [MenuItem("Ring Flow/Generate Levels (Batch)", false, 11)]
+        [MenuItem("Ring Flow/Generate Levels (Batch) &L", false, 11)]
         public static void GenerateAllLevels()
         {
             GetWindow<RingFlowEditorWindow>("RingFlow Dashboard")._generator.GenerateFromDashboardAll();
         }
 
-        [MenuItem("Ring Flow/Create Working Scene", false, 10)]
+        [MenuItem("Ring Flow/Create Working Scene &N", false, 10)]
         public static void CreateWorkingScene()
         {
             const string scenePath = EditorPaths.ScenePath;
@@ -190,18 +186,18 @@ namespace RingFlow.Editor
 
         private void DrawToolbar()
         {
-            var newTab = GUILayout.Toolbar(_selectedTab, _tabs, GUILayout.Height(ToolbarHeight));
+            var newTab = GUILayout.Toolbar(_selectedTab, _tabs, GUILayout.Height(EditorPaths.EditorSizes.ToolbarHeight));
             if (newTab != _selectedTab)
             {
                 _selectedTab = newTab;
                 EditorPrefs.SetInt(EditorPrefsKeys.SelectedTab, _selectedTab);
             }
-            EditorGUILayout.Space(SectionSpacing);
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionSpacing);
         }
 
         private static void DrawHeader(string title)
         {
-            GUILayout.Box(title, RingFlowEditorUtils.HeaderStyle, GUILayout.ExpandWidth(true), GUILayout.Height(HeaderHeight));
+            GUILayout.Box(title, RingFlowEditorUtils.HeaderStyle, GUILayout.ExpandWidth(true), GUILayout.Height(EditorPaths.EditorSizes.HeaderHeight));
             EditorGUILayout.Space(2f);
         }
 
@@ -234,13 +230,13 @@ namespace RingFlow.Editor
                 int warnCount = LogMonitor.WarningCount;
                 if (errCount > 0)
                 {
-                    GUI.color = new Color(1f, 0.4f, 0.4f);
+                    GUI.color = EditorPaths.EditorColors.Error;
                     EditorGUILayout.LabelField($"Hatalar: {errCount}", EditorStyles.boldLabel, GUILayout.Width(80f));
                     GUI.color = Color.white;
                 }
                 if (warnCount > 0)
                 {
-                    GUI.color = new Color(1f, 0.85f, 0.3f);
+                    GUI.color = EditorPaths.EditorColors.Warning;
                     EditorGUILayout.LabelField($"Uyarılar: {warnCount}", EditorStyles.boldLabel, GUILayout.Width(90f));
                     GUI.color = Color.white;
                 }
@@ -259,9 +255,9 @@ namespace RingFlow.Editor
         private void DrawHomeTab()
         {
             DrawSceneSection();
-            EditorGUILayout.Space(SectionSpacing);
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionSpacing);
             DrawActionCards();
-            EditorGUILayout.Space(SectionSpacing);
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionSpacing);
             DrawLevelStatus();
         }
 
@@ -321,19 +317,19 @@ namespace RingFlow.Editor
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    if (ActionCard("Seviyeler", "Üret & Kur", new Color(0.25f, 0.55f, 0.85f),
+                    if (ActionCard("Seviyeler", "Üret & Kur", EditorPaths.EditorColors.CardLevels,
                         "Seviye üretici + veritabanı + sahne tahtası sekmesine atlar."))
                         _selectedTab = 1;
-                    if (ActionCard("Arayüz", "Ekran & Sinyal", new Color(0.7f, 0.35f, 0.8f),
+                    if (ActionCard("Arayüz", "Ekran & Sinyal", EditorPaths.EditorColors.CardInterface,
                         "UI Studio sekmesine atlar: ekranlar, sinyaller, JSON dışa aktarımı."))
                         _selectedTab = 2;
-                    if (ActionCard("Araçlar", "Çalışma & Ayar", new Color(0.4f, 0.7f, 0.4f),
+                    if (ActionCard("Araçlar", "Çalışma & Ayar", EditorPaths.EditorColors.CardTools,
                         "Runtime, reklam test, ayarlar, tanılama, game-feel sekmesine atlar."))
                         _selectedTab = 3;
-                    if (ActionCard("Hızlı Üret", "Seçili Seviye", new Color(0.85f, 0.5f, 0.2f),
+                    if (ActionCard("Hızlı Üret", "Seçili Seviye", EditorPaths.EditorColors.CardQuickGen,
                         "Seviye Üretici sekmesindeki parametrelerle tek seviye üretir."))
                         _generator.GenerateFromDashboard();
-                    if (ActionCard("Hızlı Kur", "Sahne Tahtası", new Color(0.85f, 0.3f, 0.3f),
+                    if (ActionCard("Hızlı Kur", "Sahne Tahtası", EditorPaths.EditorColors.CardQuickSetup,
                         "Üretilen seviyeyi (veya aktif oyunu) sahnede tahta olarak kurar."))
                         _visualBuilder.BuildFromDashboard();
                 }
@@ -391,10 +387,10 @@ namespace RingFlow.Editor
         {
             EditorGUILayout.LabelField("Seviye Üretici & Çözücü Ayarları", EditorStyles.boldLabel);
             _generator.OnGUI();
-            EditorGUILayout.Space(10f);
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionBreak);
             EditorGUILayout.LabelField("Seviye Denetleyici", EditorStyles.boldLabel);
             _databaseSection.OnGUI();
-            EditorGUILayout.Space(10f);
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionBreak);
             EditorGUILayout.LabelField("Sahne Tahtası Oluşturucu", EditorStyles.boldLabel);
             _visualBuilder.OnGUI();
         }
@@ -407,21 +403,19 @@ namespace RingFlow.Editor
         {
             EditorGUILayout.LabelField("PlayMode Çalışma Modları", EditorStyles.boldLabel);
             _runtime.OnGUI();
-            EditorGUILayout.Space(8f);
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
             EditorGUILayout.LabelField("Reklam ve Ödüllendirme Test Cihazı", EditorStyles.boldLabel);
             _adTester.OnGUI();
-            EditorGUILayout.Space(8f);
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
             EditorGUILayout.LabelField("Genel Ayarlar", EditorStyles.boldLabel);
             _settings.OnGUI();
-            EditorGUILayout.Space(8f);
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
             EditorGUILayout.LabelField("Analiz ve Sinyal İnceleyici", EditorStyles.boldLabel);
             _diagnostics.OnGUI();
-            EditorGUILayout.Space(8f);
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
             EditorGUILayout.LabelField("Oyun Hissiyatı (Game Feel) & Kamera", EditorStyles.boldLabel);
             _gameFeel.OnGUI();
-            EditorGUILayout.Space(8f);
-            EditorGUILayout.LabelField("Veritabanı Düzenleyici", EditorStyles.boldLabel);
-            _databaseSection.OnGUI();
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
         }
     }
 }

@@ -220,7 +220,7 @@ namespace RingFlow.Editor
                                 var style = new GUIStyle(EditorStyles.label)
                                 {
                                     fontStyle = FontStyle.Bold,
-                                    normal = { textColor = res.Success ? new Color(0.2f, 0.7f, 0.2f) : new Color(0.9f, 0.3f, 0.3f) }
+                                    normal = { textColor = res.Success ? EditorPaths.EditorColors.Success : EditorPaths.EditorColors.Error }
                                 };
                                 EditorGUILayout.LabelField($"Lvl {res.LevelIndex}", style, GUILayout.Width(60f));
                                 EditorGUILayout.LabelField(res.Log);
@@ -314,7 +314,11 @@ namespace RingFlow.Editor
                 }
 
                 _validationResults.Add(res);
+                EditorUtility.DisplayProgressBar("Seviye Doğrulanıyor",
+                    $"Seviye {i} / {_valEndLevel} doğrulanıyor...",
+                    (float)(i - _valStartLevel + 1) / (_valEndLevel - _valStartLevel + 1));
             }
+            EditorUtility.ClearProgressBar();
             
             string summaryMsg = $"Doğrulanan Seviye: {_validationResults.Count}\n" +
                                 $"Başarılı: {solvedCount} / {_validationResults.Count}\n" +

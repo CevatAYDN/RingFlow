@@ -257,12 +257,12 @@ namespace RingFlow.Gameplay
             s_sessionEndTracked = false;
 
             if (prefs == null) return;
-            string firstLaunchStr = prefs.GetString("RF_FirstLaunchTime", "");
+            string firstLaunchStr = prefs.GetString(GameplayAssetKeys.PlayerPrefs.FirstLaunchTime, "");
             System.DateTime firstLaunch;
             if (string.IsNullOrEmpty(firstLaunchStr))
             {
                 firstLaunch = System.DateTime.UtcNow;
-                prefs.SetString("RF_FirstLaunchTime", firstLaunch.ToString("o"));
+                prefs.SetString(GameplayAssetKeys.PlayerPrefs.FirstLaunchTime, firstLaunch.ToString("o"));
                 prefs.Save();
             }
             else

@@ -93,7 +93,7 @@ namespace RingFlow.Editor
                 {
                     var style = new GUIStyle(EditorStyles.label)
                     {
-                        normal = { textColor = _solvedSuccessfully ? new Color(0.2f, 0.7f, 0.2f) : new Color(0.9f, 0.3f, 0.3f) },
+                        normal = { textColor = _solvedSuccessfully ? EditorPaths.EditorColors.Success : EditorPaths.EditorColors.Error },
                         fontStyle = FontStyle.Bold
                     };
                     EditorGUILayout.LabelField(_solveStatusMsg, style);
@@ -220,7 +220,7 @@ namespace RingFlow.Editor
 
             BuildBoardStateInScene(board);
 
-            var boardRoot = GameObject.Find("RingFlow_VisualBoard");
+            var boardRoot = GameObject.Find(EditorPaths.VisualBoardName);
             if (boardRoot != null)
             {
                 EditorApplication.delayCall += () =>
@@ -252,7 +252,7 @@ namespace RingFlow.Editor
 
         private BoardState ReadBoardFromScene()
         {
-            var boardRoot = GameObject.Find("RingFlow_VisualBoard");
+            var boardRoot = GameObject.Find(EditorPaths.VisualBoardName);
             if (boardRoot == null) return default;
 
             var f = Resources.Load<GameFeelConfigSO>(EditorPaths.GameFeelConfigKey);
@@ -328,7 +328,7 @@ namespace RingFlow.Editor
         {
             ClearScene();
 
-            var boardRoot = new GameObject("RingFlow_VisualBoard");
+            var boardRoot = new GameObject(EditorPaths.VisualBoardName);
             Undo.RegisterCreatedObjectUndo(boardRoot, "Build Visual Board");
 
             var torusModel = AssetDatabase.LoadAssetAtPath<GameObject>(EditorPaths.TorusPrefabPath);
@@ -483,7 +483,7 @@ namespace RingFlow.Editor
 
         private static void ClearScene()
         {
-            var boardRoot = GameObject.Find("RingFlow_VisualBoard");
+            var boardRoot = GameObject.Find(EditorPaths.VisualBoardName);
             if (boardRoot != null) Undo.DestroyObjectImmediate(boardRoot);
         }
     }
