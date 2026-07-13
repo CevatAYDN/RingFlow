@@ -10,6 +10,9 @@ using RingFlow.Gameplay.Diagnostics;
 using RingFlow.Gameplay.Services;
 using RingFlow.Gameplay.Strategies;
 using RingFlow.Gameplay.UI;
+using RingFlow.Gameplay.Economy;
+using RingFlow.Gameplay.Localization;
+using RingFlow.Gameplay.Views;
 
 namespace RingFlow.Gameplay
 {
@@ -71,6 +74,23 @@ namespace RingFlow.Gameplay
             if (audioConfig == null) throw new System.InvalidOperationException("AudioConfig.asset not found in Resources!");
             ProceduralAudio.Initialize(audioConfig);
             builder.BindInstance<AudioConfigSO>(audioConfig);
+
+            // --- New Data-Driven Configs ---
+            var storeCatalog = Resources.Load<StoreCatalogSO>(GameplayAssetKeys.StoreCatalog);
+            if (storeCatalog == null) throw new System.InvalidOperationException("StoreCatalog.asset not found in Resources!");
+            builder.BindInstance<StoreCatalogSO>(storeCatalog);
+
+            var localizationConfig = Resources.Load<LocalizationConfigSO>(GameplayAssetKeys.LocalizationConfig);
+            if (localizationConfig == null) throw new System.InvalidOperationException("LocalizationConfig.asset not found in Resources!");
+            builder.BindInstance<LocalizationConfigSO>(localizationConfig);
+
+            var ringMechanicData = Resources.Load<RingMechanicDataSO>(GameplayAssetKeys.RingMechanicData);
+            if (ringMechanicData == null) throw new System.InvalidOperationException("RingMechanicData.asset not found in Resources!");
+            builder.BindInstance<RingMechanicDataSO>(ringMechanicData);
+
+            var themeSkinDb = Resources.Load<ThemeSkinDatabaseSO>(GameplayAssetKeys.ThemeSkinDatabase);
+            if (themeSkinDb == null) throw new System.InvalidOperationException("ThemeSkinDatabase.asset not found in Resources!");
+            builder.BindInstance<ThemeSkinDatabaseSO>(themeSkinDb);
 
             var mainCamera = Camera.main ?? Object.FindAnyObjectByType<Camera>(FindObjectsInactive.Include);
             if (mainCamera != null) builder.BindInstance<Camera>(mainCamera);
@@ -206,6 +226,7 @@ namespace RingFlow.Gameplay
         {
             var localization = context.TryResolve<ILocalizationService>();
             var provider = context.TryResolve<ILocalizationTableProvider>();
+            var localizationConfig = context.TryResolve<LocalizationConfigSO>();
 
             if (settings != null && audio != null)
             {
@@ -219,14 +240,14 @@ namespace RingFlow.Gameplay
             }
             if (settings != null && localization != null)
             {
-                if (provider != null)
+                if (provider != null && localizationConfig != null && localizationConfig.Languages != null)
                 {
-                    var languages = new[] { "en", "tr", "id", "es", "fr", "de", "pt", "it", "ar", "hi", "ru", "ja", "zh", "ko", "vi" };
-                    foreach (var lang in languages)
+                    for (int i = 0; i < localizationConfig.Languages.Count; i++)
                     {
-                        if (provider.TryGetTable(lang, out var table) && table != null)
+                        var lang = localizationConfig.Languages[i];
+                        if (provider.TryGetTable(lang.Code, out var table) && table != null)
                         {
-                            localization.RegisterLanguageTable(lang, table);
+                            localization.RegisterLanguageTable(lang.Code, table);
                         }
                     }
                 }
@@ -303,13 +324,21 @@ namespace RingFlow.Gameplay
         private static void RegisterIapProducts(IContext context)
         {
             var iap = context.TryResolve<IIapService>();
-            if (iap != null)
+            var catalog = context.TryResolve<StoreCatalogSO>();
+            if (iap != null && catalog != null && catalog.Products != null)
             {
-                iap.RegisterProducts(
-                    new ProductDefinition { Id = "remove_ads", Type = ProductType.NonConsumable, PriceString = "$3.99" },
-                    new ProductDefinition { Id = "coins_100", Type = ProductType.Consumable, PriceString = "$0.99" },
-                    new ProductDefinition { Id = "diamonds_50", Type = ProductType.Consumable, PriceString = "$0.99" }
-                );
+                for (int i = 0; i < catalog.Products.Count; i++)
+                {
+                    var entry = catalog.Products[i];
+                    iap.RegisterProducts(
+                        new ProductDefinition
+                        {
+                            Id = entry.Id,
+                            Type = (Nexus.Core.Services.ProductType)(int)entry.Type,
+                            PriceString = entry.PriceString
+                        }
+                    );
+                }
             }
         }
 

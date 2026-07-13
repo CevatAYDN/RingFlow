@@ -26,6 +26,10 @@ namespace RingFlow.Editor
         public const string RingColorPalettePath = "Assets/Resources/" + GameplayAssetKeys.RingColorPalette + ".asset";
         public const string AudioConfigPath = "Assets/Resources/" + GameplayAssetKeys.AudioConfig + ".asset";
         public const string UIThemeConfigPath = "Assets/Resources/" + GameplayAssetKeys.UIThemeConfig + ".asset";
+        public const string StoreCatalogPath = "Assets/Resources/" + GameplayAssetKeys.StoreCatalog + ".asset";
+        public const string LocalizationConfigPath = "Assets/Resources/" + GameplayAssetKeys.LocalizationConfig + ".asset";
+        public const string RingMechanicDataPath = "Assets/Resources/" + GameplayAssetKeys.RingMechanicData + ".asset";
+        public const string ThemeSkinDatabasePath = "Assets/Resources/" + GameplayAssetKeys.ThemeSkinDatabase + ".asset";
         public const string TorusPrefabPath       = "Assets/Resources/Torus.obj";
         public const string LevelsFolder          = "Assets/Resources/Levels";
         public const string ResourcesFolder        = "Assets/Resources";
@@ -37,6 +41,10 @@ namespace RingFlow.Editor
         public const string GameFeelConfigKey     = GameplayAssetKeys.GameFeelConfig;
         public const string UIThemeConfigKey = GameplayAssetKeys.UIThemeConfig;
         public const string AudioConfigKey = GameplayAssetKeys.AudioConfig;
+        public const string StoreCatalogKey = GameplayAssetKeys.StoreCatalog;
+        public const string LocalizationConfigKey = GameplayAssetKeys.LocalizationConfig;
+        public const string RingMechanicDataKey = GameplayAssetKeys.RingMechanicData;
+        public const string ThemeSkinDatabaseKey = GameplayAssetKeys.ThemeSkinDatabase;
         public const string LocalizationKey = GameplayAssetKeys.Localization;
         public const string UiScreenPrefix        = GameplayAssetKeys.UiScreenPrefix;
 

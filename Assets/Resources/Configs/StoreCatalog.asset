@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd31ca5e3c729f54ca505fce848b7ce4, type: 3}
+  m_Name: StoreCatalog
+  m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.Economy.StoreCatalogSO
+  Products:
+  - Id: remove_ads
+    Type: 1
+    PriceString: $3.99
+    DisplayNameKey: store.remove_ads
+    DescriptionKey: 
+  - Id: coins_100
+    Type: 0
+    PriceString: $0.99
+    DisplayNameKey: store.coins_100
+    DescriptionKey: 
+  - Id: diamonds_50
+    Type: 0
+    PriceString: $0.99
+    DisplayNameKey: store.diamonds_50
+    DescriptionKey: 

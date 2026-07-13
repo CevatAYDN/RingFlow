@@ -73,7 +73,8 @@ namespace RingFlow.Gameplay
                 }
 
                 int baseSeedMultiplier = db.LevelGen.BaseGenerationSeedMultiplier > 0
-                    ? db.LevelGen.BaseGenerationSeedMultiplier : 12345;
+                    ? db.LevelGen.BaseGenerationSeedMultiplier
+                    : throw new System.InvalidOperationException("[InitLevelCommand] BaseGenerationSeedMultiplier DB'de tanımlı değil!");
                 levelData = LevelGenerator.GenerateLevel(
                     db, currentLevel, currentLevel * baseSeedMultiplier, poleCount, colorCount, maxCapacity);
             }
@@ -84,9 +85,9 @@ namespace RingFlow.Gameplay
             }
             else
             {
-                var retryMultipliers = db.LevelGen.RetrySeedMultipliers != null && db.LevelGen.RetrySeedMultipliers.Count > 0
-                    ? db.LevelGen.RetrySeedMultipliers
-                    : new List<int> { 27779, 31415, 16180 };
+                if (db.LevelGen.RetrySeedMultipliers == null || db.LevelGen.RetrySeedMultipliers.Count == 0)
+                    throw new System.InvalidOperationException("[InitLevelCommand] RetrySeedMultipliers DB'de tanımlı değil!");
+                var retryMultipliers = db.LevelGen.RetrySeedMultipliers;
                 foreach (var retryMultiplier in retryMultipliers)
                 {
                     levelData = LevelGenerator.GenerateLevel(

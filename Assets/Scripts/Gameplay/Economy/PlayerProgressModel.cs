@@ -75,7 +75,7 @@ namespace RingFlow.Gameplay
         // XP thresholds — data-driven via GameBalanceConfig fields.
         public int XpToNextLevel(GameConfigDatabaseSO db, int playerLevel)
         {
-            if (db == null) return 100;
+            if (db == null) throw new System.InvalidOperationException("[PlayerProgressModel] GameConfigDatabaseSO not injected!");
             var cfg = db.BalanceConfig;
             return playerLevel switch
             {

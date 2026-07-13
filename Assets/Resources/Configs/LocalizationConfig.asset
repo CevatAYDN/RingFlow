@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9d26097727202a48b408152b53216ca, type: 3}
+  m_Name: LocalizationConfig
+  m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.Localization.LocalizationConfigSO
+  Languages:
+  - Code: en
+    DisplayName: English
+    IsRTL: 0
+  - Code: tr
+    DisplayName: "T\xFCrk\xE7e"
+    IsRTL: 0
+  - Code: id
+    DisplayName: Bahasa Indonesia
+    IsRTL: 0
+  - Code: es
+    DisplayName: "Espa\xF1ol"
+    IsRTL: 0
+  - Code: fr
+    DisplayName: "Fran\xE7ais"
+    IsRTL: 0
+  - Code: de
+    DisplayName: Deutsch
+    IsRTL: 0
+  - Code: pt
+    DisplayName: "Portugu\xEAs"
+    IsRTL: 0
+  - Code: it
+    DisplayName: Italiano
+    IsRTL: 0
+  - Code: ar
+    DisplayName: "\u0627\u0644\u0639\u0631\u0628\u064A\u0629"
+    IsRTL: 1
+  - Code: hi
+    DisplayName: "\u0939\u093F\u0928\u094D\u0926\u0940"
+    IsRTL: 0
+  - Code: ru
+    DisplayName: "\u0420\u0443\u0441\u0441\u043A\u0438\u0439"
+    IsRTL: 0
+  - Code: ja
+    DisplayName: "\u65E5\u672C\u8A9E"
+    IsRTL: 0
+  - Code: zh
+    DisplayName: "\u4E2D\u6587"
+    IsRTL: 0
+  - Code: ko
+    DisplayName: "\uD55C\uAD6D\uC5B4"
+    IsRTL: 0
+  - Code: vi
+    DisplayName: "Ti\u1EBFng Vi\u1EC7t"
+    IsRTL: 0

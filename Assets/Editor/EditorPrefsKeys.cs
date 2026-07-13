@@ -15,6 +15,13 @@ namespace RingFlow.Editor
         public const string FoldDiagnostics  = "RingFlow.Foldout.Diagnostics";
         public const string FoldDatabase     = "RingFlow.Foldout.Database";
         public const string FoldGameFeel     = "RingFlow.Foldout.GameFeel";
+        public const string FoldConfigAssets = "RingFlow.Foldout.ConfigAssets";
+
+        // ── New data-driven config section foldout state (Bölüm 3.3) ──
+        public const string FoldStoreCatalog     = "RingFlow.Foldout.StoreCatalog";
+        public const string FoldLocalization     = "RingFlow.Foldout.Localization";
+        public const string FoldRingMechanics    = "RingFlow.Foldout.RingMechanics";
+        public const string FoldThemeSkin        = "RingFlow.Foldout.ThemeSkin";
 
         // ── GameConfigDatabaseSO editor section foldout state ──
         public const string FoldDbGeneral     = "RingFlow.Foldout.Db.General";
@@ -37,6 +44,5 @@ namespace RingFlow.Editor
 
         // ── Ad tester (transient user input) ──
         public const string AdPlacement      = "RingFlow.AdPlacement";
-        public const string FoldConfigAssets = "RingFlow.Foldout.ConfigAssets";
     }
 }

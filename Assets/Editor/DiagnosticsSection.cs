@@ -2,7 +2,12 @@
 using System.Linq;
 using Nexus.Core;
 using Nexus.Core.Services;
+using RingFlow.Gameplay;
 using RingFlow.Gameplay.Diagnostics;
+using RingFlow.Gameplay.Economy;
+using RingFlow.Gameplay.Localization;
+using RingFlow.Gameplay.Strategies;
+using RingFlow.Gameplay.Views;
 using UnityEditor;
 using UnityEngine;
 
@@ -45,6 +50,18 @@ namespace RingFlow.Editor
                 if (GUILayout.Button("Export Report", GUILayout.Width(100))) ExportReport(diag);
                 EditorGUILayout.EndHorizontal();
 
+                EditorGUILayout.Space(4f);
+
+                // --- Data-Driven Denetimi ---
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                {
+                    EditorGUILayout.LabelField("Data-Driven Denetimi", EditorStyles.boldLabel);
+                    EditorGUILayout.HelpBox("Tüm ScriptableObject konfigürasyon varlıklarının varlığını ve geçerliliğini denetler.", MessageType.Info);
+
+                    if (GUILayout.Button("Data-Driven Varlıkları Doğrula", GUILayout.Height(24)))
+                        RunDataDrivenValidation();
+                }
+
                 // Filter
                 _filter = EditorGUILayout.TextField("Filter", _filter);
                 _autoScroll = EditorGUILayout.Toggle("Auto-scroll", _autoScroll);
@@ -85,6 +102,51 @@ namespace RingFlow.Editor
                 EditorGUILayout.Space();
                 EditorGUILayout.LabelField($"Total entries: {entries.Count}", EditorStyles.miniBoldLabel);
             }
+        }
+
+        private void RunDataDrivenValidation()
+        {
+            System.Text.StringBuilder report = new();
+            report.AppendLine("=== Data-Driven Denetim Raporu ===");
+            report.AppendLine($"Tarih: {System.DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            report.AppendLine();
+
+            int passCount = 0;
+            int failCount = 0;
+
+            void CheckAsset<T>(string key, string label) where T : ScriptableObject
+            {
+                var obj = Resources.Load<T>(key);
+                if (obj == null)
+                {
+                    report.AppendLine($"[BAŞARISIZ] {label} ({key}) — Bulunamadı!");
+                    failCount++;
+                }
+                else
+                {
+                    report.AppendLine($"[BAŞARILI] {label} ({key}) — Yüklendi");
+                    passCount++;
+                }
+            }
+
+            // Ana config varlıkları
+            CheckAsset<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey, "Oyun Veritabanı (GameConfigDatabase)");
+            CheckAsset<GameFeelConfigSO>(EditorPaths.GameFeelConfigKey, "Oyun Hissiyatı (Game Feel)");
+            CheckAsset<RingColorPaletteSO>(EditorPaths.RingColorPaletteKey, "Halka Renk Paleti");
+            CheckAsset<AudioConfigSO>(EditorPaths.AudioConfigKey, "Ses Yapılandırması (Audio)");
+            CheckAsset<UIThemeConfigSO>(EditorPaths.UIThemeConfigKey, "Arayüz Teması (UI Theme)");
+
+            // Data-driven yeni varlıklar
+            CheckAsset<RingFlow.Gameplay.Economy.StoreCatalogSO>(EditorPaths.StoreCatalogKey, "Mağaza Kataloğu (StoreCatalog)");
+            CheckAsset<RingFlow.Gameplay.Localization.LocalizationConfigSO>(EditorPaths.LocalizationConfigKey, "Yerelleştirme (LocalizationConfig)");
+            CheckAsset<RingFlow.Gameplay.Strategies.RingMechanicDataSO>(EditorPaths.RingMechanicDataKey, "Halka Mekanik Verisi (RingMechanicData)");
+            CheckAsset<RingFlow.Gameplay.Views.ThemeSkinDatabaseSO>(EditorPaths.ThemeSkinDatabaseKey, "Tema/Skin Veritabanı (ThemeSkinDatabase)");
+
+            report.AppendLine();
+            report.AppendLine($"Toplam: {passCount + failCount} | Geçen: {passCount} | Başarısız: {failCount}");
+
+            NexusLog.Info("DiagnosticsSection", "RunDataDrivenValidation", "", report.ToString());
+            EditorUtility.DisplayDialog("Data-Driven Denetimi", report.ToString(), "Tamam");
         }
 
         private void ExportReport(IGameDiagnostics diag)

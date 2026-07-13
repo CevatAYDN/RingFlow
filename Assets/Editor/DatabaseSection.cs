@@ -291,11 +291,9 @@ namespace RingFlow.Editor
                         }
                     }
 
-                    int solverLimit = colorCount <= 3 ? 20000
-                                    : colorCount <= 5 ? 30000
-                                    : colorCount <= 7 ? 20000
-                                    : colorCount <= 9 ? 12000
-                                    : 8000;
+                    int solverLimit = _database.LevelGen.SolverLimitBuckets != null && _database.LevelGen.SolverLimitBuckets.Count > 0
+                        ? GetSolverLimitFromBuckets(colorCount, _database.LevelGen.SolverLimitBuckets)
+                        : 20000;
                     var solveResult = LevelSolver.Solve(board, maxCap, maxStatesLimit: solverLimit);
                     if (solveResult.IsSolvable)
                     {
@@ -326,6 +324,16 @@ namespace RingFlow.Editor
                                 $"Ort. Süre: {(solvedCount > 0 ? (totalTime / solvedCount) : 0):F1}ms\n" +
                                 $"Ort. Hamle: {(solvedCount > 0 ? (totalMoves / (float)solvedCount) : 0):F1}";
             EditorUtility.DisplayDialog("Doğrulama Tamamlandı", summaryMsg, "Tamam");
+        }
+
+        private static int GetSolverLimitFromBuckets(int colorCount, List<SolverLimitBucket> buckets)
+        {
+            for (int i = 0; i < buckets.Count; i++)
+            {
+                if (colorCount <= buckets[i].MaxColorCount)
+                    return buckets[i].StateLimit;
+            }
+            return buckets[^1].StateLimit;
         }
 
         private const string DatabaseAssetPath = EditorPaths.GameConfigDbPath;

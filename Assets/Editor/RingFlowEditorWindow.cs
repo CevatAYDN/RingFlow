@@ -412,7 +412,40 @@ namespace RingFlow.Editor
             DrawFoldableSection(EditorPrefsKeys.FoldDiagnostics, "Analiz ve Sinyal İnceleyici", _diagnostics.OnGUI);
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
             DrawFoldableSection(EditorPrefsKeys.FoldGameFeel, "Oyun Hissiyatı (Game Feel) & Kamera", _gameFeel.OnGUI);
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
             DrawFoldableSection(EditorPrefsKeys.FoldConfigAssets, "Yapılandırma Varlıkları (Config Assets)", _configSection.OnGUI);
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
+            DrawFoldableSection(EditorPrefsKeys.FoldStoreCatalog, "Mağaza Kataloğu (StoreCatalog)", () =>
+            {
+                var obj = Resources.Load<RingFlow.Gameplay.Economy.StoreCatalogSO>(EditorPaths.StoreCatalogKey);
+                if (obj == null) { EditorGUILayout.HelpBox("StoreCatalog.asset bulunamadı! Önce 'Config Assets' sekmesinden oluşturun.", MessageType.Warning); return; }
+                var editor = UnityEditor.Editor.CreateEditor(obj);
+                editor.OnInspectorGUI();
+            });
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
+            DrawFoldableSection(EditorPrefsKeys.FoldLocalization, "Yerelleştirme (LocalizationConfig)", () =>
+            {
+                var obj = Resources.Load<RingFlow.Gameplay.Localization.LocalizationConfigSO>(EditorPaths.LocalizationConfigKey);
+                if (obj == null) { EditorGUILayout.HelpBox("LocalizationConfig.asset bulunamadı! Önce 'Config Assets' sekmesinden oluşturun.", MessageType.Warning); return; }
+                var editor = UnityEditor.Editor.CreateEditor(obj);
+                editor.OnInspectorGUI();
+            });
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
+            DrawFoldableSection(EditorPrefsKeys.FoldRingMechanics, "Halka Mekanik Verisi (RingMechanicData)", () =>
+            {
+                var obj = Resources.Load<RingFlow.Gameplay.Strategies.RingMechanicDataSO>(EditorPaths.RingMechanicDataKey);
+                if (obj == null) { EditorGUILayout.HelpBox("RingMechanicData.asset bulunamadı! Önce 'Config Assets' sekmesinden oluşturun.", MessageType.Warning); return; }
+                var editor = UnityEditor.Editor.CreateEditor(obj);
+                editor.OnInspectorGUI();
+            });
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
+            DrawFoldableSection(EditorPrefsKeys.FoldThemeSkin, "Tema/Skin Veritabanı (ThemeSkinDatabase)", () =>
+            {
+                var obj = Resources.Load<RingFlow.Gameplay.Views.ThemeSkinDatabaseSO>(EditorPaths.ThemeSkinDatabaseKey);
+                if (obj == null) { EditorGUILayout.HelpBox("ThemeSkinDatabase.asset bulunamadı! Önce 'Config Assets' sekmesinden oluşturun.", MessageType.Warning); return; }
+                var editor = UnityEditor.Editor.CreateEditor(obj);
+                editor.OnInspectorGUI();
+            });
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
         }
     }

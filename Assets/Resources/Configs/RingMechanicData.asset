@@ -1,0 +1,93 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19086740f35c7be4b8771249e7cde88b, type: 3}
+  m_Name: RingMechanicData
+  m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.Strategies.RingMechanicDataSO
+  Mechanics:
+  - Type: 0
+    DisplayNameKey: mechanic.none
+    FirstAppearanceWorldIndex: 0
+    Icon: {fileID: 0}
+    IsMovementRestricting: 0
+    AffectedRingTypes: 
+  - Type: 1
+    DisplayNameKey: mechanic.mystery
+    FirstAppearanceWorldIndex: 1
+    Icon: {fileID: 0}
+    IsMovementRestricting: 0
+    AffectedRingTypes: 
+  - Type: 2
+    DisplayNameKey: mechanic.frozen
+    FirstAppearanceWorldIndex: 2
+    Icon: {fileID: 0}
+    IsMovementRestricting: 0
+    AffectedRingTypes: 
+  - Type: 3
+    DisplayNameKey: mechanic.locked_pole
+    FirstAppearanceWorldIndex: 3
+    Icon: {fileID: 0}
+    IsMovementRestricting: 0
+    AffectedRingTypes: 
+  - Type: 4
+    DisplayNameKey: mechanic.stone
+    FirstAppearanceWorldIndex: 4
+    Icon: {fileID: 0}
+    IsMovementRestricting: 1
+    AffectedRingTypes: 
+  - Type: 5
+    DisplayNameKey: mechanic.glass
+    FirstAppearanceWorldIndex: 5
+    Icon: {fileID: 0}
+    IsMovementRestricting: 0
+    AffectedRingTypes: 
+  - Type: 6
+    DisplayNameKey: mechanic.rainbow
+    FirstAppearanceWorldIndex: 6
+    Icon: {fileID: 0}
+    IsMovementRestricting: 0
+    AffectedRingTypes: 
+  - Type: 7
+    DisplayNameKey: mechanic.bomb
+    FirstAppearanceWorldIndex: 7
+    Icon: {fileID: 0}
+    IsMovementRestricting: 0
+    AffectedRingTypes: 
+  - Type: 8
+    DisplayNameKey: mechanic.chain
+    FirstAppearanceWorldIndex: 8
+    Icon: {fileID: 0}
+    IsMovementRestricting: 0
+    AffectedRingTypes: 
+  - Type: 9
+    DisplayNameKey: mechanic.magnet
+    FirstAppearanceWorldIndex: 9
+    Icon: {fileID: 0}
+    IsMovementRestricting: 0
+    AffectedRingTypes: 
+  - Type: 10
+    DisplayNameKey: mechanic.paint
+    FirstAppearanceWorldIndex: 10
+    Icon: {fileID: 0}
+    IsMovementRestricting: 0
+    AffectedRingTypes: 
+  - Type: 11
+    DisplayNameKey: mechanic.ghost
+    FirstAppearanceWorldIndex: 11
+    Icon: {fileID: 0}
+    IsMovementRestricting: 0
+    AffectedRingTypes: 
+  - Type: 15
+    DisplayNameKey: mechanic.portal
+    FirstAppearanceWorldIndex: 12
+    Icon: {fileID: 0}
+    IsMovementRestricting: 0
+    AffectedRingTypes: 

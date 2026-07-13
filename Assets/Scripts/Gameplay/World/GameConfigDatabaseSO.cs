@@ -122,6 +122,14 @@ namespace RingFlow.Gameplay
     }
 
     [System.Serializable]
+    public struct MechanicUnlockEntry
+    {
+        public WorldMechanicType MechanicType;
+        public int FirstAppearanceWorldIndex;
+        public string DisplayNameKey;
+    }
+
+    [System.Serializable]
     public struct LevelGenConfig
     {
         public int MaxScrambleAttempts;
@@ -160,6 +168,7 @@ namespace RingFlow.Gameplay
         public List<ColorCurvePoint> ColorCurve = new();
         public List<LevelThemeData> LevelThemes = new();
         public List<WorldConfigData> Worlds = new();
+        public List<MechanicUnlockEntry> MechanicUnlocks = new();
         public GameBalanceConfig BalanceConfig = new();
         public LevelGenConfig LevelGen = new()
         {
@@ -200,11 +209,26 @@ namespace RingFlow.Gameplay
             // yalnızca test/editor ortamında manuel çağrılır.
         }
 
-
-
         public void InitializeDefaults()
         {
             TotalLevels = 2000;
+
+            MechanicUnlocks = new List<MechanicUnlockEntry>
+            {
+                new() { MechanicType = WorldMechanicType.None,      FirstAppearanceWorldIndex = 0,  DisplayNameKey = "mechanic.none" },
+                new() { MechanicType = WorldMechanicType.Mystery,   FirstAppearanceWorldIndex = 1,  DisplayNameKey = "mechanic.mystery" },
+                new() { MechanicType = WorldMechanicType.Frozen,    FirstAppearanceWorldIndex = 2,  DisplayNameKey = "mechanic.frozen" },
+                new() { MechanicType = WorldMechanicType.LockedPole,FirstAppearanceWorldIndex = 3,  DisplayNameKey = "mechanic.locked_pole" },
+                new() { MechanicType = WorldMechanicType.Stone,     FirstAppearanceWorldIndex = 4,  DisplayNameKey = "mechanic.stone" },
+                new() { MechanicType = WorldMechanicType.Glass,     FirstAppearanceWorldIndex = 5,  DisplayNameKey = "mechanic.glass" },
+                new() { MechanicType = WorldMechanicType.Rainbow,   FirstAppearanceWorldIndex = 6,  DisplayNameKey = "mechanic.rainbow" },
+                new() { MechanicType = WorldMechanicType.Bomb,      FirstAppearanceWorldIndex = 7,  DisplayNameKey = "mechanic.bomb" },
+                new() { MechanicType = WorldMechanicType.Chain,     FirstAppearanceWorldIndex = 8,  DisplayNameKey = "mechanic.chain" },
+                new() { MechanicType = WorldMechanicType.Magnet,    FirstAppearanceWorldIndex = 9,  DisplayNameKey = "mechanic.magnet" },
+                new() { MechanicType = WorldMechanicType.Paint,     FirstAppearanceWorldIndex = 10, DisplayNameKey = "mechanic.paint" },
+                new() { MechanicType = WorldMechanicType.Ghost,     FirstAppearanceWorldIndex = 11, DisplayNameKey = "mechanic.ghost" },
+                new() { MechanicType = WorldMechanicType.Portal,    FirstAppearanceWorldIndex = 12, DisplayNameKey = "mechanic.portal" }
+            };
 
             BalanceConfig = new GameBalanceConfig
             {

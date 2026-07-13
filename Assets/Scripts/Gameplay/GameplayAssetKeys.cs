@@ -13,12 +13,22 @@ namespace RingFlow.Gameplay
     public static class GameplayAssetKeys
     {
         // ── Resources.Load keys ───────────────────────────────────────────
-        public const string GameConfigDatabase = "GameConfigDatabase";
-        public const string RingColorPalette = "RingColorPalette";
-        public const string GameFeelConfig = "GameFeelConfig";
-        public const string UIThemeConfig = "UIThemeConfig";
-        public const string AudioConfig = "AudioConfig";
+        // NOTE: Files reside in Assets/Resources/Configs/, so keys must include
+        // the "Configs/" subfolder prefix.  Exception: "Localization" is the CSV
+        // file at Assets/Resources/Localization.csv (root Resources, no prefix).
+        public const string GameConfigDatabase = "Configs/GameConfigDatabase";
+        public const string RingColorPalette = "Configs/RingColorPalette";
+        public const string GameFeelConfig = "Configs/GameFeelConfig";
+        public const string UIThemeConfig = "Configs/UIThemeConfig";
+        public const string AudioConfig = "Configs/AudioConfig";
         public const string Localization = "Localization";
+
+        // ── New data-driven config SO keys (Bölüm 1.2, 1.3, 2.1, 2.2) ──
+        public const string StoreCatalog = "Configs/StoreCatalog";
+        public const string LocalizationConfig = "Configs/LocalizationConfig";
+        public const string RingMechanicData = "Configs/RingMechanicData";
+        public const string ThemeSkinDatabase = "Configs/ThemeSkinDatabase";
+
         public const string UiScreenPrefix = "UI/";
 
         // ── PlayerPrefs keys (single source for ALL persistence keys) ──────
@@ -69,38 +79,38 @@ namespace RingFlow.Gameplay
         // here so balance and limits are auditable and consistent everywhere.
         public static class Tuning
         {
-            /// <summary>Hard cap on the number of poles a board supports.</summary>
+            /// <summary>Ring pole count clamp — matched by GameConfigDatabase.LevelGen.PoleCountClamp.</summary>
             public const int MaxPoleCount = 12;
 
-            /// <summary>Default ring capacity per pole when not overridden by the database.</summary>
+            /// <summary>Max rings per pole default.</summary>
             public const int MaxCapacity = 4;
 
-            /// <summary>Default countdown steps for a bomb ring when not overridden by the database.</summary>
+            /// <summary>Bomb countdown tick count (moved to LevelGenConfig.BombCountdown as single source).</summary>
             public const int BombCountdown = 5;
 
-            /// <summary>Sentinel used to mark "no minimum ring count constraint" during generation.</summary>
-            public const int SentinelMinRings = 999;
-
-            /// <summary>Upper bound for a generated color index before it wraps to a fallback.</summary>
-            public const int ColorIndexMax = 10;
-
-            /// <summary>Fallback color index used when the generated index exceeds <see cref="ColorIndexMax"/>.</summary>
-            public const int ColorIndexFallback = 3;
-
-            /// <summary>Default DOTween tween capacity used by the lifecycle bootstrap.</summary>
-            public const int TweenCapacityDefault = 1500;
-
-            /// <summary>Default DOTween sequence capacity used by the lifecycle bootstrap.</summary>
-            public const int SequenceCapacityDefault = 200;
-
-            /// <summary>Default total world count when the database does not supply one.</summary>
-            public const int DefaultWorldCount = 40;
-
-            /// <summary>Default minimum empty poles when the database does not supply one.</summary>
+            /// <summary>Fallback when DifficultyBands not configured.</summary>
             public const int DefaultMinEmptyPoles = 1;
 
-            /// <summary>Default mechanic intensity when the database does not supply one.</summary>
+            /// <summary>Fallback when DifficultyBands not configured.</summary>
             public const int DefaultMechanicIntensity = 1;
+
+            /// <summary>Default tween capacity for DOTween (used before SO loading).</summary>
+            public const int TweenCapacityDefault = 1500;
+
+            /// <summary>Default sequence capacity for DOTween (used before SO loading).</summary>
+            public const int SequenceCapacityDefault = 200;
+
+            /// <summary>Fallback world count when SO is not configured.</summary>
+            public const int DefaultWorldCount = 40;
+
+            /// <summary>Threshold for sentinel mechanic activation (kept for technical debt tracking).</summary>
+            public const int SentinelMinRings = 999;
+
+            /// <summary>Highest valid color index.</summary>
+            public const int ColorIndexMax = 10;
+
+            /// <summary>Fallback when palette has fewer entries than expected.</summary>
+            public const int ColorIndexFallback = 3;
         }
     }
 }

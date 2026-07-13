@@ -100,6 +100,8 @@ namespace RingFlow.Gameplay
         public float Layer4Volume;
         public float MasterVolume;
         public float FadeBound;
+        public float NormalBgmMultiplier;
+        public float BossBgmMultiplier;
     }
 
     [CreateAssetMenu(fileName = "AudioConfig", menuName = "RingFlow/Audio Config", order = 53)]
@@ -204,7 +206,9 @@ namespace RingFlow.Gameplay
             Layer3Volume = 0.3f,
             Layer4Volume = 0.2f,
             MasterVolume = 0.04f,
-            FadeBound = 0.3f
+            FadeBound = 0.3f,
+            NormalBgmMultiplier = 0.40f,
+            BossBgmMultiplier = 0.80f
         };
     }
 }

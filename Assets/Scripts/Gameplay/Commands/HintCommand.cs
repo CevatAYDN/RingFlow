@@ -75,7 +75,8 @@ namespace RingFlow.Gameplay
                 return;
             }
 
-            long hintCoinCost = _dbConfig != null ? _dbConfig.BalanceConfig.HintCoinCost : 50;
+            if (_dbConfig == null) throw new System.InvalidOperationException("[HintCommand] GameConfigDatabaseSO not injected!");
+            long hintCoinCost = _dbConfig.BalanceConfig.HintCoinCost;
             if (_economy != null && _economy.CanAfford(CurrencyIds.Coins, hintCoinCost))
             {
                 ResolveAndFire(firstMove, false);
@@ -115,7 +116,7 @@ namespace RingFlow.Gameplay
             }
             else
             {
-                long hintCoinCost = _dbConfig != null ? _dbConfig.BalanceConfig.HintCoinCost : 50;
+                long hintCoinCost = _dbConfig.BalanceConfig.HintCoinCost;
                 if (_economy == null || !_economy.Spend(CurrencyIds.Coins, hintCoinCost, "Hint"))
                 {
                     NexusLog.Warn("HintCommand", nameof(ResolveAndFire), "",

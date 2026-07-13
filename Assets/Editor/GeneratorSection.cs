@@ -252,7 +252,7 @@ namespace RingFlow.Editor
             int colorCount = db.GetColorCountForLevel(_levelIndex);
             int maxCapacity = db.GetMaxCapacityForLevel(_levelIndex);
             int minEmptyPoles = Mathf.Max(1, db.GetMinEmptyPolesForLevel(_levelIndex));
-            if (poleCount > 12) poleCount = 12;
+            if (poleCount > db.LevelGen.PoleCountClamp) poleCount = db.LevelGen.PoleCountClamp;
 
             NexusLog.Info("RingFlowEditor", nameof(Generate), _levelIndex.ToString(),
                 $"Seviye {_levelIndex} üretiliyor: Seed={_seed}, Direkler={poleCount}, Renkler={colorCount}, Kapasite={maxCapacity}, BoşDirek={minEmptyPoles}");
@@ -327,7 +327,7 @@ namespace RingFlow.Editor
                     int maxCap = db.GetMaxCapacityForLevel(level);
                     int minEmpty = db.GetMinEmptyPolesForLevel(level);
                     if (poles < colors + minEmpty) poles = colors + minEmpty;
-                    if (poles > 12) poles = 12;
+                    if (poles > db.LevelGen.PoleCountClamp) poles = db.LevelGen.PoleCountClamp;
 
                     var levelData = LevelGenerator.GenerateLevel(db, level, 100 + level, poles, colors, maxCap);
                     if (levelData == null)

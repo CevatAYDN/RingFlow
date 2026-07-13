@@ -14,6 +14,7 @@ namespace RingFlow.Gameplay
         [Inject] private IProgressionService _progression;
         [Inject] private IGameDiagnostics _diag;
         [Inject] private GameConfigDatabaseSO _dbConfig;
+        [Inject] private AudioConfigSO _audioConfig;
 
         public ValueTask OnEnterAsync(object args, CancellationToken ct)
         {
@@ -36,7 +37,7 @@ namespace RingFlow.Gameplay
                         bool isBoss = GameConfigDatabaseSO.IsBossLevel(_dbConfig, currentLevel);
                         // FIX P0.3: use the transient state multiplier so the player's saved
                         // BGM slider stays at whatever they last set in Settings.
-                        _audio.BgmStateMultiplier = isBoss ? 0.80f : 0.40f;
+                        _audio.BgmStateMultiplier = isBoss ? _audioConfig.Bgm.BossBgmMultiplier : _audioConfig.Bgm.NormalBgmMultiplier;
                     }
                     return default;
                 }
@@ -52,14 +53,11 @@ namespace RingFlow.Gameplay
                 targetLevel = _progression?.CurrentLevel.Value ?? 1;
             }
 
-            // GDD §12: oyun %40 (Boss seviyesiyse %80)
+            // GDD §12: oyun %40 (Boss seviyesiyse %80) — data-driven via AudioConfigSO
             if (_audio != null)
             {
-                if (_dbConfig == null) throw new System.InvalidOperationException("[PlayingState] GameConfigDatabaseSO not injected!");
                 bool isBoss = GameConfigDatabaseSO.IsBossLevel(_dbConfig, targetLevel);
-                // FIX P0.3: push the transient state multiplier; the user's saved BgmVolume is
-                // preserved untouched across level transitions.
-                _audio.BgmStateMultiplier = isBoss ? 0.80f : 0.40f;
+                _audio.BgmStateMultiplier = isBoss ? _audioConfig.Bgm.BossBgmMultiplier : _audioConfig.Bgm.NormalBgmMultiplier;
 
                 int worldIdx = _dbConfig.GetWorldForLevel(targetLevel);
                 var bgm = ProceduralAudio.GetOrCreateBgmClip(worldIdx);

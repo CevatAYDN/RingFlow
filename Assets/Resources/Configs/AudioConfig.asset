@@ -1,0 +1,85 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1c98ef79f54e284da30cbe8316964ed, type: 3}
+  m_Name: AudioConfig
+  m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.AudioConfigSO
+  SampleRate: 44100
+  Move:
+    Duration: 0.12
+    FrequencyStart: 600
+    FrequencyEnd: 400
+    Volume: 0.25
+  Win:
+    Duration: 0.8
+    Volume: 0.2
+    NoteC5: 523.25
+    NoteE5: 659.25
+    NoteG5: 783.99
+    NoteC6: 1046.5
+  Error:
+    Duration: 0.25
+    Frequency: 120
+    Volume: 0.15
+  Explosion:
+    Duration: 0.7
+    Volume: 0.25
+  PoleComplete:
+    Duration: 0.4
+    FrequencyStart: 523.25
+    FrequencyEnd: 1046.5
+    Volume: 0.22
+  RichPoleComplete:
+    Duration: 0.6
+    RingPitchFactorBase: 1
+    RingPitchFactorPerRing: 0.06
+    ThudLowFreq: 80
+    ThudHighFreq: 120
+    ThudVolume: 0.18
+    ThudNoiseVolume: 0.04
+    ThudDurationFraction: 0.25
+    SweepStartFraction: 0.08333333
+    SweepEndFraction: 0.74999994
+    SweepFreqStart: 523.25
+    SweepFreqEnd: 1046.5
+    SweepVolume: 0.12
+    SweepHarmony2Volume: 0.06
+    SweepHarmony3Volume: 0.03
+    SparkleStartFraction: 0.3333333
+    SparkleEndFraction: 0.9166666
+    SparkleFreqStart: 1800
+    SparkleFreqEnd: 3600
+    SparkleVolume: 0.04
+    SparkleNoiseVolume: 0.02
+    ReleaseStartFraction: 0.5833333
+    ReleaseFreq: 1046.5
+    ReleaseVolume: 0.06
+    ReleaseHarmonyVolume: 0.03
+    ReleaseDecayFactor: 0.15
+    MasterVolume: 0.65
+  FinalPole:
+    Duration: 1
+    MasterVolume: 0.5
+    BassFreqStart: 130.81
+    BassFreqEnd: 261.63
+    BassVolume: 0.15
+  Bgm:
+    Duration: 6
+    BaseFrequency: 220
+    FrequencyPerWorldStep: 32.7
+    Layer1Volume: 1
+    Layer2Volume: 0.5
+    Layer3Volume: 0.3
+    Layer4Volume: 0.2
+    MasterVolume: 0.04
+    FadeBound: 0.3
+    NormalBgmMultiplier: 0.4
+    BossBgmMultiplier: 0.8

@@ -171,6 +171,12 @@ namespace RingFlow.Gameplay.AOT
             typeof(ProgressionService).ToString();
             typeof(DailyRewardService).ToString();
             typeof(VfxPrefabRegistry).ToString();
+
+            // Data-driven ScriptableObject types (loaded via Resources.Load in GameplayLifecycle)
+            typeof(RingFlow.Gameplay.Economy.StoreCatalogSO).ToString();
+            typeof(RingFlow.Gameplay.Localization.LocalizationConfigSO).ToString();
+            typeof(RingFlow.Gameplay.Strategies.RingMechanicDataSO).ToString();
+            typeof(RingFlow.Gameplay.Views.ThemeSkinDatabaseSO).ToString();
         }
 
         /// <summary>

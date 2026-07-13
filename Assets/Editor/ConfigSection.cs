@@ -1,6 +1,10 @@
 using UnityEditor;
 using UnityEngine;
 using RingFlow.Gameplay;
+using RingFlow.Gameplay.Economy;
+using RingFlow.Gameplay.Localization;
+using RingFlow.Gameplay.Strategies;
+using RingFlow.Gameplay.Views;
 
 namespace RingFlow.Editor
 {
@@ -28,6 +32,14 @@ namespace RingFlow.Editor
             DrawRow<RingColorPaletteSO>("Halka Renk Paleti", EditorPaths.RingColorPaletteKey, EditorPaths.RingColorPalettePath);
             DrawRow<AudioConfigSO>("Ses Yapılandırması (Audio)", EditorPaths.AudioConfigKey, EditorPaths.AudioConfigPath);
             DrawRow<UIThemeConfigSO>("Arayüz Teması (UI Theme)", EditorPaths.UIThemeConfigKey, EditorPaths.UIThemeConfigPath);
+
+            EditorGUILayout.Space(4);
+            EditorGUILayout.LabelField("Data-Driven Varlıklar", EditorStyles.boldLabel);
+
+            DrawRow<StoreCatalogSO>("Mağaza Kataloğu (StoreCatalog)", EditorPaths.StoreCatalogKey, EditorPaths.StoreCatalogPath);
+            DrawRow<LocalizationConfigSO>("Yerelleştirme (LocalizationConfig)", EditorPaths.LocalizationConfigKey, EditorPaths.LocalizationConfigPath);
+            DrawRow<RingMechanicDataSO>("Halka Mekanik Verisi (RingMechanicData)", EditorPaths.RingMechanicDataKey, EditorPaths.RingMechanicDataPath);
+            DrawRow<ThemeSkinDatabaseSO>("Tema/Skin Veritabanı (ThemeSkinDatabase)", EditorPaths.ThemeSkinDatabaseKey, EditorPaths.ThemeSkinDatabasePath);
         }
 
         private void DrawRow<T>(string label, string resourceKey, string assetPath) where T : ScriptableObject
