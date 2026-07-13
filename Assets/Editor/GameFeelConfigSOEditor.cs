@@ -14,7 +14,7 @@ namespace RingFlow.Editor
             serializedObject.Update();
 
             // ── Board Layout ──
-            EditorGUILayout.LabelField("Board Layout", EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle("Board Layout");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 DrawField("Pole Spacing", "PoleSpacing", "Pole spacing on X axis (units).");
@@ -26,7 +26,7 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(6f);
 
             // ── Ring Sizing ──
-            EditorGUILayout.LabelField("Ring Sizing", EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle("Ring Sizing");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 DrawField("Ring Scale (Torus)", "RingScaleTorus", "Ring scale when Torus prefab is available.");
@@ -39,7 +39,7 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(6f);
 
             // ── Move Animation ──
-            EditorGUILayout.LabelField("Move Animation", EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle("Move Animation");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 DrawField("Move Duration", "MoveDuration", "Base duration for ring move jump (seconds).");
@@ -53,7 +53,7 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(6f);
 
             // ── Camera ──
-            EditorGUILayout.LabelField("Camera", EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle("Camera");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 DrawField("Camera Position", "CameraPosition", "Camera position (world).");
@@ -67,7 +67,7 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(6f);
 
             // ── Camera Shake ──
-            EditorGUILayout.LabelField("Camera Shake", EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle("Camera Shake");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 DrawField("Shake Error Intensity", "ShakeErrorIntensity", "Shake intensity on error.");
@@ -79,7 +79,7 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(6f);
 
             // ── Pole Colors ──
-            EditorGUILayout.LabelField("Pole Colors", EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle("Pole Colors");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 DrawField("Selected Tint", "SelectedTint", "Pole selection highlight color.");
@@ -95,7 +95,7 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(6f);
 
             // ── Ring Materials ──
-            EditorGUILayout.LabelField("Ring Materials", EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle("Ring Materials");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 DrawField("Ring Metallic", "RingMetallic", "Ring material metallic value.");
@@ -105,7 +105,7 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(6f);
 
             // ── Selection Glow ──
-            EditorGUILayout.LabelField("Selection Glow", EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle("Selection Glow");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 DrawField("Glow Color", "SelectionGlowColor", "Glow point light color.");
@@ -117,7 +117,7 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(6f);
 
             // ── Tutorial Visuals ──
-            EditorGUILayout.LabelField("Tutorial Visuals", EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle("Tutorial Visuals");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 DrawField("Arrow Color", "TutorialArrowColor", "Tutorial arrow/cone tint color.");
@@ -130,7 +130,7 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(6f);
 
             // ── Rainbow Cycle ──
-            EditorGUILayout.LabelField("Rainbow Cycle", EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle("Rainbow Cycle");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 DrawField("Rainbow Hue Speed", "RainbowHueSpeed", "Hue rotation speed multiplier.");
@@ -141,7 +141,7 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(6f);
 
             // ── VFX ──
-            EditorGUILayout.LabelField("VFX", EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle("VFX");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 DrawField("Ring Pop Count", "RingPopCount", "RingPop particle count.");
@@ -155,7 +155,7 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(6f);
 
             // ── Pool Sizes ──
-            EditorGUILayout.LabelField("Object Pool Sizes", EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle("Object Pool Sizes");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 DrawField("Ring Pool Size", "RingPoolSize", "Ring pool capacity.");

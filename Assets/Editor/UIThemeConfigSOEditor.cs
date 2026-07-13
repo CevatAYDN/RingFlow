@@ -20,7 +20,7 @@ namespace RingFlow.Editor
 
             EditorGUI.BeginChangeCheck();
 
-            EditorGUILayout.LabelField("Renkler", EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle("Renkler");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 config.PrimaryColor = ColorField("Birincil Renk", config.PrimaryColor);
@@ -36,7 +36,7 @@ namespace RingFlow.Editor
             }
             EditorGUILayout.Space(6f);
 
-            EditorGUILayout.LabelField("Yerleşim Tokenları", EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle("Yerleşim Tokenları");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 config.PanelElevation = EditorGUILayout.FloatField("Panel Yükseltmesi", config.PanelElevation);
@@ -46,7 +46,7 @@ namespace RingFlow.Editor
             }
             EditorGUILayout.Space(6f);
 
-            EditorGUILayout.LabelField("Buton Renk Ön Ayarları", EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle("Buton Renk Ön Ayarları");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 config.PrimaryButtonColors = DrawButtonColors("Birincil Buton", config.PrimaryButtonColors);
@@ -69,7 +69,7 @@ namespace RingFlow.Editor
 
         private static ButtonColorConfig DrawButtonColors(string title, ButtonColorConfig button)
         {
-            EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle(title);
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 button.NormalColor = EditorGUILayout.ColorField("Normal", button.NormalColor);

@@ -16,6 +16,14 @@ namespace RingFlow.Editor
         public const string FoldDatabase     = "RingFlow.Foldout.Database";
         public const string FoldGameFeel     = "RingFlow.Foldout.GameFeel";
         public const string FoldConfigAssets = "RingFlow.Foldout.ConfigAssets";
+        public const string FoldLevelBrowser = "RingFlow.Foldout.LevelBrowser";
+
+        // ── Birleşik Veri Ekranı (Veri sekmesi) foldout state ──
+        public const string FoldDataOverview  = "RingFlow.Foldout.DataOverview";
+        public const string FoldDataDifficulty = "RingFlow.Foldout.Data.Difficulty";
+        public const string FoldDataColor      = "RingFlow.Foldout.Data.Color";
+        public const string FoldDataWorlds     = "RingFlow.Foldout.Data.Worlds";
+        public const string FoldDataAssets     = "RingFlow.Foldout.Data.Assets";
 
         // ── New data-driven config section foldout state (Bölüm 3.3) ──
         public const string FoldStoreCatalog     = "RingFlow.Foldout.StoreCatalog";

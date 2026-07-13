@@ -10,6 +10,8 @@ namespace RingFlow.Editor
     {
         private bool _showRawData;
         private bool _showTools = true;
+        private int _lastValidatedHash;
+        private string[] _cachedWarnings = System.Array.Empty<string>();
 
         private static RingColor s_brushColor = RingColor.Red;
         private static RingType s_brushType = RingType.Standard;
@@ -18,7 +20,25 @@ namespace RingFlow.Editor
 
         private static GUIStyle s_compactButtonStyle;
         private static GUIStyle s_boldButtonStyle;
-        private static GUIStyle s_headerStyle;
+        private static GUIStyle s_ringButtonStyle;
+        private static GUIStyle s_addSlotStyle;
+        private static GUIStyle s_lockLabelStyle;
+        private static GUIStyle s_portalLabelStyle;
+        private static GUIStyle s_warningTitleStyle;
+
+        private static RingColor[] s_cachedColors;
+        private static RingType[] s_cachedTypes;
+
+        private static RingColor[] CachedColors
+            => s_cachedColors ??= (RingColor[])System.Enum.GetValues(typeof(RingColor));
+
+        private static RingType[] CachedTypes
+            => s_cachedTypes ??= (RingType[])System.Enum.GetValues(typeof(RingType));
+
+        // Cached palette load — replaced 48+ Resources.Load calls per frame with one.
+        private static RingColorPaletteSO s_cachedPalette;
+        private static float s_paletteCacheTime = -1f;
+        private const float PaletteCacheSeconds = 5f;
 
         private static GUIStyle CompactButton => s_compactButtonStyle ??= new GUIStyle(GUI.skin.button)
             { fontSize = 9, fontStyle = FontStyle.Normal };
@@ -26,22 +46,49 @@ namespace RingFlow.Editor
         private static GUIStyle BoldCompactButton => s_boldButtonStyle ??= new GUIStyle(GUI.skin.button)
             { fontSize = 9, fontStyle = FontStyle.Bold };
 
-        private static GUIStyle HeaderStyle
-        {
-            get
+        private static GUIStyle RingButtonStyle
+            => s_ringButtonStyle ??= new GUIStyle(GUI.skin.button)
             {
-                if (s_headerStyle == null)
-                {
-                    s_headerStyle = new GUIStyle(GUI.skin.box)
-                    {
-                        alignment = TextAnchor.MiddleCenter,
-                        fontSize = 11,
-                        fontStyle = FontStyle.Bold,
-                        normal = { textColor = EditorPaths.EditorColors.Info }
-                    };
-                }
-                return s_headerStyle;
-            }
+                fontSize = 9,
+                fontStyle = FontStyle.Bold
+            };
+
+        private static GUIStyle AddSlotStyle
+            => s_addSlotStyle ??= new GUIStyle(GUI.skin.button)
+            {
+                fontSize = 11,
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = Color.white }
+            };
+
+        private static GUIStyle LockLabelStyle
+            => s_lockLabelStyle ??= new GUIStyle(EditorStyles.miniBoldLabel)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = Color.white }
+            };
+
+        private static GUIStyle PortalLabelStyle
+            => s_portalLabelStyle ??= new GUIStyle(EditorStyles.miniBoldLabel)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = Color.white }
+            };
+
+        private static GUIStyle WarningTitleStyle
+            => s_warningTitleStyle ??= new GUIStyle(EditorStyles.boldLabel)
+            {
+                normal = { textColor = EditorPaths.EditorColors.Error }
+            };
+
+        private static RingColorPaletteSO GetCachedPalette()
+        {
+            float now = (float)EditorApplication.timeSinceStartup;
+            if (s_cachedPalette != null && now - s_paletteCacheTime < PaletteCacheSeconds)
+                return s_cachedPalette;
+            s_cachedPalette = Resources.Load<RingColorPaletteSO>(EditorPaths.RingColorPaletteKey);
+            s_paletteCacheTime = now;
+            return s_cachedPalette;
         }
 
         public override void OnInspectorGUI()
@@ -57,142 +104,20 @@ namespace RingFlow.Editor
 
             DrawHeader($"SEVİYE {levelSO.Data.LevelIndex} YAPILANDIRMASI");
 
-            // ── GDD Uyum & Doğrulama Kontrolleri ──
-            var warnings = new List<string>();
-            if (levelSO.Data.Poles == null || levelSO.Data.Poles.Count == 0)
+            int currentHash = ComputeValidationHash(levelSO.Data);
+            if (currentHash != _lastValidatedHash)
             {
-                warnings.Add("• Seviyede henüz hiç direk bulunmuyor.");
-            }
-            else
-            {
-                // 1. En az bir boş direk kontrolü
-                bool hasEmptyPole = false;
-                for (int p = 0; p < levelSO.Data.Poles.Count; p++)
-                {
-                    if (levelSO.Data.Poles[p].Rings == null || levelSO.Data.Poles[p].Rings.Count == 0)
-                    {
-                        hasEmptyPole = true;
-                        break;
-                    }
-                }
-                if (!hasEmptyPole)
-                {
-                    warnings.Add("• GDD uyarınca oyunu tamamlamak için en az 1 boş direk gereklidir.");
-                }
-
-                // 2. Kilitli direk ve anahtar kontrolü
-                bool hasLockedPole = false;
-                for (int p = 0; p < levelSO.Data.Poles.Count; p++)
-                {
-                    if (levelSO.Data.Poles[p].IsLocked)
-                    {
-                        hasLockedPole = true;
-                        break;
-                    }
-                }
-                if (hasLockedPole)
-                {
-                    bool hasKey = false;
-                    for (int p = 0; p < levelSO.Data.Poles.Count; p++)
-                    {
-                        var pole = levelSO.Data.Poles[p];
-                        if (pole.Rings != null)
-                        {
-                            for (int r = 0; r < pole.Rings.Count; r++)
-                            {
-                                if (pole.Rings[r].Type == RingType.Locked || pole.Rings[r].Type == RingType.Key)
-                                {
-                                    hasKey = true;
-                                    break;
-                                }
-                            }
-                        }
-                        if (hasKey) break;
-                    }
-                    if (!hasKey)
-                    {
-                        warnings.Add("• Seviyede kilitli direk var ancak kilidi açmak için gereken Altın Anahtar Halka (Locked/Key) yerleştirilmemiş.");
-                    }
-                }
-
-                // 3. Kilitli direk içinde Taş (Stone) veya Bomba (Bomb) kontrolü
-                for (int p = 0; p < levelSO.Data.Poles.Count; p++)
-                {
-                    var pole = levelSO.Data.Poles[p];
-                    if (pole.IsLocked && pole.Rings != null)
-                    {
-                        for (int r = 0; r < pole.Rings.Count; r++)
-                        {
-                            if (pole.Rings[r].Type == RingType.Stone || pole.Rings[r].Type == RingType.Bomb)
-                            {
-                                warnings.Add($"• Direk {p} kilitli olmasına rağmen içinde Taş veya Bomba halkası var. Bu durum kilit açılmadan hamleyi bloke edeceği için uyumsuzdur.");
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                // 4. Benzersiz mekanik limiti (Maks. 4)
-                var uniqueMechanics = new HashSet<RingType>();
-                for (int p = 0; p < levelSO.Data.Poles.Count; p++)
-                {
-                    if (levelSO.Data.Poles[p].IsLocked) uniqueMechanics.Add(RingType.Locked);
-                    if (levelSO.Data.Poles[p].Rings != null)
-                    {
-                        for (int r = 0; r < levelSO.Data.Poles[p].Rings.Count; r++)
-                        {
-                            var t = levelSO.Data.Poles[p].Rings[r].Type;
-                            if (t != RingType.Standard) uniqueMechanics.Add(t);
-                        }
-                    }
-                }
-                if (uniqueMechanics.Count > 4)
-                {
-                    warnings.Add($"• GDD uyarınca bir seviyede en fazla 4 farklı özel mekanik bulunabilir. Mevcut seviyede {uniqueMechanics.Count} farklı mekanik var.");
-                }
-
-                // 5. Portal çifti doğrulama
-                var portalPoles = new System.Collections.Generic.List<int>();
-                for (int p = 0; p < levelSO.Data.Poles.Count; p++)
-                {
-                    if (levelSO.Data.Poles[p].PortalTargetId >= 0)
-                        portalPoles.Add(p);
-                }
-
-                if (portalPoles.Count > 0)
-                {
-                    if (portalPoles.Count % 2 != 0)
-                    {
-                        warnings.Add($"• Tek sayıda ({portalPoles.Count}) portal direği var. Portal direkleri çiftler halinde olmalıdır.");
-                    }
-
-                    for (int i = 0; i < portalPoles.Count; i++)
-                    {
-                        int pid = portalPoles[i];
-                        int partner = levelSO.Data.Poles[pid].PortalTargetId;
-
-                        if (partner < 0 || partner >= levelSO.Data.Poles.Count)
-                        {
-                            warnings.Add($"• Direk {pid} portalPartnerId={partner} geçersiz (0-{levelSO.Data.Poles.Count - 1} olmalı).");
-                        }
-                        else if (levelSO.Data.Poles[partner].PortalTargetId != pid)
-                        {
-                            warnings.Add($"• Direk {pid} ↔ {partner} portal çifti karşılıklı değil (Direk {partner}'in PortalTargetId={levelSO.Data.Poles[partner].PortalTargetId}, beklenen={pid}).");
-                        }
-                    }
-                }
+                _cachedWarnings = BuildWarnings(levelSO.Data);
+                _lastValidatedHash = currentHash;
             }
 
-            if (warnings.Count > 0)
+            if (_cachedWarnings.Length > 0)
             {
                 using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
-                    var titleStyle = new GUIStyle(EditorStyles.boldLabel) { normal = { textColor = EditorPaths.EditorColors.Error } };
-                    EditorGUILayout.LabelField("⚠️ GDD UYUMLULUK UYARILARI:", titleStyle);
-                    foreach (var w in warnings)
-                    {
-                        EditorGUILayout.LabelField(w, EditorStyles.wordWrappedMiniLabel);
-                    }
+                    EditorGUILayout.LabelField("⚠️ GDD UYUMLULUK UYARILARI:", WarningTitleStyle);
+                    for (int i = 0; i < _cachedWarnings.Length; i++)
+                        EditorGUILayout.LabelField(_cachedWarnings[i], EditorStyles.wordWrappedMiniLabel);
                 }
                 EditorGUILayout.Space(4f);
             }
@@ -414,17 +339,16 @@ namespace RingFlow.Editor
         {
             EditorGUILayout.LabelField("Renk Fırçası Seçin:", EditorStyles.boldLabel);
 
-            var colors = (RingColor[])System.Enum.GetValues(typeof(RingColor));
+            var colors = CachedColors;
             var prevColor = GUI.backgroundColor;
+            var palette = GetCachedPalette();
 
             using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
             {
                 GUI.backgroundColor = s_eraserMode ? Color.red : Color.gray;
-                var eraserStyle = new GUIStyle(GUI.skin.button)
-                {
-                    fontStyle = s_eraserMode ? FontStyle.Bold : FontStyle.Normal,
-                    normal = { textColor = s_eraserMode ? Color.white : Color.black }
-                };
+                var eraserStyle = CompactButton;
+                eraserStyle.fontStyle = s_eraserMode ? FontStyle.Bold : FontStyle.Normal;
+                eraserStyle.normal.textColor = s_eraserMode ? Color.white : Color.black;
                 if (GUILayout.Button("SİLGİ", eraserStyle, GUILayout.Width(70), GUILayout.Height(24)))
                     s_eraserMode = true;
                 GUI.backgroundColor = prevColor;
@@ -434,7 +358,7 @@ namespace RingFlow.Editor
                 for (int i = 1; i < colors.Length; i++)
                 {
                     var color = colors[i];
-                    Color c = Resources.Load<RingColorPaletteSO>(EditorPaths.RingColorPaletteKey)?.GetColor(color, RingColorPaletteSO.ColorBlindMode.Off) ?? Color.grey;
+                    Color c = palette != null ? palette.GetColor(color, RingColorPaletteSO.ColorBlindMode.Off) : Color.grey;
 
                     bool isSelected = (!s_eraserMode && s_brushColor == color);
                     GUI.backgroundColor = c;
@@ -443,11 +367,9 @@ namespace RingFlow.Editor
                         ? $"[{color.ToString().Substring(0, 3).ToUpper()}]"
                         : color.ToString().Substring(0, 3).ToUpper();
 
-                    var style = new GUIStyle(CompactButton)
-                    {
-                        fontStyle = isSelected ? FontStyle.Bold : FontStyle.Normal,
-                        normal = { textColor = RingFlowEditorUtils.GetContrastColor(c) }
-                    };
+                    var style = CompactButton;
+                    style.fontStyle = isSelected ? FontStyle.Bold : FontStyle.Normal;
+                    style.normal.textColor = RingFlowEditorUtils.GetContrastColor(c);
 
                     if (GUILayout.Button(label, style, GUILayout.Width(42), GUILayout.Height(24)))
                     {
@@ -466,7 +388,7 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(2f);
             EditorGUILayout.LabelField("Halka Tipi Fırçası Seçin:", EditorStyles.boldLabel);
 
-            var types = (RingType[])System.Enum.GetValues(typeof(RingType));
+            var types = CachedTypes;
             var prevBg = GUI.backgroundColor;
             int typesPerRow = 5;
 
@@ -519,6 +441,7 @@ namespace RingFlow.Editor
             float poleWidth = 70f;
             float ringHeight = 20f;
             float poleGap = 8f;
+            var palette = GetCachedPalette();
 
             using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
             {
@@ -552,7 +475,6 @@ namespace RingFlow.Editor
                             if (hasRing)
                             {
                                 var ring = pole.Rings[r];
-                                var palette = Resources.Load<RingColorPaletteSO>(EditorPaths.RingColorPaletteKey);
                                 Color ringColor = palette != null ? palette.GetColor(ring.Color, RingColorPaletteSO.ColorBlindMode.Off) : Color.grey;
                                 GUI.backgroundColor = ringColor;
 
@@ -560,10 +482,8 @@ namespace RingFlow.Editor
                                 if (ring.AdditionalData > 0 && ring.Type == RingType.Bomb)
                                     label += ring.AdditionalData;
 
-                                var style = new GUIStyle(BoldCompactButton)
-                                {
-                                    normal = { textColor = RingFlowEditorUtils.GetContrastColor(ringColor) }
-                                };
+                                var style = RingButtonStyle;
+                                style.normal.textColor = RingFlowEditorUtils.GetContrastColor(ringColor);
 
                                 if (GUI.Button(ringRect, label, style))
                                 {
@@ -578,13 +498,8 @@ namespace RingFlow.Editor
                             else if (isAddSlot)
                             {
                                 GUI.backgroundColor = new Color(0.3f, 0.3f, 0.3f, 0.5f);
-                                var style = new GUIStyle(BoldCompactButton)
-                                {
-                                    fontSize = 11,
-                                    normal = { textColor = Color.white }
-                                };
 
-                                if (!s_eraserMode && GUI.Button(ringRect, "+", style))
+                                if (!s_eraserMode && GUI.Button(ringRect, "+", AddSlotStyle))
                                 {
                                     Undo.RecordObject(levelSO, "Halka Ekle");
                                     pole.Rings.Add(new RingData(s_brushColor, s_brushType, s_brushType == RingType.Bomb ? s_bombCounter : 0));
@@ -603,18 +518,14 @@ namespace RingFlow.Editor
                         {
                             Rect lockRect = new Rect(rect.x + 3f, rect.y + 4f, poleWidth - 6f, 13f);
                             EditorGUI.DrawRect(lockRect, new Color(0.8f, 0.1f, 0.1f, 0.9f));
-                            var lockStyle = new GUIStyle(EditorStyles.miniBoldLabel)
-                                { alignment = TextAnchor.MiddleCenter, normal = { textColor = Color.white } };
-                            GUI.Label(lockRect, "KİLİTLİ", lockStyle);
+                            GUI.Label(lockRect, "KİLİTLİ", LockLabelStyle);
                         }
 
                         if (pole.PortalTargetId >= 0)
                         {
                             Rect portalRect = new Rect(rect.x + 3f, rect.yMax - 16f, poleWidth - 6f, 13f);
                             EditorGUI.DrawRect(portalRect, new Color(0.0f, 0.6f, 0.8f, 0.9f));
-                            var portalStyle = new GUIStyle(EditorStyles.miniBoldLabel)
-                                { alignment = TextAnchor.MiddleCenter, normal = { textColor = Color.white } };
-                            GUI.Label(portalRect, $"PORTAL → {pole.PortalTargetId}", portalStyle);
+                            GUI.Label(portalRect, $"PORTAL → {pole.PortalTargetId}", PortalLabelStyle);
                         }
 
                         GUI.backgroundColor = prevColor;
@@ -657,12 +568,142 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(5f);
         }
 
+        private static int ComputeValidationHash(LevelData data)
+        {
+            if (data == null || data.Poles == null) return 0;
+            int hash = data.Poles.Count;
+            for (int p = 0; p < data.Poles.Count; p++)
+            {
+                var pole = data.Poles[p];
+                hash = unchecked(hash * 31 + (pole.IsLocked ? 1 : 0));
+                hash = unchecked(hash * 31 + pole.PortalTargetId);
+                hash = unchecked(hash * 31 + pole.RingCapacity);
+                if (pole.Rings != null)
+                {
+                    hash = unchecked(hash * 31 + pole.Rings.Count);
+                    for (int r = 0; r < pole.Rings.Count && r < 8; r++)
+                    {
+                        var ring = pole.Rings[r];
+                        hash = unchecked(hash * 31 + (int)ring.Color);
+                        hash = unchecked(hash * 31 + (int)ring.Type);
+                        hash = unchecked(hash * 31 + ring.AdditionalData);
+                    }
+                }
+            }
+            return hash;
+        }
+
+        private static string[] BuildWarnings(LevelData data)
+        {
+            var warnings = new List<string>();
+            if (data.Poles == null || data.Poles.Count == 0)
+            {
+                warnings.Add("• Seviyede henüz hiç direk bulunmuyor.");
+                return warnings.Count > 0 ? warnings.ToArray() : System.Array.Empty<string>();
+            }
+
+            bool hasEmptyPole = false;
+            for (int p = 0; p < data.Poles.Count; p++)
+            {
+                if (data.Poles[p].Rings == null || data.Poles[p].Rings.Count == 0)
+                { hasEmptyPole = true; break; }
+            }
+            if (!hasEmptyPole)
+                warnings.Add("• GDD uyarınca oyunu tamamlamak için en az 1 boş direk gereklidir.");
+
+            bool hasLockedPole = false;
+            for (int p = 0; p < data.Poles.Count; p++)
+            {
+                if (data.Poles[p].IsLocked) { hasLockedPole = true; break; }
+            }
+            if (hasLockedPole)
+            {
+                bool hasKey = false;
+                for (int p = 0; p < data.Poles.Count && !hasKey; p++)
+                {
+                    var pole = data.Poles[p];
+                    if (pole.Rings != null)
+                    {
+                        for (int r = 0; r < pole.Rings.Count; r++)
+                        {
+                            if (pole.Rings[r].Type == RingType.Locked || pole.Rings[r].Type == RingType.Key)
+                            { hasKey = true; break; }
+                        }
+                    }
+                }
+                if (!hasKey)
+                    warnings.Add("• Seviyede kilitli direk var ancak kilidi açmak için gereken Altın Anahtar Halka (Locked/Key) yerleştirilmemiş.");
+            }
+
+            for (int p = 0; p < data.Poles.Count; p++)
+            {
+                var pole = data.Poles[p];
+                if (pole.IsLocked && pole.Rings != null)
+                {
+                    for (int r = 0; r < pole.Rings.Count; r++)
+                    {
+                        if (pole.Rings[r].Type == RingType.Stone || pole.Rings[r].Type == RingType.Bomb)
+                        {
+                            warnings.Add($"• Direk {p} kilitli olmasına rağmen içinde Taş veya Bomba halkası var. Bu durum kilit açılmadan hamleyi bloke edeceği için uyumsuzdur.");
+                            break;
+                        }
+                    }
+                }
+            }
+
+            int uniqueCount = 0;
+            int[] seenTypes = new int[16];
+            int seenIndex = 0;
+            for (int p = 0; p < data.Poles.Count; p++)
+            {
+                if (data.Poles[p].IsLocked)
+                {
+                    int lt = (int)RingType.Locked;
+                    bool found = false;
+                    for (int i = 0; i < seenIndex; i++) { if (seenTypes[i] == lt) { found = true; break; } }
+                    if (!found) { seenTypes[seenIndex++] = lt; uniqueCount++; }
+                }
+                if (data.Poles[p].Rings != null)
+                {
+                    for (int r = 0; r < data.Poles[p].Rings.Count; r++)
+                    {
+                        var t = data.Poles[p].Rings[r].Type;
+                        if (t == RingType.Standard) continue;
+                        int tv = (int)t;
+                        bool found = false;
+                        for (int i = 0; i < seenIndex; i++) { if (seenTypes[i] == tv) { found = true; break; } }
+                        if (!found) { seenTypes[seenIndex++] = tv; uniqueCount++; }
+                    }
+                }
+            }
+            if (uniqueCount > 4)
+                warnings.Add($"• GDD uyarınca bir seviyede en fazla 4 farklı özel mekanik bulunabilir. Mevcut seviyede {uniqueCount} farklı mekanik var.");
+
+            var portalPoles = new List<int>();
+            for (int p = 0; p < data.Poles.Count; p++)
+                if (data.Poles[p].PortalTargetId >= 0) portalPoles.Add(p);
+
+            if (portalPoles.Count > 0)
+            {
+                if (portalPoles.Count % 2 != 0)
+                    warnings.Add($"• Tek sayıda ({portalPoles.Count}) portal direği var. Portal direkleri çiftler halinde olmalıdır.");
+                for (int i = 0; i < portalPoles.Count; i++)
+                {
+                    int pid = portalPoles[i];
+                    int partner = data.Poles[pid].PortalTargetId;
+                    if (partner < 0 || partner >= data.Poles.Count)
+                        warnings.Add($"• Direk {pid} portalPartnerId={partner} geçersiz (0-{data.Poles.Count - 1} olmalı).");
+                    else if (data.Poles[partner].PortalTargetId != pid)
+                        warnings.Add($"• Direk {pid} ↔ {partner} portal çifti karşılıklı değil (Direk {partner}'in PortalTargetId={data.Poles[partner].PortalTargetId}, beklenen={pid}).");
+                }
+            }
+
+            return warnings.Count > 0 ? warnings.ToArray() : System.Array.Empty<string>();
+        }
+
         private static void DrawHeader(string title)
         {
-            var bg = GUI.backgroundColor;
-            GUI.backgroundColor = new Color(0.12f, 0.12f, 0.15f);
-            GUILayout.Box(title, HeaderStyle, GUILayout.ExpandWidth(true), GUILayout.Height(24));
-            GUI.backgroundColor = bg;
+            GUILayout.Box(title, RingFlowEditorUtils.HeaderStyle, GUILayout.ExpandWidth(true), GUILayout.Height(24));
             EditorGUILayout.Space(2f);
         }
     }

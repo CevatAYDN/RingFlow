@@ -29,6 +29,8 @@ namespace RingFlow.Editor
             {
                 DrawInitControls();
                 EditorGUILayout.Space(EditorPaths.EditorSizes.SectionSpacing);
+                DrawQuickActions();
+                EditorGUILayout.Space(EditorPaths.EditorSizes.SectionSpacing);
                 DrawScreenTree();
                 EditorGUILayout.Space(EditorPaths.EditorSizes.SectionSpacing);
                 DrawSignalTester();
@@ -57,26 +59,6 @@ namespace RingFlow.Editor
                     GUILayout.MinWidth(280f));
                 GUILayout.FlexibleSpace();
 
-                using (new EditorGUI.DisabledScope(uiRoot == null))
-                {
-                    if (GUILayout.Button(new GUIContent("Tuvali Sıfırla (Reset)",
-                            "UIRoot üzerindeki tüm yüklü ekranları ve Canvas'ı yok eder."),
-                            GUILayout.Height(22)))
-                    {
-                        if (EditorUtility.DisplayDialog("UIRoot Tuvalini Sıfırla",
-                            "Tüm yüklenen ekran örneklerini yok etmek istediğinize emin misiniz?",
-                            "Sıfırla", "İptal"))
-                        {
-                            ResetUIRootCanvas(uiRoot);
-                        }
-                    }
-                    if (GUILayout.Button(new GUIContent("Ekranları Yeniden Yükle",
-                            "Tüm ScreenType prefab örneklerini yeniden oluşturur."),
-                            GUILayout.Height(22)))
-                    {
-                        ReloadPrefabScreens(uiRoot);
-                    }
-                }
                 if (GUILayout.Button("Yenile", GUILayout.Width(70f), GUILayout.Height(22)))
                 {
                     var window = EditorWindow.HasOpenInstances<RingFlowEditorWindow>()
@@ -84,6 +66,30 @@ namespace RingFlow.Editor
                         : null;
                     window?.Repaint();
                 }
+            }
+        }
+
+        // ── Quick actions ──
+
+        private void DrawQuickActions()
+        {
+            var uiRoot = EditorSceneContext.GetUIRoot();
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                using (new EditorGUI.DisabledScope(uiRoot == null))
+                {
+                    if (GUILayout.Button(new GUIContent("Tüm Ekranları Yenile", "UIRoot içindeki tüm prefab ekranlarını yeniden yükler."), GUILayout.Height(22)))
+                        ReloadPrefabScreens(uiRoot);
+                    if (GUILayout.Button(new GUIContent("Tuvali Sıfırla", "UIRoot üzerindeki tüm ekranları ve Canvas'ı temizler."), GUILayout.Height(22)))
+                        ResetUIRootCanvas(uiRoot);
+                }
+
+                if (GUILayout.Button(new GUIContent("Eksik Ekranları Oluştur", "Eksik UI prefablarını oluşturur."), GUILayout.Height(22)))
+                    RingFlowEditorUiStudio.CreateMissingUIScreenPrefabs();
+
+                if (GUILayout.Button(new GUIContent("JSON Dışa Aktar", "UI ağacını JSON olarak kaydeder."), GUILayout.Height(22)))
+                    ExportUIHierarchyAsJson();
             }
         }
 
@@ -108,9 +114,15 @@ namespace RingFlow.Editor
             int subs = uiRoot.Subscriptions?.Count ?? 0;
             string playSuffix = Application.isPlaying ? "" : " (PlayMode değil — sinyaller çalışmaz)";
 
-            EditorGUILayout.LabelField(
-                $"Aktif: {activeName}   Popuplar: {popups}   Abonelik: {subs}{playSuffix}",
-                EditorStyles.miniLabel);
+            using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
+            {
+                EditorGUILayout.LabelField(
+                    $"Aktif: {activeName}   Popuplar: {popups}   Abonelik: {subs}{playSuffix}",
+                    EditorStyles.miniLabel);
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("Tümünü Yenile", GUILayout.Width(96f), GUILayout.Height(20f)))
+                    ReloadPrefabScreens(uiRoot);
+            }
 
             if (screens.Count == 0)
             {
@@ -131,7 +143,7 @@ namespace RingFlow.Editor
         private void DrawScreenRow(ScreenType screen, GameObject go, UIRoot uiRoot)
         {
             bool isActiveScreen = uiRoot.ActiveExclusiveScreen.Equals(screen);
-            int btnCount = go != null ? go.GetComponentsInChildren<Button>(true).Length : 0;
+            int btnCount = CountButtons(go);
 
             using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
             {
@@ -391,6 +403,13 @@ namespace RingFlow.Editor
         }
 
         // ── Helpers ──
+
+        private static int CountButtons(GameObject go)
+        {
+            if (go == null) return 0;
+            var buttons = go.GetComponentsInChildren<Button>(true);
+            return buttons != null ? buttons.Length : 0;
+        }
 
         private static string FormatStack(System.Collections.ICollection stack)
         {

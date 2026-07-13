@@ -25,6 +25,7 @@ namespace RingFlow.Editor
         private string _solveStatus = "Seviye yüklenmedi / üretilmedi.";
         private readonly List<string> _solutionSteps = new();
         private Vector2 _solutionScroll;
+        private GameConfigDatabaseSO _cachedDatabase;
 
         public LevelData GeneratedLevel => _generatedLevel;
 
@@ -54,32 +55,32 @@ namespace RingFlow.Editor
             DrawFoldoutHeader();
             if (!IsFoldedOut) return;
 
-            var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
-            if (db == null)
+            _cachedDatabase = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
+            if (_cachedDatabase == null)
             {
                 EditorGUILayout.HelpBox("Zorluk Veritabanı (GameConfigDatabase.asset) bulunamadı!", MessageType.Error);
                 return;
             }
             using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
             {
-                EditorGUILayout.ObjectField("Zorluk Veritabanı (Database)", db, typeof(GameConfigDatabaseSO), false);
+                EditorGUILayout.ObjectField("Zorluk Veritabanı (Database)", _cachedDatabase, typeof(GameConfigDatabaseSO), false);
                 if (GUILayout.Button("Düzenle", GUILayout.Width(80f)))
-                    Selection.activeObject = db;
+                    Selection.activeObject = _cachedDatabase;
             }
             EditorGUILayout.Space(2f);
 
             // Tüm parametreler DB'den — yerel olarak okunur, UI'da yalnızca görüntülenir
-            int poleCount = db.GetPoleCountForLevel(_levelIndex);
-            int colorCount = db.GetColorCountForLevel(_levelIndex);
-            int maxCapacity = db.GetMaxCapacityForLevel(_levelIndex);
-            int minEmptyPoles = db.GetMinEmptyPolesForLevel(_levelIndex);
+            int poleCount = _cachedDatabase.GetPoleCountForLevel(_levelIndex);
+            int colorCount = _cachedDatabase.GetColorCountForLevel(_levelIndex);
+            int maxCapacity = _cachedDatabase.GetMaxCapacityForLevel(_levelIndex);
+            int minEmptyPoles = _cachedDatabase.GetMinEmptyPolesForLevel(_levelIndex);
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 EditorGUILayout.LabelField("Seviye Parametreleri", EditorStyles.boldLabel);
 
                 EditorGUI.BeginChangeCheck();
-                _levelIndex = EditorGUILayout.IntSlider("Seviye Endeksi", _levelIndex, 1, db.TotalLevels);
+                _levelIndex = EditorGUILayout.IntSlider("Seviye Endeksi", _levelIndex, 1, _cachedDatabase.TotalLevels);
                 _seed = EditorGUILayout.IntField("Rastgele Tohum (Seed)", _seed);
 
                 // GDD'den gelen parametreler — salt okunur, manuel tweak yok
@@ -125,8 +126,8 @@ namespace RingFlow.Editor
                     _batchStartLevel = EditorGUILayout.IntField("Başlangıç Seviyesi", _batchStartLevel);
                     _batchEndLevel = EditorGUILayout.IntField("Bitiş Seviyesi", _batchEndLevel);
                 }
-                _batchStartLevel = Mathf.Clamp(_batchStartLevel, 1, db.TotalLevels);
-                _batchEndLevel = Mathf.Clamp(_batchEndLevel, _batchStartLevel, db.TotalLevels);
+                _batchStartLevel = Mathf.Clamp(_batchStartLevel, 1, _cachedDatabase.TotalLevels);
+                _batchEndLevel = Mathf.Clamp(_batchEndLevel, _batchStartLevel, _cachedDatabase.TotalLevels);
 
                 int count = _batchEndLevel - _batchStartLevel + 1;
                 if (GUILayout.Button($"{_batchStartLevel} - {_batchEndLevel} Arası ({count} Seviye) Toplu Üret", GUILayout.Height(32)))
@@ -148,7 +149,7 @@ namespace RingFlow.Editor
 
         private void DrawDifficultyPreview(int levelIndex)
         {
-            var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
+            var db = _cachedDatabase;
             var band = db.GetBandForLevel(levelIndex);
             int intensity = db.GetMechanicIntensityForLevel(levelIndex);
             var allowed = db.GetAllowedMechanicsForLevel(levelIndex);
@@ -187,7 +188,7 @@ namespace RingFlow.Editor
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Üretilen Seviye Bilgileri:", EditorStyles.boldLabel);
-            var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
+            var db = _cachedDatabase;
             int level = _generatedLevel.LevelIndex;
             var band = db.GetBandForLevel(level);
             int intensity = db.GetMechanicIntensityForLevel(level);
@@ -238,7 +239,7 @@ namespace RingFlow.Editor
 
         private void Generate()
         {
-            var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
+            var db = _cachedDatabase ?? Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
             if (db == null) return;
             if (_levelIndex < 1 || _levelIndex > db.TotalLevels)
             {
@@ -308,7 +309,7 @@ namespace RingFlow.Editor
         private void GenerateAllLevels()
         {
             _generateInProgress = true;
-            var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
+            var db = _cachedDatabase ?? Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
             if (db == null) return;
 
             string folderPath = EditorPaths.LevelsFolder;

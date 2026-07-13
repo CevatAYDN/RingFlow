@@ -129,14 +129,22 @@ namespace RingFlow.Editor
             diag.Log("HealthCheck", $"Service 'IViewMediatorTracker': {(tracker != null ? "OK" : "MISSING")}",
                 tracker == null ? DiagnosticSeverity.Error : DiagnosticSeverity.Info);
 
-            var uiRoot = Object.FindAnyObjectByType<UIRoot>();
+            var uiRoot = EditorSceneContext.GetUIRoot();
             diag.Log("HealthCheck", $"UIRoot: {(uiRoot != null ? "FOUND" : "MISSING")}",
                 uiRoot == null ? DiagnosticSeverity.Critical : DiagnosticSeverity.Info);
 
-            var views = Object.FindObjectsByType<View>(FindObjectsInactive.Exclude);
-            diag.Log("HealthCheck", $"Active Views count: {views.Length}");
-            foreach (var v in views)
-                diag.Log("HealthCheck", $"  - View '{v.GetType().Name}' on GameObject '{v.gameObject.name}' (active: {v.gameObject.activeInHierarchy})");
+            int viewCount = 0;
+            var allViews = Object.FindObjectsByType<View>(FindObjectsInactive.Exclude);
+            if (allViews != null)
+            {
+                viewCount = allViews.Length;
+            }
+            diag.Log("HealthCheck", $"Active Views count: {viewCount}");
+            if (allViews != null)
+            {
+                foreach (var v in allViews)
+                    diag.Log("HealthCheck", $"  - View '{v.GetType().Name}' on GameObject '{v.gameObject.name}' (active: {v.gameObject.activeInHierarchy})");
+            }
 
             diag.Log("HealthCheck", "=== HEALTH CHECK COMPLETED ===");
         }

@@ -22,11 +22,13 @@ namespace RingFlow.Editor
         private DatabaseSection _databaseSection;
         private GameFeelSection _gameFeel;
         private ConfigSection _configSection;
+        private LevelBrowserSection _levelBrowser;
+        private DataOverviewSection _dataOverview;
         private RingFlowEditorUiStudioController _uiStudio;
 
         private Vector2 _scroll;
         private int _selectedTab;
-        private readonly string[] _tabs = { "Ana Sayfa", "Seviyeler", "Arayüz Stüdyosu", "Ayarlar & Araçlar" };
+        private readonly string[] _tabs = { "Ana Sayfa", "Seviyeler", "Arayüz Stüdyosu", "Ayarlar & Araçlar", "Veri" };
 
         private double _lastValidationUpdateTime;
         private string _cachedSceneName;
@@ -108,10 +110,12 @@ namespace RingFlow.Editor
             _databaseSection = new DatabaseSection();
             _gameFeel = new GameFeelSection();
             _configSection = new ConfigSection();
+            _levelBrowser = new LevelBrowserSection();
+            _dataOverview = new DataOverviewSection();
             _uiStudio = new RingFlowEditorUiStudioController();
 
             foreach (var s in new EditorSection[]
-                { _generator, _visualBuilder, _runtime, _settings, _adTester, _diagnostics, _databaseSection, _gameFeel, _configSection })
+                { _generator, _visualBuilder, _runtime, _settings, _adTester, _diagnostics, _databaseSection, _gameFeel, _configSection, _levelBrowser, _dataOverview })
                 s.HideHeader = true;
 
             _generator.OnEnable();
@@ -180,6 +184,7 @@ namespace RingFlow.Editor
                 case 1: DrawLevelsTab(); break;
                 case 2: _uiStudio.DrawTab(); break;
                 case 3: DrawToolsTab(); break;
+                case 4: DrawDataTab(); break;
             }
 
             EditorGUILayout.EndScrollView();
@@ -394,6 +399,8 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionBreak);
             DrawFoldableSection(EditorPrefsKeys.FoldDatabase, "Seviye Denetleyici", _databaseSection.OnGUI);
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionBreak);
+            DrawFoldableSection(EditorPrefsKeys.FoldLevelBrowser, "Seviye Tarayıcı (Level Browser)", _levelBrowser.OnGUI);
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionBreak);
             DrawFoldableSection(EditorPrefsKeys.FoldBuilder, "Sahne Tahtası Oluşturucu", _visualBuilder.OnGUI);
         }
 
@@ -447,6 +454,15 @@ namespace RingFlow.Editor
                 editor.OnInspectorGUI();
             });
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
+        }
+
+        // ──────────────────────────────────────────────────────────────
+        //  Data Tab
+        // ──────────────────────────────────────────────────────────────
+
+        private void DrawDataTab()
+        {
+            _dataOverview.OnGUI();
         }
     }
 }

@@ -104,6 +104,23 @@ namespace RingFlow.Editor
             EditorGUI.DrawRect(new Rect(rect.xMax - width, rect.y, width, rect.height), color);
         }
 
+        /// <summary>
+        /// Uniform section title used by every SO custom editor so group
+        /// headers read identically across Audio / GameFeel / Palette / Theme /
+        /// Level inspectors. Draws a thin accent bar + bold label.
+        /// </summary>
+        public static void SectionTitle(string title)
+        {
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                var prev = GUI.backgroundColor;
+                GUI.backgroundColor = EditorPaths.EditorColors.Info;
+                GUILayout.Box("", GUILayout.Width(3f), GUILayout.Height(16f));
+                GUI.backgroundColor = prev;
+                EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+            }
+        }
+
         // -----------------------------------------------------------------
         //  Foldout section (shared by dashboard + SO editors)
         // -----------------------------------------------------------------

@@ -223,9 +223,11 @@ namespace RingFlow.Editor
             var boardRoot = GameObject.Find(EditorPaths.VisualBoardName);
             if (boardRoot != null)
             {
+                var selectedRoot = boardRoot;
                 EditorApplication.delayCall += () =>
                 {
-                    Selection.activeGameObject = boardRoot;
+                    if (selectedRoot == null) return;
+                    Selection.activeGameObject = selectedRoot;
                     SceneView.FrameLastActiveSceneView();
                 };
             }

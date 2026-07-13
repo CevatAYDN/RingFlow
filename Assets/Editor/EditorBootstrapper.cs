@@ -28,6 +28,7 @@ namespace RingFlow.Editor
             EnsureMainCamera();
             EnsureDirectionalLight();
             EnsureCameraRaycasters();
+            EnsureEditorSceneReady(rootObj);
             MarkSceneDirty();
 
             NexusLog.Info("EditorBootstrapper", nameof(Bootstrap), "",
@@ -85,6 +86,8 @@ namespace RingFlow.Editor
             var torusPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(EditorPaths.TorusPrefabPath);
             if (torusPrefab != null)
                 boardView.SetTorusPrefab(torusPrefab);
+
+            EnsureEditorSceneReady(rootObj);
 
             var lifecycle = rootObj.AddComponent<GameplayLifecycle>();
             Undo.RegisterCreatedObjectUndo(lifecycle, "Attach GameplayLifecycle");
@@ -193,6 +196,15 @@ namespace RingFlow.Editor
                 t.position = new Vector3(0f, 10f, 0f);
                 t.rotation = Quaternion.Euler(50f, -30f, 0f);
             }
+        }
+
+        private static void EnsureEditorSceneReady(GameObject rootObj)
+        {
+            if (rootObj == null) return;
+
+            var uiRoot = rootObj.GetComponent<UIRoot>();
+            if (uiRoot != null)
+                RingFlowEditorUiStudioController.ReloadPrefabScreens(uiRoot, showDialog: false);
         }
 
         private static void EnsureCameraRaycasters()

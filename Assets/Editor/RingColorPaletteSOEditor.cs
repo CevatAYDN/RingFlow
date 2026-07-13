@@ -17,7 +17,7 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(4f);
 
             // ── Colorblind Mode Preview ──
-            EditorGUILayout.LabelField("Accessibility Preview", EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle("Accessibility Preview");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 _previewMode = (RingColorPaletteSO.ColorBlindMode)EditorGUILayout.EnumPopup("Preview Mode", _previewMode);
@@ -34,7 +34,7 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(8f);
 
             // ── Color Entries ──
-            EditorGUILayout.LabelField("Color Entries", EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle("Color Entries");
             EditorGUILayout.Space(2f);
 
             serializedObject.Update();
@@ -108,7 +108,7 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(8f);
 
             // ── Quick Actions ──
-            EditorGUILayout.LabelField("Quick Actions", EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle("Quick Actions");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 if (GUILayout.Button("Auto-Generate Default Palette", GUILayout.Height(30)))

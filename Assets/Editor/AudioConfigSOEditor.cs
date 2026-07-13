@@ -39,7 +39,7 @@ namespace RingFlow.Editor
 
         private static AudioMoveConfig DrawMove(string title, AudioMoveConfig s)
         {
-            EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle(title);
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             s.Duration = F("Süre (sn)", s.Duration);
             s.FrequencyStart = F("Başlangıç Frekansı (Hz)", s.FrequencyStart);
@@ -52,7 +52,7 @@ namespace RingFlow.Editor
 
         private static AudioWinConfig DrawWin(string title, AudioWinConfig s)
         {
-            EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle(title);
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             s.Duration = F("Süre (sn)", s.Duration);
             s.Volume = F("Ses Seviyesi", s.Volume);
@@ -67,7 +67,7 @@ namespace RingFlow.Editor
 
         private static AudioErrorConfig DrawError(string title, AudioErrorConfig s)
         {
-            EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle(title);
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             s.Duration = F("Süre (sn)", s.Duration);
             s.Frequency = F("Frekans (Hz)", s.Frequency);
@@ -79,7 +79,7 @@ namespace RingFlow.Editor
 
         private static AudioExplosionConfig DrawExplosion(string title, AudioExplosionConfig s)
         {
-            EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle(title);
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             s.Duration = F("Süre (sn)", s.Duration);
             s.Volume = F("Ses Seviyesi", s.Volume);
@@ -90,7 +90,7 @@ namespace RingFlow.Editor
 
         private static AudioPoleCompleteConfig DrawPoleComplete(string title, AudioPoleCompleteConfig s)
         {
-            EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle(title);
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             s.Duration = F("Süre (sn)", s.Duration);
             s.FrequencyStart = F("Başlangıç Frekansı (Hz)", s.FrequencyStart);
@@ -103,7 +103,7 @@ namespace RingFlow.Editor
 
         private static AudioRichPoleCompleteConfig DrawRichPoleComplete(string title, AudioRichPoleCompleteConfig s)
         {
-            EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle(title);
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             s.Duration = F("Süre (sn)", s.Duration);
             s.RingPitchFactorBase = F("Halka Perde Tabanı", s.RingPitchFactorBase);
@@ -139,7 +139,7 @@ namespace RingFlow.Editor
 
         private static AudioFinalPoleConfig DrawFinalPole(string title, AudioFinalPoleConfig s)
         {
-            EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle(title);
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             s.Duration = F("Süre (sn)", s.Duration);
             s.MasterVolume = F("Ana Ses Seviyesi", s.MasterVolume);
@@ -153,7 +153,7 @@ namespace RingFlow.Editor
 
         private static AudioBgmConfig DrawBgm(string title, AudioBgmConfig s)
         {
-            EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+            RingFlowEditorUtils.SectionTitle(title);
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             s.Duration = F("Süre (sn)", s.Duration);
             s.BaseFrequency = F("Temel Frekans (Hz)", s.BaseFrequency);

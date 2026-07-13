@@ -81,6 +81,11 @@ namespace RingFlow.Gameplay.UI
             if (_screens.Count == 0)
             {
                 LoadPrefabScreensFromResources();
+                _screensLoaded = _screens.Count > 0;
+            }
+            else
+            {
+                _screensLoaded = true;
             }
         }
 
@@ -92,7 +97,7 @@ namespace RingFlow.Gameplay.UI
                 $"Starting. subscribed={_subscribed}, screens={_screens.Count}");
             TrySubscribeNow();
 
-            if (_screens.Count == 0)
+            if (_screens.Count == 0 && !_screensLoaded)
             {
                 _lifecycleCts?.Cancel();
                 _lifecycleCts?.Dispose();
@@ -113,7 +118,7 @@ namespace RingFlow.Gameplay.UI
             if (!_screensLoaded && _screens.Count == 0)
             {
                 LoadPrefabScreensFromResources();
-                _screensLoaded = true;
+                _screensLoaded = _screens.Count > 0;
             }
 
             SubscribeOnce();
