@@ -408,6 +408,8 @@ namespace RingFlow.Gameplay
             diag?.Log("Lifecycle", "GameplayLifecycle.OnStartAsync started");
 
             EnsureInputSetup(context);
+            EnsureGlobalErrorHandling(context);
+            ValidateDiIntegrity(context);
 
             diag?.Log("Lifecycle", "GameplayLifecycle.OnStartAsync completed");
             return default;
@@ -444,6 +446,41 @@ namespace RingFlow.Gameplay
                 if (cam != null && cam.GetComponent<PhysicsRaycaster>() == null)
                     cam.gameObject.AddComponent<PhysicsRaycaster>();
             }
+        }
+
+        private static void EnsureGlobalErrorHandling(IContext context)
+        {
+            var signalBus = context.TryResolve<ISignalBus>();
+            if (signalBus == null) return;
+
+            signalBus.Subscribe<CommandFailedSignal>(signal =>
+            {
+                NexusLog.Error(signal.SourceCommand?.Name ?? "UnknownCommand",
+                    "Execute",
+                    signal.SourceSignal?.ToString() ?? "null",
+                    $"Command failed: {signal.Exception?.Message}\n{signal.Exception?.StackTrace}");
+            });
+        }
+
+        private static void ValidateDiIntegrity(IContext context)
+        {
+            // Poll known-critical singletons at boot — missing bindings fail loud, not silent at runtime.
+            const string Prefix = nameof(ValidateDiIntegrity);
+            TryWarnNull(context, typeof(GameplayModel), Prefix);
+            TryWarnNull(context, typeof(PlayerProgressModel), Prefix);
+            TryWarnNull(context, typeof(SettingsModel), Prefix);
+            var diag = context.TryResolve<IGameDiagnostics>();
+            diag?.Log("Lifecycle", "DI integrity check completed.");
+        }
+
+        private static void TryWarnNull(IContext context, System.Type type, string prefix)
+        {
+            var method = typeof(IContext).GetMethod("TryResolve")?.MakeGenericMethod(type);
+            if (method == null) return;
+            var result = method.Invoke(context, null);
+            if (result == null)
+                NexusLog.Warn("GameplayLifecycle", prefix, type.Name,
+                    "Resolve returned null. Missing binding or [Inject] field?");
         }
 
         public void OnDispose()

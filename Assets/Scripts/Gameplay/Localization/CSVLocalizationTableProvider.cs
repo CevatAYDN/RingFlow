@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Nexus.Core;
 using Nexus.Core.Services;
 using UnityEngine;
 
@@ -14,11 +15,28 @@ namespace RingFlow.Gameplay
         private readonly Dictionary<string, IDictionary<string, string>> _tables = new(StringComparer.OrdinalIgnoreCase);
         private bool _loaded;
 
+        // IAssetService injected for future Addressables migration.
+        // CSV is loaded synchronously because ILocalizationTableProvider.TryGetTable is sync.
+        // When Addressables replaces ResourcesAssetService, async init moves to Lifecycle layer.
+        [Inject] private Services.IAssetService _assetService;
+
         private void LoadCSVIfNeeded()
         {
             if (_loaded) return;
 
-            var csvAsset = Resources.Load<TextAsset>(GameplayAssetKeys.Localization);
+            // Use IAssetService when available; fall back to Resources.Load for
+            // contexts without DI injection (e.g. unit tests constructing manually).
+            TextAsset csvAsset;
+            if (_assetService != null)
+            {
+                var task = _assetService.LoadAsync<TextAsset>(GameplayAssetKeys.Localization);
+                csvAsset = task.GetAwaiter().GetResult();
+            }
+            else
+            {
+                csvAsset = Resources.Load<TextAsset>(GameplayAssetKeys.Localization);
+            }
+
             if (csvAsset == null)
             {
                 NexusLog.Error("CSVLocalizationTableProvider", nameof(LoadCSVIfNeeded), "",

@@ -444,7 +444,7 @@ namespace RingFlow.Gameplay
                     for (int target = 0; target < poleCount; target++)
                     {
                         if (target == bestPole) continue;
-                        if (board.GetRingCount(target) < s_maxCapacity)
+                        if (board.GetRingCount(target) < board.MaxCapacity)
                         {
                             board.AddRing(target, ringToMove);
                             break;

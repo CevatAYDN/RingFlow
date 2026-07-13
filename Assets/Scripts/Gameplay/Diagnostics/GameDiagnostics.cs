@@ -91,7 +91,10 @@ namespace RingFlow.Gameplay.Diagnostics
 
             OnEntryAdded?.Invoke(entry);
 
-            // Forward to Nexus Logger
+            // Forward to Nexus Logger (single authoritative output path).
+            // Debug.*Log calls are intentionally omitted: NexusLog + ILoggerService handle
+            // console output and the in-game diagnostics viewer. Double-logging to Debug.*
+            // would duplicate every entry in the Unity Console without adding value.
             switch (severity)
             {
                 case DiagnosticSeverity.Error:
@@ -104,16 +107,6 @@ namespace RingFlow.Gameplay.Diagnostics
                 default:
                     _nexusLogger?.Log($"[{category}] {message}");
                     break;
-            }
-
-            // Unity Debug log for critical issues
-            if (severity >= DiagnosticSeverity.Error)
-            {
-                UnityEngine.Debug.LogError($"[GameDiagnostics] [{category}] {message}");
-            }
-            else if (severity == DiagnosticSeverity.Warning)
-            {
-                UnityEngine.Debug.LogWarning($"[GameDiagnostics] [{category}] {message}");
             }
         }
 

@@ -55,6 +55,9 @@ namespace RingFlow.Gameplay
                     enableInstancing = true
                 };
             }
+
+            if (_feelConfig == null && NexusRuntime.CurrentContext != null)
+                _feelConfig = NexusRuntime.CurrentContext.Resolve<GameFeelConfigSO>();
         }
 
         private void EnsurePiecesCreated(GameFeelConfigSO config)

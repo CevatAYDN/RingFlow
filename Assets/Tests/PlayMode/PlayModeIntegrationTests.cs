@@ -43,8 +43,6 @@ namespace RingFlow.Tests
             _progressionService = new RingFlow.Gameplay.ProgressionService(_progressModel, _db);
             _economyService = new MockEconomyService();
             _strategyManager = new RingMoveStrategyManager(_db);
-            RingValidationStrategyManager validationManager = new RingValidationStrategyManager();
-            PoleState.SetValidationManager(validationManager);
 
             _progressModel.Coins.Value = 100;
             _progressModel.Xp.Value = 0;

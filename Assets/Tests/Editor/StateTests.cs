@@ -188,7 +188,7 @@ namespace RingFlow.Tests
 
         public IReadOnlyDictionary<Type, IReadOnlyList<CommandHandlerInfo>> RegisteredHandlers =>
             new Dictionary<Type, IReadOnlyList<CommandHandlerInfo>>();
-        public ValueTask FireAsync<T>(T signal) where T : struct => default;
+        public ValueTask FireAsync<T>(T signal) where T : struct { Fire(signal); return default; }
         public void FireThreadSafe<T>(T signal) where T : struct { }
         public void FireNextFrame<T>(T signal) where T : struct { }
         public ValueTask FireAsyncWithTimeout<T>(T signal, int timeoutMilliseconds) where T : struct => default;
@@ -213,7 +213,7 @@ namespace RingFlow.Tests
 
         public IReadOnlyDictionary<Type, IReadOnlyList<CommandHandlerInfo>> RegisteredHandlers =>
             new Dictionary<Type, IReadOnlyList<CommandHandlerInfo>>();
-        public ValueTask FireAsync<T>(T signal) where T : struct => default;
+        public ValueTask FireAsync<T>(T signal) where T : struct { Fire(signal); return default; }
         public void FireThreadSafe<T>(T signal) where T : struct { }
         public void FireNextFrame<T>(T signal) where T : struct { }
         public ValueTask FireAsyncWithTimeout<T>(T signal, int timeoutMilliseconds) where T : struct => default;

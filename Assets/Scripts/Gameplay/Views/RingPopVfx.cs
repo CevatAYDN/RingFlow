@@ -35,6 +35,8 @@ namespace RingFlow.Gameplay
         {
             EnsureSharedResources();
             _mpb = new MaterialPropertyBlock();
+            if (_feelConfig == null && NexusRuntime.CurrentContext != null)
+                _feelConfig = NexusRuntime.CurrentContext.Resolve<GameFeelConfigSO>();
         }
 
         private void EnsurePiecesCreated(GameFeelConfigSO config)

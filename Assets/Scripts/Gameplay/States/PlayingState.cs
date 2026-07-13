@@ -16,7 +16,7 @@ namespace RingFlow.Gameplay
         [Inject] private GameConfigDatabaseSO _dbConfig;
         [Inject] private AudioConfigSO _audioConfig;
 
-        public ValueTask OnEnterAsync(object args, CancellationToken ct)
+        public async ValueTask OnEnterAsync(object args, CancellationToken ct)
         {
             _diag?.Checkpoint("PlayingState.OnEnterAsync");
             _signalBus?.Fire(new ShowScreenSignal(ScreenType.Gameplay));
@@ -39,7 +39,7 @@ namespace RingFlow.Gameplay
                         // BGM slider stays at whatever they last set in Settings.
                         _audio.BgmStateMultiplier = isBoss ? _audioConfig.Bgm.BossBgmMultiplier : _audioConfig.Bgm.NormalBgmMultiplier;
                     }
-                    return default;
+                    return;
                 }
                 targetLevel = playingArgs.LevelIndex;
             }
@@ -66,9 +66,7 @@ namespace RingFlow.Gameplay
 
             // Start level initialization
             _diag?.Log("PlayingState", $"Starting level {targetLevel} (resume={isResume}, boss={GameConfigDatabaseSO.IsBossLevel(_dbConfig, targetLevel)}).");
-            _signalBus?.Fire(new InitLevelSignal(targetLevel));
-
-            return default;
+            await _signalBus.FireAsync(new InitLevelSignal(targetLevel));
         }
 
         public ValueTask OnExitAsync(CancellationToken ct) => default;

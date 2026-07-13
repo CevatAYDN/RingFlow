@@ -38,7 +38,7 @@ namespace RingFlow.Gameplay.UI
                 {
                     _analytics.RestartUse(level);
                 }
-                SignalBus.Fire(new InitLevelSignal(level));
+                SignalBus.FireAsyncAndForget(new InitLevelSignal(level));
             });
 
             if (View.PauseButton == null) NexusLog.Warn("HUDMediator", nameof(OnBind), "", "PauseButton missing.");

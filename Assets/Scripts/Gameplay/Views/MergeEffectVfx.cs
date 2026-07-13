@@ -42,6 +42,8 @@ namespace RingFlow.Gameplay
         {
             EnsureSharedResources();
             _mpb = new MaterialPropertyBlock();
+            if (_feelConfig == null && NexusRuntime.CurrentContext != null)
+                _feelConfig = NexusRuntime.CurrentContext.Resolve<GameFeelConfigSO>();
             _glowMpb = new MaterialPropertyBlock();
 
             _glowOrb = new GameObject("MergeGlowOrb").transform;

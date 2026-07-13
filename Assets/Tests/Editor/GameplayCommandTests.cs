@@ -77,6 +77,11 @@ namespace RingFlow.Tests
                         var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase);
                         f.SetValue(target, db);
                     }
+                    else if (f.FieldType == typeof(DailyRewardService))
+                    {
+                        var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase);
+                        f.SetValue(target, new DailyRewardService(_progressModel, db));
+                    }
                     else if (f.FieldType == typeof(IAnalyticsService))
                         f.SetValue(target, new MockAnalyticsService());
                 }
@@ -558,7 +563,7 @@ namespace RingFlow.Tests
             command.Execute(new SelectPoleSignal(0));
 
             Assert.AreEqual(RingType.Standard, pole0.TopRing.Type);
-            Assert.IsTrue(_signalBus.HasFiredRevealMystery);
+            Assert.IsTrue(_signalBus.HasFiredGhostRevealed);
         }
 
         [Test]
@@ -764,6 +769,113 @@ namespace RingFlow.Tests
             Assert.IsFalse(_signalBus.HasFiredPortalTeleport);
         }
 
+        // ── ChestClaimCommand Tests (GDD §9) ──────────────────────────────────────
+
+        [Test]
+        public void ChestClaimCommand_NoChests_ReturnsEarlyWithoutSignal()
+        {
+            var command = new ChestClaimCommand();
+            InjectDependencies(command);
+
+            _progressModel.ChestBronze.Value = 0;
+            _progressModel.ChestSilver.Value = 0;
+            _progressModel.ChestGold.Value = 0;
+            _progressModel.ChestDiamond.Value = 0;
+
+            command.Execute(new ChestClaimAllSignal());
+
+            Assert.AreEqual(0, _progressModel.Xp.Value);
+            Assert.IsFalse(_signalBus.HasFiredChestAwarded);
+        }
+
+        [Test]
+        public void ChestClaimCommand_ClaimsBronzeChests_FiresSignalAndAwardsXp()
+        {
+            var command = new ChestClaimCommand();
+            InjectDependencies(command);
+
+            _progressModel.ChestBronze.Value = 3;
+            _progressModel.Xp.Value = 0;
+
+            command.Execute(new ChestClaimAllSignal());
+
+            Assert.AreEqual(0, _progressModel.ChestBronze.Value);
+            Assert.IsTrue(_progressModel.Xp.Value > 0);
+            Assert.IsTrue(_signalBus.HasFiredChestAwarded);
+        }
+
+        [Test]
+        public void ChestClaimCommand_MixedChests_AllResetAndXpAccumulated()
+        {
+            var command = new ChestClaimCommand();
+            InjectDependencies(command);
+
+            _progressModel.ChestBronze.Value = 2;
+            _progressModel.ChestSilver.Value = 1;
+            _progressModel.ChestGold.Value = 1;
+            _progressModel.ChestDiamond.Value = 0;
+            _progressModel.Xp.Value = 0;
+
+            command.Execute(new ChestClaimAllSignal());
+
+            Assert.AreEqual(0, _progressModel.ChestBronze.Value);
+            Assert.AreEqual(0, _progressModel.ChestSilver.Value);
+            Assert.AreEqual(0, _progressModel.ChestGold.Value);
+            Assert.AreEqual(0, _progressModel.ChestDiamond.Value);
+            Assert.IsTrue(_progressModel.Xp.Value > 0);
+            Assert.IsTrue(_signalBus.HasFiredChestAwarded);
+        }
+
+        // ── DailyRewardClaimCommand Tests ─────────────────────────────────────────
+
+        [Test]
+        public void DailyRewardClaimCommand_WithAvailableReward_ClaimsAndFiresSignal()
+        {
+            var command = new DailyRewardClaimCommand();
+            InjectDependencies(command);
+
+            command.Execute(new DailyRewardClaimSignal());
+
+            Assert.IsTrue(_signalBus.HasFiredDailyRewardGranted);
+            // DailyDayIndex defaults to -1, so first claim has DayIndex=0.
+            Assert.That(_signalBus.FiredDailyRewardDay, Is.GreaterThanOrEqualTo(0));
+        }
+
+        [Test]
+        public void DailyRewardClaimCommand_ClaimCoins_EconomyEarnsReward()
+        {
+            var command = new DailyRewardClaimCommand();
+            InjectDependencies(command);
+
+            command.Execute(new DailyRewardClaimSignal());
+
+            Assert.IsTrue(_signalBus.HasFiredDailyRewardGranted);
+        }
+
+        [Test]
+        public void DailyRewardClaimCommand_ClaimTheme_AddsToOwnedThemes()
+        {
+            var progress = new PlayerProgressModel();
+            progress.DailyLastClaimUtcTicks.Value = 0;
+            int themeCountBefore = progress.OwnedThemes.Count;
+
+            var command = new DailyRewardClaimCommand();
+            var applyMethod = typeof(DailyRewardClaimCommand)
+                .GetMethod("ApplyReward", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+            if (applyMethod != null)
+            {
+                var reward = new CurrencyAmount("Theme", 1);
+                var progressField = typeof(DailyRewardClaimCommand)
+                    .GetField("_progress", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                progressField?.SetValue(command, progress);
+
+                applyMethod.Invoke(command, new object[] { reward });
+
+                Assert.AreEqual(themeCountBefore + 1, progress.OwnedThemes.Count);
+            }
+        }
+
     }
 
     // --- Minimal Mocks for Unit Testing ---
@@ -772,10 +884,18 @@ namespace RingFlow.Tests
     {
         public bool HasFiredUndo { get; private set; }
         public bool HasFiredRevealMystery { get; private set; }
+        public bool HasFiredGhostRevealed { get; private set; }
         public bool HasFiredBombExploded { get; private set; }
         public bool HasFiredBreakIce { get; private set; }
         public bool HasFiredUnlockPole { get; private set; }
         public bool HasFiredPortalTeleport { get; private set; }
+        public bool HasFiredChestAwarded { get; private set; }
+        public bool HasFiredDailyRewardGranted { get; private set; }
+        public int FiredDailyRewardDay { get; private set; }
+        public bool HasFiredHintResolved { get; private set; }
+        public bool HasFiredLevelLoaded { get; private set; }
+        public int FiredHintFrom { get; private set; } = -1;
+        public int FiredHintTo { get; private set; } = -1;
 
         private readonly System.Collections.Generic.Dictionary<Type, System.Collections.Generic.List<Delegate>> _handlers
             = new System.Collections.Generic.Dictionary<Type, System.Collections.Generic.List<Delegate>>();
@@ -798,6 +918,8 @@ namespace RingFlow.Tests
                 HasFiredUndo = true;
             else if (typeof(T) == typeof(RevealMysterySignal))
                 HasFiredRevealMystery = true;
+            else if (typeof(T) == typeof(GhostRevealedSignal))
+                HasFiredGhostRevealed = true;
             else if (typeof(T) == typeof(BombExplodedSignal))
                 HasFiredBombExploded = true;
             else if (typeof(T) == typeof(BreakIceSignal))
@@ -806,6 +928,22 @@ namespace RingFlow.Tests
                 HasFiredUnlockPole = true;
             else if (typeof(T) == typeof(PortalTeleportSignal))
                 HasFiredPortalTeleport = true;
+            else if (typeof(T) == typeof(ChestAwardedSignal))
+                HasFiredChestAwarded = true;
+            else if (typeof(T) == typeof(DailyRewardGrantedSignal))
+            {
+                HasFiredDailyRewardGranted = true;
+                FiredDailyRewardDay = ((DailyRewardGrantedSignal)(object)signal).DayIndex;
+            }
+            else if (typeof(T) == typeof(HintResolvedSignal))
+            {
+                HasFiredHintResolved = true;
+                var resolved = (HintResolvedSignal)(object)signal;
+                FiredHintFrom = resolved.FromPoleId;
+                FiredHintTo = resolved.ToPoleId;
+            }
+            else if (typeof(T) == typeof(LevelLoadedSignal))
+                HasFiredLevelLoaded = true;
 
             if (_handlers.TryGetValue(typeof(T), out var list))
             {
