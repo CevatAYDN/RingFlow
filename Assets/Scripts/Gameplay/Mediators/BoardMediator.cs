@@ -188,30 +188,30 @@ namespace RingFlow.Gameplay
         {
             if (View == null || _model == null || _progression == null) return;
 
-            _tutorialSolveCts?.Cancel();
-            _tutorialSolveCts?.Dispose();
-            _tutorialSolveCts = new System.Threading.CancellationTokenSource();
-
-            int currentLevel = _progression.CurrentLevel.Value;
-            if (currentLevel > 3)
-            {
-                View.HideTutorialArrow();
-                _tutorialFromPole = -1;
-                _tutorialToPole = -1;
-                return;
-            }
-
-            if (_model.IsGameWon.Value || _model.Poles.Count == 0)
-            {
-                View.HideTutorialArrow();
-                return;
-            }
-
-            var (board, maxCapacity) = BuildBoardStateFromModel(_model);
-            var ct = _tutorialSolveCts.Token;
-
             try
             {
+                _tutorialSolveCts?.Cancel();
+                _tutorialSolveCts?.Dispose();
+                _tutorialSolveCts = new System.Threading.CancellationTokenSource();
+
+                int currentLevel = _progression.CurrentLevel.Value;
+                if (currentLevel > 3)
+                {
+                    View.HideTutorialArrow();
+                    _tutorialFromPole = -1;
+                    _tutorialToPole = -1;
+                    return;
+                }
+
+                if (_model.IsGameWon.Value || _model.Poles.Count == 0)
+                {
+                    View.HideTutorialArrow();
+                    return;
+                }
+
+                var (board, maxCapacity) = BuildBoardStateFromModel(_model);
+                var ct = _tutorialSolveCts.Token;
+
                 var result = await LevelSolver.SolveAsync(board, maxCapacity, cancellationToken: ct);
                 if (ct.IsCancellationRequested) return;
 
@@ -244,7 +244,7 @@ namespace RingFlow.Gameplay
             }
             catch (System.Exception)
             {
-                View.HideTutorialArrow();
+                View?.HideTutorialArrow();
             }
         }
 

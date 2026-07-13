@@ -152,7 +152,7 @@ namespace RingFlow.Gameplay
             builder.Bind<RingValidationStrategyManager>();
 
             // -------------------- Commands --------------------
-            builder.BindCommand<InitLevelSignal, InitLevelCommand>();
+            builder.BindAsyncCommand<InitLevelSignal, InitLevelCommand>();
             builder.BindCommand<SelectPoleSignal, SelectPoleCommand>();
             builder.BindCommand<MoveRingSignal, MoveRingCommand>();
             builder.BindCommand<UndoSignal, UndoCommand>();
@@ -191,7 +191,8 @@ namespace RingFlow.Gameplay
 
             var fsm = context.Resolve<IGameStateMachine>();
             RegisterFsmAndStates(fsm, context);
-            PoleState.SetValidationManager(context.Resolve<RingValidationStrategyManager>());
+            // NOTE: RingValidationStrategyManager is injected directly into
+            // SelectPoleCommand and MoveRingCommand via DI — no static setter needed.
 
             PreserveAotTypes();
 

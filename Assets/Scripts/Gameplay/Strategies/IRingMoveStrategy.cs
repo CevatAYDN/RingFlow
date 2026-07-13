@@ -58,9 +58,17 @@ namespace RingFlow.Gameplay.Strategies
         public RingColor RainbowTargetOriginalColor;
         public bool WasIceBroken;
         public bool WasPoleUnlocked;
+        public int PlayerRingIndex;
         public List<int> IceBrokenRingIndices;
         public List<(int PoleId, int RingIndex, int Counter)> BombCountersBeforeTick;
         public List<(int PoleId, int RingIndex, RingData Ring)> BombExplodedRings;
         public List<MoveRecord> SubMoves;
+
+        /// <summary>
+        /// Set to true when the ring on the FROM pole was a Ghost type that was
+        /// revealed (Ghost→Standard) by SelectPoleCommand before this move fired.
+        /// BuildMoveRecord uses this to populate <see cref="MoveRecord.WasGhostRevealedOnFrom"/>.
+        /// </summary>
+        public bool WasGhostOnFrom;
     }
 }

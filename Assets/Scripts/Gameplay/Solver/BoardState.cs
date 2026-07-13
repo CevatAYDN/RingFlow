@@ -6,10 +6,23 @@ namespace RingFlow.Gameplay
     /// Tahta durumunu temsil eden, 0-GC uyumlu, kopyalaması son derece hızlı,
     /// bit-maskeleme destekli değer tipi (struct).
     /// Her direğin renk ve tip verileri sıkıştırılmış uint alanlarında tutulur.
+    ///
+    /// <b>HARD LIMITS (bit-packing constraints):</b>
+    /// <list type="bullet">
+    /// <item>MAX_POLES = 12 (Pole0..Pole11, Types0..Types11, AddData0..AddData11 field count)</item>
+    /// <item>MAX_COLORS = 15 (RingColor stored in 4 bits per ring slot; 0=None, 1-15 valid)</item>
+    /// <item>MAX_RING_COUNT_PER_POLE = 15 (4 bits in upper nibbles of Pole fields)</item>
+    /// <item>MAX_ADDITIONAL_DATA = 15 (AddData uses 4 bits; BombCountdown MUST be ≤ 15)</item>
+    /// </list>
+    /// Exceeding any of these limits silently corrupts data — there is no overflow guard at runtime.
+    /// <see cref="RingFlow.Gameplay.LevelGenerator"/> validates BombCountdown at injection time.
     /// </summary>
     public struct BoardState : IEquatable<BoardState>
     {
-        // Renkler, Halka Sayısı ve Kilit/Buz bayrakları için 12 uint (Direkler)
+        // ─── Pole storage fields ───────────────────────────────────────────────
+        // Each uint encodes up to 4 rings (4 bits per ring slot = 8 rings max in
+        // lower/upper halves) plus ring count and flags in upper bits.
+        // Hard limit: 12 poles (Pole0..Pole11). Accessing index ≥ 12 is out of range.
         public uint Pole0;
         public uint Pole1;
         public uint Pole2;
@@ -23,7 +36,8 @@ namespace RingFlow.Gameplay
         public uint Pole10;
         public uint Pole11;
 
-        // Halka tipleri (Mystery, Paint, Chain vb.) için 12 uint
+        // ─── Ring type fields ──────────────────────────────────────────────────
+        // 4 bits per ring slot — RingType enum must stay ≤ 15 distinct values.
         public uint Types0;
         public uint Types1;
         public uint Types2;
@@ -37,7 +51,9 @@ namespace RingFlow.Gameplay
         public uint Types10;
         public uint Types11;
 
-        // Ek veriler (Bomb sayacı, Chain grup ID vb.) için 12 uint
+        // ─── Additional data fields ────────────────────────────────────────────
+        // 4 bits per ring slot — values 0-15 only.
+        // BombCountdown stored here; must be configured ≤ 15 in GameConfigDatabaseSO.
         public uint AddData0;
         public uint AddData1;
         public uint AddData2;
@@ -381,7 +397,7 @@ namespace RingFlow.Gameplay
                 anyIceBroken = true;
                 belowIndex--;
             }
-            if (anyIceBroken)
+            if (anyIceBroken && ring.Type != RingType.Frozen)
             {
                 SetTopRingFrozen(poleIndex, false);
             }

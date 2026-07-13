@@ -474,8 +474,7 @@ namespace RingFlow.Gameplay.UI
                 if (asset != null)
                 {
                     var task = asset.LoadAsync<GameObject>($"{GameplayAssetKeys.UiScreenPrefix}{screen}");
-                    task.Wait();
-                    return task.Result;
+                    return task.GetAwaiter().GetResult();
                 }
             }
             return Resources.Load<GameObject>($"{GameplayAssetKeys.UiScreenPrefix}{screen}");

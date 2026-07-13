@@ -58,8 +58,8 @@ namespace RingFlow.Gameplay
             }
 
             // Pick first global volume
-            PropertyInfo isGlobalProp = volumeType.GetProperty("isGlobal");
-            PropertyInfo profileProp = volumeType.GetProperty("profile");
+            PropertyInfo isGlobalProp = volumeType.GetProperty("isGlobal", BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase);
+            PropertyInfo profileProp = volumeType.GetProperty("profile", BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase);
             _profileProperty = profileProp;
 
             Component selectedVolume = null;
@@ -112,7 +112,7 @@ namespace RingFlow.Gameplay
                 }
 
                 Type profileType = profile.GetType();
-                _tryGetMethod = profileType.GetMethod("TryGet", new[] { _bloomType.MakeByRefType() });
+                _tryGetMethod = profileType.GetMethod("TryGet", BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase, null, new[] { _bloomType.MakeByRefType() }, null);
                 if (_tryGetMethod == null)
                 {
                     NexusLog.Warn("BloomPulse", nameof(Initialize), "", "VolumeProfile.TryGet not found. Bloom pulse disabled.");
@@ -145,8 +145,8 @@ namespace RingFlow.Gameplay
             }
 
             // Cache the FieldInfo for value access
-            _intensityField = _bloomType.GetField("intensity");
-            _thresholdField = _bloomType.GetField("threshold");
+            _intensityField = _bloomType.GetField("intensity", BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase);
+            _thresholdField = _bloomType.GetField("threshold", BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase);
 
             if (_intensityField == null || _thresholdField == null)
             {

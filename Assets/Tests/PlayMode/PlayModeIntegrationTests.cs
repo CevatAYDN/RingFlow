@@ -292,7 +292,7 @@ namespace RingFlow.Tests
                 new RingFlow.Gameplay.ProgressionService(_progressModel, _db));
 
             // Act: level 999 with high difficulty (unlikely to fail, but retry logic covered)
-            cmd.Execute(new InitLevelSignal(999));
+            cmd.ExecuteAsync(new InitLevelSignal(999), default).AsTask().GetAwaiter().GetResult();
 
             // Assert
             Assert.That(_gameplayModel.Poles.Count, Is.GreaterThanOrEqualTo(2),
@@ -312,7 +312,7 @@ namespace RingFlow.Tests
             InjectField(cmd, "_signalBus", _signalBus);
             InjectField(cmd, "_progressionService",
                 new RingFlow.Gameplay.ProgressionService(_progressModel, _db));
-            cmd.Execute(new InitLevelSignal(level));
+            cmd.ExecuteAsync(new InitLevelSignal(level), default).AsTask().GetAwaiter().GetResult();
         }
 
         private void InjectFields(object target)

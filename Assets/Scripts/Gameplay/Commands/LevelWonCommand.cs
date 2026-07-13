@@ -2,8 +2,6 @@ using Nexus.Core;
 using Nexus.Core.FSM;
 using Nexus.Core.Services;
 
-using UnityEngine;
-
 namespace RingFlow.Gameplay
 {
     public class LevelWonCommand : ICommand<LevelWonSignal>
@@ -97,10 +95,13 @@ namespace RingFlow.Gameplay
 
             if (_progress != null)
             {
+                // Chest drops must be deterministic for replay compatibility.
+                // Seed = (levelIndex * 1000 + actualMoves) — unique per level+performance.
+                var chestRng = new System.Random(prevLevel * 1000 + prevMoves);
                 _progress.ChestBronze.Value++;
-                if (UnityEngine.Random.value < Cfg.SilverChestChance) _progress.ChestSilver.Value++;
-                if (stars >= 3 && UnityEngine.Random.value < Cfg.GoldChestChance) _progress.ChestGold.Value++;
-                if (stars >= 3 && UnityEngine.Random.value < Cfg.DiamondChestChance) _progress.ChestDiamond.Value++;
+                if (chestRng.NextDouble() < Cfg.SilverChestChance) _progress.ChestSilver.Value++;
+                if (stars >= 3 && chestRng.NextDouble() < Cfg.GoldChestChance) _progress.ChestGold.Value++;
+                if (stars >= 3 && chestRng.NextDouble() < Cfg.DiamondChestChance) _progress.ChestDiamond.Value++;
 
                 NexusLog.Info("LevelWonCommand", "Execute", "",
                     $"Chests awarded: Bronze+1={_progress.ChestBronze.Value}, Silver={_progress.ChestSilver.Value}, Gold={_progress.ChestGold.Value}, Diamond={_progress.ChestDiamond.Value}.");

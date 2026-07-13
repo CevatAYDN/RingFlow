@@ -24,6 +24,12 @@ namespace RingFlow.Gameplay
 
         public void Reset()
         {
+            // Return all MoveRecords to pool before clearing
+            while (MoveHistory.Count > 0)
+            {
+                MoveRecordPool.Return(MoveHistory.Pop());
+            }
+            // MoveHistory is now empty — no need for a second Clear() call
             Poles.Clear();
             CompletedPoles.Clear();
             SelectedPoleId.Value = -1;
@@ -31,7 +37,6 @@ namespace RingFlow.Gameplay
             TargetMovesCount.Value = 0;
             IsGameWon.Value = false;
             LastReward.Value = default;
-            MoveHistory.Clear();
         }
     }
 
@@ -53,6 +58,9 @@ namespace RingFlow.Gameplay
         public int ToPoleId;
         public RingData Ring;
         public bool WasMysteryRevealedOnFrom;
+        /// <summary>True if the top ring on the FROM pole was Ghost-revealed (type changed
+        /// from Ghost→Standard) when this move was selected. Undo must restore it to Ghost.</summary>
+        public bool WasGhostRevealedOnFrom;
         public readonly List<int> IceBrokenRingIndices = new(4); // Indices of rings whose ice was broken (from bottom upward).
         public bool WasIceBrokenOnTarget => IceBrokenRingIndices.Count > 0;
         public bool WasTargetPoleUnlocked;
@@ -82,7 +90,6 @@ namespace RingFlow.Gameplay
 
         public MoveRecord(int fromPoleId, int toPoleId, RingData ring,
             bool wasMysteryRevealedOnFrom = false,
-            bool wasIceBrokenOnTarget = false,
             bool wasTargetPoleUnlocked = false,
             bool wasPainted = false,
             int paintedRingIndex = -1,
@@ -123,6 +130,7 @@ namespace RingFlow.Gameplay
             ToPoleId = -1;
             Ring = default;
             WasMysteryRevealedOnFrom = false;
+            WasGhostRevealedOnFrom = false;
             IceBrokenRingIndices.Clear();
             WasTargetPoleUnlocked = false;
             WasPainted = false;
@@ -146,7 +154,8 @@ namespace RingFlow.Gameplay
     }
 
     /// <summary>
-    /// Thread-safe pooling mechanism for MoveRecord instances to prevent GC allocations.
+    /// Pooling mechanism for MoveRecord instances to prevent GC allocations.
+    /// All gameplay runs on the main thread — no lock needed.
     /// </summary>
     public static class MoveRecordPool
     {
@@ -154,12 +163,9 @@ namespace RingFlow.Gameplay
 
         public static MoveRecord Rent()
         {
-            lock (_pool)
+            if (_pool.Count > 0)
             {
-                if (_pool.Count > 0)
-                {
-                    return _pool.Pop();
-                }
+                return _pool.Pop();
             }
             return new MoveRecord();
         }
@@ -168,10 +174,7 @@ namespace RingFlow.Gameplay
         {
             if (record == null) return;
             record.Clear();
-            lock (_pool)
-            {
-                _pool.Push(record);
-            }
+            _pool.Push(record);
         }
     }
 

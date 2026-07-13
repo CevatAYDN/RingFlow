@@ -1,5 +1,6 @@
 using Nexus.Core;
 using Nexus.Core.Services;
+using RingFlow.Gameplay.Strategies;
 
 namespace RingFlow.Gameplay
 {
@@ -8,6 +9,7 @@ namespace RingFlow.Gameplay
         [Inject] private GameplayModel _model;
         [Inject] private ISignalBus _signalBus;
         [Inject] private IProgressionService _progression;
+        [Inject] private RingValidationStrategyManager _validationManager;
 
         public void Execute(SelectPoleSignal signal)
         {
@@ -16,47 +18,16 @@ namespace RingFlow.Gameplay
 
             if (_model.IsGameWon.Value) return;
 
-            // --- Tutorial Guided Move Input Restriction ---
-            if (_progression != null && _progression.CurrentLevel.Value <= 3 && _model.Poles.Count > 0)
-            {
-                var (board, maxCapacity) = BuildBoardStateFromModel(_model);
-                var solveResult = LevelSolver.Solve(board, maxCapacity);
-                if (solveResult.IsSolvable && solveResult.MoveCount > 0 && solveResult.Moves != null && solveResult.Moves.Count > 0)
-                {
-                    var recommendedMove = solveResult.Moves[0];
-                    int reqFrom = recommendedMove.FromPoleId;
-                    int reqTo = recommendedMove.ToPoleId;
-
-                    int currentSel = _model.SelectedPoleId.Value;
-                    if (currentSel == -1)
-                    {
-                        if (signal.PoleId != reqFrom)
-                        {
-                            NexusLog.Warn("SelectPoleCommand", "Execute", signal.PoleId.ToString(),
-                                $"Tutorial input blocked: must select pole {reqFrom}.");
-                            _signalBus?.Fire(new MoveBlockedSignal(signal.PoleId, reqFrom, "tutorial_select"));
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        if (signal.PoleId != currentSel && signal.PoleId != reqTo)
-                        {
-                            NexusLog.Warn("SelectPoleCommand", "Execute", signal.PoleId.ToString(),
-                                $"Tutorial input blocked: must move to pole {reqTo}.");
-                            _signalBus?.Fire(new MoveBlockedSignal(currentSel, signal.PoleId, "tutorial_place"));
-                            return;
-                        }
-                    }
-                }
-            }
+            // NOTE: Tutorial guided-input restriction has been removed.
+            // Tutorial guidance is now handled by TutorialService + HintCommand (async),
+            // which does not block the main thread. (Resolved: IHL-03)
 
             int currentSelected = _model.SelectedPoleId.Value;
 
             if (currentSelected == -1)
             {
                 var pole = _model.Poles.GetPoleById(signal.PoleId);
-                if (pole != null && pole.CanPopRing())
+                if (pole != null && CanPopRing(pole))
                 {
                     _model.SelectedPoleId.Value = signal.PoleId;
                     TryRevealGhost(pole, signal.PoleId, _signalBus);
@@ -76,7 +47,7 @@ namespace RingFlow.Gameplay
                     var fromPole = _model.Poles.GetPoleById(fromId);
                     var toPole = _model.Poles.GetPoleById(toId);
 
-                    if (fromPole == null || toPole == null || !fromPole.CanPopRing())
+                    if (fromPole == null || toPole == null || !CanPopRing(fromPole))
                     {
                         NexusLog.Warn("SelectPoleCommand", "Execute", signal.PoleId.ToString(),
                             $"Move blocked. fromNull={fromPole == null}, toNull={toPole == null}, canPop={fromPole?.CanPopRing()}");
@@ -84,9 +55,9 @@ namespace RingFlow.Gameplay
                         return;
                     }
 
-                    if (!toPole.CanAddRing(fromPole.TopRing))
+                    if (!CanAddRing(toPole, fromPole.TopRing))
                     {
-                        if (toPole.CanPopRing())
+                        if (CanPopRing(toPole))
                         {
                             _model.SelectedPoleId.Value = toId;
                             TryRevealGhost(toPole, toId, _signalBus);
@@ -108,13 +79,41 @@ namespace RingFlow.Gameplay
             }
         }
 
+        /// <summary>
+        /// Ghost reveal: changes the top Ghost ring to Standard on selection.
+        /// The move that follows will record this in MoveRecord.WasGhostRevealedOnFrom
+        /// so UndoCommand can restore it. Only fires GhostRevealedSignal — no game-state
+        /// mutation here beyond the ring type change (which is deliberate game design).
+        /// </summary>
         private static void TryRevealGhost(PoleState pole, int poleId, ISignalBus signalBus)
         {
             if (pole.TopRing.Type != RingType.Ghost) return;
             var ghostCopy = pole.Rings[^1];
             ghostCopy.Type = RingType.Standard;
             pole.Rings[^1] = ghostCopy;
-            signalBus?.Fire(new RevealMysterySignal(poleId, ghostCopy));
+            signalBus?.Fire(new GhostRevealedSignal(poleId, ghostCopy));
+        }
+
+        // ── Validation delegation ─────────────────────────────────────────────
+
+        private bool CanPopRing(PoleState pole)
+        {
+            if (_validationManager != null)
+                return _validationManager.CanPopRing(pole.TopRing, pole.IsLocked);
+            return pole.CanPopRing();
+        }
+
+        private bool CanAddRing(PoleState pole, RingData ring)
+        {
+            if (_validationManager != null)
+            {
+                if (ring.Type == RingType.Rainbow || ring.Type == RingType.Paint)
+                    return _validationManager.CanAddUniversalRing(ring, pole.TopRing, pole.IsFull, pole.IsLocked);
+                if (!pole.IsEmpty && (pole.TopRing.Type == RingType.Rainbow || pole.TopRing.Type == RingType.Paint))
+                    return _validationManager.CanAddUniversalRing(ring, pole.TopRing, pole.IsFull, pole.IsLocked);
+                return _validationManager.CanAddRing(ring, pole.TopRing, pole.IsFull, pole.IsLocked);
+            }
+            return pole.CanAddRing(ring);
         }
 
         private static (BoardState Board, int MaxCapacity) BuildBoardStateFromModel(GameplayModel m)
@@ -125,6 +124,15 @@ namespace RingFlow.Gameplay
             {
                 var pole = m.Poles[p];
                 if (pole == null) continue;
+
+                // NOTE: Enforcing 12-pole hard limit. Log if truncation occurs.
+                if (p >= 12)
+                {
+                    NexusLog.Error("SelectPoleCommand", "BuildBoardStateFromModel", p.ToString(),
+                        "Pole count exceeds BoardState maximum of 12. Excess poles silently truncated.");
+                    break;
+                }
+
                 if (pole.MaxCapacity > maxCapacity) maxCapacity = pole.MaxCapacity;
                 board.SetPoleLocked(p, pole.IsLocked);
                 int count = pole.Rings.Count;

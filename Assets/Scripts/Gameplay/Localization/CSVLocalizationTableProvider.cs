@@ -37,7 +37,7 @@ namespace RingFlow.Gameplay
             }
 
             // Header: Key,en,tr,id,es,fr,de,pt,it,ar,hi,ru,ja,zh,ko,vi
-            string[] headers = lines[0].Split(',');
+            string[] headers = SplitCsvLine(lines[0]);
             List<string> langCodes = new List<string>();
             for (int i = 1; i < headers.Length; i++)
             {
@@ -67,8 +67,34 @@ namespace RingFlow.Gameplay
 
         private string[] SplitCsvLine(string line)
         {
-            // Simple split by comma, handling potential commas inside quotes if needed
-            return line.Split(',');
+            var result = new List<string>();
+            bool inQuotes = false;
+            int start = 0;
+            for (int i = 0; i < line.Length; i++)
+            {
+                if (line[i] == '"')
+                {
+                    inQuotes = !inQuotes;
+                }
+                else if (line[i] == ',' && !inQuotes)
+                {
+                    result.Add(UnescapeCsvField(line.Substring(start, i - start)));
+                    start = i + 1;
+                }
+            }
+            result.Add(UnescapeCsvField(line.Substring(start)));
+            return result.ToArray();
+        }
+
+        private static string UnescapeCsvField(string field)
+        {
+            field = field.Trim();
+            if (field.Length >= 2 && field[0] == '"' && field[^1] == '"')
+            {
+                field = field.Substring(1, field.Length - 2);
+                field = field.Replace("\"\"", "\"");
+            }
+            return field;
         }
 
         public bool TryGetTable(string langCode, out IDictionary<string, string> table)

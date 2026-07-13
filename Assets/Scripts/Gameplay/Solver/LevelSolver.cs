@@ -30,8 +30,6 @@ namespace RingFlow.Gameplay
     /// </summary>
     public static class LevelSolver
     {
-        /// <summary>Portal pole target IDs. Set before Solve() and cleared after. index = -1 means no portal.</summary>
-        public static int[] s_portalTargets;
 
         private class SolverContext
         {
@@ -51,7 +49,7 @@ namespace RingFlow.Gameplay
             }
         }
 
-        public static SolverResult Solve(BoardState initialState, int maxCapacity, int maxStatesLimit = 100000, int maxMovesLimit = 200)
+        public static SolverResult Solve(BoardState initialState, int maxCapacity, int maxStatesLimit = 100000, int maxMovesLimit = 200, int[] portalTargets = null, CancellationToken cancellationToken = default)
         {
             initialState.MaxCapacity = maxCapacity;
             int threshold = CalculateHeuristic(initialState, maxCapacity);
@@ -61,10 +59,15 @@ namespace RingFlow.Gameplay
 
             while (threshold <= maxMovesLimit)
             {
+                // Allow cooperative cancellation at each threshold iteration.
+                // This makes SolveAsync truly cancellable once Search begins.
+                if (cancellationToken.IsCancellationRequested)
+                    break;
+
                 context.TranspositionTable.Clear();
                 context.StatesSearched = 0;
                 
-                int nextThreshold = Search(initialState, 0, threshold, maxCapacity, path, context);
+                int nextThreshold = Search(initialState, 0, threshold, maxCapacity, path, context, portalTargets);
                 if (nextThreshold == -1) // Çözüm bulundu
                 {
                     var movesList = new List<MoveRecord>(path.Count);
@@ -73,7 +76,6 @@ namespace RingFlow.Gameplay
                         var m = path[i];
                         movesList.Add(new MoveRecord(m.From, m.To, new RingData(RingColor.None)));
                     }
-                    s_portalTargets = null;
                     return new SolverResult
                     {
                         IsSolvable = true,
@@ -90,7 +92,6 @@ namespace RingFlow.Gameplay
                 threshold = nextThreshold;
             }
 
-            s_portalTargets = null;
             return new SolverResult
             {
                 IsSolvable = false,
@@ -99,7 +100,7 @@ namespace RingFlow.Gameplay
             };
         }
 
-        private static int Search(BoardState state, int g, int threshold, int maxCapacity, List<Move> path, SolverContext context)
+        private static int Search(BoardState state, int g, int threshold, int maxCapacity, List<Move> path, SolverContext context, int[] portalTargets)
         {
             context.StatesSearched++;
             if (context.StatesSearched >= context.MaxStatesLimit)
@@ -121,7 +122,7 @@ namespace RingFlow.Gameplay
 
             int min = int.MaxValue;
             Span<Move> moves = stackalloc Move[132]; // 12 direk * 11 hedef = maks 132 hamle kombinasyonu
-            int movesCount = GetValidMoves(state, maxCapacity, moves);
+            int movesCount = GetValidMoves(state, maxCapacity, moves, portalTargets);
 
             // Heuristic Move Ordering: Sort valid moves based on next state heuristic
             Span<MoveWithHeuristic> sortedMoves = stackalloc MoveWithHeuristic[movesCount];
@@ -132,8 +133,7 @@ namespace RingFlow.Gameplay
                 var nextState = state;
                 var ring = nextState.PopRing(move.From);
                 nextState.AddRing(move.To, ring);
-                // Prune moves that cause bomb explosion
-                if (TickBombsAndCheckExplosion(ref nextState)) continue;
+                // Use heuristic for move ordering (no state mutation during ordering)
                 int nextH = CalculateHeuristic(nextState, maxCapacity);
                 sortedMoves[sortIdx++] = new MoveWithHeuristic { Move = move, Heuristic = nextH };
             }
@@ -160,9 +160,9 @@ namespace RingFlow.Gameplay
                 nextState.AddRing(move.To, ring);
 
                 // Portal teleport: if target is a portal pole, forward the ring to its partner
-                if (s_portalTargets != null && s_portalTargets[move.To] >= 0)
+                if (portalTargets != null && move.To >= 0 && move.To < portalTargets.Length && portalTargets[move.To] >= 0)
                 {
-                    int partner = s_portalTargets[move.To];
+                    int partner = portalTargets[move.To];
                     if (nextState.GetRingCount(partner) < nextState.MaxCapacity)
                     {
                         var portalRing = nextState.PopRing(move.To);
@@ -175,7 +175,7 @@ namespace RingFlow.Gameplay
 
                 path.Add(move);
 
-                int result = Search(nextState, g + 1, threshold, maxCapacity, path, context);
+                int result = Search(nextState, g + 1, threshold, maxCapacity, path, context, portalTargets);
                 if (result == -1) return -1; // Bulunduysa yukarı doğru propagate et
                 if (result < min) min = result;
 
@@ -251,7 +251,7 @@ namespace RingFlow.Gameplay
             return h;
         }
 
-        public static int GetValidMoves(BoardState state, int maxCapacity, Span<Move> destination)
+        public static int GetValidMoves(BoardState state, int maxCapacity, Span<Move> destination, int[] portalTargets = null)
         {
             int count = 0;
             int numPoles = state.PoleCount;
@@ -267,8 +267,8 @@ namespace RingFlow.Gameplay
 
                     // Resolve portal target: if j is a portal pole, check the partner instead
                     int effectiveTarget = j;
-                    if (s_portalTargets != null && s_portalTargets[j] >= 0)
-                        effectiveTarget = s_portalTargets[j];
+                    if (portalTargets != null && portalTargets[j] >= 0)
+                        effectiveTarget = portalTargets[j];
 
                     // Chain: check if target has room for main ring + linked partners
                     if (topRing.Type == RingType.Chain && topRing.AdditionalData > 0)
@@ -337,19 +337,33 @@ namespace RingFlow.Gameplay
         /// <summary>
         /// Background-thread wrapper around <see cref="Solve"/>. Forwards the same
         /// IDA* search onto the thread-pool so the Unity main thread never blocks.
-        /// Cancellation propagates through the supplied token as
-        /// <see cref="OperationCanceledException"/>; callers should let Nexus'
-        /// async-command recovery handle retries/aborts.
+        /// <para>
+        /// Cancellation is propagated cooperatively: the token is checked at each
+        /// threshold iteration inside <see cref="Solve"/>, so cancellation may take
+        /// up to one full IDA* threshold pass to take effect. For interactive hints
+        /// this is acceptable (typical solve &lt; 100ms). For very large puzzles the
+        /// solver will respect the token before starting the next threshold.
+        /// </para>
+        /// Callers should let Nexus' async-command recovery handle retries/aborts.
         /// </summary>
         public static ValueTask<SolverResult> SolveAsync(
             BoardState initialState,
             int maxCapacity,
             int maxStatesLimit = 100000,
             int maxMovesLimit = 200,
+            int[] portalTargets = null,
             CancellationToken cancellationToken = default)
         {
+            // Capture locals for closure (avoids boxing of struct arguments)
+            var capturedState   = initialState;
+            int capturedCap     = maxCapacity;
+            int capturedStates  = maxStatesLimit;
+            int capturedMoves   = maxMovesLimit;
+            int[] capturedPorts = portalTargets;
+            CancellationToken ct = cancellationToken;
+
             return new ValueTask<SolverResult>(Task.Run(
-                () => Solve(initialState, maxCapacity, maxStatesLimit, maxMovesLimit),
+                () => Solve(capturedState, capturedCap, capturedStates, capturedMoves, capturedPorts, ct),
                 cancellationToken));
         }
     }

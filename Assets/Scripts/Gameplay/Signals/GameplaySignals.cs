@@ -93,6 +93,43 @@ namespace RingFlow.Gameplay
         public BombExplodedSignal(int poleId) => PoleId = poleId;
     }
 
+    /// <summary>
+    /// Fired during <b>Undo</b> to restore a bomb counter to its pre-move value.
+    /// Distinct from <see cref="BombTickSignal"/> which drives normal-gameplay animations.
+    /// Listeners must only update visuals; they must NOT modify any game state.
+    /// </summary>
+    public readonly struct BombCounterRestoredSignal
+    {
+        public readonly int PoleId;
+        public readonly int RingIndex;
+        public readonly int RestoredCounter;
+        public BombCounterRestoredSignal(int poleId, int ringIndex, int restoredCounter)
+        {
+            PoleId = poleId;
+            RingIndex = ringIndex;
+            RestoredCounter = restoredCounter;
+        }
+    }
+
+    /// <summary>Fired when a Ghost ring is revealed (type changed Ghost→Standard) on selection.</summary>
+    public readonly struct GhostRevealedSignal
+    {
+        public readonly int PoleId;
+        public readonly RingData RevealedRing;
+        public GhostRevealedSignal(int poleId, RingData revealedRing)
+        {
+            PoleId = poleId;
+            RevealedRing = revealedRing;
+        }
+    }
+
+    /// <summary>Fired during Undo to restore a Standard ring back to Ghost state.</summary>
+    public readonly struct GhostRestoredSignal
+    {
+        public readonly int PoleId;
+        public GhostRestoredSignal(int poleId) => PoleId = poleId;
+    }
+
     public readonly struct PaintRingSignal
     {
         public readonly int PoleId;

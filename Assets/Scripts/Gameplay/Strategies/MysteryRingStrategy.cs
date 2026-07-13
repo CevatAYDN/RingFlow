@@ -6,6 +6,7 @@ namespace RingFlow.Gameplay.Strategies
     public sealed class MysteryRingStrategy : IRingMoveStrategy
     {
         private readonly GameConfigDatabaseSO _db;
+        private static readonly RingColor[] s_colors = (RingColor[])System.Enum.GetValues(typeof(RingColor));
 
         public MysteryRingStrategy(GameConfigDatabaseSO db)
         {
@@ -51,11 +52,11 @@ namespace RingFlow.Gameplay.Strategies
             // before the modulo so downstream arithmetic stays inside the 32-bit range.
             int level = context.Progression?.CurrentLevel.Value ?? 1;
             int seed = unchecked((int)((long)level * 2654435761L) ^ (context.FromPoleId * 31));
-            int colorIndex = 1 + (System.Math.Abs(seed) % colorCount); // Skip None (index 0)
+            int safeSeed = seed == int.MinValue ? 0 : System.Math.Abs(seed);
+            int colorIndex = 1 + (safeSeed % colorCount); // Skip None (index 0)
 
             // Clamp into the palette — use RingColor enum count (minus None) as the upper bound.
-            var colors = (RingColor[])System.Enum.GetValues(typeof(RingColor));
-            int maxColorIndex = colors.Length - 1; // Skip None (index 0)
+            int maxColorIndex = s_colors.Length - 1; // Skip None (index 0)
             if (colorIndex > maxColorIndex) colorIndex = 1 + (colorIndex % maxColorIndex);
 
             return (RingColor)colorIndex;

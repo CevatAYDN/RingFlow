@@ -1,10 +1,12 @@
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Nexus.Core;
 using Nexus.Core.Services;
 
 namespace RingFlow.Gameplay
 {
-    public class InitLevelCommand : ICommand<InitLevelSignal>
+    public class InitLevelCommand : IAsyncCommand<InitLevelSignal>
     {
         [Inject] private GameplayModel _model;
         [Inject] private IProgressionService _progressionService;
@@ -13,7 +15,7 @@ namespace RingFlow.Gameplay
         [Inject] private GameConfigDatabaseSO _dbConfig;
         [Inject] private IAnalyticsService _analyticsService;
 
-        public void Execute(InitLevelSignal signal)
+        public async ValueTask ExecuteAsync(InitLevelSignal signal, CancellationToken ct)
         {
             if (_model == null)
             {
@@ -39,8 +41,7 @@ namespace RingFlow.Gameplay
             }
             
             var task = _assetService.LoadAsync<LevelDataSO>(levelKey);
-            task.Wait();
-            savedLevel = task.Result;
+            savedLevel = await task;
 
             // GDD curve params — always computed so retry logic can reuse them
             if (_dbConfig == null)

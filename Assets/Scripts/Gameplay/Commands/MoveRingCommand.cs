@@ -13,6 +13,7 @@ namespace RingFlow.Gameplay
         [Inject] private IGameStateMachine _fsm;
         [Inject] private RingMoveStrategyManager _strategyManager;
         [Inject] private IProgressionService _progression;
+        [Inject] private RingValidationStrategyManager _validationManager;
 
         public void Execute(MoveRingSignal signal)
         {
@@ -109,6 +110,7 @@ namespace RingFlow.Gameplay
 
         private void ExecuteSubMoves(ref MoveContext context, MoveRecord mainRecord)
         {
+            context.PlayerRingIndex = context.ToPole.Rings.Count - 1;
             ApplyChainSubMove(ref context, mainRecord);
             ApplyMagnetPull(ref context, mainRecord);
             TryBreakIceOnTarget(ref context, mainRecord);
@@ -146,6 +148,12 @@ namespace RingFlow.Gameplay
             record.ToPoleId = context.ToPoleId;
             record.Ring = context.MovingRing;
             record.WasMysteryRevealedOnFrom = context.WasMysteryRevealed;
+            // Record whether the FROM pole's top ring was a Ghost that was revealed on selection
+            // (SelectPoleCommand changes Ghost→Standard before the move fires).
+            // UndoCommand uses this flag to restore it back to Ghost.
+            record.WasGhostRevealedOnFrom = context.FromPole.Rings.Count > 0 &&
+                                            context.MovingRing.Type == RingType.Standard &&
+                                            context.WasGhostOnFrom;
             record.WasTargetPoleUnlocked = context.WasPoleUnlocked;
             record.WasPainted = context.WasPaintApplied;
             record.PaintedRingIndex = context.PaintedRingIndex;
@@ -161,8 +169,10 @@ namespace RingFlow.Gameplay
         {
             if (ring.Type != RingType.Chain) return true;
 
-            foreach (var pole in _model.Poles)
+            // Use for-index to avoid enumerator allocation (ObservableList may allocate on foreach)
+            for (int i = 0; i < _model.Poles.Count; i++)
             {
+                var pole = _model.Poles[i];
                 if (pole.Id == fromPole.Id) continue;
                 var topR = pole.TopRing;
                 if (topR.Type == RingType.Chain && topR.AdditionalData == ring.AdditionalData)
@@ -203,8 +213,11 @@ namespace RingFlow.Gameplay
                 context.WasIceBroken = true;
                 context.IceBrokenRingIndices = mainRecord.IceBrokenRingIndices;
                 _signalBus.Fire(new BreakIceSignal(context.ToPoleId));
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                // string.Join allocates — guard behind dev-build flag to avoid release GC pressure
                 NexusLog.Info("MoveRingCommand", "TryBreakIceOnTarget", context.ToPoleId.ToString(),
                     $"Ice broken on pole {context.ToPoleId}: {mainRecord.IceBrokenRingIndices.Count} rings melted at indices [{string.Join(",", mainRecord.IceBrokenRingIndices)}].");
+#endif
             }
         }
 
@@ -212,13 +225,20 @@ namespace RingFlow.Gameplay
         {
             if (context.MovingRing.Type != RingType.Chain) return;
 
-            foreach (var pole in _model.Poles)
+            // Use for-index to avoid enumerator allocation (ObservableList may allocate on foreach)
+            for (int i = 0; i < _model.Poles.Count; i++)
             {
+                var pole = _model.Poles[i];
                 if (pole.Id == context.FromPole.Id) continue;
                 var topR = pole.TopRing;
                 if (topR.Type != RingType.Chain || topR.AdditionalData != context.MovingRing.AdditionalData) continue;
 
                 pole.PopRing();
+                if (!context.ToPole.CanAddRing(topR))
+                {
+                    pole.AddRing(topR);
+                    return;
+                }
                 context.ToPole.AddRing(topR);
 
                 var subRecord = MoveRecordPool.Rent();
@@ -246,6 +266,11 @@ namespace RingFlow.Gameplay
                 if (!pole.CanPopRing() || pole.TopRing.Color != context.MovingRing.Color) continue;
 
                 var pulled = pole.PopRing();
+                if (!context.ToPole.CanAddRing(pulled))
+                {
+                    pole.AddRing(pulled);
+                    continue;
+                }
                 context.ToPole.AddRing(pulled);
 
                 var subRecord = MoveRecordPool.Rent();
@@ -272,7 +297,11 @@ namespace RingFlow.Gameplay
             if (partner == null) return;
             if (partner.IsFull) return;
 
-            var ring = context.ToPole.PopRing();
+            int playerIdx = context.PlayerRingIndex;
+            if (playerIdx < 0 || playerIdx >= context.ToPole.Rings.Count) return;
+            var ring = context.ToPole.Rings[playerIdx];
+            context.ToPole.Rings.RemoveAt(playerIdx);
+
             if (!partner.CanAddRing(ring))
             {
                 context.ToPole.AddRing(ring);
@@ -304,7 +333,7 @@ namespace RingFlow.Gameplay
             {
                 var pole = _model.Poles[p];
                 int explodedCount = 0;
-                Span<int> explodedIdx = stackalloc int[4];
+                Span<int> explodedIdx = stackalloc int[pole.Rings.Count];
 
                 for (int r = 0; r < pole.Rings.Count; r++)
                 {

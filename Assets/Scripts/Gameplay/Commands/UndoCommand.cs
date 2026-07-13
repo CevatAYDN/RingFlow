@@ -1,4 +1,3 @@
-using System;
 using Nexus.Core;
 using Nexus.Core.Services;
 
@@ -19,10 +18,11 @@ namespace RingFlow.Gameplay
                     $"Undoing move. History depth: {depthAfterPop} remaining.");
 
                 var fromPole = _model.Poles.GetPoleById(lastMove.FromPoleId);
-                var toPole = _model.Poles.GetPoleById(lastMove.ToPoleId);
+                var toPole   = _model.Poles.GetPoleById(lastMove.ToPoleId);
 
                 if (fromPole != null && toPole != null)
                 {
+                    // ── 1. Restore exploded bomb rings (insert back in original index order, descending) ──
                     if (lastMove.BombExplodedRings.Count > 0)
                     {
                         lastMove.BombExplodedRings.Sort(static (a, b) => b.RingIndex.CompareTo(a.RingIndex));
@@ -36,15 +36,17 @@ namespace RingFlow.Gameplay
                         }
                     }
 
+                    // ── 2. Restore bomb counters to their pre-move values ──
                     RestoreBombCounters(lastMove.BombCountersBeforeTick);
 
+                    // ── 3. Undo sub-moves in reverse order (chain, magnet, portal) ──
                     if (lastMove.SubMoves.Count > 0)
                     {
                         for (int i = lastMove.SubMoves.Count - 1; i >= 0; i--)
                         {
-                            var sub = lastMove.SubMoves[i];
+                            var sub    = lastMove.SubMoves[i];
                             var subFrom = _model.Poles.GetPoleById(sub.FromPoleId);
-                            var subTo = _model.Poles.GetPoleById(sub.ToPoleId);
+                            var subTo   = _model.Poles.GetPoleById(sub.ToPoleId);
 
                             if (subFrom != null && subTo != null)
                             {
@@ -54,24 +56,31 @@ namespace RingFlow.Gameplay
                         }
                     }
 
+                    // ── 4. Restore locked pole state ──
                     if (lastMove.WasTargetPoleUnlocked)
                     {
                         toPole.IsLocked = true;
                     }
 
+                    // ── 5. Restore Mystery reveal on FROM pole ──
                     if (lastMove.WasMysteryRevealedOnFrom && !fromPole.IsEmpty)
                     {
                         var topM = fromPole.TopRing;
                         fromPole.Rings[^1] = new RingData(topM.Color, RingType.Mystery);
                     }
 
+                    // ── 6. Undo main ring move (portal-aware) ──
+                    //   If the move included a portal teleport, the ring was actually
+                    //   placed on ToPole first and then teleported to PortalTeleportTargetPoleId.
+                    //   Sub-moves already reversed the teleport (step 3), so we just pop ToPole here.
                     var movedRing = toPole.PopRing();
 
+                    // ── 7. Undo paint effect ──
                     if (lastMove.WasPainted)
                     {
                         movedRing.Color = lastMove.OriginalColor;
 
-                        int paintTargetIndex = lastMove.PaintedRingIndex - 1;
+                        int paintTargetIndex = lastMove.PaintedRingIndex;
                         if (paintTargetIndex >= 0 && paintTargetIndex < toPole.Rings.Count)
                         {
                             var painted = toPole.Rings[paintTargetIndex];
@@ -80,14 +89,36 @@ namespace RingFlow.Gameplay
                         }
                     }
 
+                    // ── 8. Undo rainbow conversion ──
                     if (lastMove.WasRainbowTargetConverted)
                     {
-                        movedRing.Type = RingType.Rainbow;
-                        movedRing.Color = lastMove.RainbowTargetOriginalColor;
+                        int rainbowIdx = lastMove.RainbowTargetRingIndex - 1;
+                        if (rainbowIdx >= 0 && rainbowIdx < toPole.Rings.Count)
+                        {
+                            var rainbow = toPole.Rings[rainbowIdx];
+                            rainbow.Type  = RingType.Rainbow;
+                            rainbow.Color = lastMove.RainbowTargetOriginalColor;
+                            toPole.Rings[rainbowIdx] = rainbow;
+                        }
                     }
 
+                    // ── 9. Return moving ring to FROM pole ──
                     fromPole.AddRing(movedRing);
 
+                    // ── 10. Restore Ghost state if ring was revealed on FROM pole selection ──
+                    //   SelectPoleCommand changes Ghost→Standard before firing MoveRingSignal.
+                    //   We must revert that change so the ring appears Ghost again.
+                    if (lastMove.WasGhostRevealedOnFrom && !fromPole.IsEmpty)
+                    {
+                        var topG = fromPole.Rings[^1];
+                        topG.Type = RingType.Ghost;
+                        fromPole.Rings[^1] = topG;
+                        _signalBus?.Fire(new GhostRestoredSignal(lastMove.FromPoleId));
+                        NexusLog.Info("UndoCommand", "Execute", lastMove.FromPoleId.ToString(),
+                            "Ghost ring restored on FROM pole (undo of reveal).");
+                    }
+
+                    // ── 11. Restore frozen rings on TO pole ──
                     if (lastMove.IceBrokenRingIndices.Count > 0)
                     {
                         for (int i = 0; i < lastMove.IceBrokenRingIndices.Count; i++)
@@ -101,6 +132,7 @@ namespace RingFlow.Gameplay
                         }
                     }
 
+                    // ── 12. Restore move counter ──
                     if (_model.MovesCount.Value > 0)
                     {
                         _model.MovesCount.Value--;
@@ -133,6 +165,12 @@ namespace RingFlow.Gameplay
             }
         }
 
+        /// <summary>
+        /// Restores bomb counters to their pre-move snapshot values.
+        /// Uses <see cref="BombCounterRestoredSignal"/> (NOT <see cref="BombTickSignal"/>)
+        /// so that View listeners can distinguish between a normal tick and an undo restore.
+        /// Signals must not modify state — only update visuals.
+        /// </summary>
         private void RestoreBombCounters(System.Collections.Generic.List<(int PoleId, int RingIndex, int Counter)> snapshot)
         {
             if (snapshot == null || snapshot.Count == 0) return;
@@ -144,7 +182,8 @@ namespace RingFlow.Gameplay
                 var r = pole.Rings[entry.RingIndex];
                 if (r.Type != RingType.Bomb) continue;
                 pole.Rings[entry.RingIndex] = new RingData(r.Color, RingType.Bomb, entry.Counter);
-                _signalBus.Fire(new BombTickSignal(entry.PoleId, entry.Counter));
+                // Use BombCounterRestoredSignal (not BombTickSignal) — undo context is different from gameplay tick.
+                _signalBus.Fire(new BombCounterRestoredSignal(entry.PoleId, entry.RingIndex, entry.Counter));
             }
         }
     }

@@ -10,10 +10,15 @@ namespace RingFlow.Gameplay
     /// </summary>
     public static class LevelGenerator
     {
+        // Static readonly arrays are safe — used as temporary per-method scratch inside GenerateLevel,
+        // which is always called from a single thread (editor or game startup).
         private static readonly int[] _sourcePoles = new int[GameplayAssetKeys.Tuning.MaxPoleCount];
         private static readonly int[] _targetPoles = new int[GameplayAssetKeys.Tuning.MaxPoleCount];
-        private static int s_bombCountdown = GameplayAssetKeys.Tuning.BombCountdown; // Default; overridden on each GenerateLevel call
-        private static int s_maxCapacity = GameplayAssetKeys.Tuning.MaxCapacity;   // Default; overridden on each GenerateLevel call
+        // Pre-allocated ring backup list for EnforceEmptyPolesFloor (reused per GenerateLevel call)
+        private static readonly List<RingData> _ringsBackup = new(GameplayAssetKeys.Tuning.MaxCapacity);
+        // Static comparer to avoid lambda closure allocation in candidates.Sort()
+        private static readonly Comparison<(LevelData level, float diff)> _candidateComparer =
+            static (a, b) => a.diff.CompareTo(b.diff);
 
         public static LevelData GenerateLevel(GameConfigDatabaseSO db, int levelIndex, int seed, int poleCount, int colorCount, int maxCapacity)
         {
@@ -23,8 +28,7 @@ namespace RingFlow.Gameplay
             }
 
             var cfg = db.LevelGen;
-            s_bombCountdown = cfg.BombCountdown;
-            s_maxCapacity = maxCapacity;
+            int bombCountdown = cfg.BombCountdown; // Local, thread-safe (was static mutable s_bombCountdown)
             int currentSeed = seed;
             int attempts = 0;
             var candidates = new List<(LevelData level, float diff)>();
@@ -131,7 +135,7 @@ namespace RingFlow.Gameplay
                 for (int pi = 0; pi < poleCount; pi++) portalTargets[pi] = -1;
 
                 // GDD §4 & §5 Kuralları uyarınca özel halka mekaniklerini enjekte et
-                InjectSpecialMechanics(db, ref scrambledState, levelIndex, rand);
+                InjectSpecialMechanics(db, ref scrambledState, levelIndex, rand, bombCountdown);
 
                 // GDD §41: Portal pole çiftlerini enjekte et
                 InjectPortalPoles(db, ref scrambledState, portalTargets, levelIndex, rand, minEmptyPoles);
@@ -162,9 +166,9 @@ namespace RingFlow.Gameplay
                     }
                 }
                 int solverCapacity = maxCapacity;
-                LevelSolver.s_portalTargets = portalTargets;
                 var solveResult = LevelSolver.Solve(scrambledState, solverCapacity,
-                    maxStatesLimit: solverLimit, maxMovesLimit: cfg.DefaultMaxMovesLimit);
+                    maxStatesLimit: solverLimit, maxMovesLimit: cfg.DefaultMaxMovesLimit,
+                    portalTargets: portalTargets);
 
                 if (solveResult.IsSolvable && solveResult.MoveCount >= 2)
                 {
@@ -225,7 +229,7 @@ namespace RingFlow.Gameplay
 
             if (candidates.Count > 0)
             {
-                candidates.Sort((a, b) => a.diff.CompareTo(b.diff));
+                candidates.Sort(_candidateComparer); // static comparer — no lambda allocation
                 var bestCandidate = candidates[0].level;
                 
                 NexusLog.Info("LevelGenerator", nameof(GenerateLevel), levelIndex.ToString(),
@@ -251,7 +255,7 @@ namespace RingFlow.Gameplay
             return empty;
         }
 
-        private static void InjectSpecialMechanics(GameConfigDatabaseSO db, ref BoardState board, int levelIndex, Random rand)
+        private static void InjectSpecialMechanics(GameConfigDatabaseSO db, ref BoardState board, int levelIndex, Random rand, int bombCountdown)
         {
             if (db == null) throw new System.ArgumentNullException(nameof(db));
             int worldIndex = db.GetWorldForLevel(levelIndex);
@@ -282,27 +286,27 @@ namespace RingFlow.Gameplay
             int mechanicCount = intensity;
 
             if (mechanic == WorldMechanicType.Mystery)
-                InjectSingleType(ref board, RingType.Mystery, mechanicCount, rand);
+                InjectSingleType(ref board, RingType.Mystery, mechanicCount, rand, bombCountdown);
             else if (mechanic == WorldMechanicType.Frozen)
                 InjectFrozen(ref board, mechanicCount, rand);
             else if (mechanic == WorldMechanicType.LockedPole)
                 for (int i = 0; i < mechanicCount; i++) InjectLockedPole(ref board, rand);
             else if (mechanic == WorldMechanicType.Stone)
-                InjectSingleType(ref board, RingType.Stone, mechanicCount, rand);
+                InjectSingleType(ref board, RingType.Stone, mechanicCount, rand, bombCountdown);
             else if (mechanic == WorldMechanicType.Glass)
-                InjectSingleType(ref board, RingType.Glass, mechanicCount, rand);
+                InjectSingleType(ref board, RingType.Glass, mechanicCount, rand, bombCountdown);
             else if (mechanic == WorldMechanicType.Rainbow)
-                InjectSingleType(ref board, RingType.Rainbow, mechanicCount, rand);
+                InjectSingleType(ref board, RingType.Rainbow, mechanicCount, rand, bombCountdown);
             else if (mechanic == WorldMechanicType.Bomb)
-                InjectSingleType(ref board, RingType.Bomb, mechanicCount, rand);
+                InjectSingleType(ref board, RingType.Bomb, mechanicCount, rand, bombCountdown);
             else if (mechanic == WorldMechanicType.Chain)
-                InjectSingleType(ref board, RingType.Chain, mechanicCount, rand);
+                InjectSingleType(ref board, RingType.Chain, mechanicCount, rand, bombCountdown);
             else if (mechanic == WorldMechanicType.Magnet)
-                InjectSingleType(ref board, RingType.Magnet, mechanicCount, rand);
+                InjectSingleType(ref board, RingType.Magnet, mechanicCount, rand, bombCountdown);
             else if (mechanic == WorldMechanicType.Paint)
-                InjectSingleType(ref board, RingType.Paint, mechanicCount, rand);
+                InjectSingleType(ref board, RingType.Paint, mechanicCount, rand, bombCountdown);
             else if (mechanic == WorldMechanicType.Ghost)
-                InjectSingleType(ref board, RingType.Ghost, mechanicCount, rand);
+                InjectSingleType(ref board, RingType.Ghost, mechanicCount, rand, bombCountdown);
             else if (mechanic == WorldMechanicType.RandomPool1 ||
                      mechanic == WorldMechanicType.RandomPool2 ||
                      mechanic == WorldMechanicType.RandomPool3)
@@ -333,15 +337,23 @@ namespace RingFlow.Gameplay
                 }
 
                 for (int i = 0; i < chosenTypes.Count; i++)
-                    InjectSingleType(ref board, chosenTypes[i], mechanicCount, rand);
+                    InjectSingleType(ref board, chosenTypes[i], mechanicCount, rand, bombCountdown);
             }
 
             EnforceMaxMechanicsLimit(db, ref board);
             EnforceMechanicCompatibility(ref board);
         }
 
-        private static void InjectSingleType(ref BoardState board, RingType type, int maxCount, Random rand)
+        private static void InjectSingleType(ref BoardState board, RingType type, int maxCount, Random rand, int bombCountdown)
         {
+            // Validate bomb countdown fits in 4-bit BoardState storage
+            if (type == RingType.Bomb && bombCountdown > 15)
+            {
+                NexusLog.Error("LevelGenerator", nameof(InjectSingleType), "Bomb",
+                    $"BombCountdown={bombCountdown} exceeds 4-bit BoardState limit (max 15). Clamping to 15.");
+                bombCountdown = 15;
+            }
+
             int poleCount = board.PoleCount;
             int count = 0;
             for (int attempt = 0; attempt < 20 && count < maxCount; attempt++)
@@ -360,7 +372,7 @@ namespace RingFlow.Gameplay
                         board.SetRingType(p, r, type);
                         if (type == RingType.Bomb)
                         {
-                            board.SetRingAdditional(p, r, s_bombCountdown);
+                            board.SetRingAdditional(p, r, bombCountdown);
                         }
                         else if (type == RingType.Chain)
                         {
@@ -623,12 +635,13 @@ namespace RingFlow.Gameplay
 
                 if (bestPoleToEmpty == -1) break;
 
+                // Reuse pre-allocated backup list — avoids new List<> on every iteration (was alloc_in_loop)
+                _ringsBackup.Clear();
                 bool success = true;
-                var ringsBackup = new List<RingData>();
                 int rcToMove = board.GetRingCount(bestPoleToEmpty);
                 for (int r = rcToMove - 1; r >= 0; r--)
                 {
-                    ringsBackup.Add(new RingData(
+                    _ringsBackup.Add(new RingData(
                         board.GetRingColor(bestPoleToEmpty, r),
                         board.GetRingType(bestPoleToEmpty, r),
                         board.GetRingAdditional(bestPoleToEmpty, r)));
@@ -636,8 +649,9 @@ namespace RingFlow.Gameplay
 
                 board.SetRingCount(bestPoleToEmpty, 0);
 
-                foreach (var ring in ringsBackup)
+                for (int ri = 0; ri < _ringsBackup.Count; ri++)
                 {
+                    var ring = _ringsBackup[ri];
                     bool placed = false;
                     for (int p = 0; p < board.PoleCount; p++)
                     {
@@ -663,9 +677,9 @@ namespace RingFlow.Gameplay
                 else
                 {
                     board.SetRingCount(bestPoleToEmpty, 0);
-                    for (int r = ringsBackup.Count - 1; r >= 0; r--)
+                    for (int r = _ringsBackup.Count - 1; r >= 0; r--)
                     {
-                        board.AddRingSimple(bestPoleToEmpty, ringsBackup[r]);
+                        board.AddRingSimple(bestPoleToEmpty, _ringsBackup[r]);
                     }
                     break;
                 }

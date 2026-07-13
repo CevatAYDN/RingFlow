@@ -1,17 +1,16 @@
 using System.Collections.Generic;
-using RingFlow.Gameplay.Strategies;
 
 namespace RingFlow.Gameplay
 {
     /// <summary>
     /// Pole state model following Nexus MVCS principles.
-    /// Uses Strategy pattern for ring validation rules, enabling Open/Closed Principle compliance.
-    /// Validation is delegated to RingValidationStrategyManager for extensibility.
+    /// Validation rules are self-contained via direct inline logic (DirectCanAddRing /
+    /// DirectCanPopRing). The <see cref="Strategies.RingValidationStrategyManager"/> is
+    /// injected into Commands (SelectPoleCommand, MoveRingCommand) which is the correct
+    /// MVCS boundary — Models must not hold service references.
     /// </summary>
     public class PoleState
     {
-        private static RingValidationStrategyManager s_validationManager;
-
         public int Id { get; set; }
         public List<RingData> Rings { get; } = new(4);
         private int _maxCapacity = 4;
@@ -49,54 +48,21 @@ namespace RingFlow.Gameplay
         public RingData TopRing => IsEmpty ? new RingData(RingColor.None) : Rings[^1];
 
         /// <summary>
-        /// Sets the validation strategy manager (called during gameplay initialization).
-        /// This follows Dependency Injection principles while keeping PoleState as a simple model.
-        /// </summary>
-        public static void SetValidationManager(RingValidationStrategyManager manager)
-        {
-            s_validationManager = manager;
-        }
-
-        /// <summary>
-        /// Validates if a ring can be added to this pole using Strategy pattern.
-        /// Delegates to RingValidationStrategyManager for rule execution.
-        /// If validation manager is not set, uses direct validation rules.
+        /// Validates if a ring can be added to this pole.
+        /// Handles all standard and special ring type rules inline.
         /// </summary>
         public bool CanAddRing(RingData ring)
         {
-            if (s_validationManager == null)
-            {
-                return DirectCanAddRing(ring);
-            }
-
-            if (ring.Type == RingType.Rainbow || ring.Type == RingType.Paint)
-            {
-                return s_validationManager.CanAddUniversalRing(ring, TopRing, IsFull, IsLocked);
-            }
-
-            if (!IsEmpty && (TopRing.Type == RingType.Rainbow || TopRing.Type == RingType.Paint))
-            {
-                return s_validationManager.CanAddUniversalRing(ring, TopRing, IsFull, IsLocked);
-            }
-
-            return s_validationManager.CanAddRing(ring, TopRing, IsFull, IsLocked);
+            return DirectCanAddRing(ring);
         }
 
         /// <summary>
-        /// Validates if the top ring can be removed from this pole using Strategy pattern.
-        /// Delegates to RingValidationStrategyManager for rule execution.
+        /// Validates if the top ring can be removed from this pole.
         /// </summary>
         public bool CanPopRing()
         {
             if (IsEmpty) return false;
-
-            if (s_validationManager == null)
-            {
-                // Use direct validation rules if manager not set (editor compatibility)
-                return DirectCanPopRing();
-            }
-
-            return s_validationManager.CanPopRing(TopRing, IsLocked);
+            return DirectCanPopRing();
         }
 
         public void AddRing(RingData ring)
@@ -121,7 +87,7 @@ namespace RingFlow.Gameplay
             return ring;
         }
 
-        #region Direct Validation (Editor Compatibility)
+        #region Validation Rules
 
         private bool DirectCanAddRing(RingData ring)
         {

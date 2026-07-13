@@ -55,15 +55,15 @@ namespace RingFlow.Gameplay.Diagnostics
 
         public string GetBindingReport()
         {
-            string report = "=== View/Mediator Binding Report ===\n";
+            var sb = new System.Text.StringBuilder("=== View/Mediator Binding Report ===\n");
             lock (_viewCounts)
             {
                 foreach (var kvp in _viewCounts)
                 {
-                    report += $"  {kvp.Key.Name}: {kvp.Value} active\n";
+                    sb.Append("  ").Append(kvp.Key.Name).Append(": ").Append(kvp.Value).AppendLine(" active");
                 }
             }
-            return report;
+            return sb.ToString();
         }
 
         public void OnDispose() {}
