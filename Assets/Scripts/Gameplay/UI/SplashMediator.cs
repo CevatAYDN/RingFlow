@@ -60,9 +60,13 @@ namespace RingFlow.Gameplay.UI
                 return;
             }
 
-            bool gdprAccepted = _prefs != null
-                ? _prefs.GetInt(GameplayAssetKeys.PlayerPrefs.GdprAccepted, 0) == 1
-                : PlayerPrefs.GetInt(GameplayAssetKeys.PlayerPrefs.GdprAccepted, 0) == 1;
+            if (_prefs == null)
+            {
+                NexusLog.Error("SplashMediator", nameof(TransitionAfterDelay), "",
+                    "IPlayerPrefsService is not bound; treating GDPR consent as not accepted.");
+            }
+            bool gdprAccepted = _prefs != null &&
+                _prefs.GetInt(GameplayAssetKeys.PlayerPrefs.GdprAccepted, 0) == 1;
 
             if (gdprAccepted)
             {

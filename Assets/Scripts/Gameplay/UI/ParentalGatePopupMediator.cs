@@ -38,8 +38,8 @@ namespace RingFlow.Gameplay.UI
                 }
                 else
                 {
-                    PlayerPrefs.SetInt(GameplayAssetKeys.PlayerPrefs.GdprAccepted, 1);
-                    PlayerPrefs.Save();
+                    NexusLog.Error("ParentalGatePopupMediator", nameof(HandleAccept), "",
+                        "IPlayerPrefsService is not bound; consent cannot be persisted.");
                 }
 
                 NexusLog.Info("ParentalGatePopupMediator", "HandleAccept", "", "Parental gate verification passed. GDPR accepted.");
