@@ -3,6 +3,7 @@ using Nexus.Core;
 using Nexus.Core.FSM;
 using Nexus.Core.Services;
 using UnityEngine;
+using RingFlow.Gameplay.Services;
 
 namespace RingFlow.Gameplay.UI
 {
@@ -11,7 +12,7 @@ namespace RingFlow.Gameplay.UI
         [Inject] private IGameStateMachine _fsm;
         [Inject] private ILocalizationService _loc;
         [Inject] private ISignalBus _signalBus;
-        [Inject] private IPlayerPrefsService _prefs;
+        [Inject] private ILegalConsentService _consent;
 
         protected override void OnBind()
         {
@@ -60,13 +61,12 @@ namespace RingFlow.Gameplay.UI
                 return;
             }
 
-            if (_prefs == null)
+            if (_consent == null)
             {
                 NexusLog.Error("SplashMediator", nameof(TransitionAfterDelay), "",
-                    "IPlayerPrefsService is not bound; treating GDPR consent as not accepted.");
+                    "ILegalConsentService is not bound; treating GDPR consent as not accepted.");
             }
-            bool gdprAccepted = _prefs != null &&
-                _prefs.GetInt(GameplayAssetKeys.PlayerPrefs.GdprAccepted, 0) == 1;
+            bool gdprAccepted = _consent != null && _consent.IsAccepted;
 
             if (gdprAccepted)
             {

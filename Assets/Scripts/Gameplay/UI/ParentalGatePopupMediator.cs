@@ -2,6 +2,7 @@ using Nexus.Core;
 using Nexus.Core.FSM;
 using Nexus.Core.Services;
 using UnityEngine;
+using RingFlow.Gameplay.Services;
 
 namespace RingFlow.Gameplay.UI
 {
@@ -10,7 +11,7 @@ namespace RingFlow.Gameplay.UI
         [Inject] private IGameStateMachine _fsm;
         [Inject] private ISignalBus _signalBus;
         [Inject] private ILocalizationService _loc;
-        [Inject] private IPlayerPrefsService _prefs;
+        [Inject] private ILegalConsentService _consent;
 
         protected override void OnBind()
         {
@@ -30,17 +31,8 @@ namespace RingFlow.Gameplay.UI
 
             if (View.ValidateAnswer())
             {
-                // Save acceptance state locally (device bound) via the encrypted storage abstraction.
-                if (_prefs != null)
-                {
-                    _prefs.SetInt(GameplayAssetKeys.PlayerPrefs.GdprAccepted, 1);
-                    _prefs.Save();
-                }
-                else
-                {
-                    NexusLog.Error("ParentalGatePopupMediator", nameof(HandleAccept), "",
-                        "IPlayerPrefsService is not bound; consent cannot be persisted.");
-                }
+                // Save acceptance state locally (device bound) via the Nexus legal consent service.
+                _consent?.Accept();
 
                 NexusLog.Info("ParentalGatePopupMediator", "HandleAccept", "", "Parental gate verification passed. GDPR accepted.");
                 

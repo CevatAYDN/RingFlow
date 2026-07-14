@@ -171,6 +171,7 @@ namespace RingFlow.Gameplay.AOT
             typeof(ProgressionService).ToString();
             typeof(DailyRewardService).ToString();
             typeof(RingFlow.Gameplay.Services.GameTimeService).ToString();
+            typeof(RingFlow.Gameplay.Services.LegalConsentService).ToString();
             typeof(VfxPrefabRegistry).ToString();
 
             // Data-driven ScriptableObject types (loaded via Resources.Load in GameplayLifecycle)
