@@ -343,7 +343,13 @@ namespace RingFlow.Editor
                 using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
                     _lookupLevelIndex = EditorGUILayout.IntField("Sorgulanacak Seviye", _lookupLevelIndex);
-                    _lookupLevelIndex = Mathf.Clamp(_lookupLevelIndex, 1, db.TotalLevels);
+                    if (_lookupLevelIndex < 1 || _lookupLevelIndex > db.TotalLevels)
+                    {
+                        EditorGUILayout.HelpBox(
+                            $"Seviye {_lookupLevelIndex} geçersiz. Lütfen 1 ile {db.TotalLevels} arasında bir seviye giriniz.",
+                            MessageType.Error);
+                        return;
+                    }
 
                     var band = db.GetBandForLevel(_lookupLevelIndex);
                     int colorCount = db.GetColorCountForLevel(_lookupLevelIndex);

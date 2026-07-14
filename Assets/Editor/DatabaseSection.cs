@@ -268,9 +268,7 @@ namespace RingFlow.Editor
                         }
                     }
 
-                    int solverLimit = _database.LevelGen.SolverLimitBuckets != null && _database.LevelGen.SolverLimitBuckets.Count > 0
-                        ? GetSolverLimitFromBuckets(colorCount, _database.LevelGen.SolverLimitBuckets)
-                        : 20000;
+                    int solverLimit = GetSolverLimitFromBuckets(colorCount, _database.LevelGen.SolverLimitBuckets);
                     var solveResult = LevelSolver.Solve(board, maxCap, maxStatesLimit: solverLimit);
                     if (solveResult.IsSolvable)
                     {

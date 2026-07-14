@@ -12,7 +12,11 @@ namespace RingFlow.Tests
         [SetUp]
         public void SetUp()
         {
-            _db = UnityEngine.Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase); if (_db == null) { _db = UnityEngine.ScriptableObject.CreateInstance<GameConfigDatabaseSO>(); _db.InitializeDefaults(); }
+            _db = UnityEngine.Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase);
+            if (_db == null)
+                throw new System.InvalidOperationException(
+                    "[Test SetUp] GameConfigDatabaseSO not found at Resources key: " + GameplayAssetKeys.GameConfigDatabase +
+                    ". Create and configure the asset before running tests.");
         }
 
         private static void AssertLevelContainsOnlyAllowedMechanics(LevelData levelData, System.Collections.Generic.List<WorldMechanicType> allowedMechanics,
@@ -105,17 +109,18 @@ namespace RingFlow.Tests
         [Test]
         public void LevelGenerator_ProducesSolvableLevelWithStandardRings()
         {
-            // Generate Level 1 (Grass Valley - standard rings, 3 poles, 2 colors, max capacity 3)
-            var levelData = LevelGenerator.GenerateLevel(_db, 1, seed: 100, poleCount: 3, colorCount: 2, maxCapacity: 3);
+            // Level 1: Tutorial band -> MinEmptyPoles=2, MaxCapacity=4
+            // Use poleCount = colorCount + minEmptyPoles = 2 + 2 = 4
+            var levelData = LevelGenerator.GenerateLevel(_db, 1, seed: 100, poleCount: 4, colorCount: 2, maxCapacity: 3);
 
             Assert.IsNotNull(levelData);
             Assert.AreEqual(1, levelData.LevelIndex);
-            Assert.AreEqual(3, levelData.Poles.Count);
+            Assert.AreEqual(4, levelData.Poles.Count);
             Assert.Greater(levelData.TargetMoves, 0);
 
             // Verify with solver
-            var board = new BoardState { PoleCount = 3, MaxCapacity = 3 };
-            for (int p = 0; p < 3; p++)
+            var board = new BoardState { PoleCount = 4, MaxCapacity = 3 };
+            for (int p = 0; p < 4; p++)
             {
                 var poleData = levelData.Poles[p];
                 for (int r = 0; r < poleData.Rings.Count; r++)
@@ -196,14 +201,12 @@ namespace RingFlow.Tests
         public void LevelGenerator_ProducesSolvableLevelAtHighDifficulty()
         {
             // Generate a high-difficulty level with enough solver budget to verify solvability.
-            // Level 800 = 9 colors (Expert band), 9+1=10 poles, tested at 8000 solver states.
+            // Level 800 = 9 colors (Expert band), Expert.MinEmptyPoles=1, so 9+1=10 poles.
             int currentLevel = 800;
             var db = _db;
             int colorCount = db.GetColorCountForLevel(currentLevel);
             int poleCount = db.GetPoleCountForLevel(currentLevel);
             int maxCapacity = db.GetMaxCapacityForLevel(currentLevel);
-            if (poleCount < colorCount + 1) poleCount = colorCount + 1;
-            if (poleCount > 12) poleCount = 12;
 
             var levelData = LevelGenerator.GenerateLevel(db, currentLevel, seed: 800 * 12345, poleCount, colorCount, maxCapacity);
 
@@ -784,23 +787,19 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void DB_Fallback_NotAllowedMechanics_ReturnsEmptyList()
+        public void DB_Fallback_NotAllowedMechanics_Throws()
         {
             var db = _db;
-            // Backup the original data, clear it temporarily for testing
             var savedBands = db.DifficultyBands;
-            db.DifficultyBands = new List<DifficultyBandData>();
-
-            // Expect the error log from GetBandForLevel when bands are empty
-            UnityEngine.TestTools.LogAssert.Expect(UnityEngine.LogType.Error,
-                new System.Text.RegularExpressions.Regex("DifficultyBands"));
-
-            var result = db.GetAllowedMechanicsForLevel(1);
-            Assert.IsNotNull(result);
-            Assert.IsEmpty(result);
-
-            // Restore
-            db.DifficultyBands = savedBands;
+            try
+            {
+                db.DifficultyBands = new List<DifficultyBandData>();
+                Assert.Throws<System.InvalidOperationException>(() => db.GetAllowedMechanicsForLevel(1));
+            }
+            finally
+            {
+                db.DifficultyBands = savedBands;
+            }
         }
 
         [Test]

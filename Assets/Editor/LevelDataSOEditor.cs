@@ -86,7 +86,11 @@ namespace RingFlow.Editor
             float now = (float)EditorApplication.timeSinceStartup;
             if (s_cachedPalette != null && now - s_paletteCacheTime < PaletteCacheSeconds)
                 return s_cachedPalette;
+
             s_cachedPalette = Resources.Load<RingColorPaletteSO>(EditorPaths.RingColorPaletteKey);
+            if (s_cachedPalette == null)
+                throw new System.InvalidOperationException("[LevelDataSOEditor] RingColorPaletteSO is required.");
+
             s_paletteCacheTime = now;
             return s_cachedPalette;
         }
@@ -164,9 +168,12 @@ namespace RingFlow.Editor
                     {
                         if (GUILayout.Button("Boş Direk Ekle", GUILayout.Height(24)))
                         {
+                            var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
+                            if (db == null)
+                                throw new System.InvalidOperationException("[LevelDataSOEditor] GameConfigDatabaseSO is required to determine ring capacity.");
                             int ringCapacity = levelSO.Data.Poles.Count > 0 
                                 ? levelSO.Data.Poles[0].RingCapacity 
-                                : (Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey)?.GetMaxCapacityForLevel(levelSO.Data.LevelIndex) ?? 4);
+                                : db.GetMaxCapacityForLevel(levelSO.Data.LevelIndex);
                             Undo.RecordObject(levelSO, "Direk Ekle");
                             levelSO.Data.Poles.Add(new PoleData(ringCapacity));
                             EditorUtility.SetDirty(levelSO);
@@ -311,7 +318,8 @@ namespace RingFlow.Editor
             }
 
             var database = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
-            if (database == null) return;
+            if (database == null)
+                throw new System.InvalidOperationException("[LevelDataSOEditor] GameConfigDatabaseSO is required.");
             int levelIndex = levelData.LevelIndex;
             var band = database.GetBandForLevel(levelIndex);
             var allowed = database.GetAllowedMechanicsForLevel(levelIndex);

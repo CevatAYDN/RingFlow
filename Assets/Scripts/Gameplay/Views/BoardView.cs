@@ -111,7 +111,11 @@ namespace RingFlow.Gameplay
                 poleObj.transform.localPosition = new Vector3(startX + p * spacing, F.PoleYPosition, 0f);
                 poleObj.transform.localRotation = Quaternion.identity;
                 var poleScale = F.PoleScale;
-                int poleCap = poleData.RingCapacity > 0 ? poleData.RingCapacity : F.DefaultPoleCapacity;
+                int poleCap = poleData.RingCapacity;
+                if (poleCap <= 0)
+                    throw new System.InvalidOperationException(
+                        $"[BoardView] Pole {p} has RingCapacity={poleCap}. Data must have a positive RingCapacity value. " +
+                        "Check LevelData or pole configuration.");
                 poleScale.y = F.PoleScale.y * (poleCap / (float)F.PoleScaleFullCapacity);
                 poleObj.transform.localScale = poleScale;
 

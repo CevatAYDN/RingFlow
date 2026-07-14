@@ -158,12 +158,12 @@ namespace RingFlow.Gameplay
     [CreateAssetMenu(fileName = "GameConfigDatabase", menuName = "RingFlow/Game Config Database")]
     public class GameConfigDatabaseSO : ScriptableObject
     {
-        public int TotalLevels = 2000;
-        public int LevelsPerWorld = 50;
-        public int TotalWorlds = 40;
-        public int BossLevelModulo = 50;
+        public int TotalLevels = 0;
+        public int LevelsPerWorld = 25;
+        public int TotalWorlds = 0;
+        public int BossLevelModulo = 25;
         public int LevelsPerThemeStep = 5;
-        public int MinimumEmptyPoles = 1;
+        public int MinimumEmptyPoles = 0;
         public List<DifficultyBandData> DifficultyBands = new();
         public List<ColorCurvePoint> ColorCurve = new();
         public List<LevelThemeData> LevelThemes = new();
@@ -517,9 +517,8 @@ namespace RingFlow.Gameplay
         {
             if (DifficultyBands == null || DifficultyBands.Count == 0)
             {
-                NexusLog.Error("GameConfigDatabaseSO", nameof(GetBandForLevel), level.ToString(),
-                    "DifficultyBands DB'de tanımlı değil. Lütfen DifficultyBands listesini doldurun.");
-                return DifficultyBand.Tutorial;
+                throw new System.InvalidOperationException(
+                    "[GameConfigDatabaseSO] DifficultyBands DB'de tanımlı değil. Lütfen DifficultyBands listesini doldurun.");
             }
 
             foreach (var b in DifficultyBands)
@@ -543,12 +542,11 @@ namespace RingFlow.Gameplay
                 }
             }
 
-            // ColorCurve DB verisi kullanılır — hardcoded fallback yok.
             if (ColorCurve == null || ColorCurve.Count == 0)
             {
-                NexusLog.Warn("GameConfigDatabaseSO", nameof(GetColorCountForLevel), level.ToString(),
-                    "ColorCurve DB'de tanımlı değil. Varsayılan 3 renk kullanılıyor. Lütfen ColorCurve verisini doldurun.");
-                return 3;
+                throw new System.InvalidOperationException(
+                    $"[GameConfigDatabaseSO] ColorCurve DB'de tanımlı değil. Level {level} için renk sayısı belirlenemiyor. " +
+                    "Lütfen ColorCurve listesini doldurun.");
             }
 
             int count = ColorCurve[0].ColorCount;
@@ -567,30 +565,31 @@ namespace RingFlow.Gameplay
 
         public int GetMinEmptyPolesForLevel(int level)
         {
-            // Hardcoded dönüş yok — tüm değerler DifficultyBands DB verisinden gelir.
-            // Tutorial band'ında MinEmptyPoles, DifficultyBands tablosunda tanımlıdır.
-            if (DifficultyBands != null && DifficultyBands.Count > 0)
+            if (DifficultyBands == null || DifficultyBands.Count == 0)
             {
-                var band = GetBandForLevel(level);
-                foreach (var b in DifficultyBands)
-                {
-                    if (b.Band == band) return b.MinEmptyPoles;
-                }
+                throw new System.InvalidOperationException(
+                    $"[GameConfigDatabaseSO] DifficultyBands DB'de tanımlı değil. Level {level} için boş direk sayısı belirlenemiyor. " +
+                    "Lütfen DifficultyBands listesini doldurun.");
             }
 
-            NexusLog.Warn("GameConfigDatabaseSO", nameof(GetMinEmptyPolesForLevel), level.ToString(),
-                "DifficultyBands boş veya band bulunamadı. MinimumEmptyPools field değeri kullanılıyor.");
-            return MinimumEmptyPoles > 0 ? MinimumEmptyPoles : GameplayAssetKeys.Tuning.DefaultMinEmptyPoles;
+            var band = GetBandForLevel(level);
+            foreach (var b in DifficultyBands)
+            {
+                if (b.Band == band) return b.MinEmptyPoles;
+            }
+
+            throw new System.InvalidOperationException(
+                $"[GameConfigDatabaseSO] DifficultyBand '{band}' için MinEmptyPoles DB'de tanımlı değil. " +
+                "Lütfen DifficultyBands verisini güncelleyin.");
         }
 
         public int GetMaxCapacityForLevel(int level)
         {
-            // Hardcoded dönüş yok — tüm kapasite değerleri DifficultyBands DB verisinden gelir.
             if (DifficultyBands == null || DifficultyBands.Count == 0)
             {
-                NexusLog.Warn("GameConfigDatabaseSO", nameof(GetMaxCapacityForLevel), level.ToString(),
-                    "DifficultyBands boş. Varsayılan kapasite 4 kullanılıyor.");
-                return 4;
+                throw new System.InvalidOperationException(
+                    $"[GameConfigDatabaseSO] DifficultyBands DB'de tanımlı değil. Level {level} için kapasite belirlenemiyor. " +
+                    "Lütfen DifficultyBands listesini doldurun.");
             }
 
             var band = GetBandForLevel(level);
@@ -598,7 +597,10 @@ namespace RingFlow.Gameplay
             {
                 if (b.Band == band) return b.MaxCapacity;
             }
-            return 4;
+
+            throw new System.InvalidOperationException(
+                $"[GameConfigDatabaseSO] DifficultyBand '{band}' için MaxCapacity DB'de tanımlı değil. " +
+                "Lütfen DifficultyBands verisini güncelleyin.");
         }
 
         public List<WorldMechanicType> GetAllowedMechanicsForLevel(int level)
@@ -619,11 +621,9 @@ namespace RingFlow.Gameplay
                 }
             }
 
-            // Fail-loud: DB'de AllowedMechanics tanımlı değilse boş liste dön,
-            // hiçbir hardcoded fallback üretilmez.
-            NexusLog.Warn("GameConfigDatabaseSO", nameof(GetAllowedMechanicsForLevel), level.ToString(),
-                $"DifficultyBand '{band}' için AllowedMechanics DB'de tanımlı değil. DifficultyBands verisini güncelleyin.");
-            return new List<WorldMechanicType>();
+            throw new System.InvalidOperationException(
+                $"[GameConfigDatabaseSO] DifficultyBand '{band}' için AllowedMechanics DB'de tanımlı değil. " +
+                "Lütfen DifficultyBands verisini güncelleyin.");
         }
 
         public int GetMechanicIntensityForLevel(int level)
@@ -635,21 +635,33 @@ namespace RingFlow.Gameplay
                 {
                     if (b.Band == band)
                     {
-                        return b.MechanicIntensity > 0 ? b.MechanicIntensity : GameplayAssetKeys.Tuning.DefaultMechanicIntensity;
+                        if (b.MechanicIntensity > 0)
+                            return b.MechanicIntensity;
+                        break;
                     }
                 }
             }
 
-            // Fallback fail-loud: DB'de MechanicIntensity tanımlı değil.
-            NexusLog.Warn("GameConfigDatabaseSO", nameof(GetMechanicIntensityForLevel), level.ToString(),
-                $"DifficultyBand '{band}' için MechanicIntensity DB'de tanımlı değil. Lütfen DifficultyBands verisine bu alanı ekleyin.");
-            return 1;
+            throw new System.InvalidOperationException(
+                $"[GameConfigDatabaseSO] DifficultyBand '{band}' için MechanicIntensity DB'de tanımlı değil veya 0. " +
+                "Lütfen DifficultyBands verisine bu alanı ekleyin.");
         }
 
         public int GetWorldForLevel(int level)
         {
+            if (Worlds == null || Worlds.Count == 0)
+                throw new System.InvalidOperationException(
+                    "[GameConfigDatabaseSO] Worlds list DB'de tanımlı değil. Lütfen Worlds listesini doldurun.");
+            if (LevelsPerWorld <= 0)
+                throw new System.InvalidOperationException(
+                    "[GameConfigDatabaseSO] LevelsPerWorld 0 veya negatif. Lütfen geçerli bir değer girin.");
+
             int world = (level - 1) / LevelsPerWorld;
-            return Mathf.Clamp(world, 0, Worlds.Count - 1);
+            if (world < 0 || world >= Worlds.Count)
+                throw new System.ArgumentOutOfRangeException(nameof(level),
+                    $"Level {level}, world index {world} üretiyor ancak Worlds.Count = {Worlds.Count}. " +
+                    "Lütfen TotalLevels ve Worlds.Count değerlerini kontrol edin.");
+            return world;
         }
 
         public LevelThemeData GetLevelThemeForLevel(int level)
@@ -666,18 +678,20 @@ namespace RingFlow.Gameplay
                 }
             }
 
-            return new LevelThemeData
-            {
-                StartLevel = level,
-                EndLevel = level,
-                ColorCount = GetColorCountForLevel(level),
-                ForcedMechanics = GetAllowedMechanicsForLevel(level)
-            };
+            throw new System.InvalidOperationException(
+                $"[GameConfigDatabaseSO] LevelThemes DB'de tanımlı değil veya level {level} için eşleşen tema bulunamadı. " +
+                "Lütfen LevelThemes listesini doldurun.");
         }
 
         public WorldMechanicType GetMechanicForWorld(int worldIndex)
         {
-            if (Worlds == null || worldIndex < 0 || worldIndex >= Worlds.Count) return WorldMechanicType.None;
+            if (Worlds == null || Worlds.Count == 0)
+                throw new System.InvalidOperationException(
+                    "[GameConfigDatabaseSO] Worlds list DB'de tanımlı değil. Lütfen Worlds listesini doldurun.");
+            if (worldIndex < 0 || worldIndex >= Worlds.Count)
+                throw new System.ArgumentOutOfRangeException(nameof(worldIndex),
+                    $"World index {worldIndex} geçersiz. Worlds.Count = {Worlds.Count}. " +
+                    "Lütfen Worlds listesini kontrol edin.");
             return Worlds[worldIndex].MechanicType;
         }
 

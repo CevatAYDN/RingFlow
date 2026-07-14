@@ -57,10 +57,7 @@ namespace RingFlow.Editor
 
             _cachedDatabase = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
             if (_cachedDatabase == null)
-            {
-                EditorGUILayout.HelpBox("Zorluk Veritabanı (GameConfigDatabase.asset) bulunamadı!", MessageType.Error);
-                return;
-            }
+                throw new System.InvalidOperationException("[GeneratorSection] GameConfigDatabaseSO is required.");
             using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
             {
                 EditorGUILayout.ObjectField("Zorluk Veritabanı (Database)", _cachedDatabase, typeof(GameConfigDatabaseSO), false);
@@ -239,21 +236,22 @@ namespace RingFlow.Editor
 
         private void Generate()
         {
-            var db = _cachedDatabase ?? Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
-            if (db == null) return;
+            var db = _cachedDatabase;
+            if (db == null)
+                throw new System.InvalidOperationException("[GeneratorSection.Generate] GameConfigDatabaseSO is required.");
             if (_levelIndex < 1 || _levelIndex > db.TotalLevels)
-            {
-                NexusLog.Warn("RingFlowEditor", nameof(Generate), _levelIndex.ToString(),
-                    "Seviye endeksi sınırların dışında, düzeltiliyor.");
-                _levelIndex = Mathf.Clamp(_levelIndex, 1, db.TotalLevels);
-            }
+                throw new System.ArgumentOutOfRangeException(nameof(_levelIndex),
+                    $"Level index {_levelIndex} is out of range [1, {db.TotalLevels}]. " +
+                    "Update DB TotalLevels or enter a valid index.");
 
-            // Tüm parametreler DB'den — yerel değişkenler
             int poleCount = db.GetPoleCountForLevel(_levelIndex);
             int colorCount = db.GetColorCountForLevel(_levelIndex);
             int maxCapacity = db.GetMaxCapacityForLevel(_levelIndex);
-            int minEmptyPoles = Mathf.Max(1, db.GetMinEmptyPolesForLevel(_levelIndex));
-            if (poleCount > db.LevelGen.PoleCountClamp) poleCount = db.LevelGen.PoleCountClamp;
+            int minEmptyPoles = db.GetMinEmptyPolesForLevel(_levelIndex);
+
+            if (poleCount > db.LevelGen.PoleCountClamp)
+                throw new System.InvalidOperationException(
+                    $"Pole count {poleCount} exceeds PoleCountClamp {db.LevelGen.PoleCountClamp} for level {_levelIndex}. Update DB PoleCountClamp or adjust the level config.");
 
             NexusLog.Info("RingFlowEditor", nameof(Generate), _levelIndex.ToString(),
                 $"Seviye {_levelIndex} üretiliyor: Seed={_seed}, Direkler={poleCount}, Renkler={colorCount}, Kapasite={maxCapacity}, BoşDirek={minEmptyPoles}");
@@ -309,8 +307,9 @@ namespace RingFlow.Editor
         private void GenerateAllLevels()
         {
             _generateInProgress = true;
-            var db = _cachedDatabase ?? Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
-            if (db == null) return;
+            var db = _cachedDatabase;
+            if (db == null)
+                throw new System.InvalidOperationException("[GeneratorSection.GenerateAllLevels] GameConfigDatabaseSO is required.");
 
             string folderPath = EditorPaths.LevelsFolder;
             EnsureLevelsFolder(folderPath);
@@ -327,8 +326,15 @@ namespace RingFlow.Editor
                     int colors = db.GetColorCountForLevel(level);
                     int maxCap = db.GetMaxCapacityForLevel(level);
                     int minEmpty = db.GetMinEmptyPolesForLevel(level);
-                    if (poles < colors + minEmpty) poles = colors + minEmpty;
-                    if (poles > db.LevelGen.PoleCountClamp) poles = db.LevelGen.PoleCountClamp;
+
+                    if (poles > db.LevelGen.PoleCountClamp)
+                        throw new System.InvalidOperationException(
+                            $"Pole count {poles} exceeds PoleCountClamp {db.LevelGen.PoleCountClamp} for level {level}. Update DB or adjust level config.");
+
+                    if (poles < colors + minEmpty)
+                        throw new System.InvalidOperationException(
+                            $"Pole count {poles} < colors ({colors}) + minEmptyPoles ({minEmpty}) for level {level}. " +
+                            "Update DB ColorCurve or DifficultyBands to ensure pole capacity.");
 
                     var levelData = LevelGenerator.GenerateLevel(db, level, 100 + level, poles, colors, maxCap);
                     if (levelData == null)

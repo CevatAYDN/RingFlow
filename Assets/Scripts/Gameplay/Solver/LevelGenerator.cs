@@ -49,14 +49,12 @@ namespace RingFlow.Gameplay
                     selectedColors.Add(colors[i]);
                 }
 
-                // DB-driven: Renk sayısı enum kapasitesini aşıyorsa hard hatayı logla
-                // (fail-loud — hiçbir silent fallback yok)
+                // DB-driven: Renk sayısı enum kapasitesini aşıyorsa hard hatayı fırlat
                 if (selectedColors.Count < colorCount)
                 {
-                    NexusLog.Error("LevelGenerator", nameof(GenerateLevel), levelIndex.ToString(),
+                    throw new System.InvalidOperationException(
                         $"DB {colorCount} renk istiyor ama RingColor enum'ında yalnızca {selectedColors.Count} " +
                         "renk kullanılabilir. RingColor enum'ını genişletin veya DB ColorCurve'u düşürün.");
-                    colorCount = selectedColors.Count;
                 }
 
                 // Direkleri doldur
@@ -70,16 +68,16 @@ namespace RingFlow.Gameplay
                 }
 
                 int minEmptyPoles = db.GetMinEmptyPolesForLevel(levelIndex);
-                if (minEmptyPoles < 1) minEmptyPoles = 1;
+
                 if (minEmptyPoles > poleCount - colorCount)
                 {
-                    minEmptyPoles = poleCount - colorCount;
+                    throw new System.InvalidOperationException(
+                        $"MinEmptyPoles {minEmptyPoles} > poleCount ({poleCount}) - colorCount ({colorCount}) for level {levelIndex}. " +
+                        "Update DB DifficultyBands or ColorCurve.");
                 }
 
                 int untouchedPoles = System.Math.Max(0, minEmptyPoles - 1);
                 int scramblePoleCount = poleCount - untouchedPoles;
-                if (scramblePoleCount < colorCount + minEmptyPoles) scramblePoleCount = colorCount + minEmptyPoles;
-                if (scramblePoleCount > poleCount) scramblePoleCount = poleCount;
 
                 int validScrambleMoves = 0;
                 int scrambleTarget = cfg.ScrambleTargetBase + rand.Next(cfg.ScrambleTargetRandomRange);
@@ -349,9 +347,9 @@ namespace RingFlow.Gameplay
             // Validate bomb countdown fits in 4-bit BoardState storage
             if (type == RingType.Bomb && bombCountdown > 15)
             {
-                NexusLog.Error("LevelGenerator", nameof(InjectSingleType), "Bomb",
-                    $"BombCountdown={bombCountdown} exceeds 4-bit BoardState limit (max 15). Clamping to 15.");
-                bombCountdown = 15;
+                throw new System.InvalidOperationException(
+                    $"BombCountdown={bombCountdown} exceeds 4-bit BoardState limit (max 15). " +
+                    "Update DB LevelGen.BombCountdown to a valid value (0-15).");
             }
 
             int poleCount = board.PoleCount;
@@ -487,7 +485,7 @@ namespace RingFlow.Gameplay
 
         private static void EnforceMaxMechanicsLimit(GameConfigDatabaseSO db, ref BoardState board)
         {
-            int maxTypes = db != null ? db.LevelGen.MaxMechanicTypesPerLevel : 4;
+            int maxTypes = db.LevelGen.MaxMechanicTypesPerLevel;
 
             var uniqueTypes = new HashSet<RingType>();
             for (int p = 0; p < board.PoleCount; p++)
@@ -513,9 +511,12 @@ namespace RingFlow.Gameplay
                 return;
             }
 
-            var priorityOrder = db != null && db.LevelGen.MechanicPriorityOrder != null
-                ? db.LevelGen.MechanicPriorityOrder
-                : new List<int> { 3, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11 };
+            var priorityOrder = db.LevelGen.MechanicPriorityOrder;
+            if (priorityOrder == null || priorityOrder.Count == 0)
+            {
+                throw new System.InvalidOperationException(
+                    "MechanicPriorityOrder DB'de tanımlı değil. Lütfen LevelGen.MechanicPriorityOrder listesini doldurun.");
+            }
 
             var allowed = new List<RingType>(maxTypes);
             for (int i = 0; i < priorityOrder.Count && allowed.Count < maxTypes; i++)
@@ -529,7 +530,9 @@ namespace RingFlow.Gameplay
 
             if (allowed.Count == 0)
             {
-                allowed.Add(RingType.Mystery);
+                throw new System.InvalidOperationException(
+                    "Hiçbir mekanik türü priority order'da bulunamadı. " +
+                    "MechanicPriorityOrder, board'daki mekaniklerle eşleşecek şekilde güncellenmelidir.");
             }
 
             for (int p = 0; p < board.PoleCount; p++)

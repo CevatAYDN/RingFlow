@@ -18,14 +18,22 @@ namespace RingFlow.Gameplay
 
         public static void Initialize(AudioConfigSO config)
         {
-            _config = config;
             if (config == null)
-                NexusLog.Warn("ProceduralAudio", nameof(Initialize), "", "AudioConfigSO is null; audio will use fallback defaults.");
-            else
-                NexusLog.Info("ProceduralAudio", nameof(Initialize), "", $"Initialized with AudioConfigSO '{config.name}' (sampleRate={config.SampleRate}).");
+                throw new System.InvalidOperationException("[ProceduralAudio] AudioConfigSO is required.");
+
+            _config = config;
         }
 
-        private static int SampleRate => _config != null ? _config.SampleRate : 44100;
+        private static int SampleRate
+        {
+            get
+            {
+                if (_config == null)
+                    throw new System.InvalidOperationException("[ProceduralAudio] AudioConfigSO is required.");
+
+                return _config.SampleRate;
+            }
+        }
 
         public static AudioClip GetOrCreatePoleCompleteClip()
         {

@@ -45,16 +45,18 @@ namespace RingFlow.Gameplay
             Type volumeType = Type.GetType("UnityEngine.Rendering.Volume, Unity.RenderPipelines.Core.Runtime");
             if (volumeType == null)
             {
-                NexusLog.Warn("BloomPulse", nameof(Initialize), "", "Volume type not found. URP may not be available. Bloom pulse disabled.");
-                return;
+                throw new System.InvalidOperationException(
+                    "[BloomPulseController] Volume type not found. UnityEngine.Rendering.Volume assembly is missing. " +
+                    "Ensure URP package is installed and the Volume component exists in the scene.");
             }
 
             // Find all Volume components
             var volumes = FindObjectsByType(volumeType, FindObjectsInactive.Include);
             if (volumes == null || volumes.Length == 0)
             {
-                NexusLog.Warn("BloomPulse", nameof(Initialize), "", "No Volume components found. Bloom pulse disabled.");
-                return;
+                throw new System.InvalidOperationException(
+                    "[BloomPulseController] No Volume components found in the scene. " +
+                    "Add a global Volume with a Bloom override to the scene.");
             }
 
             // Pick first global volume
@@ -86,8 +88,9 @@ namespace RingFlow.Gameplay
 
             if (selectedVolume == null)
             {
-                NexusLog.Warn("BloomPulse", nameof(Initialize), "", "No suitable Volume found. Bloom pulse disabled.");
-                return;
+                throw new System.InvalidOperationException(
+                    "[BloomPulseController] No suitable Volume component found. " +
+                    "Ensure there is at least one Volume in the scene.");
             }
 
             _volume = selectedVolume;
@@ -97,8 +100,9 @@ namespace RingFlow.Gameplay
             _bloomType = Type.GetType("UnityEngine.Rendering.Universal.Bloom, Unity.RenderPipelines.Universal.Runtime");
             if (_bloomType == null)
             {
-                NexusLog.Warn("BloomPulse", nameof(Initialize), "", "Bloom type not found. URP Bloom override may not be available.");
-                return;
+                throw new System.InvalidOperationException(
+                    "[BloomPulseController] Bloom type not found. URP Bloom override package may not be installed. " +
+                    "Ensure Unity.RenderPipelines.Universal.Runtime is available.");
             }
 
             // VolumeProfile.TryGet<T>(out T override)
@@ -107,24 +111,27 @@ namespace RingFlow.Gameplay
                 object profile = profileProp.GetValue(_volume);
                 if (profile == null)
                 {
-                    NexusLog.Warn("BloomPulse", nameof(Initialize), "", "Volume has no profile. Bloom pulse disabled.");
-                    return;
+                    throw new System.InvalidOperationException(
+                        "[BloomPulseController] Volume has no profile assigned. " +
+                        "Assign a VolumeProfile to the Volume component.");
                 }
 
                 Type profileType = profile.GetType();
                 _tryGetMethod = profileType.GetMethod("TryGet", BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase, null, new[] { _bloomType.MakeByRefType() }, null);
                 if (_tryGetMethod == null)
                 {
-                    NexusLog.Warn("BloomPulse", nameof(Initialize), "", "VolumeProfile.TryGet not found. Bloom pulse disabled.");
-                    return;
+                    throw new System.InvalidOperationException(
+                        "[BloomPulseController] VolumeProfile.TryGet method not found. " +
+                        "URP version may be incompatible.");
                 }
 
                 var parameters = new object[] { null };
                 bool found = (bool)_tryGetMethod.Invoke(profile, parameters);
                 if (!found || parameters[0] == null)
                 {
-                    NexusLog.Warn("BloomPulse", nameof(Initialize), "", "Volume has no Bloom override. Add a Bloom override to the Volume profile.");
-                    return;
+                    throw new System.InvalidOperationException(
+                        "[BloomPulseController] Volume profile has no Bloom override. " +
+                        "Add a Bloom override to the Volume profile.");
                 }
 
                 _bloom = parameters[0];
@@ -132,12 +139,12 @@ namespace RingFlow.Gameplay
 
             if (_bloom == null)
             {
-                NexusLog.Warn("BloomPulse", nameof(Initialize), "", "Could not resolve Bloom override. Bloom pulse disabled.");
-                return;
+                throw new System.InvalidOperationException(
+                    "[BloomPulseController] Could not resolve Bloom override. " +
+                    "Ensure the Volume profile has a Bloom component.");
             }
 
-            // Get FloatParameter fields from Bloom — Bloom has fields like: intensity, threshold
-            // These are of type ClampedFloatParameter or FloatParameter (both from UnityEngine.Rendering)
+            // Get FloatParameter fields from Bloom
             _floatParameterType = Type.GetType("UnityEngine.Rendering.FloatParameter, Unity.RenderPipelines.Core.Runtime");
             if (_floatParameterType == null)
             {
@@ -150,8 +157,9 @@ namespace RingFlow.Gameplay
 
             if (_intensityField == null || _thresholdField == null)
             {
-                NexusLog.Warn("BloomPulse", nameof(Initialize), "", "Could not find intensity/threshold fields on Bloom. Bloom pulse disabled.");
-                return;
+                throw new System.InvalidOperationException(
+                    "[BloomPulseController] Could not find intensity/threshold fields on Bloom type. " +
+                    "URP Bloom API may have changed.");
             }
 
             // Read original values

@@ -234,6 +234,10 @@ namespace RingFlow.Tests
         public void CSVLocalizationTableProvider_ParsesCSVHeadersAndRows()
         {
             var provider = new CSVLocalizationTableProvider();
+            // Inject IAssetService via reflection (field is [Inject]-marked)
+            var assetField = typeof(CSVLocalizationTableProvider)
+                .GetField("_assetService", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            assetField.SetValue(provider, new RingFlow.Gameplay.Services.ResourcesAssetService());
 
             // Load Turkish table
             bool hasTr = provider.TryGetTable("tr", out var trTable);
@@ -256,6 +260,11 @@ namespace RingFlow.Tests
         public void LocalizationService_CorrectlyIdentifiesRtlAndReversesStrings()
         {
             var provider = new CSVLocalizationTableProvider();
+            // Inject IAssetService via reflection
+            var assetField = typeof(CSVLocalizationTableProvider)
+                .GetField("_assetService", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            assetField.SetValue(provider, new RingFlow.Gameplay.Services.ResourcesAssetService());
+
             var service = new LocalizationService(_prefs, provider);
 
             // Async initialization is simulateable by loading

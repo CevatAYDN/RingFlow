@@ -438,7 +438,10 @@ namespace RingFlow.Editor
                 ringObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
                 ringObj.transform.SetParent(parent);
                 ringObj.transform.localPosition = new Vector3(0f, ringBaseY + (index * ringSpacing), 0f);
-                ringObj.transform.localScale = f != null ? f.RingScaleFallback : new Vector3(4.0f, 0.08f, 4.0f);
+                var feel = Resources.Load<Gameplay.GameFeelConfigSO>(EditorPaths.GameFeelConfigKey);
+                if (feel == null)
+                    throw new System.InvalidOperationException("[VisualBuilderSection] GameFeelConfigSO is required. Configurate GameFeelConfigSO asset.");
+                ringObj.transform.localScale = feel.RingScaleFallback;
             }
 
             ringObj.name = $"Ring_{index}_{ringData.Color}_{ringData.Type}";

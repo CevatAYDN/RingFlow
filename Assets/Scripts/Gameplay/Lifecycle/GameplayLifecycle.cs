@@ -92,8 +92,10 @@ namespace RingFlow.Gameplay
             if (themeSkinDb == null) throw new System.InvalidOperationException("ThemeSkinDatabase.asset not found in Resources!");
             builder.BindInstance<ThemeSkinDatabaseSO>(themeSkinDb);
 
-            var mainCamera = Camera.main ?? Object.FindAnyObjectByType<Camera>(FindObjectsInactive.Include);
-            if (mainCamera != null) builder.BindInstance<Camera>(mainCamera);
+            var mainCamera = Camera.main;
+            if (mainCamera == null)
+                throw new System.InvalidOperationException("Main Camera not found. Scene must provide exactly one camera.");
+            builder.BindInstance<Camera>(mainCamera);
 
             // -------------------- Storage --------------------
             builder.Bind<IPlayerPrefsService, EncryptedStorageService>();
@@ -376,9 +378,11 @@ namespace RingFlow.Gameplay
                 var feelConfig = context.Resolve<GameFeelConfigSO>();
                 if (pool != null)
                 {
-                    pool.Prewarm(vfxRegistry.RingPopPrefab, feelConfig?.RingPopPoolSize ?? 50);
-                    pool.Prewarm(vfxRegistry.ConfettiPrefab, feelConfig?.ConfettiPoolSize ?? 30);
-                    pool.Prewarm(vfxRegistry.MergeEffectPrefab, feelConfig?.MergeEffectPoolSize ?? 20);
+                    if (feelConfig == null)
+                        throw new System.InvalidOperationException("[GameplayLifecycle] GameFeelConfigSO is required for pool prewarming.");
+                    pool.Prewarm(vfxRegistry.RingPopPrefab, feelConfig.RingPopPoolSize);
+                    pool.Prewarm(vfxRegistry.ConfettiPrefab, feelConfig.ConfettiPoolSize);
+                    pool.Prewarm(vfxRegistry.MergeEffectPrefab, feelConfig.MergeEffectPoolSize);
                 }
             }
             else

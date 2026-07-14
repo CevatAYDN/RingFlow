@@ -188,7 +188,7 @@ namespace RingFlow.Tests
         public void Solver_FindsSolutionForGeneratedLevel()
         {
             // Arrange
-            int poleCount = 4;
+            int poleCount = 5; // colorCount(3) + Tutorial.MinEmptyPoles(2)
             int colorCount = 3;
             int maxCap = 4;
             int level = 5;

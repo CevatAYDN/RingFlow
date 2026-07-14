@@ -15,35 +15,19 @@ namespace RingFlow.Gameplay
         private readonly Dictionary<string, IDictionary<string, string>> _tables = new(StringComparer.OrdinalIgnoreCase);
         private bool _loaded;
 
-        // IAssetService injected for future Addressables migration.
-        // CSV is loaded synchronously because ILocalizationTableProvider.TryGetTable is sync.
-        // When Addressables replaces ResourcesAssetService, async init moves to Lifecycle layer.
         [Inject] private Services.IAssetService _assetService;
 
         private void LoadCSVIfNeeded()
         {
             if (_loaded) return;
 
-            // Use IAssetService when available; fall back to Resources.Load for
-            // contexts without DI injection (e.g. unit tests constructing manually).
-            TextAsset csvAsset;
-            if (_assetService != null)
-            {
-                var task = _assetService.LoadAsync<TextAsset>(GameplayAssetKeys.Localization);
-                csvAsset = task.GetAwaiter().GetResult();
-            }
-            else
-            {
-                csvAsset = Resources.Load<TextAsset>(GameplayAssetKeys.Localization);
-            }
+            if (_assetService == null)
+                throw new InvalidOperationException("[CSVLocalizationTableProvider] IAssetService is required.");
 
+            var task = _assetService.LoadAsync<TextAsset>(GameplayAssetKeys.Localization);
+            var csvAsset = task.GetAwaiter().GetResult();
             if (csvAsset == null)
-            {
-                NexusLog.Error("CSVLocalizationTableProvider", nameof(LoadCSVIfNeeded), "",
-                    "Localization.csv not found in Resources! Localized strings will fall back to defaults.");
-                _loaded = true;
-                return;
-            }
+                throw new InvalidOperationException($"[CSVLocalizationTableProvider] Localization.csv not found at '{GameplayAssetKeys.Localization}'.");
 
             string[] lines = csvAsset.text.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
             if (lines.Length <= 1)

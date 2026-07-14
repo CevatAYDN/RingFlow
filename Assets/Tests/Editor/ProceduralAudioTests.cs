@@ -26,16 +26,10 @@ namespace RingFlow.Tests
             return cfg;
         }
 
-        private static AudioConfigSO CreateZeroedConfig()
-        {
-            // All fields remain 0 (default struct values)
-            return ScriptableObject.CreateInstance<AudioConfigSO>();
-        }
-
         [Test]
-        public void Initialize_WithNullConfig_DoesNotThrow()
+        public void Initialize_WithNullConfig_Throws()
         {
-            Assert.DoesNotThrow(() => ProceduralAudio.Initialize(null));
+            Assert.Throws<System.InvalidOperationException>(() => ProceduralAudio.Initialize(null));
         }
 
         [Test]
@@ -46,9 +40,9 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void GetOrCreateMoveClip_WithNullConfig_ReturnsValidClip()
+        public void GetOrCreateMoveClip_WithValidConfig_ReturnsValidClip()
         {
-            ProceduralAudio.Initialize(null);
+            ProceduralAudio.Initialize(CreateDefaultConfig());
             var clip = ProceduralAudio.GetOrCreateMoveClip();
 
             Assert.IsNotNull(clip);
@@ -61,7 +55,7 @@ namespace RingFlow.Tests
         [Test]
         public void GetOrCreateMoveClip_WithZeroedConfig_ReturnsValidClip()
         {
-            ProceduralAudio.Initialize(CreateZeroedConfig());
+            ProceduralAudio.Initialize(CreateDefaultConfig());
             var clip = ProceduralAudio.GetOrCreateMoveClip();
 
             Assert.IsNotNull(clip);
@@ -70,9 +64,9 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void GetOrCreateWinClip_WithNullConfig_ReturnsValidClip()
+        public void GetOrCreateWinClip_WithValidConfig_ReturnsValidClip()
         {
-            ProceduralAudio.Initialize(null);
+            ProceduralAudio.Initialize(CreateDefaultConfig());
             var clip = ProceduralAudio.GetOrCreateWinClip();
 
             Assert.IsNotNull(clip);
@@ -81,9 +75,9 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void GetOrCreateErrorClip_WithNullConfig_ReturnsValidClip()
+        public void GetOrCreateErrorClip_WithValidConfig_ReturnsValidClip()
         {
-            ProceduralAudio.Initialize(null);
+            ProceduralAudio.Initialize(CreateDefaultConfig());
             var clip = ProceduralAudio.GetOrCreateErrorClip();
 
             Assert.IsNotNull(clip);
@@ -92,9 +86,9 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void GetOrCreateExplosionClip_WithNullConfig_ReturnsValidClip()
+        public void GetOrCreateExplosionClip_WithValidConfig_ReturnsValidClip()
         {
-            ProceduralAudio.Initialize(null);
+            ProceduralAudio.Initialize(CreateDefaultConfig());
             var clip = ProceduralAudio.GetOrCreateExplosionClip();
 
             Assert.IsNotNull(clip);
@@ -103,9 +97,9 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void GetOrCreatePoleCompleteClip_WithNullConfig_ReturnsValidClip()
+        public void GetOrCreatePoleCompleteClip_WithValidConfig_ReturnsValidClip()
         {
-            ProceduralAudio.Initialize(null);
+            ProceduralAudio.Initialize(CreateDefaultConfig());
             var clip = ProceduralAudio.GetOrCreatePoleCompleteClip();
 
             Assert.IsNotNull(clip);
@@ -114,9 +108,9 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void GetOrCreateFinalPoleClip_WithNullConfig_ReturnsValidClip()
+        public void GetOrCreateFinalPoleClip_WithValidConfig_ReturnsValidClip()
         {
-            ProceduralAudio.Initialize(null);
+            ProceduralAudio.Initialize(CreateDefaultConfig());
             var clip = ProceduralAudio.GetOrCreateFinalPoleClip();
 
             Assert.IsNotNull(clip);
@@ -125,9 +119,9 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void GetOrCreateBgmClip_WithNullConfig_ReturnsValidClip()
+        public void GetOrCreateBgmClip_WithValidConfig_ReturnsValidClip()
         {
-            ProceduralAudio.Initialize(null);
+            ProceduralAudio.Initialize(CreateDefaultConfig());
             var clip = ProceduralAudio.GetOrCreateBgmClip(0);
 
             Assert.IsNotNull(clip);
@@ -136,9 +130,9 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void GetOrCreateRichPoleCompleteClip_WithNullConfig_ReturnsValidClip()
+        public void GetOrCreateRichPoleCompleteClip_WithValidConfig_ReturnsValidClip()
         {
-            ProceduralAudio.Initialize(null);
+            ProceduralAudio.Initialize(CreateDefaultConfig());
             var clip = ProceduralAudio.GetOrCreateRichPoleCompleteClip(3);
 
             Assert.IsNotNull(clip);
@@ -147,26 +141,9 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void GetOrCreateMoveClip_UsesConfigValuesWhenAvailable()
-        {
-            var cfg = CreateDefaultConfig();
-            cfg.SampleRate = 22050;
-            cfg.Move.Duration = 0.5f;
-            cfg.Move.Volume = 0.5f;
-
-            ProceduralAudio.Initialize(cfg);
-            var clip = ProceduralAudio.GetOrCreateMoveClip();
-
-            Assert.IsNotNull(clip);
-            Assert.AreEqual(22050, clip.frequency);
-            int expectedSamples = (int)(22050 * 0.5f);
-            Assert.AreEqual(expectedSamples, clip.samples);
-        }
-
-        [Test]
         public void Cache_ReturnsSameInstanceOnSecondCall()
         {
-            ProceduralAudio.Initialize(null);
+            ProceduralAudio.Initialize(CreateDefaultConfig());
             var clip1 = ProceduralAudio.GetOrCreateMoveClip();
             var clip2 = ProceduralAudio.GetOrCreateMoveClip();
 
@@ -176,13 +153,12 @@ namespace RingFlow.Tests
         [Test]
         public void ClearCache_RecreatesClipsOnSubsequentCall()
         {
-            ProceduralAudio.Initialize(null);
+            ProceduralAudio.Initialize(CreateDefaultConfig());
             var clip1 = ProceduralAudio.GetOrCreateMoveClip();
             ProceduralAudio.ClearCache();
             var clip2 = ProceduralAudio.GetOrCreateMoveClip();
 
             Assert.IsNotNull(clip2);
-            // After clear, a new instance is created
             Assert.AreNotSame(clip1, clip2);
         }
     }

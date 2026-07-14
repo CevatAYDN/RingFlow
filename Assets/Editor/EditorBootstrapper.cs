@@ -84,8 +84,9 @@ namespace RingFlow.Editor
             Undo.RegisterCreatedObjectUndo(boardView, "Attach BoardView");
 
             var torusPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(EditorPaths.TorusPrefabPath);
-            if (torusPrefab != null)
-                boardView.SetTorusPrefab(torusPrefab);
+            if (torusPrefab == null)
+                throw new System.InvalidOperationException("[EditorBootstrapper] Torus prefab is required.");
+            boardView.SetTorusPrefab(torusPrefab);
 
             EnsureEditorSceneReady(rootObj);
 
@@ -100,48 +101,28 @@ namespace RingFlow.Editor
         {
             var eventSystem = Object.FindAnyObjectByType<EventSystem>();
             if (eventSystem == null)
-            {
-                var esObj = new GameObject("EventSystem");
-                Undo.RegisterCreatedObjectUndo(esObj, "Create EventSystem");
-                eventSystem = esObj.AddComponent<EventSystem>();
-            }
+                throw new System.InvalidOperationException("[EditorBootstrapper] EventSystem is required.");
 
             var inputModuleType = ResolveInputSystemUIInputModuleType();
             if (inputModuleType == null)
-            {
-                inputModuleType = typeof(StandaloneInputModule);
-                NexusLog.Warn("EditorBootstrapper", nameof(EnsureEventSystem), "",
-                    "Input System package not detected. Falling back to StandaloneInputModule.");
-            }
+                throw new System.InvalidOperationException("[EditorBootstrapper] Input System UI module type is required.");
 
             var existing = eventSystem.GetComponent<BaseInputModule>();
-            if (existing != null && !inputModuleType.IsInstanceOfType(existing))
-                Undo.DestroyObjectImmediate(existing);
-
-            if (eventSystem.GetComponent<BaseInputModule>() == null)
-            {
-                var instance = eventSystem.gameObject.AddComponent(inputModuleType);
-                if (instance != null) Undo.RegisterCreatedObjectUndo(instance, "Attach Input Module");
-            }
+            if (existing == null || !inputModuleType.IsInstanceOfType(existing))
+                throw new System.InvalidOperationException("[EditorBootstrapper] EventSystem must already contain the correct input module.");
         }
 
         private static void EnsureMainCamera()
         {
-            var camera = Camera.main ?? Object.FindAnyObjectByType<Camera>();
-            var camObj = camera != null ? camera.gameObject : null;
-
-            if (camObj == null)
-            {
-                camObj = new GameObject("Main Camera");
-                Undo.RegisterCreatedObjectUndo(camObj, "Create Main Camera");
-                camera = camObj.AddComponent<Camera>();
-            }
+            var camera = Camera.main;
+            if (camera == null)
+                throw new System.InvalidOperationException(
+                    "[EditorBootstrapper] Main Camera tag bulunamadı. Scene'de bir Main Camera tag'i tanımlanmalıdır.");
 
             var feel = Resources.Load<Gameplay.GameFeelConfigSO>(EditorPaths.GameFeelConfigKey);
             if (feel == null)
-            {
-                feel = ScriptableObject.CreateInstance<Gameplay.GameFeelConfigSO>();
-            }
+                throw new System.InvalidOperationException("[EditorBootstrapper] GameFeelConfigSO is required.");
+
             camera.orthographic = true;
             camera.orthographicSize = feel.CameraBaseOrtho;
             camera.clearFlags = CameraClearFlags.SolidColor;
@@ -150,11 +131,9 @@ namespace RingFlow.Editor
             camera.farClipPlane = 100f;
             camera.depth = -1;
 
-            var t = camObj.transform;
+            var t = camera.transform;
             t.position = feel.CameraPosition;
             t.rotation = Quaternion.Euler(feel.CameraRotation);
-
-            camObj.tag = "MainCamera";
         }
 
         private static void EnsureDirectionalLight()
