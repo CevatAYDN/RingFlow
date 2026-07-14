@@ -95,7 +95,7 @@ namespace RingFlow.Gameplay.UI
             if (DayText != null)
             {
                 string dayFormat = _locService != null
-                    ? _locService.GetString("daily_day_format", "Day {0}")
+                    ? _locService.GetString("daily_reward_day", "Day {0}")
                     : "Day {0}";
                 DayText.text = string.Format(dayFormat, dayIndex + 1);
             }

@@ -71,3 +71,8 @@ chest_gold_format,Gold: x{0}  (+{1} XP),Altın: x{0}  (+{1} XP),Gold: x{0}  (+{1
 chest_diamond_format,Diamond: x{0}  (+{1} XP),Elmas: x{0}  (+{1} XP),Diamond: x{0}  (+{1} XP),Diamond: x{0}  (+{1} XP),Diamond: x{0}  (+{1} XP),Diamond: x{0}  (+{1} XP),Diamond: x{0}  (+{1} XP),Diamond: x{0}  (+{1} XP),Diamond: x{0}  (+{1} XP),Diamond: x{0}  (+{1} XP),Diamond: x{0}  (+{1} XP),Diamond: x{0}  (+{1} XP),Diamond: x{0}  (+{1} XP),Diamond: x{0}  (+{1} XP),Diamond: x{0}  (+{1} XP)
 chest_total_xp_format,Total XP: +{0},Toplam XP: +{0},Total XP: +{0},Total XP: +{0},Total XP: +{0},Total XP: +{0},Total XP: +{0},Total XP: +{0},Total XP: +{0},Total XP: +{0},Total XP: +{0},Total XP: +{0},Total XP: +{0},Total XP: +{0},Total XP: +{0}
 daily_reward_day_format,Day {0},Gün {0},Day {0},Day {0},Day {0},Day {0},Day {0},Day {0},Day {0},Day {0},Day {0},Day {0},Day {0},Day {0},Day {0}
+reward_amount_format,+{0} {1},+{0} {1},+{0} {1},+{0} {1},+{0} {1},+{0} {1},+{0} {1},+{0} {1},+{0} {1},+{0} {1},+{0} {1},+{0} {1},+{0} {1},+{0} {1},+{0} {1}
+currency_coins,Coins,Coin,Coins,Coins,Coins,Coins,Coins,Coins,Coins,Coins,Coins,Coins,Coins,Coins,Coins
+currency_diamonds,Diamonds,Elmas,Diamonds,Diamonds,Diamonds,Diamonds,Diamonds,Diamonds,Diamonds,Diamonds,Diamonds,Diamonds,Diamonds,Diamonds,Diamonds
+currency_hint,Hint,İpucu,Hint,Hint,Hint,Hint,Hint,Hint,Hint,Hint,Hint,Hint,Hint,Hint,Hint
+currency_theme,Theme,Tema,Theme,Theme,Theme,Theme,Theme,Theme,Theme,Theme,Theme,Theme,Theme,Theme,Theme

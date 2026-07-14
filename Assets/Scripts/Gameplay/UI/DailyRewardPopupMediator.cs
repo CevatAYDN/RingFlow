@@ -39,9 +39,7 @@ namespace RingFlow.Gameplay.UI
                 int previewDay = _dailyReward.DayIndexPreview;
                 var rewardList = _dbConfig?.BalanceConfig.DailyRewards ?? new System.Collections.Generic.List<DailyRewardEntry>();
                 var reward = DailyRewardTable.RewardForDayIndex(rewardList, previewDay);
-                string rewardText = reward.Amount > 0
-                    ? $"+{reward.Amount} {reward.CurrencyId}"
-                    : reward.CurrencyId;
+                string rewardText = FormatRewardText(reward);
                 View.ShowReward(previewDay, rewardText);
 
                 bool canClaim = _dailyReward.CanClaimNow();
@@ -50,6 +48,16 @@ namespace RingFlow.Gameplay.UI
 
                 _diag?.Log("DailyRewardPopupMediator", $"Bound. Day={previewDay}, Reward={rewardText}, CanClaim={canClaim}.");
             }
+        }
+
+
+        private string FormatRewardText(CurrencyAmount reward)
+        {
+            if (reward.Amount <= 0) return reward.CurrencyId;
+            string currencyKey = $"currency_{reward.CurrencyId.ToLowerInvariant()}";
+            string currencyName = _loc != null ? _loc.GetString(currencyKey, reward.CurrencyId) : reward.CurrencyId;
+            string format = _loc != null ? _loc.GetString("reward_amount_format", "+{0} {1}") : "+{0} {1}";
+            return string.Format(format, reward.Amount, currencyName);
         }
 
         private void OnClaimClicked()
