@@ -99,7 +99,16 @@ poetry.lock
 *.commandcode
 *.commandcode/taste/taste.md
 
-# AI/LLM-specific names/directories (case-insensitive blocks)
+# AI / LLM / Agent Workspace Ignores
+/.agents/
+/.devin/
+/.omo/
+/-p/
+/.commandcode/
+/.codegraph/
+/AGENTS.md
+
+# AI-related names/directories (case-insensitive blocks)
 *[Oo]pen[Aa]i*
 *[Gg]emini*
 *[Aa]nthropic*
@@ -117,13 +126,4 @@ poetry.lock
 *[Ww]hisper*
 *[Pp]y[Tt]orch*
 *[Tt]ensor[Ff]low*
-
-# AI / LLM / Agent Workspace Ignores
-/.agents/
-/.devin/
-/.omo/
-/-p/
-/.commandcode/
-/.codegraph
-/AGENTS.md
 

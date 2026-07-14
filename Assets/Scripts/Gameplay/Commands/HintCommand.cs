@@ -45,7 +45,7 @@ namespace RingFlow.Gameplay
             Move firstMove;
             try
             {
-                firstMove = await TryFindFirstMoveAsync(current, maxCapacity, ct);
+                firstMove = await TryFindFirstMoveAsync(current, maxCapacity, ct, _dbConfig?.LevelGen.BombTickMode ?? BombTickMode.AllBombsPerMove);
             }
             catch (System.OperationCanceledException)
             {
@@ -181,9 +181,9 @@ namespace RingFlow.Gameplay
             return (board, maxCapacity);
         }
 
-        private static async ValueTask<Move> TryFindFirstMoveAsync(BoardState initial, int maxCapacity, CancellationToken ct)
+        private static async ValueTask<Move> TryFindFirstMoveAsync(BoardState initial, int maxCapacity, CancellationToken ct, BombTickMode tickMode)
         {
-            var result = await LevelSolver.SolveAsync(initial, maxCapacity, cancellationToken: ct);
+            var result = await LevelSolver.SolveAsync(initial, maxCapacity, cancellationToken: ct, bombTickMode: tickMode);
             if (!result.IsSolvable || result.MoveCount <= 0 || result.Moves == null)
             {
                 return new Move(-1, -1, default);

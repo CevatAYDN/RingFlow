@@ -51,7 +51,7 @@ namespace RingFlow.Gameplay
             }
         }
 
-        public static SolverResult Solve(BoardState initialState, int maxCapacity, int maxStatesLimit = 100000, int maxMovesLimit = 200, int[] portalTargets = null, CancellationToken cancellationToken = default)
+        public static SolverResult Solve(BoardState initialState, int maxCapacity, int maxStatesLimit = 100000, int maxMovesLimit = 200, int[] portalTargets = null, CancellationToken cancellationToken = default, BombTickMode bombTickMode = BombTickMode.AllBombsPerMove)
         {
             initialState.MaxCapacity = maxCapacity;
             int threshold = CalculateHeuristic(initialState, maxCapacity);
@@ -69,7 +69,7 @@ namespace RingFlow.Gameplay
                 context.TranspositionTable.Clear();
                 context.StatesSearched = 0;
                 
-                int nextThreshold = Search(initialState, 0, threshold, maxCapacity, path, context, portalTargets);
+                int nextThreshold = Search(initialState, 0, threshold, maxCapacity, path, context, portalTargets, bombTickMode);
                 if (nextThreshold == -1) // Çözüm bulundu
                 {
                     var movesList = new List<MoveRecord>(path.Count);
@@ -102,7 +102,7 @@ namespace RingFlow.Gameplay
             };
         }
 
-        private static int Search(BoardState state, int g, int threshold, int maxCapacity, List<Move> path, SolverContext context, int[] portalTargets)
+        private static int Search(BoardState state, int g, int threshold, int maxCapacity, List<Move> path, SolverContext context, int[] portalTargets, BombTickMode bombTickMode)
         {
             context.StatesSearched++;
             if (context.StatesSearched >= context.MaxStatesLimit)
@@ -183,12 +183,13 @@ namespace RingFlow.Gameplay
                     }
                 }
 
-                // Tick all bombs — if any explodes, prune this branch
-                if (TickBombsAndCheckExplosion(ref nextState)) continue;
+                // Tick bombs per config mode — if any explodes, prune this branch
+                int portalTarget = (portalTargets != null && move.To >= 0 && move.To < portalTargets.Length) ? portalTargets[move.To] : -1;
+                if (TickBombsAndCheckExplosion(ref nextState, bombTickMode, move.From, move.To, portalTarget, move.Ring.Type)) continue;
 
                 path.Add(move);
 
-                int result = Search(nextState, g + 1, threshold, maxCapacity, path, context, portalTargets);
+                int result = Search(nextState, g + 1, threshold, maxCapacity, path, context, portalTargets, bombTickMode);
                 if (result == -1) return -1; // Bulunduysa yukarı doğru propagate et
                 if (result < min) min = result;
 
@@ -345,7 +346,7 @@ namespace RingFlow.Gameplay
             return top.Color == color;
         }
 
-        private static bool TickBombsAndCheckExplosion(ref BoardState state)
+        private static bool TickBombsAndCheckExplosion(ref BoardState state, BombTickMode tickMode, int fromPoleId, int toPoleId, int portalTargetPoleId, RingType movedRingType)
         {
             bool exploded = false;
             for (int p = 0; p < state.PoleCount; p++)
@@ -354,12 +355,33 @@ namespace RingFlow.Gameplay
                 for (int r = 0; r < count; r++)
                 {
                     if (state.GetRingType(p, r) != RingType.Bomb) continue;
+                    if (!ShouldTickBombForSolver(tickMode, p, r, fromPoleId, toPoleId, portalTargetPoleId, movedRingType)) continue;
                     int counter = state.GetRingAdditional(p, r) - 1;
                     state.SetRingAdditional(p, r, counter < 0 ? 0 : counter);
                     if (counter <= 0) exploded = true;
                 }
             }
             return exploded;
+        }
+
+        private static bool ShouldTickBombForSolver(BombTickMode tickMode, int poleId, int ringIndex, int fromPoleId, int toPoleId, int portalTargetPoleId, RingType movedRingType)
+        {
+            switch (tickMode)
+            {
+                case BombTickMode.SourceAndTargetPolesOnly:
+                    return poleId == fromPoleId ||
+                           poleId == toPoleId ||
+                           poleId == portalTargetPoleId;
+                case BombTickMode.MovedBombOnly:
+                    // Mirror of MoveRingCommand.ShouldTickBomb:
+                    // Only the bomb that was moved ticks. The moved ring is a bomb iff movedRingType==Bomb,
+                    // and it lands on toPoleId. Ignore ringIndex — the ring at the landing position is
+                    // what matters, not the stack depth.
+                    if (movedRingType != RingType.Bomb) return false;
+                    return poleId == toPoleId;
+                default:
+                    return true;
+            }
         }
 
         /// <summary>
@@ -380,7 +402,8 @@ namespace RingFlow.Gameplay
             int maxStatesLimit = 100000,
             int maxMovesLimit = 200,
             int[] portalTargets = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            BombTickMode bombTickMode = BombTickMode.AllBombsPerMove)
         {
             // Capture locals for closure (avoids boxing of struct arguments)
             var capturedState   = initialState;
@@ -389,9 +412,10 @@ namespace RingFlow.Gameplay
             int capturedMoves   = maxMovesLimit;
             int[] capturedPorts = portalTargets;
             CancellationToken ct = cancellationToken;
+            BombTickMode capturedTickMode = bombTickMode;
 
             return new ValueTask<SolverResult>(Task.Run(
-                () => Solve(capturedState, capturedCap, capturedStates, capturedMoves, capturedPorts, ct),
+                () => Solve(capturedState, capturedCap, capturedStates, capturedMoves, capturedPorts, ct, capturedTickMode),
                 cancellationToken));
         }
     }

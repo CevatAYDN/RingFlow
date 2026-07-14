@@ -18,6 +18,7 @@ namespace RingFlow.Gameplay
         [Inject] private Diagnostics.IGameDiagnostics _diag;
         [Inject] private Diagnostics.IViewMediatorTracker _tracker;
         [Inject] private GameFeelConfigSO _feelConfig;
+        [Inject] private GameConfigDatabaseSO _dbConfig;
 
         private Action<int, int> _selectedPoleHandler;
         private Action<int, int> _movesCountHandler;
@@ -140,7 +141,7 @@ namespace RingFlow.Gameplay
 
         private void OnBombExploded(BombExplodedSignal signal)
         {
-            _logger?.Log($"[BoardMediator] Bomb exploded on pole {signal.PoleId}.");
+            _logger?.Log($"[BoardMediator] Bomb exploded on pole {signal.PoleId}. Level lost per GDD §36.");
             RebuildBoard();
             var f = _feelConfig;
             if (f == null) throw new System.InvalidOperationException("[BoardMediator] GameFeelConfigSO not injected!");
@@ -212,7 +213,8 @@ namespace RingFlow.Gameplay
                 var (board, maxCapacity) = BuildBoardStateFromModel(_model);
                 var ct = _tutorialSolveCts.Token;
 
-                var result = await LevelSolver.SolveAsync(board, maxCapacity, cancellationToken: ct);
+                var result = await LevelSolver.SolveAsync(board, maxCapacity, cancellationToken: ct,
+                    bombTickMode: _dbConfig?.LevelGen.BombTickMode ?? BombTickMode.AllBombsPerMove);
                 if (ct.IsCancellationRequested) return;
 
                 if (result.IsSolvable && result.MoveCount > 0 && result.Moves != null && result.Moves.Count > 0)

@@ -179,6 +179,7 @@ namespace RingFlow.Gameplay.UI
                 _subscriptions.Add(sb.Subscribe<LevelSelectedSignal>(s => fsm.ChangeStateAsync<PlayingState>(new PlayingStateArgs(s.LevelIndex))));
                 _subscriptions.Add(sb.Subscribe<PauseRequestedSignal>(_ => fsm.ChangeStateAsync<PausedState>()));
                 _subscriptions.Add(sb.Subscribe<ResumeRequestedSignal>(_ => fsm.ChangeStateAsync<PlayingState>(PlayingStateArgs.Resume)));
+                _subscriptions.Add(sb.Subscribe<LevelLostSignal>(s => fsm.ChangeStateAsync<LoseState>(s)));
 
                 _subscriptions.Add(sb.Subscribe<NextLevelRequestedSignal>(_ =>
                 {

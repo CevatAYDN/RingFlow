@@ -76,42 +76,72 @@ namespace RingFlow.Gameplay
         }
 
         // ── Gameplay tuning constants (single source for all magic numbers) ─
-        // Values that were previously hard-coded inside gameplay logic now live
-        // here so balance and limits are auditable and consistent everywhere.
+        // These are HARD LIMITS and ENGINE DEFAULTS only — not gameplay balance values.
+        // Gameplay balance always comes from GameConfigDatabaseSO (ScriptableObject).
+        // C5: Any site that uses Tuning.* as a runtime fallback instead of reading from
+        // the authoritative SO should throw InvalidOperationException in dev builds to
+        // surface misconfiguration early.
         public static class Tuning
         {
-            /// <summary>Ring pole count clamp — matched by GameConfigDatabase.LevelGen.PoleCountClamp.</summary>
+            /// <summary>Ring pole count hard clamp — must match GameConfigDatabase.LevelGen.PoleCountClamp.</summary>
             public const int MaxPoleCount = 12;
 
-            /// <summary>Max rings per pole default.</summary>
+            /// <summary>Max rings per pole hard default. Must match GameConfigDatabase ring capacity.</summary>
             public const int MaxCapacity = 4;
 
-            /// <summary>Bomb countdown tick count (moved to LevelGenConfig.BombCountdown as single source).</summary>
+            /// <summary>
+            /// Bomb countdown HARD FALLBACK. Production code must read from LevelGenConfig.BombCountdown.
+            /// Use ThrowIfMissingConfig() in callers that reach this value at runtime.
+            /// </summary>
             public const int BombCountdown = 5;
 
-            /// <summary>Fallback when DifficultyBands not configured.</summary>
+            /// <summary>
+            /// Fallback when DifficultyBands is not configured. Surfaces missing config in dev builds.
+            /// </summary>
             public const int DefaultMinEmptyPoles = 1;
 
-            /// <summary>Fallback when DifficultyBands not configured.</summary>
+            /// <summary>
+            /// Fallback when DifficultyBands is not configured. Surfaces missing config in dev builds.
+            /// </summary>
             public const int DefaultMechanicIntensity = 1;
 
-            /// <summary>Default tween capacity for DOTween (used before SO loading).</summary>
+            /// <summary>Default tween capacity for DOTween (used before SO loading in bootstrap only).</summary>
             public const int TweenCapacityDefault = 1500;
 
-            /// <summary>Default sequence capacity for DOTween (used before SO loading).</summary>
+            /// <summary>Default sequence capacity for DOTween (used before SO loading in bootstrap only).</summary>
             public const int SequenceCapacityDefault = 200;
 
             /// <summary>Fallback world count when SO is not configured.</summary>
             public const int DefaultWorldCount = 40;
 
-            /// <summary>Threshold for sentinel mechanic activation (kept for technical debt tracking).</summary>
+            /// <summary>Threshold for sentinel mechanic activation (technical debt: must come from SO).</summary>
             public const int SentinelMinRings = 999;
 
-            /// <summary>Highest valid color index.</summary>
+            /// <summary>Highest valid color index (hard clamp, not balance).</summary>
             public const int ColorIndexMax = 10;
 
-            /// <summary>Fallback when palette has fewer entries than expected.</summary>
+            /// <summary>
+            /// Color index fallback when palette has fewer entries.
+            /// C5: callers must validate palette size before reaching this; never rely on it silently.
+            /// </summary>
             public const int ColorIndexFallback = 3;
+
+            /// <summary>
+            /// C5: Asserts in development builds that the caller should never reach a Tuning.* fallback
+            /// for a value that must come from an authoritative ScriptableObject.
+            /// In release builds this is a no-op to avoid hard crashes.
+            /// </summary>
+            [System.Diagnostics.Conditional("UNITY_EDITOR")]
+            [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
+            public static void AssertNotFallback(string callerName, string fieldName)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                throw new System.InvalidOperationException(
+                    $"[GameplayAssetKeys.Tuning] '{callerName}' reached the fallback value for '{fieldName}'. " +
+                    $"This field must be read from the authoritative ScriptableObject (GameConfigDatabaseSO). " +
+                    $"Bind the SO via DI and ensure it is loaded before this code runs.");
+#endif
+            }
         }
     }
 }

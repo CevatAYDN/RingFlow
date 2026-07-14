@@ -127,8 +127,10 @@ namespace RingFlow.Gameplay
 
             _model.MovesCount.Value++;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             NexusLog.Info("MoveRingCommand", "CompleteMove", $"{context.FromPoleId}->{context.ToPoleId}",
                 $"Move {context.FromPoleId}->{context.ToPoleId} OK. Total moves={_model.MovesCount.Value}. Subs={mainRecord.SubMoves?.Count ?? 0}.");
+#endif
 
             _signalBus.Fire(new RingMovedSignal(context.FromPoleId, context.ToPoleId));
 
@@ -138,11 +140,18 @@ namespace RingFlow.Gameplay
 
             if (bombExploded)
             {
+                int explodedPoleId = mainRecord.BombExplodedRings[0].PoleId;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 NexusLog.Warn("MoveRingCommand", "CompleteMove", $"{context.FromPoleId}->{context.ToPoleId}",
-                    "Bomb exploded during classic-mode move. Continuing level per GDD §3 — only Challenge mode ends the run.");
+                    $"Bomb exploded on pole {explodedPoleId}. Level failed per GDD §36.");
+#endif
+                _signalBus.Fire(new BombExplodedSignal(explodedPoleId));
+                _signalBus.Fire(new LevelLostSignal($"Bomb exploded on pole {explodedPoleId}"));
             }
-
-            _signalBus.Fire(new CheckWinSignal());
+            else
+            {
+                _signalBus.Fire(new CheckWinSignal());
+            }
         }
 
         private void PopulateMoveRecord(MoveContext context, MoveRecord record)
@@ -265,8 +274,10 @@ namespace RingFlow.Gameplay
                 subRecord.Ring = topR;
                 mainRecord.SubMoves.Add(subRecord);
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 NexusLog.Info("MoveRingCommand", "ApplyChainSubMove", context.ToPoleId.ToString(),
                     $"Chain sub-move: partner from pole {pole.Id} → {context.ToPoleId}, color={topR.Color}.");
+#endif
                 return;
             }
         }
@@ -301,8 +312,10 @@ namespace RingFlow.Gameplay
 
             if (pullCount > 0)
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 NexusLog.Info("MoveRingCommand", "ApplyMagnetPull", context.ToPoleId.ToString(),
                     $"Magnet pulled {pullCount} matching ring(s) from all poles to pole {context.ToPoleId}, color={context.MovingRing.Color}.");
+#endif
             }
         }
 
@@ -339,8 +352,10 @@ namespace RingFlow.Gameplay
 
             _signalBus.Fire(new PortalTeleportSignal(context.ToPoleId, portalPartnerId));
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             NexusLog.Info("MoveRingCommand", nameof(ApplyPortalTeleport), $"portal{context.ToPoleId}->{portalPartnerId}",
                 $"Ring teleported from portal pole {context.ToPoleId} to partner pole {portalPartnerId}, color={ring.Color}.");
+#endif
         }
 
         private void TickAllBombsAndCapture(MoveRecord mainRecord)
@@ -365,7 +380,6 @@ namespace RingFlow.Gameplay
 
                     if (newCounter <= 0)
                     {
-                        _signalBus.Fire(new BombExplodedSignal(pole.Id));
                         explodedIdx[explodedCount++] = r;
                     }
                 }
@@ -394,10 +408,13 @@ namespace RingFlow.Gameplay
                            poleId == mainRecord.ToPoleId ||
                            poleId == mainRecord.PortalTeleportTargetPoleId;
                 case BombTickMode.MovedBombOnly:
-                    if (ring.Type != RingType.Bomb) return false;
-                    if (poleId == mainRecord.ToPoleId && ringIndex >= 0)
-                        return mainRecord.Ring.Type == RingType.Bomb;
-                    return false;
+                    // Only tick the bomb that was actually moved.
+                    // Aligns exactly with LevelSolver.ShouldTickBombForSolver:
+                    //   movedRingType == Bomb → only pole==toPoleId ticks.
+                    // The ring at the landing position IS the moved ring iff
+                    //   poleId==toPoleId AND the moved ring itself was a Bomb.
+                    if (mainRecord.Ring.Type != RingType.Bomb) return false;
+                    return poleId == mainRecord.ToPoleId;
                 default:
                     return true;
             }

@@ -186,6 +186,17 @@ namespace RingFlow.Gameplay
 
     // ── Game Over / Restart ───────────────────────────────
     public readonly struct GameOverSignal {}
+
+    /// <summary>
+    /// Fired when the player loses the current level (e.g. bomb exploded, out of moves).
+    /// Triggers transition to LoseState per GDD state machine.
+    /// </summary>
+    public readonly struct LevelLostSignal
+    {
+        public readonly string Reason;
+        public LevelLostSignal(string reason) => Reason = reason ?? "unknown";
+    }
+
     public readonly struct RestartLevelSignal
     {
         public readonly int LevelIndex;

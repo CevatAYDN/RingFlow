@@ -273,13 +273,11 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void MoveRingCommand_BombExplosionDoesNotEndClassicMode()
+        public void MoveRingCommand_BombExplosionFailsLevel()
         {
-            // FIX P1.Bomb — classic-mode level no longer transitions to GameOver when a bomb
-            // detonates. Per GDD §3, GameOver is reserved for Challenge mode. The bomb ticks
-            // down, the explosion signal still fires (HUD/analytics reaction), but the move
-            // history is preserved so the player can undo the move (paying coins) and recover
-            // the lost ring.
+            // GDD §36 — Bomb explosion fails the level.
+            // BombExplodedSignal fires for VFX, LevelLostSignal triggers LoseState transition.
+            // CheckWinSignal is NOT fired when a bomb explodes.
             var command = new MoveRingCommand();
             InjectDependencies(command);
 
@@ -293,19 +291,19 @@ namespace RingFlow.Tests
             _gameplayModel.Poles.Add(pole0);
             _gameplayModel.Poles.Add(pole1);
 
-            // Snapshot move-count so we can assert nothing got reset to 0.
-            int movesBefore = _gameplayModel.MovesCount.Value;
-
             // Execute move
             command.Execute(new MoveRingSignal(0, 1));
 
-            // Bomb exploded signal still fires (UI + analytics), but IsGameWon is not flipped.
+            // Bomb exploded signal still fires (UI + VFX).
             Assert.IsTrue(_signalBus.HasFiredBombExploded);
+            // LevelLostSignal fires to trigger LoseState transition.
+            Assert.IsTrue(_signalBus.HasFiredLevelLost);
+            Assert.IsNotNull(_signalBus.FiredLevelLostReason);
+            // IsGameWon is not flipped.
             Assert.IsFalse(_gameplayModel.IsGameWon.Value);
 
-            // Move history was pushed (so the player can pay coins to undo and recover the bomb).
+            // Move history was pushed (for potential undo replay).
             Assert.AreEqual(1, _gameplayModel.MoveHistory.Count);
-            Assert.AreEqual(movesBefore + 1, _gameplayModel.MovesCount.Value);
         }
 
         [Test]
@@ -1075,6 +1073,8 @@ namespace RingFlow.Tests
         public bool HasFiredRevealMystery { get; private set; }
         public bool HasFiredGhostRevealed { get; private set; }
         public bool HasFiredBombExploded { get; private set; }
+        public bool HasFiredLevelLost { get; private set; }
+        public string FiredLevelLostReason { get; private set; }
         public bool HasFiredBreakIce { get; private set; }
         public bool HasFiredUnlockPole { get; private set; }
         public bool HasFiredPortalTeleport { get; private set; }
@@ -1111,6 +1111,11 @@ namespace RingFlow.Tests
                 HasFiredGhostRevealed = true;
             else if (typeof(T) == typeof(BombExplodedSignal))
                 HasFiredBombExploded = true;
+            else if (typeof(T) == typeof(LevelLostSignal))
+            {
+                HasFiredLevelLost = true;
+                FiredLevelLostReason = ((LevelLostSignal)(object)signal).Reason;
+            }
             else if (typeof(T) == typeof(BreakIceSignal))
                 HasFiredBreakIce = true;
             else if (typeof(T) == typeof(UnlockPoleSignal))

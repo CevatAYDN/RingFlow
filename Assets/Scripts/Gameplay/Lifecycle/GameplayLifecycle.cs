@@ -67,14 +67,15 @@ namespace RingFlow.Gameplay
 
             var theme = Resources.Load<UIThemeConfigSO>(GameplayAssetKeys.UIThemeConfig);
             if (theme == null) throw new System.InvalidOperationException("UIThemeConfig.asset not found in Resources!");
+            // C3: static wrapper kept for backward-compat; DI-injectable via IGameUIResourcesService.
             GameUIResources.Bind(theme);
             builder.BindInstance<UIThemeConfigSO>(theme);
 
             var audioConfig = Resources.Load<AudioConfigSO>(GameplayAssetKeys.AudioConfig);
             if (audioConfig == null) throw new System.InvalidOperationException("AudioConfig.asset not found in Resources!");
+            // C4: static wrapper kept for backward-compat; DI-injectable via IProceduralAudioService.
             ProceduralAudio.Initialize(audioConfig);
             builder.BindInstance<AudioConfigSO>(audioConfig);
-
             // --- New Data-Driven Configs ---
             var storeCatalog = Resources.Load<StoreCatalogSO>(GameplayAssetKeys.StoreCatalog);
             if (storeCatalog == null) throw new System.InvalidOperationException("StoreCatalog.asset not found in Resources!");
@@ -109,6 +110,10 @@ namespace RingFlow.Gameplay
             builder.BindService<IHapticService, HapticService>();
             builder.BindService<IFeedbackService, FeedbackService>();
             builder.BindService<ILocalizationService, LocalizationService>();
+            // C3+C4: DI-injectable replacements for static GameUIResources and ProceduralAudio.
+            // Existing static call-sites continue working during migration period.
+            builder.BindService<IGameUIResourcesService, GameUIResourcesService>();
+            builder.BindService<IProceduralAudioService, ProceduralAudioService>();
             builder.BindService<Services.IGameTimeService, Services.GameTimeService>();
             builder.BindService<Services.ILegalConsentService, Services.LegalConsentService>();
             builder.BindService<IAnalyticsService, AnalyticsService>();
@@ -140,6 +145,7 @@ namespace RingFlow.Gameplay
             builder.Bind<PausedState>();
             builder.Bind<WinState>();
             builder.Bind<GameOverState>();
+            builder.Bind<LoseState>();
             builder.Bind<LoadingState>();
             builder.Bind<ErrorState>();
 
@@ -223,6 +229,7 @@ namespace RingFlow.Gameplay
             fsm.RegisterState(context.Resolve<PausedState>());
             fsm.RegisterState(context.Resolve<WinState>());
             fsm.RegisterState(context.Resolve<GameOverState>());
+            fsm.RegisterState(context.Resolve<LoseState>());
             fsm.RegisterState(context.Resolve<LoadingState>());
             fsm.RegisterState(context.Resolve<ErrorState>());
         }

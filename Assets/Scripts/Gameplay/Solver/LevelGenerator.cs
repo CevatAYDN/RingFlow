@@ -197,7 +197,7 @@ namespace RingFlow.Gameplay
                 int solverCapacity = maxCapacity;
                 var solveResult = LevelSolver.Solve(scrambledState, solverCapacity,
                     maxStatesLimit: solverLimit, maxMovesLimit: cfg.DefaultMaxMovesLimit,
-                    portalTargets: portalTargets);
+                    portalTargets: portalTargets, bombTickMode: cfg.BombTickMode);
 
                 if (solveResult.IsSolvable && solveResult.MoveCount >= 2)
                 {

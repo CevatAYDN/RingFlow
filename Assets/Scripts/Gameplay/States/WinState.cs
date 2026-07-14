@@ -19,6 +19,10 @@ namespace RingFlow.Gameplay
                 "Entered WinState.");
             _signalBus?.Fire(new ShowScreenSignal(ScreenType.Win));
 
+            // M3: BGM multiplier should not persist across states — reset to full on win screen.
+            if (_audio != null)
+                _audio.BgmStateMultiplier = 1f;
+
             // Play win sound procedurally
             if (_audio != null)
             {
