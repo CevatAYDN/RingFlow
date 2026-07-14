@@ -166,9 +166,9 @@ namespace RingFlow.Gameplay
     public class GameConfigDatabaseSO : ScriptableObject
     {
         public int TotalLevels = 0;
-        public int LevelsPerWorld = 25;
-        public int TotalWorlds = 0;
-        public int BossLevelModulo = 25;
+        public int LevelsPerWorld = 50;
+        public int TotalWorlds = 40;
+        public int BossLevelModulo = 50;
         public int LevelsPerThemeStep = 5;
         public int MinimumEmptyPoles = 0;
         public List<DifficultyBandData> DifficultyBands = new();
@@ -220,6 +220,9 @@ namespace RingFlow.Gameplay
         public void InitializeDefaults()
         {
             TotalLevels = 2000;
+            LevelsPerWorld = 50;
+            TotalWorlds = 40;
+            BossLevelModulo = 50;
 
             MechanicUnlocks = new List<MechanicUnlockEntry>
             {
