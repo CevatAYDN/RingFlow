@@ -1,4 +1,3 @@
-using System;
 using Nexus.Core;
 using Nexus.Core.FSM;
 using Nexus.Core.Services;
@@ -22,13 +21,7 @@ namespace RingFlow.Gameplay.UI
             View.AcceptButton?.onClick.AddListener(HandleAccept);
             View.TermsButton?.onClick.AddListener(HandleOpenTerms);
             View.PrivacyButton?.onClick.AddListener(HandleOpenPrivacy);
-            if (View.AgeInputField != null)
-            {
-                View.AgeInputField.onEndEdit.AddListener(HandleSubmit);
-            }
         }
-
-        private void HandleSubmit(string _) => HandleAccept();
 
         private void HandleAccept()
         {
@@ -67,10 +60,6 @@ namespace RingFlow.Gameplay.UI
             View.AcceptButton?.onClick.RemoveListener(HandleAccept);
             View.TermsButton?.onClick.RemoveListener(HandleOpenTerms);
             View.PrivacyButton?.onClick.RemoveListener(HandleOpenPrivacy);
-            if (View.AgeInputField != null)
-            {
-                View.AgeInputField.onEndEdit.RemoveListener(HandleSubmit);
-            }
         }
     }
 }

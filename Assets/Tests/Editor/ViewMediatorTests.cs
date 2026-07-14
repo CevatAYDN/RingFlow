@@ -113,8 +113,9 @@ namespace RingFlow.Tests
             view.EnsureInitialized();
             Assert.IsNotNull(view);
             Assert.IsNotNull(view.AcceptButton, "Parental gate must always have an accept button so first-run users are not trapped.");
-            Assert.IsNotNull(view.AgeInputField, "Parental gate must always have an input field for the verification answer.");
-            Assert.IsNotNull(view.QuestionText, "Parental gate must show the generated math question.");
+            Assert.IsNull(view.AgeInputField, "Parental gate is consent-only and must not require a math/input challenge.");
+            Assert.IsNotNull(view.QuestionText, "Parental gate must show localized consent text.");
+            Assert.IsTrue(view.ValidateAnswer(), "Consent-only parental gate should pass when the accept button is pressed.");
             UnityEngine.Object.DestroyImmediate(go);
         }
 

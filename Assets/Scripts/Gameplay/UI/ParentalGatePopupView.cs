@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using UnityEngine.UI;
 using Nexus.Core;
@@ -7,8 +6,8 @@ using Nexus.Core.Services;
 namespace RingFlow.Gameplay.UI
 {
     /// <summary>
-    /// GDD §14 — GDPR / KVKK and COPPA Parental Gate Popup.
-    /// Requires verification (e.g., multiplication check) before accepting terms.
+    /// GDD §14 — GDPR / KVKK and COPPA consent popup.
+    /// Consent-only flow: the player reviews Terms/Privacy and continues with a localized accept button.
     /// Self-building: when the prefab has no child objects, the entire UI is built
     /// programmatically. When the editor-generated prefab provides children, they are
     /// auto-wired via BindReferencesFromChildren.
@@ -20,13 +19,11 @@ namespace RingFlow.Gameplay.UI
         public Button TermsButton;
         public Button PrivacyButton;
 
-        public InputField AgeInputField;
-        public Text QuestionText;
+        public Text TitleText;
+        public InputField AgeInputField; // Deprecated: old math gate input. Hidden in consent-only mode.
+        public Text QuestionText; // Used as consent/body text in the current flow.
         public Text ErrorText;
 
-        private int _num1;
-        private int _num2;
-        private int _correctAnswer;
         private ILocalizationService _loc;
         private bool _initialized;
 
@@ -66,7 +63,8 @@ namespace RingFlow.Gameplay.UI
         {
             base.OnEnable();
             EnsureInitialized();
-            GenerateQuestion();
+            ApplyConsentOnlyMode();
+            RefreshConsentText();
             if (ErrorText != null) ErrorText.text = "";
             if (AgeInputField != null) AgeInputField.text = "";
         }
@@ -100,69 +98,26 @@ namespace RingFlow.Gameplay.UI
 
             // ── Title ──
             var titleGo = GameUIResources.CreateText("Parental Verification", card.transform, 36, TextAnchor.MiddleCenter, GameUIResources.TextColor);
+            TitleText = titleGo.GetComponent<Text>();
             var titleRt = titleGo.GetComponent<RectTransform>();
-            GameUIResources.SetAnchors(titleRt, 0.05f, 0.72f, 0.95f, 0.88f);
-            titleGo.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            GameUIResources.SetAnchors(titleRt, 0.05f, 0.70f, 0.95f, 0.88f);
+            TitleText.fontStyle = FontStyle.Bold;
             titleGo.name = "Title";
 
-            // ── Question text ──
-            var questionGo = GameUIResources.CreateText("", card.transform, 28, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
+            // ── Consent/body text ──
+            var questionGo = GameUIResources.CreateText("", card.transform, 24, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
             QuestionText = questionGo.GetComponent<Text>();
             QuestionText.fontStyle = FontStyle.Bold;
             QuestionText.name = "Question";
             var questionRt = questionGo.GetComponent<RectTransform>();
-            GameUIResources.SetAnchors(questionRt, 0.05f, 0.56f, 0.95f, 0.68f);
+            GameUIResources.SetAnchors(questionRt, 0.08f, 0.42f, 0.92f, 0.66f);
 
-            // ── Age InputField ──
-            var inputBgGo = new GameObject("AnswerInput", typeof(RectTransform), typeof(Image), typeof(InputField));
-            inputBgGo.transform.SetParent(card.transform, false);
-            var inputBgRt = inputBgGo.GetComponent<RectTransform>();
-            GameUIResources.SetAnchors(inputBgRt, 0.28f, 0.44f, 0.72f, 0.53f);
-            inputBgGo.GetComponent<Image>().color = GameUIResources.SurfaceColor;
-
-            // Placeholder text
-            var placeholderGo = new GameObject("Placeholder", typeof(RectTransform), typeof(Text));
-            placeholderGo.transform.SetParent(inputBgGo.transform, false);
-            var placeholderRt = placeholderGo.GetComponent<RectTransform>();
-            placeholderRt.anchorMin = Vector2.zero;
-            placeholderRt.anchorMax = Vector2.one;
-            placeholderRt.offsetMin = new Vector2(10, 0);
-            placeholderRt.offsetMax = new Vector2(-10, 0);
-            var placeholderText = placeholderGo.GetComponent<Text>();
-            placeholderText.text = "Enter answer...";
-            placeholderText.font = GameUIResources.GetFont();
-            placeholderText.fontSize = 22;
-            placeholderText.alignment = TextAnchor.MiddleLeft;
-            placeholderText.color = GameUIResources.MutedText;
-            placeholderText.fontStyle = FontStyle.Italic;
-
-            // Text display
-            var textGo = new GameObject("Text", typeof(RectTransform), typeof(Text));
-            textGo.transform.SetParent(inputBgGo.transform, false);
-            var textRt = textGo.GetComponent<RectTransform>();
-            textRt.anchorMin = Vector2.zero;
-            textRt.anchorMax = Vector2.one;
-            textRt.offsetMin = new Vector2(10, 0);
-            textRt.offsetMax = new Vector2(-10, 0);
-            var inputText = textGo.GetComponent<Text>();
-            inputText.font = GameUIResources.GetFont();
-            inputText.fontSize = 22;
-            inputText.alignment = TextAnchor.MiddleLeft;
-            inputText.color = GameUIResources.TextColor;
-
-            var inputField = inputBgGo.GetComponent<InputField>();
-            inputField.textComponent = inputText;
-            inputField.placeholder = placeholderText;
-            inputField.characterLimit = 5;
-            inputField.contentType = InputField.ContentType.IntegerNumber;
-            AgeInputField = inputField;
-
-            // ── Error text ──
+            // ── Error text (kept for safety; hidden in consent-only mode) ──
             var errorGo = GameUIResources.CreateText("", card.transform, 18, TextAnchor.MiddleCenter, GameUIResources.DangerColor);
             ErrorText = errorGo.GetComponent<Text>();
             ErrorText.name = "Error";
             var errorRt = errorGo.GetComponent<RectTransform>();
-            GameUIResources.SetAnchors(errorRt, 0.15f, 0.38f, 0.85f, 0.43f);
+            GameUIResources.SetAnchors(errorRt, 0.15f, 0.36f, 0.85f, 0.41f);
 
             // ── Accept button (primary) ──
             var acceptBtnGo = GameUIResources.CreateButton("ACCEPT & CONTINUE", card.transform, 320, 64);
@@ -189,40 +144,40 @@ namespace RingFlow.Gameplay.UI
             GameUIResources.SetAnchors(privacyBtnGo.GetComponent<RectTransform>(), 0.52f, 0.10f, 0.92f, 0.18f);
         }
 
-        private void GenerateQuestion()
+        private void ApplyConsentOnlyMode()
         {
-            var rand = new System.Random();
-            _num1 = rand.Next(3, 9);
-            _num2 = rand.Next(4, 9);
-            _correctAnswer = _num1 * _num2;
+            // Current product decision: no math gate. Small children can play,
+            // and legal consent is a simple localized accept flow. Hide legacy
+            // authored InputField if an older prefab still contains it.
+            if (AgeInputField != null)
+            {
+                AgeInputField.text = string.Empty;
+                AgeInputField.gameObject.SetActive(false);
+            }
+
+            if (ErrorText != null)
+                ErrorText.text = string.Empty;
+        }
+
+        private void RefreshConsentText()
+        {
+            if (TitleText != null && _loc != null)
+                TitleText.text = _loc.GetString("parental_title", TitleText.text);
 
             if (QuestionText != null)
             {
-                string format = _loc?.GetString("parental_question", "Parental Verification: {0} x {1} = ?")
-                    ?? "Parental Verification: {0} x {1} = ?";
-                QuestionText.text = string.Format(format, _num1, _num2);
+                QuestionText.text = _loc?.GetString("parental_question",
+                    "Please review and accept our Terms of Service and Privacy Policy to continue.")
+                    ?? "Please review and accept our Terms of Service and Privacy Policy to continue.";
             }
         }
 
         public bool ValidateAnswer()
         {
-            if (AgeInputField == null) return true;
-
-            if (int.TryParse(AgeInputField.text, out int answer))
-            {
-                if (answer == _correctAnswer)
-                {
-                    return true;
-                }
-            }
-
-            if (ErrorText != null)
-            {
-                ErrorText.text = _loc?.GetString("parental_error", "Incorrect answer. Verification failed.")
-                    ?? "Incorrect answer. Verification failed.";
-            }
-            GenerateQuestion();
-            return false;
+            // Consent-only flow: pressing the localized accept button is enough.
+            // No multiplication/captcha gate; younger players must not be blocked
+            // by an arithmetic challenge.
+            return true;
         }
 
         public void Localize(ILocalizationService loc)
@@ -231,8 +186,8 @@ namespace RingFlow.Gameplay.UI
             _loc = loc;
             EnsureInitialized();
 
-            if (QuestionText != null)
-                GenerateQuestion();
+            ApplyConsentOnlyMode();
+            RefreshConsentText();
 
             if (AcceptButton != null)
                 GameUIResources.LocalizeButtonText(AcceptButton.gameObject, "parental_accept", loc);
@@ -245,9 +200,6 @@ namespace RingFlow.Gameplay.UI
 
             if (ErrorText != null && !string.IsNullOrEmpty(ErrorText.text))
                 ErrorText.text = loc.GetString("parental_error", ErrorText.text);
-
-            if (AgeInputField != null && AgeInputField.placeholder is Text ph)
-                ph.text = loc.GetString("parental_placeholder", "Enter answer...");
         }
 
         private void BindReferencesFromChildren()
@@ -265,7 +217,8 @@ namespace RingFlow.Gameplay.UI
             var texts = GetComponentsInChildren<Text>(true);
             foreach (var txt in texts)
             {
-                if (txt.name.ToUpper().Contains("QUESTION")) QuestionText = txt;
+                if (txt.name.ToUpper().Contains("TITLE")) TitleText = txt;
+                else if (txt.name.ToUpper().Contains("QUESTION")) QuestionText = txt;
                 else if (txt.name.ToUpper().Contains("ERROR")) ErrorText = txt;
             }
         }
