@@ -373,19 +373,25 @@ namespace RingFlow.Gameplay
             }
             if (GetRingCount(poleIndex) >= maxCapacity) return false;
 
-            // Chain kapasite kuralı: Çözücüde de 2 boşluk gerektiği kontrol edilmeli
+            // Chain kapasite kuralı: zincir halkası taşındığında yanına yalnızca TEK bir
+            // eş halkayı çeker (bkz. BoardState.AddRing / MoveRingCommand.ApplyChainSubMove),
+            // ve bu yalnızca eş halka BAŞKA bir direğin en üstünde ise gerçekleşir.
+            // Bu yüzden hedef direğin 2 boşluğu (taşınan + 1 eş) ya da eş yoksa 1 boşluğu gerekir.
             if (type == RingType.Chain && additionalData > 0)
             {
-                int partners = 0;
+                bool hasPullablePartner = false;
                 for (int p = 0; p < PoleCount; p++)
                 {
                     if (p == poleIndex) continue;
-                    if (IsEmpty(p)) continue;
                     var partnerTop = GetTopRing(p);
                     if (partnerTop.Type == RingType.Chain && partnerTop.AdditionalData == additionalData)
-                        partners++;
+                    {
+                        hasPullablePartner = true;
+                        break;
+                    }
                 }
-                if (GetRingCount(poleIndex) + 1 + partners > maxCapacity)
+                int required = hasPullablePartner ? 2 : 1;
+                if (GetRingCount(poleIndex) + required > maxCapacity)
                 {
                     return false;
                 }

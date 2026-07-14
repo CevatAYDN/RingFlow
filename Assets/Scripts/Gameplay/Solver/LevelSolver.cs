@@ -10,10 +10,12 @@ namespace RingFlow.Gameplay
     {
         public int From;
         public int To;
-        public Move(int from, int to)
+        public RingData Ring;
+        public Move(int from, int to, RingData ring)
         {
             From = from;
             To = to;
+            Ring = ring;
         }
     }
 
@@ -74,7 +76,7 @@ namespace RingFlow.Gameplay
                     for (int i = 0; i < path.Count; i++)
                     {
                         var m = path[i];
-                        movesList.Add(new MoveRecord(m.From, m.To, new RingData(RingColor.None)));
+                        movesList.Add(new MoveRecord(m.From, m.To, m.Ring));
                     }
                     return new SolverResult
                     {
@@ -229,6 +231,14 @@ namespace RingFlow.Gameplay
             return true;
         }
 
+        /// <summary>
+        /// Admissible (optimistic) heuristic for the IDA* search. Per pole it counts the
+        /// number of misplaced rings plus a penalty for non-full (incomplete) poles.
+        /// Every misplaced ring needs at least one move to fix and an incomplete pole needs
+        /// more rings, so this never overestimates the remaining cost — the search therefore
+        /// returns an optimal solution. Special-ring side effects (paint/portal/ice) are
+        /// realised by the search expansion, not the heuristic.
+        /// </summary>
         public static int CalculateHeuristic(BoardState state, int maxCapacity)
         {
             // Heuristic = Σ(yanlış pozisyondaki ring) + (incomplete pole × 2)
@@ -295,33 +305,30 @@ namespace RingFlow.Gameplay
                         effectiveTarget = partner;
                     }
 
-                    // Chain: check if final target has room for main ring + linked partners
+                    // Chain: tek eş çekme kuralı — hedef direğin 2 boşluğu (taşınan + 1 eş) ya da
+                    // eş yoksa 1 boşluğu yeterli. Uygulama yolu (BoardState.AddRing) ile aynı mantık.
                     if (topRing.Type == RingType.Chain && topRing.AdditionalData > 0)
                     {
-                        int linked = CountChainLinkedPartners(state, topRing.AdditionalData, i);
-                        int requiredSlots = 1 + linked;
+                        bool hasPullablePartner = false;
+                        for (int p = 0; p < state.PoleCount; p++)
+                        {
+                            if (p == i) continue;
+                            var partnerTop = state.GetTopRing(p);
+                            if (partnerTop.Type == RingType.Chain && partnerTop.AdditionalData == topRing.AdditionalData)
+                            {
+                                hasPullablePartner = true;
+                                break;
+                            }
+                        }
+                        int requiredSlots = hasPullablePartner ? 2 : 1;
                         if (!CanAddRingWithExtraCapacity(state, effectiveTarget, topRing.Color, topRing.Type, maxCapacity, requiredSlots))
                             continue;
                     }
 
-                    destination[count++] = new Move(i, j);
+                    destination[count++] = new Move(i, j, topRing);
                 }
             }
             return count;
-        }
-
-        private static int CountChainLinkedPartners(BoardState state, int groupId, int excludePole)
-        {
-            int partners = 0;
-            for (int p = 0; p < state.PoleCount; p++)
-            {
-                if (p == excludePole) continue;
-                if (state.IsEmpty(p)) continue;
-                var top = state.GetTopRing(p);
-                if (top.Type == RingType.Chain && top.AdditionalData == groupId)
-                    partners++;
-            }
-            return partners;
         }
 
         private static bool CanAddRingWithExtraCapacity(BoardState state, int poleIndex,

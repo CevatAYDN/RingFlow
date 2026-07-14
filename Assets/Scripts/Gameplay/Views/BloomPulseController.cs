@@ -41,6 +41,8 @@ namespace RingFlow.Gameplay
 
         private void Initialize()
         {
+            try
+            {
             // Find Volume type via reflection — UnityEngine.Rendering.Universal may not be compiled
             Type volumeType = Type.GetType("UnityEngine.Rendering.Volume, Unity.RenderPipelines.Core.Runtime");
             if (volumeType == null)
@@ -166,8 +168,14 @@ namespace RingFlow.Gameplay
             _originalIntensity = ReadFloatValue(_intensityField);
             _originalThreshold = ReadFloatValue(_thresholdField);
 
-            _isReady = true;
-            NexusLog.Info("BloomPulse", nameof(Initialize), "", "Bloom pulse controller ready.");
+                _isReady = true;
+                NexusLog.Info("BloomPulse", nameof(Initialize), "", "Bloom pulse controller ready.");
+            }
+            catch (Exception ex)
+            {
+                _isReady = false;
+                NexusLog.Warn("BloomPulse", nameof(Initialize), "", ex.Message);
+            }
         }
 
         private float ReadFloatValue(FieldInfo field)

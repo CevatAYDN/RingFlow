@@ -22,138 +22,21 @@ namespace RingFlow.Gameplay
 
                 if (fromPole != null && toPole != null)
                 {
+                    // MoveRingCommand.CaptureBoardSnapshot always populates BoardBefore, so the
+                    // snapshot-restore path above is canonical and fully reverses the move —
+                    // including bombs, special rings, portals, ice, ghost, chain and magnet pulls.
+                    // The field-by-field undo path was dead code and has been removed.
                     if (lastMove.BoardBefore.Count > 0)
                     {
                         RestoreBoardSnapshot(lastMove);
+                        RestoreGhostReveal(lastMove, fromPole);
                         FinishUndo(lastMove);
                         return;
                     }
 
-                    // ── 1. Restore exploded bomb rings (insert back in original index order, descending) ──
-                    if (lastMove.BombExplodedRings.Count > 0)
-                    {
-                        lastMove.BombExplodedRings.Sort(static (a, b) => b.RingIndex.CompareTo(a.RingIndex));
-                        for (int i = 0; i < lastMove.BombExplodedRings.Count; i++)
-                        {
-                            var entry = lastMove.BombExplodedRings[i];
-                            var pole = _model.Poles.GetPoleById(entry.PoleId);
-                            if (pole == null) continue;
-                            int insertIdx = entry.RingIndex < pole.Rings.Count ? entry.RingIndex : pole.Rings.Count;
-                            pole.Rings.Insert(insertIdx, entry.Ring);
-                        }
-                    }
-
-                    // ── 2. Restore bomb counters to their pre-move values ──
-                    RestoreBombCounters(lastMove.BombCountersBeforeTick);
-
-                    // ── 3. Undo sub-moves in reverse order (chain, magnet, portal) ──
-                    if (lastMove.SubMoves.Count > 0)
-                    {
-                        for (int i = lastMove.SubMoves.Count - 1; i >= 0; i--)
-                        {
-                            var sub    = lastMove.SubMoves[i];
-                            var subFrom = _model.Poles.GetPoleById(sub.FromPoleId);
-                            var subTo   = _model.Poles.GetPoleById(sub.ToPoleId);
-
-                            if (subFrom != null && subTo != null)
-                            {
-                                subTo.PopRingRaw();
-                                subFrom.AddRingRaw(sub.Ring);
-                            }
-                        }
-                    }
-
-                    // ── 4. Restore locked pole state ──
-                    if (lastMove.WasTargetPoleUnlocked)
-                    {
-                        toPole.IsLocked = true;
-                    }
-
-                    // ── 5. Restore Mystery reveal on FROM pole ──
-                    if (lastMove.WasMysteryRevealedOnFrom && !fromPole.IsEmpty)
-                    {
-                        var topM = fromPole.TopRing;
-                        fromPole.Rings[^1] = new RingData(topM.Color, RingType.Mystery);
-                    }
-
-                    // ── 6. Undo main ring move (portal-aware) ──
-                    //   If the move included a portal teleport, the ring was actually
-                    //   placed on ToPole first and then teleported to PortalTeleportTargetPoleId.
-                    //   Sub-moves already reversed the teleport (step 3), so we just pop ToPole here.
-                    var movedRing = toPole.PopRingRaw();
-
-                    // ── 7. Undo paint effect ──
-                    if (lastMove.WasPainted)
-                    {
-                        movedRing.Color = lastMove.OriginalColor;
-
-                        // Restore the consumed Paint ring (Standard → back to Paint).
-                        // Two scenarios:
-                        //   1. consumed ring still on target pole (ring placed on an existing Paint ring)
-                        //   2. consumed ring was the moved ring itself (Paint ring painted ring below)
-                        if (lastMove.PaintConsumedRingIndex >= 0)
-                        {
-                            if (lastMove.PaintConsumedRingIndex < toPole.Rings.Count)
-                            {
-                                toPole.Rings[lastMove.PaintConsumedRingIndex] = lastMove.PaintConsumedRingData;
-                            }
-                            else
-                            {
-                                movedRing = lastMove.PaintConsumedRingData;
-                            }
-                        }
-
-                        // Restore the painted ring's original color
-                        if (lastMove.PaintedRingIndex >= 0 &&
-                            lastMove.PaintedRingIndex < toPole.Rings.Count)
-                        {
-                            var painted = toPole.Rings[lastMove.PaintedRingIndex];
-                            painted.Color = lastMove.PaintedRingOriginalColor;
-                            toPole.Rings[lastMove.PaintedRingIndex] = painted;
-                        }
-                    }
-
-                    // ── 8. Undo rainbow conversion ──
-                    //   The rainbow WAS the movedRing (already popped from toPole in step 6).
-                    //   We restore its original Type and Color directly.
-                    if (lastMove.WasRainbowTargetConverted)
-                    {
-                        movedRing.Type  = RingType.Rainbow;
-                        movedRing.Color = lastMove.RainbowTargetOriginalColor;
-                    }
-
-                    // ── 9. Return moving ring to FROM pole ──
-                    fromPole.AddRingRaw(movedRing);
-
-                    // ── 10. Restore Ghost state if ring was revealed on FROM pole selection ──
-                    //   SelectPoleCommand changes Ghost→Standard before firing MoveRingSignal.
-                    //   We must revert that change so the ring appears Ghost again.
-                    if (lastMove.WasGhostRevealedOnFrom && !fromPole.IsEmpty)
-                    {
-                        var topG = fromPole.Rings[^1];
-                        topG.Type = RingType.Ghost;
-                        fromPole.Rings[^1] = topG;
-                        _signalBus?.Fire(new GhostRestoredSignal(lastMove.FromPoleId));
-                        NexusLog.Info("UndoCommand", "Execute", lastMove.FromPoleId.ToString(),
-                            "Ghost ring restored on FROM pole (undo of reveal).");
-                    }
-
-                    // ── 11. Restore frozen rings on TO pole ──
-                    if (lastMove.IceBrokenRingIndices.Count > 0)
-                    {
-                        for (int i = 0; i < lastMove.IceBrokenRingIndices.Count; i++)
-                        {
-                            int idx = lastMove.IceBrokenRingIndices[i];
-                            if (idx >= 0 && idx < toPole.Rings.Count)
-                            {
-                                var ringAtIdx = toPole.Rings[idx];
-                                toPole.Rings[idx] = new RingData(ringAtIdx.Color, RingType.Frozen);
-                            }
-                        }
-                    }
-
-                    // ── 12. Restore move counter / state ──
-                    FinishUndo(lastMove);
+                    NexusLog.Warn("UndoCommand", "Execute", $"{lastMove.FromPoleId}->{lastMove.ToPoleId}",
+                        "Undo failed: no board snapshot captured for this move.");
+                    MoveRecordPool.Return(lastMove);
                 }
                 else
                 {
@@ -172,17 +55,40 @@ namespace RingFlow.Gameplay
 
         private void RestoreBoardSnapshot(MoveRecord record)
         {
-            _model.Poles.Clear();
-            _model.CompletedPoles.Clear();
+            // Restore in place: mutate the existing PoleState objects (matched by Id) instead of
+            // recreating them. This preserves external references (views, tests) and avoids
+            // per-undo allocations, satisfying the zero-GC-during-gameplay rule.
             for (int i = 0; i < record.BoardBefore.Count; i++)
             {
                 var snapshot = record.BoardBefore[i];
-                var pole = new PoleState { Id = snapshot.Id, IsLocked = snapshot.IsLocked, PortalPartnerId = snapshot.PortalPartnerId };
+                var pole = _model.Poles.GetPoleById(snapshot.Id);
+                if (pole == null) continue;
+
+                pole.IsLocked = snapshot.IsLocked;
+                pole.PortalPartnerId = snapshot.PortalPartnerId;
                 pole.SetCapacity(snapshot.RingCapacity);
+                pole.Rings.Clear();
                 for (int r = 0; r < snapshot.Rings.Count; r++)
                     pole.AddRingRaw(snapshot.Rings[r].Clone());
-                _model.Poles.Add(pole);
             }
+
+            // Completed-pole flags are recomputed by the win-check fired in FinishUndo.
+            _model.CompletedPoles.Clear();
+        }
+
+        /// <summary>
+        /// Re-applies the Ghost type to the restored from-pole top ring. The board snapshot is
+        /// captured at move time, after SelectPoleCommand already revealed the ghost (Ghost→Standard),
+        /// so the restored ring comes back as Standard. Per the MoveRecord contract a move whose
+        /// selection revealed a ghost must undo back to the pre-selection Ghost state.
+        /// </summary>
+        private void RestoreGhostReveal(MoveRecord record, PoleState fromPole)
+        {
+            if (!record.WasGhostRevealedOnFrom || fromPole == null || fromPole.Rings.Count == 0)
+                return;
+
+            var top = fromPole.TopRing;
+            fromPole.Rings[fromPole.Rings.Count - 1] = new RingData(top.Color, RingType.Ghost);
         }
 
         private void FinishUndo(MoveRecord lastMove)
@@ -206,26 +112,6 @@ namespace RingFlow.Gameplay
             _signalBus.Fire(new CheckWinSignal());
         }
 
-        /// <summary>
-        /// Restores bomb counters to their pre-move snapshot values.
-        /// Uses <see cref="BombCounterRestoredSignal"/> (NOT <see cref="BombTickSignal"/>)
-        /// so that View listeners can distinguish between a normal tick and an undo restore.
-        /// Signals must not modify state — only update visuals.
-        /// </summary>
-        private void RestoreBombCounters(System.Collections.Generic.List<(int PoleId, int RingIndex, int Counter)> snapshot)
-        {
-            if (snapshot == null || snapshot.Count == 0) return;
-            for (int i = 0; i < snapshot.Count; i++)
-            {
-                var entry = snapshot[i];
-                var pole = _model.Poles.GetPoleById(entry.PoleId);
-                if (pole == null || entry.RingIndex >= pole.Rings.Count) continue;
-                var r = pole.Rings[entry.RingIndex];
-                if (r.Type != RingType.Bomb) continue;
-                pole.Rings[entry.RingIndex] = new RingData(r.Color, RingType.Bomb, entry.Counter);
-                // Use BombCounterRestoredSignal (not BombTickSignal) — undo context is different from gameplay tick.
-                _signalBus.Fire(new BombCounterRestoredSignal(entry.PoleId, entry.RingIndex, entry.Counter));
-            }
-        }
+
     }
 }

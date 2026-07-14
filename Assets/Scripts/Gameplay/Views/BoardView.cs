@@ -41,6 +41,12 @@ namespace RingFlow.Gameplay
         }
 
         private readonly Dictionary<(RingColor, RingType), Material> _ringMaterialCache = new();
+        // Reused across ApplySelection calls to avoid per-ring MaterialPropertyBlock allocations.
+        // NOT a field initializer: creating engine objects in a MonoBehaviour constructor / field
+        // initializer is forbidden (Unity throws "CreateImpl is not allowed from a MonoBehaviour
+        // constructor"), and the resulting abort would also skip _spawnedPoles initialization and
+        // surface as a NullReferenceException at BuildBoard. Lazily initialized instead.
+        private MaterialPropertyBlock _selectionPropBlock;
 
         private readonly List<PoleView> _spawnedPoles = new();
         private readonly List<List<GameObject>> _spawnedRings = new();
@@ -54,7 +60,6 @@ namespace RingFlow.Gameplay
         private UnityEngine.UI.Text _tutorialLabelText;
 
         private BloomPulseController _bloomPulseController;
-        private bool _bloomPulseSearched;
 
         public void EnsureRingPoolPrewarmed()
         {
@@ -479,18 +484,19 @@ namespace RingFlow.Gameplay
 
         private BloomPulseController GetOrFindBloomPulseController()
         {
-            if (_bloomPulseController != null && _bloomPulseController.isActiveAndEnabled)
-                return _bloomPulseController;
-            if (_bloomPulseSearched) return null;
-            _bloomPulseSearched = true;
-            _bloomPulseController = FindAnyObjectByType<BloomPulseController>(FindObjectsInactive.Include);
-            if (_bloomPulseController == null)
-            {
-                var go = new GameObject("BloomPulseController", typeof(BloomPulseController));
-                go.hideFlags = HideFlags.HideAndDontSave;
-                _bloomPulseController = go.GetComponent<BloomPulseController>();
-            }
+            // BloomPulseController hiçbir sahnede/preFab'da yer almaz; bu yüzden FindObjectOfType
+            // kullanmadan yalnızca bir kez oluşturulur ve önbelleğe alınır (AGENTS.md: asla FindObjectOfType).
+            if (_bloomPulseController != null) return _bloomPulseController;
+            var go = new GameObject("BloomPulseController", typeof(BloomPulseController));
+            go.hideFlags = HideFlags.HideAndDontSave;
+            _bloomPulseController = go.GetComponent<BloomPulseController>();
             return _bloomPulseController;
+        }
+
+        private MaterialPropertyBlock GetSelectionPropBlock()
+        {
+            if (_selectionPropBlock == null) _selectionPropBlock = new MaterialPropertyBlock();
+            return _selectionPropBlock;
         }
 
         private void ApplySelection()
@@ -540,7 +546,8 @@ namespace RingFlow.Gameplay
                     // --- Warm Selection Glow ---
                     var lightChildTransform = topRing.transform.Find("SelectionGlowLight");
                     var ringRenderer = topRing.GetComponentInChildren<Renderer>();
-                    var propBlock = new MaterialPropertyBlock();
+                    var propBlock = GetSelectionPropBlock();
+                    propBlock.Clear();
 
                     if (isSelected)
                     {

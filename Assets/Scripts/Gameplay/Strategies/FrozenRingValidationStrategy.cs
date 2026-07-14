@@ -17,6 +17,8 @@ namespace RingFlow.Gameplay.Strategies
             if (isPoleFull) return false;
             if (topRing.Color == RingColor.None) return true;
             if (topRing.Type == RingType.Stone) return topRing.Color == ring.Color;
+            // Frozen blocks popping only (see CanPopRing), not adding — any ring may be placed on top.
+            if (topRing.Type == RingType.Frozen) return true;
             if (topRing.Type == RingType.Rainbow || topRing.Type == RingType.Paint) return true;
             return topRing.Color == ring.Color;
         }

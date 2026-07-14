@@ -231,19 +231,157 @@ namespace RingFlow.Tests
         [Test]
         public void LevelGenerator_MultipleSeeds_ProducesDeterministicResults()
         {
-            var db = _db;
-            Assert.IsNotNull(db);
-            Assert.IsNotNull(db.GetAllowedMechanicsForLevel(50));
-            Assert.IsNotNull(db.GetMechanicIntensityForLevel(50));
+            // Aynı seed her zaman aynı seviyeyi üretmeli (deterministik üretim kuralı, GDD).
+            int levelIndex = 50;
+            int seed = 12345;
+            int poleCount = _db.GetPoleCountForLevel(levelIndex);
+            int colorCount = _db.GetColorCountForLevel(levelIndex);
+            int maxCapacity = _db.GetMaxCapacityForLevel(levelIndex);
+
+            var a = LevelGenerator.GenerateLevel(_db, levelIndex, seed, poleCount, colorCount, maxCapacity);
+            var b = LevelGenerator.GenerateLevel(_db, levelIndex, seed, poleCount, colorCount, maxCapacity);
+
+            Assert.IsNotNull(a);
+            Assert.IsNotNull(b);
+            Assert.IsTrue(AreLevelsEqual(a, b), "Aynı seed ile üretilen iki seviye özdeş olmalı.");
         }
 
         [Test]
         public void LevelGenerator_DifferentSeeds_ProducesDifferentResults()
         {
-            var db = _db;
-            Assert.IsNotNull(db);
-            Assert.IsNotNull(db.GetAllowedMechanicsForLevel(50));
-            Assert.IsNotNull(db.GetMechanicIntensityForLevel(50));
+            // Üretim seed'e bağlı olmalı: farklı seed'ler farklı seviye üretir.
+            int levelIndex = 50;
+            int poleCount = _db.GetPoleCountForLevel(levelIndex);
+            int colorCount = _db.GetColorCountForLevel(levelIndex);
+            int maxCapacity = _db.GetMaxCapacityForLevel(levelIndex);
+
+            var a = LevelGenerator.GenerateLevel(_db, levelIndex, 111, poleCount, colorCount, maxCapacity);
+            var b = LevelGenerator.GenerateLevel(_db, levelIndex, 999, poleCount, colorCount, maxCapacity);
+
+            Assert.IsNotNull(a);
+            Assert.IsNotNull(b);
+            Assert.IsFalse(AreLevelsEqual(a, b), "Farklı seed'ler aynı seviyeyi üretmemeli (seed-bağımlı determinizm).");
+        }
+
+        [Test]
+        public void ReplayEngine_Replay_SolvedLevel_IsDeterministic()
+        {
+            // Aynı oturum iki kez oynatıldığında birebir aynı sonucu vermeli (deterministik replay).
+            var session = BuildSolvedReplaySession(1, 100);
+            var engine = new ReplayEngine(_db);
+
+            var r1 = engine.Replay(session);
+            var r2 = engine.Replay(session);
+
+            Assert.IsTrue(r1.IsValid, "Çözülmüş bir seviyenin replay'i geçerli olmalı.");
+            Assert.AreEqual(0, r1.DeterminismFailures, "Geçerli bir çözümün replay'i determinizm hatası üretmemeli.");
+            Assert.AreEqual(r1.ReplayedMoves, r2.ReplayedMoves);
+            Assert.AreEqual(r1.DeterminismFailures, r2.DeterminismFailures);
+            Assert.IsTrue(r1.FinalBoard.Equals(r2.FinalBoard), "Aynı oturumun tekrarı deterministik olmalı.");
+        }
+
+        [Test]
+        public void ReplayEngine_Replay_SolvedLevel_NoDeterminismFailures()
+        {
+            // Çözücüden alınan hamle dizisi replay edildiğinde hiçbir determinizm hatası olmamalı.
+            var session = BuildSolvedReplaySession(1, 100);
+            var engine = new ReplayEngine(_db);
+
+            var result = engine.Replay(session);
+
+            Assert.IsTrue(result.IsValid);
+            Assert.AreEqual(0, result.DeterminismFailures);
+            Assert.AreEqual(session.Moves.Count, result.ReplayedMoves);
+        }
+
+        [Test]
+        public void ReplayEngine_Replay_Performance_IsBounded()
+        {
+            // Tek bir replay (seed'den seviye üretimi + hamle uygulama) oyun içi kare
+            // bütçesinin çok altında kalmalı. Replay başına seviye üretimi dahil maliyet ölçülür.
+            var session = BuildSolvedReplaySession(1, 100);
+            var engine = new ReplayEngine(_db);
+
+            const int iterations = 10;
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            ReplayEngine.ReplayResult last = default;
+            for (int i = 0; i < iterations; i++)
+                last = engine.Replay(session);
+            sw.Stop();
+
+            Assert.IsTrue(last.IsValid);
+            long perReplayMs = sw.ElapsedMilliseconds / iterations;
+            Assert.Less(perReplayMs, 250,
+                $"Tek replay (seviye üretimi + hamle uygulama) 250 ms altında kalmalı; ölçülen: {perReplayMs} ms.");
+        }
+
+        private static bool AreLevelsEqual(LevelData a, LevelData b)
+        {
+            if (a == null || b == null) return a == b;
+            if (a.Poles.Count != b.Poles.Count) return false;
+            for (int p = 0; p < a.Poles.Count; p++)
+            {
+                var pa = a.Poles[p];
+                var pb = b.Poles[p];
+                if (pa.IsLocked != pb.IsLocked) return false;
+                if (pa.PortalTargetId != pb.PortalTargetId) return false;
+                if (pa.Rings.Count != pb.Rings.Count) return false;
+                for (int r = 0; r < pa.Rings.Count; r++)
+                {
+                    var ra = pa.Rings[r];
+                    var rb = pb.Rings[r];
+                    if (ra.Color != rb.Color || ra.Type != rb.Type || ra.AdditionalData != rb.AdditionalData)
+                        return false;
+                }
+            }
+            return true;
+        }
+
+        private ReplayEngine.ReplaySession BuildSolvedReplaySession(int levelIndex, int seed)
+        {
+            // ReplayEngine.Replay ile birebir aynı yeniden üretimi yap (DB'den türetilen
+            // parametreler + clamp'ler), böylece çözülen seviye replay'de yeniden oluşturulur.
+            int colorCount = _db.GetColorCountForLevel(levelIndex);
+            int poleCount = _db.GetPoleCountForLevel(levelIndex);
+            int maxCapacity = _db.GetMaxCapacityForLevel(levelIndex);
+            if (poleCount < colorCount + 1) poleCount = colorCount + 1;
+            if (poleCount > GameplayAssetKeys.Tuning.MaxPoleCount) poleCount = GameplayAssetKeys.Tuning.MaxPoleCount;
+
+            var levelData = LevelGenerator.GenerateLevel(_db, levelIndex, seed, poleCount, colorCount, maxCapacity);
+            Assert.IsNotNull(levelData);
+
+            // Board must be reconstructed verbatim (SetRing*, not AddRing) so it matches ReplayEngine.Replay exactly.
+            var board = new BoardState();
+            board.Initialize(levelData.Poles.Count, maxCapacity, levelData.Poles.Count);
+
+            int[] portalTargets = new int[levelData.Poles.Count];
+            for (int pi = 0; pi < levelData.Poles.Count; pi++) portalTargets[pi] = -1;
+
+            for (int p = 0; p < levelData.Poles.Count; p++)
+            {
+                var poleData = levelData.Poles[p];
+                board.SetPoleLocked(p, poleData.IsLocked);
+                for (int r = 0; r < poleData.Rings.Count; r++)
+                {
+                    board.SetRingColor(p, r, poleData.Rings[r].Color);
+                    board.SetRingType(p, r, poleData.Rings[r].Type);
+                    board.SetRingAdditional(p, r, poleData.Rings[r].AdditionalData);
+                }
+                board.SetRingCount(p, poleData.Rings.Count);
+                if (poleData.PortalTargetId >= 0) portalTargets[p] = poleData.PortalTargetId;
+            }
+
+            var solve = LevelSolver.Solve(board, maxCapacity, portalTargets: portalTargets);
+            Assert.IsTrue(solve.IsSolvable, "Üretilen seviye çözülebilir olmalı.");
+            Assert.IsNotNull(solve.Moves, "Çözücü hamle listesi döndürmeli.");
+
+            return new ReplayEngine.ReplaySession
+            {
+                LevelIndex = levelIndex,
+                LevelSeed = seed,
+                Moves = solve.Moves,
+                Version = 1
+            };
         }
 
         [Test]
@@ -434,9 +572,10 @@ namespace RingFlow.Tests
         [Test]
         public void BoardState_CanPopRing_Frozen_PopNotAllowed()
         {
+            // Donmuş halka, tipi RingType.Frozen olan halkadır (ayrı TopRingFrozen bayrağı değil).
+            // Hem BoardState hem PoleState bu yüzden tipe bakar; bu yüzden frozen temsili tip üzerinden kurulur.
             var board = new BoardState { PoleCount = 2 };
-            board.AddRing(0, new RingData(RingColor.Red, RingType.Standard));
-            board.SetTopRingFrozen(0, true);
+            board.AddRing(0, new RingData(RingColor.Red, RingType.Frozen));
 
             Assert.IsFalse(board.CanPopRing(0));
         }

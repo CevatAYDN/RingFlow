@@ -186,10 +186,10 @@ namespace RingFlow.Gameplay
             var result = await LevelSolver.SolveAsync(initial, maxCapacity, cancellationToken: ct);
             if (!result.IsSolvable || result.MoveCount <= 0 || result.Moves == null)
             {
-                return new Move(-1, -1);
+                return new Move(-1, -1, default);
             }
             var first = result.Moves[0];
-            return new Move(first.FromPoleId, first.ToPoleId);
+            return new Move(first.FromPoleId, first.ToPoleId, first.Ring);
         }
 
         /// <summary>

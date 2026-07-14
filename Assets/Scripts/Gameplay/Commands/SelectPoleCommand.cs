@@ -124,41 +124,5 @@ namespace RingFlow.Gameplay
             return pole.CanAddRing(ring);
         }
 
-        private static (BoardState Board, int MaxCapacity) BuildBoardStateFromModel(GameplayModel m)
-        {
-            var board = new BoardState { PoleCount = m.Poles.Count };
-            int maxCapacity = 0;
-            for (int p = 0; p < m.Poles.Count && p < 12; p++)
-            {
-                var pole = m.Poles[p];
-                if (pole == null) continue;
-
-                // NOTE: Enforcing 12-pole hard limit. Log if truncation occurs.
-                if (p >= 12)
-                {
-                    NexusLog.Error("SelectPoleCommand", "BuildBoardStateFromModel", p.ToString(),
-                        "Pole count exceeds BoardState maximum of 12. Excess poles silently truncated.");
-                    break;
-                }
-
-                if (pole.MaxCapacity > maxCapacity) maxCapacity = pole.MaxCapacity;
-                board.SetPoleLocked(p, pole.IsLocked);
-                int count = pole.Rings.Count;
-                board.SetRingCount(p, count);
-                for (int r = 0; r < count; r++)
-                {
-                    var ringData = pole.Rings[r];
-                    board.SetRingColor(p, r, ringData.Color);
-                    board.SetRingType(p, r, ringData.Type);
-                    board.SetRingAdditional(p, r, ringData.AdditionalData);
-                }
-                if (count > 0)
-                {
-                    var top = pole.TopRing;
-                    board.SetTopRingFrozen(p, top.Type == RingType.Frozen);
-                }
-            }
-            return (board, maxCapacity);
-        }
     }
 }
