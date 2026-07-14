@@ -15,6 +15,7 @@ namespace RingFlow.Gameplay.UI
         public Text RewardText { get; private set; }
         public Text[] StarIcons { get; private set; } = new Text[3];
         public Text TitleText { get; private set; }
+        public Text LevelText { get; private set; }
         private GameObject _nextBtn, _quitBtn;
         [Inject] private IAudioService _audio;
 
@@ -37,9 +38,20 @@ namespace RingFlow.Gameplay.UI
 
             if (TitleText == null)
             {
-                var titleGo = GameUIResources.CreateText("YOU WIN!", transform, 52, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
+                var titleGo = GameUIResources.CreateText("YOU WIN!", transform, 46, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
                 TitleText = titleGo.GetComponent<Text>();
-                GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.2f, 0.66f, 0.8f, 0.76f);
+                GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.2f, 0.73f, 0.8f, 0.80f);
+            }
+
+            if (LevelText == null)
+            {
+                var levelGo = GameUIResources.CreateText("LEVEL 1", transform, 92, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
+                LevelText = levelGo.GetComponent<Text>();
+                var levelOutline = levelGo.GetComponent<Outline>();
+                if (levelOutline == null) levelOutline = levelGo.AddComponent<Outline>();
+                levelOutline.effectColor = new Color(0f, 0f, 0f, 0.6f);
+                levelOutline.effectDistance = new Vector2(3f, -3f);
+                GameUIResources.SetAnchors(levelGo.GetComponent<RectTransform>(), 0.1f, 0.60f, 0.9f, 0.72f);
             }
 
             var card = transform.Find("Card")?.gameObject;
@@ -94,6 +106,17 @@ namespace RingFlow.Gameplay.UI
                 GameUIResources.ApplyOutlineStyle(_quitBtn);
             }
             QuitButton = _quitBtn.GetComponent<Button>();
+        }
+
+        public void SetLevel(int level, ILocalizationService loc = null)
+        {
+            if (LevelText == null || level <= 0) return;
+            string format = loc != null ? loc.GetString("format_level", "LEVEL {0}") : "LEVEL {0}";
+            LevelText.text = string.Format(format, level);
+
+            DOTween.Kill(LevelText.transform);
+            LevelText.transform.localScale = Vector3.one * 0.6f;
+            LevelText.transform.DOScale(1f, 0.45f).SetEase(Ease.OutBack).SetAutoKill(true);
         }
 
         public void ShowResults(int moves, int targetMoves, int coins, int xp, int stars)

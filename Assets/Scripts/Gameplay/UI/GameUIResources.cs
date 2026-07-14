@@ -52,6 +52,18 @@ namespace RingFlow.Gameplay.UI
             return s_font;
         }
 
+        private static Sprite s_roundedSprite;
+        /// <summary>
+        /// Unity's built-in 4px-radius sliced sprite. Used with <see cref="Image.Type.Sliced"/>
+        /// to give buttons/panels soft rounded corners for a more premium look.
+        /// </summary>
+        public static Sprite GetRoundedSprite()
+        {
+            if (s_roundedSprite == null)
+                s_roundedSprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
+            return s_roundedSprite;
+        }
+
         public static GameObject CreatePanel(string name, Transform parent)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
@@ -61,7 +73,10 @@ namespace RingFlow.Gameplay.UI
             rect.anchorMax = Vector2.one;
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
-            go.GetComponent<Image>().color = BgColor;
+            var image = go.GetComponent<Image>();
+            image.color = BgColor;
+            image.sprite = GetRoundedSprite();
+            image.type = Image.Type.Sliced;
             return go;
         }
 
@@ -85,11 +100,19 @@ namespace RingFlow.Gameplay.UI
 
         public static GameObject CreateButton(string label, Transform parent, float width, float height)
         {
-            var go = new GameObject($"Btn_{label}", typeof(RectTransform), typeof(Image), typeof(Button));
+            var go = new GameObject($"Btn_{label}", typeof(RectTransform), typeof(Image), typeof(Button), typeof(Shadow));
             var rect = go.GetComponent<RectTransform>();
             rect.SetParent(parent, false);
             rect.sizeDelta = new Vector2(width, height);
-            go.GetComponent<Image>().color = PrimaryColor;
+            var image = go.GetComponent<Image>();
+            image.color = PrimaryColor;
+            image.sprite = GetRoundedSprite();
+            image.type = Image.Type.Sliced;
+
+            // Soft drop shadow gives buttons depth for a more premium feel.
+            var shadow = go.GetComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.35f);
+            shadow.effectDistance = new Vector2(0f, -4f);
 
             var button = go.GetComponent<Button>();
             ApplyButtonColors(button, Theme.PrimaryButtonColors);

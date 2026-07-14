@@ -16,9 +16,21 @@ namespace RingFlow.Gameplay
     {
         private static Shader s_unlitShader;
         private static Material s_sharedMaterial;
+        // Premium celebration palette: vivid party colours mixed with gold, white and
+        // soft pastels for a richer, more satisfying confetti burst.
         private static readonly Color[] s_Colors = {
-            Color.red, Color.blue, Color.green, Color.yellow,
-            Color.cyan, Color.magenta, new Color(1f, 0.5f, 0f), new Color(0.5f, 0f, 1f)
+            new Color(1f, 0.23f, 0.36f),  // vivid pink-red
+            new Color(0.25f, 0.55f, 1f),  // bright blue
+            new Color(0.20f, 0.85f, 0.45f), // emerald
+            new Color(1f, 0.84f, 0.20f),  // gold
+            new Color(0.30f, 0.90f, 0.95f), // cyan
+            new Color(0.80f, 0.35f, 1f),  // violet
+            new Color(1f, 0.55f, 0.15f),  // orange
+            new Color(1f, 0.98f, 0.92f),  // warm white
+            new Color(1f, 0.70f, 0.80f),  // pastel pink
+            new Color(0.65f, 0.95f, 0.70f), // pastel green
+            new Color(0.72f, 0.80f, 1f),  // pastel blue
+            new Color(1f, 0.90f, 0.55f)   // pastel gold
         };
 
         private struct Piece

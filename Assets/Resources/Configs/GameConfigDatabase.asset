@@ -21,13 +21,13 @@ MonoBehaviour:
   DifficultyBands:
   - Band: 0
     MaxLevel: 20
-    MinEmptyPoles: 2
+    MinEmptyPoles: 1
     MaxCapacity: 4
     MechanicIntensity: 1
     AllowedMechanics: 0000000001000000
   - Band: 1
     MaxLevel: 100
-    MinEmptyPoles: 2
+    MinEmptyPoles: 1
     MaxCapacity: 4
     MechanicIntensity: 1
     AllowedMechanics: 000000000100000002000000
@@ -85,39 +85,39 @@ MonoBehaviour:
     ForcedMechanics: 00000000
   - StartLevel: 6
     EndLevel: 10
-    ColorCount: 3
+    ColorCount: 4
     ForcedMechanics: 01000000
   - StartLevel: 11
     EndLevel: 15
-    ColorCount: 3
+    ColorCount: 4
     ForcedMechanics: 02000000
   - StartLevel: 16
     EndLevel: 20
-    ColorCount: 3
+    ColorCount: 5
     ForcedMechanics: 03000000
   - StartLevel: 21
     EndLevel: 25
-    ColorCount: 4
+    ColorCount: 5
     ForcedMechanics: 04000000
   - StartLevel: 26
     EndLevel: 30
-    ColorCount: 4
+    ColorCount: 6
     ForcedMechanics: 05000000
   - StartLevel: 31
     EndLevel: 35
-    ColorCount: 4
+    ColorCount: 6
     ForcedMechanics: 06000000
   - StartLevel: 36
     EndLevel: 40
-    ColorCount: 4
+    ColorCount: 6
     ForcedMechanics: 07000000
   - StartLevel: 41
     EndLevel: 45
-    ColorCount: 4
+    ColorCount: 7
     ForcedMechanics: 08000000
   - StartLevel: 46
     EndLevel: 50
-    ColorCount: 4
+    ColorCount: 7
     ForcedMechanics: 09000000
   - StartLevel: 51
     EndLevel: 55

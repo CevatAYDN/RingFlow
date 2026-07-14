@@ -8,6 +8,7 @@ namespace RingFlow.Gameplay.UI
     {
         [Inject] private GameplayModel _model;
         [Inject] private ILocalizationService _loc;
+        [Inject] private IProgressionService _progression;
 
         private Action<bool, bool> _wonHandler;
         private Action<WinReward, WinReward> _rewardHandler;
@@ -54,6 +55,10 @@ namespace RingFlow.Gameplay.UI
             {
                 int moves = _model.MovesCount.Value;
                 int target = _model.TargetMovesCount.Value > 0 ? _model.TargetMovesCount.Value : moves;
+                // IsGameWon fires before the level counter advances, so CurrentLevel is still
+                // the level the player just completed here.
+                int level = _progression != null ? _progression.CurrentLevel.Value : 0;
+                View.SetLevel(level, _loc);
                 View.ShowResults(moves, target, moves, 10, 1);
             }
         }
@@ -61,6 +66,7 @@ namespace RingFlow.Gameplay.UI
         private void RefreshReward(WinReward reward)
         {
             if (_model == null || View == null) return;
+            View.SetLevel(reward.Level, _loc);
             View.ShowResults(reward.Moves, reward.TargetMoves, reward.Coins, reward.Xp, reward.Stars);
         }
 

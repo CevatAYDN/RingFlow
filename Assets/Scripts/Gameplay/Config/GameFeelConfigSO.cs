@@ -25,8 +25,8 @@ namespace RingFlow.Gameplay
         public Vector3 RingScaleFallback = new(3.0f, 0.12f, 3.0f);
         [Tooltip("Vertical offset of the first (bottom) ring from pole top.")]
         public float RingBaseYOffset = -0.9f;
-        [Tooltip("Vertical stacking distance between rings.")]
-        public float RingStackSpacing = 0.4f;
+        [Tooltip("Vertical stacking distance between rings. Kept slightly below the ring visual height so rings touch/overlap and leave no vertical gaps.")]
+        public float RingStackSpacing = 0.34f;
         [Tooltip("Y lift for the selected top ring.")]
         public float RingSelectionLift = 0.35f;
 
@@ -80,7 +80,7 @@ namespace RingFlow.Gameplay
         [Tooltip("Error flash duration.")]
         public float ErrorFlashDuration = 0.35f;
         [Tooltip("Open pole standard color.")]
-        public Color PoleColorOpen = new Color(0.20f, 0.22f, 0.25f);
+        public Color PoleColorOpen = new Color(0.902f, 0.894f, 0.863f);
         [Tooltip("Locked pole standard color.")]
         public Color PoleColorLocked = new Color(0.12f, 0.12f, 0.14f);
         [Tooltip("Pole material metallic value.")]
@@ -160,7 +160,7 @@ namespace RingFlow.Gameplay
 
         [Header("Confetti VFX")]
         [Tooltip("Confetti piece count.")]
-        public int ConfettiCount = 40;
+        public int ConfettiCount = 60;
         [Tooltip("Confetti fall duration range.")]
         public Vector2 ConfettiFallDuration = new(1.8f, 3.0f);
         [Tooltip("Confetti despawn delay.")]

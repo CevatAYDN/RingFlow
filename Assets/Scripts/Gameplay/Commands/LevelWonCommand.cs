@@ -83,7 +83,7 @@ namespace RingFlow.Gameplay
                 }
             }
 
-            _model.LastReward.Value = WinReward.From(prevMoves, prevTarget, coinReward, xpEarned, stars);
+            _model.LastReward.Value = WinReward.From(prevMoves, prevTarget, coinReward, xpEarned, stars, prevLevel);
 
             NexusLog.Info("LevelWonCommand", "Execute", "",
                 $"Level {prevLevel} WON! Moves={prevMoves}, Target={prevTarget}, Stars={stars}, Coins+={coinReward}, XP+={xpEarned}");

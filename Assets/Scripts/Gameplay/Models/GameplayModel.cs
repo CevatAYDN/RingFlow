@@ -47,9 +47,11 @@ namespace RingFlow.Gameplay
         public int Coins;
         public int Xp;
         public int Stars;
+        /// <summary>The level index that was just completed (for the result screen display).</summary>
+        public int Level;
 
-        public static WinReward From(int moves, int targetMoves, int coins, int xp, int stars)
-            => new WinReward { Moves = moves, TargetMoves = targetMoves, Coins = coins, Xp = xp, Stars = stars };
+        public static WinReward From(int moves, int targetMoves, int coins, int xp, int stars, int level)
+            => new WinReward { Moves = moves, TargetMoves = targetMoves, Coins = coins, Xp = xp, Stars = stars, Level = level };
     }
 
     public class MoveRecord

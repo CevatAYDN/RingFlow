@@ -336,7 +336,7 @@ namespace RingFlow.Editor
                             $"Pole count {poles} < colors ({colors}) + minEmptyPoles ({minEmpty}) for level {level}. " +
                             "Update DB ColorCurve or DifficultyBands to ensure pole capacity.");
 
-                    var levelData = LevelGenerator.GenerateLevel(db, level, 100 + level, poles, colors, maxCap);
+                    var levelData = LevelGenerator.GenerateLevel(db, level, LevelGenerator.GetDeterministicSeed(level), poles, colors, maxCap);
                     if (levelData == null)
                     {
                         failed++;

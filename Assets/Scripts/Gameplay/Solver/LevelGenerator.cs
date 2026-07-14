@@ -20,6 +20,20 @@ namespace RingFlow.Gameplay
         private static readonly Comparison<(LevelData level, float diff)> _candidateComparer =
             static (a, b) => a.diff.CompareTo(b.diff);
 
+        /// <summary>
+        /// Seviye endeksinden deterministik ve iyi ayrışmış (well-separated) bir tohum üretir.
+        /// Komşu seviyeler için <c>100 + level</c> gibi bitişik tohumlar, üreticinin ardışık
+        /// tohum penceresi (candidate window) taraması ile çakışıp aynı tahtayı/renk paletini
+        /// tekrar ürettiği için renk çeşitliliğini bozuyordu (revizyon notları §2/§3/§4).
+        /// Asal bir çarpanla her seviyeye çakışmayan bir tohum aralığı verilir; formül
+        /// deterministiktir, bu yüzden aynı seviye her zaman aynı tohumu (dolayısıyla aynı
+        /// çözülebilir seviyeyi) verir.
+        /// </summary>
+        public static int GetDeterministicSeed(int levelIndex)
+        {
+            return 1000 + (levelIndex * 7919);
+        }
+
         public static LevelData GenerateLevel(GameConfigDatabaseSO db, int levelIndex, int seed, int poleCount, int colorCount, int maxCapacity)
         {
             if (db == null)
@@ -42,19 +56,29 @@ namespace RingFlow.Gameplay
                 // 1. Bitmiş hali oluştur (Her direğe tek renk dolacak şekilde)
                 var colors = (RingColor[])Enum.GetValues(typeof(RingColor));
 
-                // Kullanılabilir renkleri belirle (None rengini atla, index 1'den başla)
-                var selectedColors = new List<RingColor>();
-                for (int i = 1; i < colors.Length && selectedColors.Count < colorCount; i++)
+                // Kullanılabilir tüm renkleri havuza al (None rengini atla, index 1'den başla)
+                int availableColorCount = colors.Length - 1;
+
+                // DB-driven: Renk sayısı enum kapasitesini aşıyorsa hard hatayı fırlat
+                if (availableColorCount < colorCount)
+                {
+                    throw new System.InvalidOperationException(
+                        $"DB {colorCount} renk istiyor ama RingColor enum'ında yalnızca {availableColorCount} " +
+                        "renk kullanılabilir. RingColor enum'ını genişletin veya DB ColorCurve'u düşürün.");
+                }
+
+                // Renk çeşitliliği: Her seviyede sabit ilk N renk yerine, seed'e bağlı
+                // deterministik Fisher-Yates karıştırma ile farklı renk kombinasyonları seçilir.
+                // Böylece ardışık seviyeler aynı renk paletini tekrar etmez (revizyon notları §2/§3/§4).
+                var selectedColors = new List<RingColor>(availableColorCount);
+                for (int i = 1; i < colors.Length; i++)
                 {
                     selectedColors.Add(colors[i]);
                 }
-
-                // DB-driven: Renk sayısı enum kapasitesini aşıyorsa hard hatayı fırlat
-                if (selectedColors.Count < colorCount)
+                for (int i = selectedColors.Count - 1; i > 0; i--)
                 {
-                    throw new System.InvalidOperationException(
-                        $"DB {colorCount} renk istiyor ama RingColor enum'ında yalnızca {selectedColors.Count} " +
-                        "renk kullanılabilir. RingColor enum'ını genişletin veya DB ColorCurve'u düşürün.");
+                    int j = rand.Next(i + 1);
+                    (selectedColors[i], selectedColors[j]) = (selectedColors[j], selectedColors[i]);
                 }
 
                 // Direkleri doldur

@@ -14,57 +14,69 @@ MonoBehaviour:
   m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.LevelDataSO
   Data:
     LevelIndex: 14
-    Seed: 115
+    Seed: 111881
     TargetMoves: 7
     Poles:
     - RingCapacity: 4
-      Rings: []
-      IsLocked: 0
-      PortalTargetId: -1
-    - RingCapacity: 4
       Rings:
-      - Color: 1
+      - Color: 9
         Type: 0
         AdditionalData: 0
-      - Color: 3
+      - Color: 9
         Type: 0
         AdditionalData: 0
-      - Color: 3
+      - Color: 4
         Type: 0
         AdditionalData: 0
-      - Color: 1
-        Type: 0
-        AdditionalData: 0
-      IsLocked: 0
-      PortalTargetId: -1
-    - RingCapacity: 4
-      Rings:
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
-      - Color: 3
+      - Color: 4
         Type: 0
         AdditionalData: 0
       IsLocked: 0
       PortalTargetId: -1
     - RingCapacity: 4
       Rings:
-      - Color: 1
+      - Color: 9
         Type: 0
         AdditionalData: 0
-      - Color: 1
-        Type: 0
-        AdditionalData: 0
-      - Color: 2
+      - Color: 4
         Type: 0
         AdditionalData: 0
       - Color: 3
+        Type: 0
+        AdditionalData: 0
+      - Color: 9
+        Type: 0
+        AdditionalData: 0
+      IsLocked: 0
+      PortalTargetId: -1
+    - RingCapacity: 4
+      Rings:
+      - Color: 5
+        Type: 0
+        AdditionalData: 0
+      - Color: 5
+        Type: 0
+        AdditionalData: 0
+      - Color: 5
+        Type: 0
+        AdditionalData: 0
+      - Color: 5
+        Type: 0
+        AdditionalData: 0
+      IsLocked: 0
+      PortalTargetId: -1
+    - RingCapacity: 4
+      Rings:
+      - Color: 3
+        Type: 0
+        AdditionalData: 0
+      - Color: 3
+        Type: 0
+        AdditionalData: 0
+      - Color: 3
+        Type: 0
+        AdditionalData: 0
+      - Color: 4
         Type: 0
         AdditionalData: 0
       IsLocked: 0

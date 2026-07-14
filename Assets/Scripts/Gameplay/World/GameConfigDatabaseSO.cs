@@ -276,7 +276,7 @@ namespace RingFlow.Gameplay
                 {
                     Band = DifficultyBand.Tutorial,
                     MaxLevel = 20,
-                    MinEmptyPoles = 2,
+                    MinEmptyPoles = 1,
                     MaxCapacity = 4,
                     MechanicIntensity = 1,
                     AllowedMechanics = new List<WorldMechanicType>
@@ -289,7 +289,7 @@ namespace RingFlow.Gameplay
                 {
                     Band = DifficultyBand.Easy,
                     MaxLevel = 100,
-                    MinEmptyPoles = 2,
+                    MinEmptyPoles = 1,
                     MaxCapacity = 4,
                     MechanicIntensity = 1,
                     AllowedMechanics = new List<WorldMechanicType>
@@ -461,14 +461,24 @@ namespace RingFlow.Gameplay
                 int startLevel = t * LevelsPerThemeStep + 1;
                 int endLevel = Mathf.Min(startLevel + LevelsPerThemeStep - 1, TotalLevels);
 
-                int colorCount = 3;
-                if (startLevel >= 1200) colorCount = 10;
+                int colorCount;
+                if (startLevel <= 50)
+                {
+                    // Revizyon notları §2/§3/§4/§5: İlk 50 seviye için kademeli renk/zorluk
+                    // eğrisi. Her 5 seviyelik adımda (step) renk sayısı yumuşak biçimde artar
+                    // (3 → 7), böylece oyuncu belirgin bir ilerleme hissi yaşar.
+                    int step = (startLevel - 1) / LevelsPerThemeStep; // 0..9
+                    int[] earlyColorRamp = { 3, 4, 4, 5, 5, 6, 6, 6, 7, 7 };
+                    colorCount = earlyColorRamp[step];
+                }
+                else if (startLevel >= 1200) colorCount = 10;
                 else if (startLevel >= 800) colorCount = 9;
                 else if (startLevel >= 500) colorCount = 8;
                 else if (startLevel >= 300) colorCount = 7;
                 else if (startLevel >= 150) colorCount = 6;
                 else if (startLevel >= 80) colorCount = 5;
                 else if (startLevel >= 20) colorCount = 4;
+                else colorCount = 3;
 
                 var forcedMechanics = new List<WorldMechanicType>();
                 if (t == 0)

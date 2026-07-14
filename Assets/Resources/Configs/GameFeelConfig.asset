@@ -19,7 +19,7 @@ MonoBehaviour:
   RingScaleTorus: {x: 3, y: 0.25, z: 3}
   RingScaleFallback: {x: 3, y: 0.12, z: 3}
   RingBaseYOffset: -0.9
-  RingStackSpacing: 0.4
+  RingStackSpacing: 0.34
   RingSelectionLift: 0.35
   MoveDuration: 0.3
   MoveJumpPower: 0.8
@@ -41,7 +41,7 @@ MonoBehaviour:
   ErrorTint: {r: 1, g: 0.3, b: 0.3, a: 1}
   LockedTint: {r: 0, g: 0, b: 0, a: 1}
   ErrorFlashDuration: 0.35
-  PoleColorOpen: {r: 0.2, g: 0.22, b: 0.25, a: 1}
+  PoleColorOpen: {r: 0.902, g: 0.894, b: 0.863, a: 1}
   PoleColorLocked: {r: 0.12, g: 0.12, b: 0.14, a: 1}
   PoleMetallic: 0.8
   PoleSmoothness: 0.8
@@ -72,7 +72,7 @@ MonoBehaviour:
   MergeBurstCount: 16
   MergeBurstDuration: 0.4
   MergeGlowOrbScale: 0.5
-  ConfettiCount: 40
+  ConfettiCount: 60
   ConfettiFallDuration: {x: 1.8, y: 3}
   ConfettiDespawnDelay: 3.1
   PoleSuccessFlashDuration: 0.3
