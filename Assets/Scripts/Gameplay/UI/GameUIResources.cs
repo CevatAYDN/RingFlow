@@ -53,14 +53,44 @@ namespace RingFlow.Gameplay.UI
         }
 
         private static Sprite s_roundedSprite;
+        private static Texture2D s_roundedTexture;
+
         /// <summary>
-        /// Unity's built-in 4px-radius sliced sprite. Used with <see cref="Image.Type.Sliced"/>
-        /// to give buttons/panels soft rounded corners for a more premium look.
+        /// Shared sliced sprite for buttons/panels.
+        /// Do not call Resources.GetBuiltinResource("UI/Skin/UISprite.psd") here: some
+        /// Unity 6/test-runner profiles no longer expose that legacy builtin and emit
+        /// unhandled Assert logs. A tiny generated white sprite is deterministic,
+        /// test-safe, and still supports Image.Type.Sliced via a small border.
         /// </summary>
         public static Sprite GetRoundedSprite()
         {
-            if (s_roundedSprite == null)
-                s_roundedSprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
+            if (s_roundedSprite != null) return s_roundedSprite;
+
+            const int size = 16;
+            s_roundedTexture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                name = "RingFlow_GeneratedUISprite",
+                hideFlags = HideFlags.HideAndDontSave,
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp
+            };
+
+            var pixels = new Color32[size * size];
+            for (int i = 0; i < pixels.Length; i++)
+                pixels[i] = new Color32(255, 255, 255, 255);
+            s_roundedTexture.SetPixels32(pixels);
+            s_roundedTexture.Apply(false, true);
+
+            s_roundedSprite = Sprite.Create(
+                s_roundedTexture,
+                new Rect(0f, 0f, size, size),
+                new Vector2(0.5f, 0.5f),
+                100f,
+                0,
+                SpriteMeshType.FullRect,
+                new Vector4(4f, 4f, 4f, 4f));
+            s_roundedSprite.name = "RingFlow_GeneratedUISprite";
+            s_roundedSprite.hideFlags = HideFlags.HideAndDontSave;
             return s_roundedSprite;
         }
 
