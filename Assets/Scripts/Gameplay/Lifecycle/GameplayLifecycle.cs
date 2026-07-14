@@ -291,11 +291,13 @@ namespace RingFlow.Gameplay
             s_sessionEndTracked = false;
 
             if (prefs == null) return;
+            var time = context.TryResolve<IGameTimeService>();
+            var nowUtc = time?.UtcNow ?? System.DateTime.UtcNow;
             string firstLaunchStr = prefs.GetString(GameplayAssetKeys.PlayerPrefs.FirstLaunchTime, "");
             System.DateTime firstLaunch;
             if (string.IsNullOrEmpty(firstLaunchStr))
             {
-                firstLaunch = System.DateTime.UtcNow;
+                firstLaunch = nowUtc;
                 prefs.SetString(GameplayAssetKeys.PlayerPrefs.FirstLaunchTime, firstLaunch.ToString("o"));
                 prefs.Save();
             }
@@ -304,7 +306,7 @@ namespace RingFlow.Gameplay
                 System.DateTime.TryParse(firstLaunchStr, out firstLaunch);
             }
 
-            int daysSinceFirstLaunch = (System.DateTime.UtcNow - firstLaunch).Days;
+            int daysSinceFirstLaunch = (nowUtc - firstLaunch).Days;
             var analytics = context.TryResolve<IAnalyticsService>();
             if (analytics != null)
             {
