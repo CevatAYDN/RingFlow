@@ -199,6 +199,7 @@ namespace RingFlow.Gameplay.AOT
             typeof(UI.GameOverView).ToString();
             typeof(UI.SplashView).ToString();
             typeof(UI.ParentalGatePopupView).ToString();
+            typeof(UI.LocalizedTextBinder).ToString();
         }
     }
 }
