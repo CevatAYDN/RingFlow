@@ -22,6 +22,13 @@ namespace RingFlow.Gameplay
 
                 if (fromPole != null && toPole != null)
                 {
+                    if (lastMove.BoardBefore.Count > 0)
+                    {
+                        RestoreBoardSnapshot(lastMove);
+                        FinishUndo(lastMove);
+                        return;
+                    }
+
                     // ── 1. Restore exploded bomb rings (insert back in original index order, descending) ──
                     if (lastMove.BombExplodedRings.Count > 0)
                     {
@@ -145,24 +152,8 @@ namespace RingFlow.Gameplay
                         }
                     }
 
-                    // ── 12. Restore move counter ──
-                    if (_model.MovesCount.Value > 0)
-                    {
-                        _model.MovesCount.Value--;
-                    }
-
-                    if (_model.IsGameWon.Value)
-                    {
-                        _model.IsGameWon.Value = false;
-                    }
-
-                    _model.SelectedPoleId.Value = -1;
-                    NexusLog.Info("UndoCommand", "Execute", $"{lastMove.FromPoleId}->{lastMove.ToPoleId}",
-                        $"Undo complete. Moves now: {_model.MovesCount.Value}");
-
-                    MoveRecordPool.Return(lastMove);
-
-                    _signalBus.Fire(new CheckWinSignal());
+                    // ── 12. Restore move counter / state ──
+                    FinishUndo(lastMove);
                 }
                 else
                 {
@@ -176,6 +167,43 @@ namespace RingFlow.Gameplay
             {
                 NexusLog.Warn("UndoCommand", "Execute", "", "Undo requested but MoveHistory is empty.");
             }
+        }
+
+
+        private void RestoreBoardSnapshot(MoveRecord record)
+        {
+            _model.Poles.Clear();
+            _model.CompletedPoles.Clear();
+            for (int i = 0; i < record.BoardBefore.Count; i++)
+            {
+                var snapshot = record.BoardBefore[i];
+                var pole = new PoleState { Id = snapshot.Id, IsLocked = snapshot.IsLocked, PortalPartnerId = snapshot.PortalPartnerId };
+                pole.SetCapacity(snapshot.RingCapacity);
+                for (int r = 0; r < snapshot.Rings.Count; r++)
+                    pole.AddRingRaw(snapshot.Rings[r].Clone());
+                _model.Poles.Add(pole);
+            }
+        }
+
+        private void FinishUndo(MoveRecord lastMove)
+        {
+            if (_model.MovesCount.Value > 0)
+            {
+                _model.MovesCount.Value--;
+            }
+
+            if (_model.IsGameWon.Value)
+            {
+                _model.IsGameWon.Value = false;
+            }
+
+            _model.SelectedPoleId.Value = -1;
+            _model.PendingGhostRevealPoleId = -1;
+            NexusLog.Info("UndoCommand", "Execute", $"{lastMove.FromPoleId}->{lastMove.ToPoleId}",
+                $"Undo complete. Moves now: {_model.MovesCount.Value}");
+
+            MoveRecordPool.Return(lastMove);
+            _signalBus.Fire(new CheckWinSignal());
         }
 
         /// <summary>

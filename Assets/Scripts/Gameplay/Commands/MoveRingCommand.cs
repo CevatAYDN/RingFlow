@@ -21,8 +21,11 @@ namespace RingFlow.Gameplay
             if (!TryValidateMove(signal, out var context)) return;
             if (!TryPreMoveValidate(ref context)) return;
 
+            var mainRecord = MoveRecordPool.Rent();
+            CaptureBoardSnapshot(mainRecord);
+
             ExecuteCoreMove(ref context);
-            var mainRecord = BuildMoveRecord(context);
+            PopulateMoveRecord(context, mainRecord);
             ExecuteSubMoves(ref context, mainRecord);
 
             CompleteMove(context, mainRecord);
@@ -142,9 +145,8 @@ namespace RingFlow.Gameplay
             _signalBus.Fire(new CheckWinSignal());
         }
 
-        private MoveRecord BuildMoveRecord(MoveContext context)
+        private void PopulateMoveRecord(MoveContext context, MoveRecord record)
         {
-            var record = MoveRecordPool.Rent();
             record.FromPoleId = context.FromPoleId;
             record.ToPoleId = context.ToPoleId;
             record.Ring = context.MovingRing;
@@ -164,7 +166,18 @@ namespace RingFlow.Gameplay
             record.WasRainbowTargetConverted = context.WasRainbowConverted;
             record.RainbowTargetRingIndex = context.RainbowTargetIndex;
             record.RainbowTargetOriginalColor = context.RainbowTargetOriginalColor;
-            return record;
+        }
+
+        private void CaptureBoardSnapshot(MoveRecord record)
+        {
+            for (int i = 0; i < _model.Poles.Count; i++)
+            {
+                var pole = _model.Poles[i];
+                if (pole == null) continue;
+                var snapshot = PoleSnapshotPool.Rent();
+                snapshot.Capture(pole);
+                record.BoardBefore.Add(snapshot);
+            }
         }
 
         private bool TryReserveChainCapacity(ref RingData ring, PoleState fromPole, PoleState toPole)

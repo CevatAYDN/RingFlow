@@ -69,6 +69,52 @@ namespace RingFlow.Gameplay
             => new WinReward { Moves = moves, TargetMoves = targetMoves, Coins = coins, Xp = xp, Stars = stars, Level = level };
     }
 
+    public class PoleSnapshot
+    {
+        public int Id;
+        public int RingCapacity;
+        public bool IsLocked;
+        public int PortalPartnerId;
+        public readonly List<RingData> Rings = new(4);
+
+        public void Capture(PoleState pole)
+        {
+            Id = pole.Id;
+            RingCapacity = pole.RingCapacity;
+            IsLocked = pole.IsLocked;
+            PortalPartnerId = pole.PortalPartnerId;
+            Rings.Clear();
+            for (int i = 0; i < pole.Rings.Count; i++)
+                Rings.Add(pole.Rings[i].Clone());
+        }
+
+        public void Clear()
+        {
+            Id = -1;
+            RingCapacity = GameplayAssetKeys.Tuning.MaxCapacity;
+            IsLocked = false;
+            PortalPartnerId = -1;
+            Rings.Clear();
+        }
+    }
+
+    public static class PoleSnapshotPool
+    {
+        private static readonly Stack<PoleSnapshot> _pool = new(64);
+
+        public static PoleSnapshot Rent()
+        {
+            return _pool.Count > 0 ? _pool.Pop() : new PoleSnapshot();
+        }
+
+        public static void Return(PoleSnapshot snapshot)
+        {
+            if (snapshot == null) return;
+            snapshot.Clear();
+            _pool.Push(snapshot);
+        }
+    }
+
     public class MoveRecord
     {
         public int FromPoleId;
@@ -93,6 +139,9 @@ namespace RingFlow.Gameplay
         public bool WasPortalTeleported;
         public int PortalTeleportTargetPoleId;
         public readonly List<MoveRecord> SubMoves = new(4);
+
+        /// <summary>Full board snapshot before the move. Used for exact undo without replaying side-effectful add/pop rules.</summary>
+        public readonly List<PoleSnapshot> BoardBefore = new(12);
 
         /// <summary>Snapshot of every bomb's counter BEFORE this move's TickAllBombs() ran.
         /// Undo restores these counters instead of blindly incrementing every current bomb.</summary>
@@ -169,6 +218,11 @@ namespace RingFlow.Gameplay
                 MoveRecordPool.Return(SubMoves[i]);
             }
             SubMoves.Clear();
+            for (int i = 0; i < BoardBefore.Count; i++)
+            {
+                PoleSnapshotPool.Return(BoardBefore[i]);
+            }
+            BoardBefore.Clear();
             BombCountersBeforeTick.Clear();
             BombExplodedRings.Clear();
         }
