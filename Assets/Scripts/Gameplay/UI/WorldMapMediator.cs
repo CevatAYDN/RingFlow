@@ -10,10 +10,12 @@ namespace RingFlow.Gameplay.UI
     public class WorldMapMediator : Mediator<WorldMapView>
     {
         [Inject] private ISignalBus _signalBus;
+        [Inject] private ILocalizationService _loc;
 
         protected override void OnBind()
         {
             if (View == null) return;
+            View.Localize(_loc);
 
             // Auto-advance to LevelSelect since WorldMap is stubbed
             _signalBus?.Fire(new PlayRequestedSignal());

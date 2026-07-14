@@ -10,10 +10,12 @@ namespace RingFlow.Gameplay.UI
     public class OnboardingMediator : Mediator<OnboardingView>
     {
         [Inject] private ISignalBus _signalBus;
+        [Inject] private ILocalizationService _loc;
 
         protected override void OnBind()
         {
             if (View == null) return;
+            View.Localize(_loc);
             _signalBus?.Fire(new PlayRequestedSignal());
         }
 
