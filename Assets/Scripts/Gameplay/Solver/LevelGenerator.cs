@@ -41,6 +41,13 @@ namespace RingFlow.Gameplay
                 throw new System.ArgumentNullException(nameof(db), "GameConfigDatabaseSO is null — cannot generate level.");
             }
 
+            if (maxCapacity > BoardState.MaxSupportedCapacity)
+            {
+                throw new System.InvalidOperationException(
+                    $"MaxCapacity={maxCapacity} exceeds BoardState.MaxSupportedCapacity={BoardState.MaxSupportedCapacity}. " +
+                    "Update GameConfigDatabaseSO DifficultyBands or expand BoardState bit packing before generating levels.");
+            }
+
             var cfg = db.LevelGen;
             int bombCountdown = cfg.BombCountdown; // Local, thread-safe (was static mutable s_bombCountdown)
             int currentSeed = seed;

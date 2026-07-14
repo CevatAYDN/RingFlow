@@ -16,11 +16,18 @@ namespace RingFlow.Gameplay
         public ObservableProperty<WinReward> LastReward { get; } = new(default);
 
         /// <summary>
-        /// Set by SelectPoleCommand when it reveals a Ghost ring on selection
-        /// (Ghost → Standard type change). MoveRingCommand reads and clears this
-        /// flag to populate MoveRecord.WasGhostRevealedOnFrom for undo.
+        /// Pole id whose top Ghost ring was revealed on selection (Ghost → Standard).
+        /// MoveRingCommand consumes this id only if the following move starts from the same pole.
+        /// -1 means no pending reveal.
         /// </summary>
-        public bool PendingGhostRevealOnFrom;
+        public int PendingGhostRevealPoleId = -1;
+
+        /// <summary>Backward-compatible convenience flag used by older tests/tools.</summary>
+        public bool PendingGhostRevealOnFrom
+        {
+            get => PendingGhostRevealPoleId >= 0;
+            set => PendingGhostRevealPoleId = value ? SelectedPoleId.Value : -1;
+        }
 
         public UndoStack<MoveRecord> MoveHistory { get; } = new(1000);
 
@@ -44,7 +51,7 @@ namespace RingFlow.Gameplay
             TargetMovesCount.Value = 0;
             IsGameWon.Value = false;
             LastReward.Value = default;
-            PendingGhostRevealOnFrom = false;
+            PendingGhostRevealPoleId = -1;
         }
     }
 

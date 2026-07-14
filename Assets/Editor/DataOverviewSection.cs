@@ -480,11 +480,32 @@ namespace RingFlow.Editor
                 {
                     string[] csvHeaders = csvLines[0].Split(',');
                     int langColumnCount = csvHeaders.Length - 1; // First column is Key
-                    if (langColumnCount >= 15)
+                    var csvLangCodes = new HashSet<string>();
+                    for (int i = 1; i < csvHeaders.Length; i++)
+                        csvLangCodes.Add(csvHeaders[i].Trim());
+
+                    var missingInCsv = new List<string>();
+                    if (loc != null && loc.Languages != null)
+                    {
+                        for (int i = 0; i < loc.Languages.Count; i++)
+                        {
+                            var code = loc.Languages[i].Code;
+                            if (!string.IsNullOrEmpty(code) && !csvLangCodes.Contains(code))
+                                missingInCsv.Add(code);
+                        }
+                    }
+
+                    if (langColumnCount >= 15 && missingInCsv.Count == 0)
                     {
                         AddAuditResult("Yerelleştirme CSV Dosyası",
-                            $"Localization.csv mevcut: {csvLines.Length - 1} satır, {langColumnCount} dil sütunu (hedef: 15).",
+                            $"Localization.csv mevcut: {csvLines.Length - 1} satır, {langColumnCount} dil sütunu ve config dil kodlarıyla uyumlu.",
                             AuditStatus.Pass);
+                    }
+                    else if (missingInCsv.Count > 0)
+                    {
+                        AddAuditResult("Yerelleştirme CSV Dosyası",
+                            $"Localization.csv mevcut ancak config dil kodları CSV header'da eksik: {string.Join(", ", missingInCsv)}.",
+                            AuditStatus.Fail);
                     }
                     else
                     {

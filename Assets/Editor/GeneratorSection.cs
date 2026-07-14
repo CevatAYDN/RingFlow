@@ -268,27 +268,14 @@ namespace RingFlow.Editor
                 return;
             }
 
-            var board = new BoardState { PoleCount = _generatedLevel.Poles.Count };
-            for (int p = 0; p < _generatedLevel.Poles.Count; p++)
-            {
-                var pole = _generatedLevel.Poles[p];
-                for (int r = 0; r < pole.Rings.Count; r++)
-                {
-                    var ring = pole.Rings[r];
-                    board.SetRingColor(p, r, ring.Color);
-                    board.SetRingType(p, r, ring.Type);
-                    board.SetRingAdditional(p, r, ring.AdditionalData);
-                }
-                board.SetRingCount(p, pole.Rings.Count);
-            }
-
-            var solveResult = LevelSolver.Solve(board, maxCapacity);
+            var board = BuildBoardStateFromLevelData(_generatedLevel, maxCapacity, out int[] portalTargets);
+            var solveResult = LevelSolver.Solve(board, maxCapacity, portalTargets: portalTargets);
             int emptyPoleCount = CountEmptyPoles(_generatedLevel);
+            int requiredMinEmpty = db.GetMinEmptyPolesForLevel(_generatedLevel.LevelIndex);
 
-            int maxEmptyPoles = EditorPrefs.GetInt(EditorPrefsKeys.MaxEmptyPoles, 1);
-            if (emptyPoleCount > maxEmptyPoles)
+            if (emptyPoleCount < requiredMinEmpty)
             {
-                _solveStatus = $"Geçersiz: en fazla {maxEmptyPoles} boş direk olmalı, bulunan: {emptyPoleCount}.";
+                _solveStatus = $"Geçersiz: en az {requiredMinEmpty} boş direk olmalı, bulunan: {emptyPoleCount}.";
                 _solutionSteps.Clear();
             }
             else if (solveResult.IsSolvable && solveResult.MoveCount > 0)
@@ -452,6 +439,39 @@ namespace RingFlow.Editor
             }
 
             return clone;
+        }
+
+
+        private static BoardState BuildBoardStateFromLevelData(LevelData levelData, int maxCapacity, out int[] portalTargets)
+        {
+            int poleCount = levelData?.Poles?.Count ?? 0;
+            portalTargets = new int[poleCount];
+            for (int i = 0; i < poleCount; i++) portalTargets[i] = -1;
+
+            if (maxCapacity > BoardState.MaxSupportedCapacity)
+                throw new System.InvalidOperationException($"Max capacity {maxCapacity} exceeds BoardState.MaxSupportedCapacity={BoardState.MaxSupportedCapacity}.");
+
+            var board = new BoardState { PoleCount = poleCount, MaxCapacity = maxCapacity };
+            for (int p = 0; p < poleCount; p++)
+            {
+                var pole = levelData.Poles[p];
+                if (pole == null) continue;
+                board.SetPoleLocked(p, pole.IsLocked);
+                portalTargets[p] = pole.PortalTargetId;
+
+                int count = pole.Rings?.Count ?? 0;
+                board.SetRingCount(p, count);
+                for (int r = 0; r < count; r++)
+                {
+                    var ring = pole.Rings[r];
+                    board.SetRingColor(p, r, ring.Color);
+                    board.SetRingType(p, r, ring.Type);
+                    board.SetRingAdditional(p, r, ring.AdditionalData);
+                }
+                if (count > 0)
+                    board.SetTopRingFrozen(p, pole.Rings[count - 1].Type == RingType.Frozen);
+            }
+            return board;
         }
 
         private static int CountEmptyPoles(LevelData levelData)

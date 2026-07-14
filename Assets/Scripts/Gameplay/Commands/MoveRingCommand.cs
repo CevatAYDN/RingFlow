@@ -150,8 +150,8 @@ namespace RingFlow.Gameplay
             record.WasMysteryRevealedOnFrom = context.WasMysteryRevealed;
             // Consume the ghost-reveal flag set by SelectPoleCommand.
             // Clear it immediately so stale flags never leak into subsequent moves.
-            bool ghostRevealed = _model.PendingGhostRevealOnFrom;
-            _model.PendingGhostRevealOnFrom = false;
+            bool ghostRevealed = _model.PendingGhostRevealPoleId == context.FromPoleId;
+            _model.PendingGhostRevealPoleId = -1;
             record.WasGhostRevealedOnFrom = ghostRevealed;
             record.WasTargetPoleUnlocked = context.WasPoleUnlocked;
             record.WasPainted = context.WasPaintApplied;

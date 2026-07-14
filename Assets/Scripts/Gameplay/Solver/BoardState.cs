@@ -11,7 +11,7 @@ namespace RingFlow.Gameplay
     /// <list type="bullet">
     /// <item>MAX_POLES = 12 (Pole0..Pole11, Types0..Types11, AddData0..AddData11 field count)</item>
     /// <item>MAX_COLORS = 15 (RingColor stored in 4 bits per ring slot; 0=None, 1-15 valid)</item>
-    /// <item>MAX_RING_COUNT_PER_POLE = 15 (4 bits in upper nibbles of Pole fields)</item>
+    /// <item>MAX_RING_COUNT_PER_POLE = 6 with the current layout (slots 0-5 use bits 0-23; bits 24-29 are count/flags)</item>
     /// <item>MAX_ADDITIONAL_DATA = 15 (AddData uses 4 bits; BombCountdown MUST be ≤ 15)</item>
     /// </list>
     /// Exceeding any of these limits silently corrupts data — there is no overflow guard at runtime.
@@ -67,10 +67,20 @@ namespace RingFlow.Gameplay
         public uint AddData10;
         public uint AddData11;
 
-        public const int MaxSupportedCapacity = 8;
+        public const int MaxSupportedCapacity = 6;
 
         public int PoleCount;
         public int MaxCapacity;
+
+        private static void ValidateRingIndex(int ringIndex)
+        {
+            if (ringIndex < 0 || ringIndex >= MaxSupportedCapacity)
+            {
+                throw new ArgumentOutOfRangeException(nameof(ringIndex),
+                    $"BoardState supports ring slots 0-{MaxSupportedCapacity - 1}; got {ringIndex}. " +
+                    "Increase BoardState packing capacity or lower pole capacity in GameConfigDatabaseSO.");
+            }
+        }
 
         public void Initialize(int poleCount, int maxCapacity, int poleCapacity)
         {
@@ -164,6 +174,12 @@ namespace RingFlow.Gameplay
 
         public void SetRingCount(int poleIndex, int count)
         {
+            if (count < 0 || count > MaxSupportedCapacity)
+            {
+                throw new ArgumentOutOfRangeException(nameof(count),
+                    $"BoardState supports 0-{MaxSupportedCapacity} rings per pole; got {count}.");
+            }
+
             uint val = GetPoleRaw(poleIndex);
             val &= ~(0xFu << 24);
             val |= ((uint)count & 0xF) << 24;
@@ -172,6 +188,7 @@ namespace RingFlow.Gameplay
 
         public RingColor GetRingColor(int poleIndex, int ringIndex)
         {
+            ValidateRingIndex(ringIndex);
             uint val = GetPoleRaw(poleIndex);
             int shift = ringIndex * 4;
             return (RingColor)((val >> shift) & 0xF);
@@ -179,6 +196,7 @@ namespace RingFlow.Gameplay
 
         public void SetRingColor(int poleIndex, int ringIndex, RingColor color)
         {
+            ValidateRingIndex(ringIndex);
             uint val = GetPoleRaw(poleIndex);
             int shift = ringIndex * 4;
             val &= ~(0xFu << shift);
@@ -188,6 +206,7 @@ namespace RingFlow.Gameplay
 
         public RingType GetRingType(int poleIndex, int ringIndex)
         {
+            ValidateRingIndex(ringIndex);
             uint val = GetTypesRaw(poleIndex);
             int shift = ringIndex * 4;
             return (RingType)((val >> shift) & 0xF);
@@ -195,6 +214,7 @@ namespace RingFlow.Gameplay
 
         public void SetRingType(int poleIndex, int ringIndex, RingType type)
         {
+            ValidateRingIndex(ringIndex);
             uint val = GetTypesRaw(poleIndex);
             int shift = ringIndex * 4;
             val &= ~(0xFu << shift);
@@ -204,6 +224,7 @@ namespace RingFlow.Gameplay
 
         public int GetRingAdditional(int poleIndex, int ringIndex)
         {
+            ValidateRingIndex(ringIndex);
             uint val = GetAddDataRaw(poleIndex);
             int shift = ringIndex * 4;
             return (int)((val >> shift) & 0xF);
@@ -211,6 +232,7 @@ namespace RingFlow.Gameplay
 
         public void SetRingAdditional(int poleIndex, int ringIndex, int value)
         {
+            ValidateRingIndex(ringIndex);
             uint val = GetAddDataRaw(poleIndex);
             int shift = ringIndex * 4;
             val &= ~(0xFu << shift);

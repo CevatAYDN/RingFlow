@@ -20,20 +20,31 @@ namespace RingFlow.Editor
             if (Object.FindAnyObjectByType<Root>() != null)
                 return BootstrapResult.Fail("Nexus Bootstrapper already exists in the scene.");
 
-            var contextData = EnsureContextData();
-            var rootObj = CreateRootWithContext(contextData);
-            Undo.RegisterCreatedObjectUndo(rootObj, "Create Nexus Root");
-            AttachComponents(rootObj);
-            EnsureEventSystem();
-            EnsureMainCamera();
-            EnsureDirectionalLight();
-            EnsureCameraRaycasters();
-            EnsureEditorSceneReady(rootObj);
-            MarkSceneDirty();
+            GameObject rootObj = null;
+            try
+            {
+                var contextData = EnsureContextData();
+                rootObj = CreateRootWithContext(contextData);
+                Undo.RegisterCreatedObjectUndo(rootObj, "Create Nexus Root");
+                AttachComponents(rootObj);
+                EnsureEventSystem();
+                EnsureMainCamera();
+                EnsureDirectionalLight();
+                EnsureCameraRaycasters();
+                EnsureEditorSceneReady(rootObj);
+                MarkSceneDirty();
 
-            NexusLog.Info("EditorBootstrapper", nameof(Bootstrap), "",
-                "Nexus Bootstrapper successfully added to the active scene.");
-            return BootstrapResult.Ok(rootObj);
+                NexusLog.Info("EditorBootstrapper", nameof(Bootstrap), "",
+                    "Nexus Bootstrapper successfully added to the active scene.");
+                return BootstrapResult.Ok(rootObj);
+            }
+            catch (System.Exception ex)
+            {
+                if (rootObj != null)
+                    Object.DestroyImmediate(rootObj);
+                NexusLog.Error("EditorBootstrapper", nameof(Bootstrap), "", ex.Message);
+                return BootstrapResult.Fail(ex.Message);
+            }
         }
 
         public struct BootstrapResult

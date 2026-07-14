@@ -212,6 +212,38 @@ namespace RingFlow.Tests
         }
 
         [Test]
+        public void PlayerProgressSaveSystem_BackupRestore_PreservesPipeDelimitedListsAndRemoveAds()
+        {
+            var prefs = new MockPlayerPrefsService();
+            var progress = new PlayerProgressModel();
+            progress.Coins.Value = 777;
+            progress.RemoveAds.Value = true;
+            progress.UnlockedWorlds.Clear();
+            for (int i = 0; i < 40; i++) progress.UnlockedWorlds.Add(i == 0 || i == 10 || i == 25);
+            progress.OwnedThemes.Add("theme|with_separator");
+            progress.Achievements.Add("first|win");
+
+            PlayerProgressSaveSystem.Save(prefs, progress);
+
+            // Corrupt fields covered by the checksum. Load should restore the JSON backup snapshot exactly.
+            prefs.SetInt(PlayerProgressModel.KeyCoins, -999);
+            prefs.SetBool(PlayerProgressModel.KeyRemoveAds, false);
+            prefs.SetString(PlayerProgressModel.KeyWorlds, "0|0|0");
+            prefs.SetString(PlayerProgressModel.KeyThemes, "broken");
+            prefs.SetString(PlayerProgressModel.KeyAchieves, "broken");
+
+            var loaded = new PlayerProgressModel();
+            PlayerProgressSaveSystem.Load(prefs, loaded);
+
+            Assert.AreEqual(777, loaded.Coins.Value);
+            Assert.IsTrue(loaded.RemoveAds.Value);
+            Assert.IsTrue(loaded.UnlockedWorlds[10]);
+            Assert.IsTrue(loaded.UnlockedWorlds[25]);
+            Assert.Contains("theme|with_separator", loaded.OwnedThemes);
+            Assert.Contains("first|win", loaded.Achievements);
+        }
+
+        [Test]
         public void SettingsSaveSystem_RoundAll_PreservesAllFields()
         {
             var prefs = new MockPlayerPrefsService();

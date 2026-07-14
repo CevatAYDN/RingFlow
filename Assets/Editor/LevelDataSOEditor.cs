@@ -203,25 +203,16 @@ namespace RingFlow.Editor
 
         private void VerifyAndSolve(LevelDataSO levelSO)
         {
-            var board = new BoardState { PoleCount = levelSO.Data.Poles.Count };
-            for (int p = 0; p < levelSO.Data.Poles.Count; p++)
-            {
-                var pole = levelSO.Data.Poles[p];
-                for (int r = 0; r < pole.Rings.Count; r++)
-                    board.AddRing(p, pole.Rings[r]);
-            }
-
             var database = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
             if (database == null) throw new System.InvalidOperationException("GameConfigDatabase not found!");
-            int maxCapacity = levelSO.Data.Poles.Count > 0 
-                ? levelSO.Data.Poles[0].RingCapacity 
-                : database.GetMaxCapacityForLevel(levelSO.Data.LevelIndex);
+
+            var board = BuildBoardStateFromLevelData(levelSO.Data, database, out int maxCapacity, out int[] portalTargets);
             int levelIndex = levelSO.Data.LevelIndex;
             var band = database.GetBandForLevel(levelIndex);
             var allowedMechanics = database.GetAllowedMechanicsForLevel(levelIndex);
             int intensity = database.GetMechanicIntensityForLevel(levelIndex);
 
-            var solveResult = LevelSolver.Solve(board, maxCapacity);
+            var solveResult = LevelSolver.Solve(board, maxCapacity, portalTargets: portalTargets);
 
             if (solveResult.IsSolvable)
             {
@@ -236,6 +227,58 @@ namespace RingFlow.Editor
                     $"Seviye ÇÖZÜLEMEZ!\nBand: {band}\nAçık Mekanikler: {string.Join(", ", allowedMechanics)}\nBu yapılandırmayı çözebilecek geçerli bir hamle sırası bulunamadı.", "Tamam");
             }
             EditorUtility.SetDirty(levelSO);
+        }
+
+
+        private static BoardState BuildBoardStateFromLevelData(LevelData levelData, GameConfigDatabaseSO database, out int maxCapacity, out int[] portalTargets)
+        {
+            if (levelData == null)
+                throw new System.ArgumentNullException(nameof(levelData));
+
+            int poleCount = levelData.Poles?.Count ?? 0;
+            maxCapacity = database != null ? database.GetMaxCapacityForLevel(levelData.LevelIndex) : GameplayAssetKeys.Tuning.MaxCapacity;
+            portalTargets = new int[poleCount];
+            for (int i = 0; i < poleCount; i++) portalTargets[i] = -1;
+
+            var board = new BoardState { PoleCount = poleCount, MaxCapacity = maxCapacity };
+            for (int p = 0; p < poleCount; p++)
+            {
+                var pole = levelData.Poles[p];
+                if (pole == null) continue;
+
+                if (pole.RingCapacity > BoardState.MaxSupportedCapacity)
+                {
+                    throw new System.InvalidOperationException(
+                        $"Level {levelData.LevelIndex} pole {p} capacity {pole.RingCapacity} exceeds BoardState.MaxSupportedCapacity={BoardState.MaxSupportedCapacity}.");
+                }
+
+                if (pole.RingCapacity > maxCapacity) maxCapacity = pole.RingCapacity;
+                board.MaxCapacity = maxCapacity;
+                board.SetPoleLocked(p, pole.IsLocked);
+                portalTargets[p] = pole.PortalTargetId;
+
+                int count = pole.Rings?.Count ?? 0;
+                if (count > pole.RingCapacity)
+                {
+                    throw new System.InvalidOperationException(
+                        $"Level {levelData.LevelIndex} pole {p} has {count} rings but capacity is {pole.RingCapacity}.");
+                }
+
+                board.SetRingCount(p, count);
+                for (int r = 0; r < count; r++)
+                {
+                    var ring = pole.Rings[r];
+                    board.SetRingColor(p, r, ring.Color);
+                    board.SetRingType(p, r, ring.Type);
+                    board.SetRingAdditional(p, r, ring.AdditionalData);
+                }
+
+                if (count > 0)
+                    board.SetTopRingFrozen(p, pole.Rings[count - 1].Type == RingType.Frozen);
+            }
+
+            board.MaxCapacity = maxCapacity;
+            return board;
         }
 
         private void ReScramble(LevelDataSO levelSO)
@@ -553,7 +596,7 @@ namespace RingFlow.Editor
                         if (EditorGUI.EndChangeCheck())
                         {
                             Undo.RecordObject(levelSO, "Direk Kapasitesi Değiştir");
-                            pole.RingCapacity = Mathf.Clamp(capNew, 2, 8);
+                            pole.RingCapacity = Mathf.Clamp(capNew, 2, BoardState.MaxSupportedCapacity);
                             while (pole.Rings.Count > pole.RingCapacity)
                                 pole.Rings.RemoveAt(pole.Rings.Count - 1);
                             EditorUtility.SetDirty(levelSO);

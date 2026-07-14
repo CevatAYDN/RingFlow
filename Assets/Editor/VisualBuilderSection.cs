@@ -20,6 +20,7 @@ namespace RingFlow.Editor
         private List<MoveRecord> _previewMoves = new();
         private int _currentPreviewIndex = -1;
         private BoardState _initialPreviewBoard;
+        private int[] _initialPreviewPortalTargets;
         private bool _solvedSuccessfully;
         private string _solveStatusMsg = "";
 
@@ -62,7 +63,7 @@ namespace RingFlow.Editor
                 {
                     if (GUILayout.Button("Sahne Tahtasını Çöz", GUILayout.Height(26)))
                     {
-                        var board = ReadBoardFromScene();
+                        var board = ReadBoardFromScene(out var portalTargets);
                         if (board.PoleCount == 0)
                         {
                             _solveStatusMsg = "Sahne üzerinde tahta bulunamadı. Önce sahneyi kurun.";
@@ -70,11 +71,12 @@ namespace RingFlow.Editor
                         }
                         else
                         {
-                            var result = LevelSolver.Solve(board, board.MaxCapacity);
+                            var result = LevelSolver.Solve(board, board.MaxCapacity, portalTargets: portalTargets);
                             _solvedSuccessfully = result.IsSolvable;
                             if (result.IsSolvable && result.Moves != null && result.Moves.Count > 0)
                             {
                                 _initialPreviewBoard = board;
+                                _initialPreviewPortalTargets = portalTargets;
                                 _previewMoves = result.Moves;
                                 _currentPreviewIndex = -1;
                                 _solveStatusMsg = $"Çözülebilir! Hamle sayısı: {result.MoveCount}";
@@ -187,26 +189,31 @@ namespace RingFlow.Editor
                 : 4;
 
             var board = new BoardState { PoleCount = poleCount, MaxCapacity = defaultMaxCapacity };
+            var portalTargets = CreateEmptyPortalTargets(poleCount);
             int boardMaxCapacity = defaultMaxCapacity;
 
             for (int p = 0; p < poleCount; p++)
             {
                 bool isLocked;
                 int maxCapacity;
+                int portalTarget;
                 List<RingData> rings;
                 if (polesToBuild != null)
                 {
                     isLocked = polesToBuild[p].IsLocked;
                     maxCapacity = polesToBuild[p].MaxCapacity;
+                    portalTarget = polesToBuild[p].PortalPartnerId;
                     rings = polesToBuild[p].Rings;
                 }
                 else
                 {
                     isLocked = _generator.GeneratedLevel.Poles[p].IsLocked;
                     maxCapacity = _generator.GeneratedLevel.Poles[p].RingCapacity;
+                    portalTarget = _generator.GeneratedLevel.Poles[p].PortalTargetId;
                     rings = _generator.GeneratedLevel.Poles[p].Rings;
                 }
                 board.SetPoleLocked(p, isLocked);
+                portalTargets[p] = portalTarget;
                 board.SetRingCount(p, rings.Count);
                 for (int r = 0; r < rings.Count; r++)
                 {
@@ -218,7 +225,7 @@ namespace RingFlow.Editor
             }
             board.MaxCapacity = boardMaxCapacity;
 
-            BuildBoardStateInScene(board);
+            BuildBoardStateInScene(board, portalTargets);
 
             var boardRoot = GameObject.Find(EditorPaths.VisualBoardName);
             if (boardRoot != null)
@@ -246,16 +253,21 @@ namespace RingFlow.Editor
                 {
                     var ring = currentBoard.PopRing(mv.FromPoleId);
                     currentBoard.AddRing(mv.ToPoleId, ring);
+                    ApplyPortalTeleportForPreview(ref currentBoard, mv.ToPoleId, _initialPreviewPortalTargets);
                 }
             }
 
-            BuildBoardStateInScene(currentBoard);
+            BuildBoardStateInScene(currentBoard, _initialPreviewPortalTargets);
         }
 
-        private BoardState ReadBoardFromScene()
+        private BoardState ReadBoardFromScene(out int[] portalTargets)
         {
             var boardRoot = GameObject.Find(EditorPaths.VisualBoardName);
-            if (boardRoot == null) return default;
+            if (boardRoot == null)
+            {
+                portalTargets = System.Array.Empty<int>();
+                return default;
+            }
 
             var f = Resources.Load<GameFeelConfigSO>(EditorPaths.GameFeelConfigKey);
             var polesList = new List<Transform>();
@@ -279,12 +291,16 @@ namespace RingFlow.Editor
             }
 
             var board = new BoardState { PoleCount = polesList.Count, MaxCapacity = resolvedMaxCapacity };
+            portalTargets = CreateEmptyPortalTargets(polesList.Count);
 
             for (int p = 0; p < polesList.Count; p++)
             {
                 var pTrans = polesList[p];
-                bool isLocked = pTrans.name.Contains("[LOCKED]");
+                var poleMeta = pTrans.GetComponent<EditorPoleMetadata>();
+                bool isLocked = poleMeta != null ? poleMeta.IsLocked : pTrans.name.Contains("[LOCKED]");
                 board.SetPoleLocked(p, isLocked);
+                if (poleMeta != null)
+                    portalTargets[p] = poleMeta.PortalTargetId;
 
                 var ringsList = new List<Transform>();
                 for (int r = 0; r < 10; r++)
@@ -303,17 +319,27 @@ namespace RingFlow.Editor
                 for (int r = 0; r < ringsList.Count; r++)
                 {
                     var rTrans = ringsList[r];
-                    string[] parts = rTrans.name.Split('_');
+                    var ringMeta = rTrans.GetComponent<EditorRingMetadata>();
                     RingColor color = RingColor.None;
                     RingType type = RingType.Standard;
                     int additional = 0;
 
-                    if (parts.Length >= 4)
+                    if (ringMeta != null)
                     {
-                        System.Enum.TryParse(parts[2], out color);
-                        System.Enum.TryParse(parts[3], out type);
-                        if (parts.Length >= 5)
-                            int.TryParse(parts[4], out additional);
+                        color = ringMeta.Color;
+                        type = ringMeta.Type;
+                        additional = ringMeta.AdditionalData;
+                    }
+                    else
+                    {
+                        string[] parts = rTrans.name.Split('_');
+                        if (parts.Length >= 4)
+                        {
+                            System.Enum.TryParse(parts[2], out color);
+                            System.Enum.TryParse(parts[3], out type);
+                            if (parts.Length >= 5)
+                                int.TryParse(parts[4], out additional);
+                        }
                     }
                     board.SetRingColor(p, r, color);
                     board.SetRingType(p, r, type);
@@ -330,7 +356,7 @@ namespace RingFlow.Editor
             return board;
         }
 
-        private void BuildBoardStateInScene(BoardState board)
+        private void BuildBoardStateInScene(BoardState board, int[] portalTargets = null)
         {
             ClearScene();
 
@@ -358,11 +384,11 @@ namespace RingFlow.Editor
                     ));
                 }
 
-                CreatePole(boardRoot.transform, p, startX, spacing, isLocked, board.MaxCapacity, rings, torusModel, f, palette);
+                CreatePole(boardRoot.transform, p, startX, spacing, isLocked, board.MaxCapacity, rings, torusModel, f, palette, GetPortalTarget(portalTargets, p));
             }
         }
 
-        private static void CreatePole(Transform parent, int index, float startX, float spacing, bool isLocked, int capacity, List<RingData> rings, GameObject torusModel, GameFeelConfigSO f, RingColorPaletteSO palette)
+        private static void CreatePole(Transform parent, int index, float startX, float spacing, bool isLocked, int capacity, List<RingData> rings, GameObject torusModel, GameFeelConfigSO f, RingColorPaletteSO palette, int portalTarget)
         {
             var poleObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             poleObj.name = $"Pole_{index}" + (isLocked ? " [LOCKED]" : "");
@@ -382,8 +408,28 @@ namespace RingFlow.Editor
             text.alignment = TextAlignment.Center;
             text.color = Color.white;
 
+            if (portalTarget >= 0)
+            {
+                var portalLabel = new GameObject("PortalLabel");
+                portalLabel.transform.SetParent(poleObj.transform);
+                portalLabel.transform.localPosition = new Vector3(0f, 2.45f, 0f);
+                var portalText = portalLabel.AddComponent<TextMesh>();
+                portalText.text = $"Portal → {portalTarget}";
+                portalText.characterSize = 0.07f;
+                portalText.fontSize = 48;
+                portalText.anchor = TextAnchor.MiddleCenter;
+                portalText.alignment = TextAlignment.Center;
+                portalText.color = Color.cyan;
+            }
+
             var poleView = poleObj.AddComponent<PoleView>();
             poleView.PoleId = index;
+
+            var poleMeta = poleObj.AddComponent<EditorPoleMetadata>();
+            poleMeta.PoleId = index;
+            poleMeta.Capacity = capacity;
+            poleMeta.IsLocked = isLocked;
+            poleMeta.PortalTargetId = portalTarget;
 
             var capsule = poleObj.GetComponent<CapsuleCollider>();
             if (capsule != null)
@@ -451,6 +497,12 @@ namespace RingFlow.Editor
                 ? $"Ring_{index}_{ringData.Color}_{ringData.Type}_{ringData.AdditionalData}"
                 : $"Ring_{index}_{ringData.Color}_{ringData.Type}";
 
+            var ringMeta = ringObj.AddComponent<EditorRingMetadata>();
+            ringMeta.RingIndex = index;
+            ringMeta.Color = ringData.Color;
+            ringMeta.Type = ringData.Type;
+            ringMeta.AdditionalData = ringData.AdditionalData;
+
             var ringRenderer = ringObj.GetComponentInChildren<Renderer>();
             if (ringRenderer != null)
             {
@@ -488,6 +540,31 @@ namespace RingFlow.Editor
 
             var col = ringObj.GetComponent<Collider>();
             if (col != null) Object.DestroyImmediate(col);
+        }
+
+
+        private static int[] CreateEmptyPortalTargets(int poleCount)
+        {
+            var portals = new int[poleCount];
+            for (int i = 0; i < poleCount; i++) portals[i] = -1;
+            return portals;
+        }
+
+        private static int GetPortalTarget(int[] portalTargets, int poleId)
+        {
+            if (portalTargets == null || poleId < 0 || poleId >= portalTargets.Length) return -1;
+            return portalTargets[poleId];
+        }
+
+        private static void ApplyPortalTeleportForPreview(ref BoardState board, int targetPole, int[] portalTargets)
+        {
+            int partner = GetPortalTarget(portalTargets, targetPole);
+            if (partner < 0 || partner >= board.PoleCount) return;
+            if (board.GetRingCount(targetPole) <= 0) return;
+            if (board.GetRingCount(partner) >= board.MaxCapacity) return;
+
+            var portalRing = board.PopRing(targetPole);
+            board.AddRing(partner, portalRing);
         }
 
         private static void ClearScene()

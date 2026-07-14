@@ -131,9 +131,8 @@ namespace RingFlow.Gameplay
         private const string KeySchemaVersion = GameplayAssetKeys.PlayerPrefs.SaveSchemaVersion;
         private const string KeyChecksum = GameplayAssetKeys.PlayerPrefs.SaveChecksum;
 
-        // Backup save keys — snapshot of current state before overwriting
-        private const string KeyBackupInts = "RingFlow_Bak_Ints";
-        private const string KeyBackupStrings = "RingFlow_Bak_Strs";
+        // Backup save key — JSON snapshot of the last valid progress state before checksum write.
+        private const string KeyBackupSnapshot = "RingFlow_Bak_Snapshot";
 
         public static void Save(IPlayerPrefsService prefs, PlayerProgressModel m)
         {
@@ -342,101 +341,124 @@ namespace RingFlow.Gameplay
             }
         }
 
+        [System.Serializable]
+        private sealed class ProgressBackupSnapshot
+        {
+            public int SchemaVersion;
+            public int Coins;
+            public int Diamonds;
+            public int Xp;
+            public int CurrentLevel;
+            public int MaxUnlocked;
+            public int PlayerLevel;
+            public int ChestBronze;
+            public int ChestSilver;
+            public int ChestGold;
+            public int ChestDiamond;
+            public int DailyDayIndex;
+            public int UndoUsed;
+            public int HintCount;
+            public bool RemoveAds;
+            public string DailyStamp;
+            public string Worlds;
+            public string Themes;
+            public string Achievements;
+        }
+
         // S2: Backup current progress state before overwriting during Save().
         // On checksum mismatch during Load(), the backup is restored automatically.
         private static void BackupCurrentState(IPlayerPrefsService prefs)
         {
-            var intSb = new System.Text.StringBuilder();
-            intSb.Append(prefs.GetInt(KeySchemaVersion, 0)); intSb.Append('|');
-            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyCoins, 0)); intSb.Append('|');
-            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyDiamonds, 0)); intSb.Append('|');
-            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyXp, 0)); intSb.Append('|');
-            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyCurrentLevel, 0)); intSb.Append('|');
-            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyMaxUnlocked, 0)); intSb.Append('|');
-            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyPlayerLvl, 0)); intSb.Append('|');
-            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyChestsBronze, 0)); intSb.Append('|');
-            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyChestsSilver, 0)); intSb.Append('|');
-            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyChestsGold, 0)); intSb.Append('|');
-            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyChestsDiamond, 0)); intSb.Append('|');
-            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyDailyDay, 0)); intSb.Append('|');
-            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyUndoUsed, 0)); intSb.Append('|');
-            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyHintCount, 0));
-            prefs.SetString(KeyBackupInts, intSb.ToString());
+            var snapshot = new ProgressBackupSnapshot
+            {
+                SchemaVersion = prefs.GetInt(KeySchemaVersion, 0),
+                Coins = prefs.GetInt(PlayerProgressModel.KeyCoins, 0),
+                Diamonds = prefs.GetInt(PlayerProgressModel.KeyDiamonds, 0),
+                Xp = prefs.GetInt(PlayerProgressModel.KeyXp, 0),
+                CurrentLevel = prefs.GetInt(PlayerProgressModel.KeyCurrentLevel, 0),
+                MaxUnlocked = prefs.GetInt(PlayerProgressModel.KeyMaxUnlocked, 0),
+                PlayerLevel = prefs.GetInt(PlayerProgressModel.KeyPlayerLvl, 0),
+                ChestBronze = prefs.GetInt(PlayerProgressModel.KeyChestsBronze, 0),
+                ChestSilver = prefs.GetInt(PlayerProgressModel.KeyChestsSilver, 0),
+                ChestGold = prefs.GetInt(PlayerProgressModel.KeyChestsGold, 0),
+                ChestDiamond = prefs.GetInt(PlayerProgressModel.KeyChestsDiamond, 0),
+                DailyDayIndex = prefs.GetInt(PlayerProgressModel.KeyDailyDay, 0),
+                UndoUsed = prefs.GetInt(PlayerProgressModel.KeyUndoUsed, 0),
+                HintCount = prefs.GetInt(PlayerProgressModel.KeyHintCount, 0),
+                RemoveAds = prefs.GetBool(PlayerProgressModel.KeyRemoveAds, false),
+                DailyStamp = prefs.GetString(PlayerProgressModel.KeyDailyStamp, ""),
+                Worlds = prefs.GetString(PlayerProgressModel.KeyWorlds, ""),
+                Themes = prefs.GetString(PlayerProgressModel.KeyThemes, ""),
+                Achievements = prefs.GetString(PlayerProgressModel.KeyAchieves, "")
+            };
 
-            var strSb = new System.Text.StringBuilder();
-            strSb.Append(prefs.GetString(PlayerProgressModel.KeyDailyStamp, "")); strSb.Append('|');
-            strSb.Append(prefs.GetString(PlayerProgressModel.KeyWorlds, "")); strSb.Append('|');
-            strSb.Append(prefs.GetString(PlayerProgressModel.KeyThemes, "")); strSb.Append('|');
-            strSb.Append(prefs.GetString(PlayerProgressModel.KeyAchieves, ""));
-            prefs.SetString(KeyBackupStrings, strSb.ToString());
+            prefs.SetString(KeyBackupSnapshot, UnityEngine.JsonUtility.ToJson(snapshot));
         }
 
         private static bool TryRestoreFromBackup(IPlayerPrefsService prefs, PlayerProgressModel m)
         {
-            var intsRaw = prefs.GetString(KeyBackupInts, "");
-            var strsRaw = prefs.GetString(KeyBackupStrings, "");
-            if (string.IsNullOrEmpty(intsRaw) && string.IsNullOrEmpty(strsRaw))
+            var raw = prefs.GetString(KeyBackupSnapshot, "");
+            if (string.IsNullOrEmpty(raw))
                 return false;
 
-            var intParts = intsRaw.Split('|');
-            int idx = 0;
-
-            int ReadInt(int fallback)
+            ProgressBackupSnapshot snapshot;
+            try
             {
-                return idx < intParts.Length && int.TryParse(intParts[idx], out var val) ? val : fallback;
+                snapshot = UnityEngine.JsonUtility.FromJson<ProgressBackupSnapshot>(raw);
+            }
+            catch (System.Exception ex)
+            {
+                NexusLog.Warn("PlayerProgress", nameof(TryRestoreFromBackup), "",
+                    $"Backup snapshot JSON parse failed: {ex.Message}");
+                return false;
             }
 
-            if (intParts.Length >= 2)
+            if (!IsBackupSnapshotValid(snapshot))
             {
-                // Apply backup int values only if they seem valid (at least have the right key count)
-                var version = ReadInt(2); idx++;
-                var coins = ReadInt(0); idx++;
-                var diamonds = ReadInt(0); idx++;
-                var xp = ReadInt(0); idx++;
-                var cl = ReadInt(1); idx++;
-                var mu = ReadInt(1); idx++;
-                var pl = ReadInt(1); idx++;
-                var cb = ReadInt(0); idx++;
-                var cs = ReadInt(0); idx++;
-                var cg = ReadInt(0); idx++;
-                var cd = ReadInt(0); idx++;
-                var dd = ReadInt(-1); idx++;
-                var undoUsed = ReadInt(0); idx++;
-                var hint = ReadInt(0);
-
-                // Re-apply key values to restore state
-                prefs.SetInt(KeySchemaVersion, version);
-                prefs.SetInt(PlayerProgressModel.KeyCoins, coins);
-                prefs.SetInt(PlayerProgressModel.KeyDiamonds, diamonds);
-                prefs.SetInt(PlayerProgressModel.KeyXp, xp);
-                prefs.SetInt(PlayerProgressModel.KeyCurrentLevel, cl);
-                prefs.SetInt(PlayerProgressModel.KeyMaxUnlocked, mu);
-                prefs.SetInt(PlayerProgressModel.KeyPlayerLvl, pl);
-                prefs.SetInt(PlayerProgressModel.KeyChestsBronze, cb);
-                prefs.SetInt(PlayerProgressModel.KeyChestsSilver, cs);
-                prefs.SetInt(PlayerProgressModel.KeyChestsGold, cg);
-                prefs.SetInt(PlayerProgressModel.KeyChestsDiamond, cd);
-                prefs.SetInt(PlayerProgressModel.KeyDailyDay, dd);
-                prefs.SetInt(PlayerProgressModel.KeyUndoUsed, undoUsed);
-                prefs.SetInt(PlayerProgressModel.KeyHintCount, hint);
+                NexusLog.Warn("PlayerProgress", nameof(TryRestoreFromBackup), "",
+                    "Backup snapshot failed validation; refusing to overwrite current save data.");
+                return false;
             }
 
-            var strParts = strsRaw.Split('|');
-            if (strParts.Length >= 1)
-            {
-                prefs.SetString(PlayerProgressModel.KeyDailyStamp, strParts.Length > 0 ? strParts[0] : "0");
-                if (strParts.Length > 1) prefs.SetString(PlayerProgressModel.KeyWorlds, strParts[1]);
-                if (strParts.Length > 2) prefs.SetString(PlayerProgressModel.KeyThemes, strParts[2]);
-                if (strParts.Length > 3) prefs.SetString(PlayerProgressModel.KeyAchieves, strParts[3]);
-            }
+            prefs.SetInt(KeySchemaVersion, snapshot.SchemaVersion);
+            prefs.SetInt(PlayerProgressModel.KeyCoins, snapshot.Coins);
+            prefs.SetInt(PlayerProgressModel.KeyDiamonds, snapshot.Diamonds);
+            prefs.SetInt(PlayerProgressModel.KeyXp, snapshot.Xp);
+            prefs.SetInt(PlayerProgressModel.KeyCurrentLevel, snapshot.CurrentLevel);
+            prefs.SetInt(PlayerProgressModel.KeyMaxUnlocked, snapshot.MaxUnlocked);
+            prefs.SetInt(PlayerProgressModel.KeyPlayerLvl, snapshot.PlayerLevel);
+            prefs.SetInt(PlayerProgressModel.KeyChestsBronze, snapshot.ChestBronze);
+            prefs.SetInt(PlayerProgressModel.KeyChestsSilver, snapshot.ChestSilver);
+            prefs.SetInt(PlayerProgressModel.KeyChestsGold, snapshot.ChestGold);
+            prefs.SetInt(PlayerProgressModel.KeyChestsDiamond, snapshot.ChestDiamond);
+            prefs.SetInt(PlayerProgressModel.KeyDailyDay, snapshot.DailyDayIndex);
+            prefs.SetInt(PlayerProgressModel.KeyUndoUsed, snapshot.UndoUsed);
+            prefs.SetInt(PlayerProgressModel.KeyHintCount, snapshot.HintCount);
+            prefs.SetBool(PlayerProgressModel.KeyRemoveAds, snapshot.RemoveAds);
+            prefs.SetString(PlayerProgressModel.KeyDailyStamp, snapshot.DailyStamp ?? "0");
+            prefs.SetString(PlayerProgressModel.KeyWorlds, snapshot.Worlds ?? "");
+            prefs.SetString(PlayerProgressModel.KeyThemes, snapshot.Themes ?? "");
+            prefs.SetString(PlayerProgressModel.KeyAchieves, snapshot.Achievements ?? "");
 
-            // Now re-run the standard load with restored values
+            // Now re-run the standard load with restored values.
             int newChecksum = ComputeProgressChecksum(prefs);
             prefs.SetInt(KeyChecksum, newChecksum);
             prefs.Save();
 
-            // Load the model from the restored prefs
             Load(prefs, m);
+            return true;
+        }
+
+        private static bool IsBackupSnapshotValid(ProgressBackupSnapshot snapshot)
+        {
+            if (snapshot == null) return false;
+            if (snapshot.SchemaVersion <= 0) return false;
+            if (snapshot.CurrentLevel < 1) return false;
+            if (snapshot.MaxUnlocked < 1) return false;
+            if (snapshot.PlayerLevel < 1) return false;
+            if (snapshot.Coins < 0 || snapshot.Diamonds < 0 || snapshot.Xp < 0) return false;
+            if (snapshot.ChestBronze < 0 || snapshot.ChestSilver < 0 || snapshot.ChestGold < 0 || snapshot.ChestDiamond < 0) return false;
+            if (snapshot.UndoUsed < 0 || snapshot.HintCount < 0) return false;
             return true;
         }
     }

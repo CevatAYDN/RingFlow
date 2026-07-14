@@ -375,6 +375,25 @@ namespace RingFlow.Tests
         }
 
         [Test]
+        public void BoardState_SetRingCount_AboveSupportedCapacity_Throws()
+        {
+            var board = new BoardState { PoleCount = 1, MaxCapacity = BoardState.MaxSupportedCapacity };
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => board.SetRingCount(0, BoardState.MaxSupportedCapacity + 1));
+        }
+
+        [Test]
+        public void BoardState_SupportsConfiguredMaxSupportedCapacityWithoutCorruptingFlags()
+        {
+            var board = new BoardState { PoleCount = 1, MaxCapacity = BoardState.MaxSupportedCapacity };
+            for (int i = 0; i < BoardState.MaxSupportedCapacity; i++)
+                board.AddRing(0, new RingData(RingColor.Red, RingType.Standard));
+
+            Assert.AreEqual(BoardState.MaxSupportedCapacity, board.GetRingCount(0));
+            Assert.IsFalse(board.IsPoleLocked(0));
+            Assert.IsFalse(board.IsTopRingFrozen(0));
+        }
+
+        [Test]
         public void BoardState_AddRing_RainbowOnEmpty_StaysRainbow()
         {
             var board = new BoardState { PoleCount = 2 };
