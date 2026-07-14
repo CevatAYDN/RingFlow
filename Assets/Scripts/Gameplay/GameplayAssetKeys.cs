@@ -69,6 +69,7 @@ namespace RingFlow.Gameplay
             public const string SlowMode = "RF_Set_SlowMode";
             public const string BigButtons = "RF_Set_BigButtons";
             public const string ColorBlind = "RF_Set_ColorBlind";
+            public const string Language = "RF_Set_Language";
 
             // Legal / GDPR
             public const string GdprAccepted = "RF_GdprAccepted";

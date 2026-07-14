@@ -17,6 +17,8 @@ namespace RingFlow.Gameplay
         public const string KeySlowMode = GameplayAssetKeys.PlayerPrefs.SlowMode;
         public const string KeyBigButtons = GameplayAssetKeys.PlayerPrefs.BigButtons;
         public const string KeyColorBlind = GameplayAssetKeys.PlayerPrefs.ColorBlind;
+        public const string KeyLanguage = GameplayAssetKeys.PlayerPrefs.Language;
+        private const string LegacyKeyLanguage = "LanguageCode";
 
         public ObservableProperty<bool> MusicEnabled { get; } = new(true);
         public ObservableProperty<bool> SfxEnabled { get; } = new(true);
@@ -60,7 +62,7 @@ namespace RingFlow.Gameplay
             prefs.SetBool(SettingsModel.KeySlowMode, m.SlowMode.Value);
             prefs.SetBool(SettingsModel.KeyBigButtons, m.BigButtons.Value);
             prefs.SetInt(SettingsModel.KeyColorBlind, m.ColorBlindMode.Value);
-            prefs.SetString(nameof(m.LanguageCode), m.LanguageCode.Value);
+            prefs.SetString(KeyLanguage, m.LanguageCode.Value);
             prefs.Save();
         }
 
@@ -73,7 +75,7 @@ namespace RingFlow.Gameplay
             m.SlowMode.Value = prefs.GetBool(SettingsModel.KeySlowMode, false);
             m.BigButtons.Value = prefs.GetBool(SettingsModel.KeyBigButtons, false);
             m.ColorBlindMode.Value = prefs.GetInt(SettingsModel.KeyColorBlind, 0);
-            m.LanguageCode.Value = prefs.GetString(nameof(m.LanguageCode), "en");
+            m.LanguageCode.Value = prefs.GetString(KeyLanguage, prefs.GetString(LegacyKeyLanguage, "en"));
         }
     }
 }
