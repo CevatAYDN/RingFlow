@@ -1,4 +1,5 @@
 using System;
+using RingFlow.Gameplay.Rules;
 
 namespace RingFlow.Gameplay
 {
@@ -361,11 +362,7 @@ namespace RingFlow.Gameplay
 
         public bool CanPopRing(int poleIndex)
         {
-            if (IsEmpty(poleIndex)) return false;
-            if (IsPoleLocked(poleIndex)) return false;
-            if (IsTopRingFrozen(poleIndex)) return false;
-            if (GetTopRingType(poleIndex) == RingType.Stone) return false;
-            return true;
+            return RingRuleEvaluator.CanPopRing(GetTopRing(poleIndex), IsEmpty(poleIndex), IsPoleLocked(poleIndex));
         }
 
         public bool CanAddRing(int poleIndex, RingColor color, RingType type, int maxCapacity, int additionalData = 0)
@@ -394,15 +391,8 @@ namespace RingFlow.Gameplay
                 }
             }
 
-            if (IsEmpty(poleIndex)) return true;
-
             var top = GetTopRing(poleIndex);
-            if (top.Type == RingType.Stone) return top.Color == color;
-
-            // Gökkuşağı (Rainbow) veya Boya (Paint) joker kuralları
-            if (type == RingType.Rainbow || type == RingType.Paint || top.Type == RingType.Rainbow || top.Type == RingType.Paint) return true;
-
-            return top.Color == color;
+            return RingRuleEvaluator.CanAddRing(new RingData(color, type, additionalData), top, false, false);
         }
 
         public void AddRing(int poleIndex, RingData ring)

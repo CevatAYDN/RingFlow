@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using RingFlow.Gameplay.Rules;
 
 namespace RingFlow.Gameplay.Strategies
 {
@@ -63,20 +64,18 @@ namespace RingFlow.Gameplay.Strategies
 
         public bool CanAddRing(RingData ring, RingData topRing, bool isPoleFull, bool isPoleLocked)
         {
-            return GetStrategy(ring.Type).CanAddRing(ring, topRing, isPoleFull, isPoleLocked);
+            return RingRuleEvaluator.CanAddRing(ring, topRing, isPoleFull, isPoleLocked);
         }
 
         public bool CanPopRing(RingData topRing, bool isPoleLocked)
         {
-            return GetStrategy(topRing.Type).CanPopRing(topRing, isPoleLocked);
+            bool isEmpty = topRing.Color == RingColor.None;
+            return RingRuleEvaluator.CanPopRing(topRing, isEmpty, isPoleLocked);
         }
 
         public bool CanAddUniversalRing(RingData ring, RingData topRing, bool isPoleFull, bool isPoleLocked)
         {
-            if (isPoleLocked && ring.Type != RingType.Locked) return false;
-            if (isPoleFull) return false;
-            if (topRing.Color == RingColor.None) return true;
-            return true;
+            return RingRuleEvaluator.CanAddRing(ring, topRing, isPoleFull, isPoleLocked);
         }
     }
 }

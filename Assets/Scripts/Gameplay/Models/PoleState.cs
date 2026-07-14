@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using RingFlow.Gameplay.Rules;
 
 namespace RingFlow.Gameplay
 {
@@ -121,30 +122,12 @@ namespace RingFlow.Gameplay
 
         private bool DirectCanAddRing(RingData ring)
         {
-            if (IsLocked)
-            {
-                return ring.Type == RingType.Locked;
-            }
-            if (IsFull) return false;
-            if (IsEmpty) return true;
-
-            if (TopRing.Type == RingType.Stone) return TopRing.Color == ring.Color;
-
-            if (ring.Type == RingType.Rainbow || ring.Type == RingType.Paint) return true;
-
-            if (TopRing.Type == RingType.Rainbow || TopRing.Type == RingType.Paint) return true;
-
-            return TopRing.Color == ring.Color;
+            return RingRuleEvaluator.CanAddRing(ring, TopRing, IsFull, IsLocked);
         }
 
         private bool DirectCanPopRing()
         {
-            if (IsLocked) return false;
-
-            if (TopRing.Type == RingType.Frozen) return false;
-            if (TopRing.Type == RingType.Stone) return false;
-
-            return true;
+            return RingRuleEvaluator.CanPopRing(TopRing, IsEmpty, IsLocked);
         }
 
         #endregion
