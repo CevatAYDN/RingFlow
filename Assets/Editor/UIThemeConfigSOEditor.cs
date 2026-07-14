@@ -18,6 +18,18 @@ namespace RingFlow.Editor
             EditorGUILayout.LabelField("Arayüz Tema Yapılandırması (UI Theme)", RingFlowEditorUtils.HeaderStyle);
             EditorGUILayout.Space(4f);
 
+            // ── Visual Palette Preview ──
+            using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
+            {
+                DrawColorBox(config.PrimaryColor, "Primary");
+                DrawColorBox(config.AccentColor, "Accent");
+                DrawColorBox(config.BgColor, "BG");
+                DrawColorBox(config.SurfaceColor, "Surface");
+                DrawColorBox(config.PanelColor, "Panel");
+                DrawColorBox(config.TextColor, "Text");
+            }
+            EditorGUILayout.Space(4f);
+
             EditorGUI.BeginChangeCheck();
 
             RingFlowEditorUtils.SectionTitle("Renkler");
@@ -80,6 +92,16 @@ namespace RingFlow.Editor
             }
             EditorGUILayout.Space(4f);
             return button;
+        }
+
+        private static void DrawColorBox(Color color, string label)
+        {
+            using (new EditorGUILayout.VerticalScope(GUILayout.Width(55f)))
+            {
+                var rect = GUILayoutUtility.GetRect(50f, 20f);
+                EditorGUI.DrawRect(rect, color);
+                EditorGUILayout.LabelField(label, RingFlowEditorUtils.CenteredMiniLabel, GUILayout.Width(50f));
+            }
         }
     }
 }

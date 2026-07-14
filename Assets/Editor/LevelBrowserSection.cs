@@ -17,7 +17,6 @@ namespace RingFlow.Editor
         private int _jumpToLevel = 1;
         private string _searchFilter = string.Empty;
         private Vector2 _scroll;
-        private const int GridColumns = 10;
         private const float GridButtonWidth = 46f;
         private const float GridButtonHeight = 26f;
         private const float RowSpacing = 2f;
@@ -125,6 +124,10 @@ namespace RingFlow.Editor
         {
             const float visibleHeight = 220f;
 
+            // Calculate grid columns dynamically based on window width to ensure responsiveness
+            float availableWidth = EditorGUIUtility.currentViewWidth - 240f;
+            int cols = Mathf.Max(2, Mathf.FloorToInt(availableWidth / (GridButtonWidth + RowSpacing)));
+
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 _scroll = EditorGUILayout.BeginScrollView(_scroll, GUILayout.Height(visibleHeight));
@@ -135,11 +138,11 @@ namespace RingFlow.Editor
                     if (hasFilter && !level.ToString().Contains(_searchFilter))
                         continue;
 
-                    int col = (row % GridColumns);
+                    int col = (row % cols);
                     if (col == 0)
                         EditorGUILayout.BeginHorizontal();
                     DrawLevelButton(level);
-                    if (col == GridColumns - 1 || level == _cachedTotalLevels)
+                    if (col == cols - 1 || level == _cachedTotalLevels)
                     {
                         GUILayout.FlexibleSpace();
                         EditorGUILayout.EndHorizontal();

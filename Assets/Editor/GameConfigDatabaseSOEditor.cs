@@ -9,6 +9,7 @@ namespace RingFlow.Editor
     {
         private int _selectedWorldIndex;
         private int _lookupLevelIndex = 1;
+        private string _worldSearchFilter = string.Empty;
         private Vector2 _scrollPos;
 
         public override void OnInspectorGUI()
@@ -17,6 +18,25 @@ namespace RingFlow.Editor
 
             EditorGUILayout.LabelField("RingFlow Veritabanı Editörü (Database)", RingFlowEditorUtils.HeaderStyle);
             EditorGUILayout.Space(4f);
+
+            // ── GDD Consistency Checks ──
+            if (db.TotalLevels != 2000 || db.Worlds.Count != 40 || db.LevelsPerWorld != 50)
+            {
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                {
+                    var prevCol = GUI.color;
+                    GUI.color = EditorPaths.EditorColors.Warning;
+                    EditorGUILayout.LabelField("⚠ GDD Tutarsızlığı Saptandı:", EditorStyles.boldLabel);
+                    GUI.color = prevCol;
+                    if (db.TotalLevels != 2000)
+                        EditorGUILayout.LabelField($"• Toplam Seviye {db.TotalLevels} ayarlanmış (GDD beklentisi: 2000).", EditorStyles.miniLabel);
+                    if (db.Worlds.Count != 40)
+                        EditorGUILayout.LabelField($"• Dünya Sayısı {db.Worlds.Count} ayarlanmış (GDD beklentisi: 40).", EditorStyles.miniLabel);
+                    if (db.LevelsPerWorld != 50)
+                        EditorGUILayout.LabelField($"• Dünya Başına Seviye {db.LevelsPerWorld} ayarlanmış (GDD beklentisi: 50).", EditorStyles.miniLabel);
+                }
+                EditorGUILayout.Space(4f);
+            }
 
             _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
 
@@ -121,6 +141,23 @@ namespace RingFlow.Editor
                         }
                     }
 
+                    // ── Visual Color Curve Preview Bar ──
+                    EditorGUILayout.Space(2f);
+                    using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
+                    {
+                        for (int i = 0; i < db.ColorCurve.Count; i++)
+                        {
+                            var pt = db.ColorCurve[i];
+                            var rect = GUILayoutUtility.GetRect(0f, 16f, GUILayout.ExpandWidth(true));
+                            float normalVal = (float)(pt.ColorCount - 2) / 8f; // range 2 to 10
+                            Color col = Color.HSVToRGB(normalVal * 0.7f, 0.8f, 0.8f);
+                            EditorGUI.DrawRect(rect, col);
+                            var textStyle = new GUIStyle(EditorStyles.miniBoldLabel) { alignment = TextAnchor.MiddleCenter };
+                            EditorGUI.LabelField(rect, $"L{pt.LevelThreshold}: {pt.ColorCount}C", textStyle);
+                        }
+                    }
+                    EditorGUILayout.Space(2f);
+
                     using (new EditorGUILayout.HorizontalScope())
                     {
                         if (GUILayout.Button("+ Yeni Nokta Ekle"))
@@ -138,6 +175,40 @@ namespace RingFlow.Editor
             {
                 if (db.Worlds == null)
                     db.Worlds = new System.Collections.Generic.List<WorldConfigData>();
+
+                // Search Filter
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    _worldSearchFilter = EditorGUILayout.TextField("Dünya Ara (İsim / No)", _worldSearchFilter);
+                    if (!string.IsNullOrEmpty(_worldSearchFilter) && GUILayout.Button("Temizle", GUILayout.Width(60f)))
+                    {
+                        _worldSearchFilter = string.Empty;
+                        GUI.FocusControl(null);
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(_worldSearchFilter))
+                {
+                    EditorGUILayout.LabelField("Arama Sonuçları (Seçmek için Tıklayın):", EditorStyles.boldLabel);
+                    using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                    {
+                        for (int i = 0; i < db.Worlds.Count; i++)
+                        {
+                            if (db.Worlds[i].Theme.ToLower().Contains(_worldSearchFilter.ToLower()) || 
+                                (i + 1).ToString() == _worldSearchFilter)
+                            {
+                                if (GUILayout.Button($"Dünya {i + 1}: {db.Worlds[i].Theme}", EditorStyles.miniButton))
+                                {
+                                    _selectedWorldIndex = i;
+                                    _worldSearchFilter = string.Empty;
+                                    GUI.FocusControl(null);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    EditorGUILayout.Space(2f);
+                }
 
                 string[] worldNames = new string[db.Worlds.Count];
                 for (int i = 0; i < db.Worlds.Count; i++)

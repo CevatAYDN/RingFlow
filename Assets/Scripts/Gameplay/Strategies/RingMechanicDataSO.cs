@@ -7,8 +7,6 @@ namespace RingFlow.Gameplay.Strategies
     public struct MechanicEntry
     {
         public WorldMechanicType Type;
-        public string DisplayNameKey;
-        public int FirstAppearanceWorldIndex;
         public Sprite Icon;
         public bool IsMovementRestricting;
         public List<RingType> AffectedRingTypes;
@@ -19,19 +17,45 @@ namespace RingFlow.Gameplay.Strategies
     {
         public List<MechanicEntry> Mechanics = new()
         {
-            new() { Type = WorldMechanicType.None,        DisplayNameKey = "mechanic.none",        FirstAppearanceWorldIndex = 0,  IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Standard } },
-            new() { Type = WorldMechanicType.Mystery,     DisplayNameKey = "mechanic.mystery",     FirstAppearanceWorldIndex = 1,  IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Mystery } },
-            new() { Type = WorldMechanicType.Frozen,      DisplayNameKey = "mechanic.frozen",      FirstAppearanceWorldIndex = 2,  IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Frozen } },
-            new() { Type = WorldMechanicType.LockedPole,  DisplayNameKey = "mechanic.locked_pole", FirstAppearanceWorldIndex = 3,  IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Standard } },
-            new() { Type = WorldMechanicType.Stone,       DisplayNameKey = "mechanic.stone",       FirstAppearanceWorldIndex = 4,  IsMovementRestricting = true,  AffectedRingTypes = new() { RingType.Stone } },
-            new() { Type = WorldMechanicType.Glass,       DisplayNameKey = "mechanic.glass",       FirstAppearanceWorldIndex = 5,  IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Glass } },
-            new() { Type = WorldMechanicType.Rainbow,     DisplayNameKey = "mechanic.rainbow",     FirstAppearanceWorldIndex = 6,  IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Rainbow } },
-            new() { Type = WorldMechanicType.Bomb,        DisplayNameKey = "mechanic.bomb",        FirstAppearanceWorldIndex = 7,  IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Bomb } },
-            new() { Type = WorldMechanicType.Chain,       DisplayNameKey = "mechanic.chain",       FirstAppearanceWorldIndex = 8,  IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Chain } },
-            new() { Type = WorldMechanicType.Magnet,      DisplayNameKey = "mechanic.magnet",      FirstAppearanceWorldIndex = 9,  IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Magnet } },
-            new() { Type = WorldMechanicType.Paint,       DisplayNameKey = "mechanic.paint",       FirstAppearanceWorldIndex = 10, IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Paint } },
-            new() { Type = WorldMechanicType.Ghost,       DisplayNameKey = "mechanic.ghost",       FirstAppearanceWorldIndex = 11, IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Ghost } },
-            new() { Type = WorldMechanicType.Portal,      DisplayNameKey = "mechanic.portal",      FirstAppearanceWorldIndex = 12, IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Standard } }
+            new() { Type = WorldMechanicType.None,        IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Standard } },
+            new() { Type = WorldMechanicType.Mystery,     IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Mystery } },
+            new() { Type = WorldMechanicType.Frozen,      IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Frozen } },
+            new() { Type = WorldMechanicType.LockedPole,  IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Standard } },
+            new() { Type = WorldMechanicType.Stone,       IsMovementRestricting = true,  AffectedRingTypes = new() { RingType.Stone } },
+            new() { Type = WorldMechanicType.Glass,       IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Glass } },
+            new() { Type = WorldMechanicType.Rainbow,     IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Rainbow } },
+            new() { Type = WorldMechanicType.Bomb,        IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Bomb } },
+            new() { Type = WorldMechanicType.Chain,       IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Chain } },
+            new() { Type = WorldMechanicType.Magnet,      IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Magnet } },
+            new() { Type = WorldMechanicType.Paint,       IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Paint } },
+            new() { Type = WorldMechanicType.Ghost,       IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Ghost } },
+            new() { Type = WorldMechanicType.Portal,      IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Standard } }
         };
+
+        public string GetDisplayNameKey(WorldMechanicType type, GameConfigDatabaseSO dbConfig)
+        {
+            if (dbConfig != null && dbConfig.MechanicUnlocks != null)
+            {
+                for (int i = 0; i < dbConfig.MechanicUnlocks.Count; i++)
+                {
+                    if (dbConfig.MechanicUnlocks[i].MechanicType == type)
+                        return dbConfig.MechanicUnlocks[i].DisplayNameKey;
+                }
+            }
+            return $"mechanic.{type.ToString().ToLower()}";
+        }
+
+        public int GetFirstAppearanceWorldIndex(WorldMechanicType type, GameConfigDatabaseSO dbConfig)
+        {
+            if (dbConfig != null && dbConfig.MechanicUnlocks != null)
+            {
+                for (int i = 0; i < dbConfig.MechanicUnlocks.Count; i++)
+                {
+                    if (dbConfig.MechanicUnlocks[i].MechanicType == type)
+                        return dbConfig.MechanicUnlocks[i].FirstAppearanceWorldIndex;
+                }
+            }
+            return 0;
+        }
     }
 }

@@ -86,6 +86,39 @@ namespace RingFlow.Tests
         }
 
         [Test]
+        public void RingMechanicDataSO_ResolvesNameAndFirstAppearanceFromGameConfigDb()
+        {
+            var data = Resources.Load<RingMechanicDataSO>(GameplayAssetKeys.RingMechanicData);
+            var db = Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase);
+            Assert.IsNotNull(data);
+            Assert.IsNotNull(db);
+
+            for (int i = 0; i < data.Mechanics.Count; i++)
+            {
+                var type = data.Mechanics[i].Type;
+                var resolvedName = data.GetDisplayNameKey(type, db);
+                var resolvedWorld = data.GetFirstAppearanceWorldIndex(type, db);
+
+                // Find matching entry in db config database
+                MechanicUnlockEntry? match = null;
+                for (int k = 0; k < db.MechanicUnlocks.Count; k++)
+                {
+                    if (db.MechanicUnlocks[k].MechanicType == type)
+                    {
+                        match = db.MechanicUnlocks[k];
+                        break;
+                    }
+                }
+
+                if (match != null)
+                {
+                    Assert.AreEqual(match.Value.DisplayNameKey, resolvedName, $"Mismatch name key for {type}");
+                    Assert.AreEqual(match.Value.FirstAppearanceWorldIndex, resolvedWorld, $"Mismatch world index for {type}");
+                }
+            }
+        }
+
+        [Test]
         public void ThemeSkinDatabaseSO_LoadsFromResources()
         {
             var db = Resources.Load<ThemeSkinDatabaseSO>(GameplayAssetKeys.ThemeSkinDatabase);

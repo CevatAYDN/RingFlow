@@ -4,11 +4,11 @@ using UnityEngine;
 namespace RingFlow.Editor
 {
     [CustomEditor(typeof(Gameplay.GameFeelConfigSO))]
-    public class GameFeelConfigSOEditor : UnityEditor.Editor
+    public sealed class GameFeelConfigSOEditor : UnityEditor.Editor
     {
         public override void OnInspectorGUI()
         {
-            EditorGUILayout.LabelField("Game Feel & Camera Configuration", RingFlowEditorUtils.HeaderStyle);
+            EditorGUILayout.LabelField("Game Feel & Kamera Yapılandırması", RingFlowEditorUtils.HeaderStyle);
             EditorGUILayout.Space(4f);
 
             serializedObject.Update();
@@ -20,7 +20,7 @@ namespace RingFlow.Editor
                 DrawField("Pole Spacing", "PoleSpacing", "Pole spacing on X axis (units).");
                 DrawField("Pole Y Position", "PoleYPosition", "Pole Y position (height).");
                 DrawField("Pole Scale", "PoleScale", "Pole visual scale.");
-                DrawField("Pole Collider Width Fraction", "PoleColliderWidthFraction", "Collider width as fraction of pole spacing (0-1).");
+                DrawSlider("Pole Collider Width Fraction", "PoleColliderWidthFraction", 0f, 1f, "Collider width as fraction of pole spacing (0-1).");
             }
 
             EditorGUILayout.Space(6f);
@@ -42,12 +42,12 @@ namespace RingFlow.Editor
             RingFlowEditorUtils.SectionTitle("Move Animation");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                DrawField("Move Duration", "MoveDuration", "Base duration for ring move jump (seconds).");
-                DrawField("Move Jump Power", "MoveJumpPower", "Jump arc power.");
-                DrawField("Ring Place Pulse Scale", "RingPlacePulseScale", "Scale-pop multiplier on ring placement (1 = off).");
-                DrawField("Ring Place Pulse Duration", "RingPlacePulseDuration", "Pulse return duration.");
-                DrawField("Selection Lift Duration", "SelectionLiftDuration", "Duration for selection highlight lift.");
-                DrawField("Slow Mode Multiplier", "SlowModeMultiplier", "Slow-mode speed multiplier.");
+                DrawSlider("Move Duration", "MoveDuration", 0.05f, 2.0f, "Base duration for ring move jump (seconds).");
+                DrawSlider("Move Jump Power", "MoveJumpPower", 0f, 3.0f, "Jump arc power.");
+                DrawSlider("Ring Place Pulse Scale", "RingPlacePulseScale", 1.0f, 2.0f, "Scale-pop multiplier on ring placement (1 = off).");
+                DrawSlider("Ring Place Pulse Duration", "RingPlacePulseDuration", 0.05f, 1.0f, "Pulse return duration.");
+                DrawSlider("Selection Lift Duration", "SelectionLiftDuration", 0.05f, 1.0f, "Duration for selection highlight lift.");
+                DrawSlider("Slow Mode Multiplier", "SlowModeMultiplier", 1.0f, 5.0f, "Slow-mode speed multiplier.");
             }
 
             EditorGUILayout.Space(6f);
@@ -70,10 +70,10 @@ namespace RingFlow.Editor
             RingFlowEditorUtils.SectionTitle("Camera Shake");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                DrawField("Shake Error Intensity", "ShakeErrorIntensity", "Shake intensity on error.");
-                DrawField("Shake Error Duration", "ShakeErrorDuration", "Shake duration on error.");
-                DrawField("Shake Explosion Intensity", "ShakeExplosionIntensity", "Shake intensity on bomb explosion.");
-                DrawField("Shake Explosion Duration", "ShakeExplosionDuration", "Shake duration on bomb explosion.");
+                DrawSlider("Shake Error Intensity", "ShakeErrorIntensity", 0f, 0.5f, "Shake intensity on error.");
+                DrawSlider("Shake Error Duration", "ShakeErrorDuration", 0.05f, 1.0f, "Shake duration on error.");
+                DrawSlider("Shake Explosion Intensity", "ShakeExplosionIntensity", 0f, 1.0f, "Shake intensity on bomb explosion.");
+                DrawSlider("Shake Explosion Duration", "ShakeExplosionDuration", 0.05f, 2.0f, "Shake duration on bomb explosion.");
             }
 
             EditorGUILayout.Space(6f);
@@ -88,8 +88,8 @@ namespace RingFlow.Editor
                 DrawField("Error Flash Duration", "ErrorFlashDuration", "Error flash duration.");
                 DrawField("Pole Color Open", "PoleColorOpen", "Open pole standard color.");
                 DrawField("Pole Color Locked", "PoleColorLocked", "Locked pole standard color.");
-                DrawField("Pole Metallic", "PoleMetallic", "Pole material metallic value.");
-                DrawField("Pole Smoothness", "PoleSmoothness", "Pole material smoothness value.");
+                DrawSlider("Pole Metallic", "PoleMetallic", 0f, 1f, "Pole material metallic value.");
+                DrawSlider("Pole Smoothness", "PoleSmoothness", 0f, 1f, "Pole material smoothness value.");
             }
 
             EditorGUILayout.Space(6f);
@@ -98,8 +98,8 @@ namespace RingFlow.Editor
             RingFlowEditorUtils.SectionTitle("Ring Materials");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                DrawField("Ring Metallic", "RingMetallic", "Ring material metallic value.");
-                DrawField("Ring Smoothness", "RingSmoothness", "Ring material smoothness value.");
+                DrawSlider("Ring Metallic", "RingMetallic", 0f, 1f, "Ring material metallic value.");
+                DrawSlider("Ring Smoothness", "RingSmoothness", 0f, 1f, "Ring material smoothness value.");
             }
 
             EditorGUILayout.Space(6f);
@@ -109,8 +109,8 @@ namespace RingFlow.Editor
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 DrawField("Glow Color", "SelectionGlowColor", "Glow point light color.");
-                DrawField("Glow Intensity", "SelectionGlowIntensity", "Glow point light intensity.");
-                DrawField("Glow Range", "SelectionGlowRange", "Glow point light range.");
+                DrawSlider("Glow Intensity", "SelectionGlowIntensity", 0f, 5f, "Glow point light intensity.");
+                DrawSlider("Glow Range", "SelectionGlowRange", 0.5f, 10f, "Glow point light range.");
                 DrawField("Emission Color", "SelectionEmissionColor", "Selected ring emission color.");
             }
 
@@ -133,9 +133,9 @@ namespace RingFlow.Editor
             RingFlowEditorUtils.SectionTitle("Rainbow Cycle");
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                DrawField("Rainbow Hue Speed", "RainbowHueSpeed", "Hue rotation speed multiplier.");
-                DrawField("Rainbow Saturation", "RainbowSaturation", "Rainbow saturation.");
-                DrawField("Rainbow Value", "RainbowValue", "Rainbow value/brightness.");
+                DrawSlider("Rainbow Hue Speed", "RainbowHueSpeed", 0.1f, 10f, "Hue rotation speed multiplier.");
+                DrawSlider("Rainbow Saturation", "RainbowSaturation", 0f, 1f, "Rainbow saturation.");
+                DrawSlider("Rainbow Value", "RainbowValue", 0f, 1f, "Rainbow value/brightness.");
             }
 
             EditorGUILayout.Space(6f);
@@ -177,6 +177,18 @@ namespace RingFlow.Editor
             {
                 EditorGUILayout.LabelField(new GUIContent(label, tooltip), GUILayout.Width(200f));
                 EditorGUILayout.PropertyField(prop, GUIContent.none);
+            }
+        }
+
+        private void DrawSlider(string label, string propertyName, float min, float max, string tooltip)
+        {
+            var prop = serializedObject.FindProperty(propertyName);
+            if (prop == null) return;
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField(new GUIContent(label, tooltip), GUILayout.Width(200f));
+                EditorGUILayout.Slider(prop, min, max, GUIContent.none);
             }
         }
     }

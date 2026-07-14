@@ -28,7 +28,26 @@ namespace RingFlow.Editor
 
         private Vector2 _scroll;
         private int _selectedTab;
-        private readonly string[] _tabs = { "Ana Sayfa", "Seviyeler", "Arayüz Stüdyosu", "Ayarlar & Araçlar", "Veri" };
+        private readonly string[] _tabs = { "Ana Sayfa", "Seviye İşlemleri", "Arayüz Stüdyosu", "Veri & GDD Denetimi", "Ayarlar & Araçlar" };
+
+        private int _selectedConfigSubTab = 0;
+        private readonly string[] _configSubTabs = {
+            "Oyun Modu & Çalışma",
+            "Reklam Test Cihazı",
+            "Genel Ayarlar",
+            "Analiz & Sinyaller",
+            "Oyun Hissiyatı (Game Feel)",
+            "Oyun Veritabanı (Database)",
+            "Halka Mekanikleri",
+            "Ses Yapılandırması",
+            "Arayüz Teması",
+            "Mağaza Kataloğu",
+            "Tema/Skin Veritabanı",
+            "Yerelleştirme Ayarları"
+        };
+
+        private UnityEditor.Editor _cachedAssetEditor;
+        private ScriptableObject _cachedAssetObj;
 
         private double _lastValidationUpdateTime;
         private string _cachedSceneName;
@@ -153,6 +172,12 @@ namespace RingFlow.Editor
             EditorSceneManager.sceneOpened -= OnAnySceneChanged;
             EditorSceneManager.sceneClosed -= OnAnySceneClosed;
             EditorSceneManager.newSceneCreated -= OnNewSceneCreated;
+
+            if (_cachedAssetEditor != null)
+            {
+                DestroyImmediate(_cachedAssetEditor);
+                _cachedAssetEditor = null;
+            }
         }
 
         private void RefreshValidationCache()
@@ -174,38 +199,117 @@ namespace RingFlow.Editor
         private void OnGUI()
         {
             RefreshValidationCache();
-            DrawHeader("RING FLOW KONTROL PANELİ");
-            DrawToolbar();
-            _scroll = EditorGUILayout.BeginScrollView(_scroll);
 
-            switch (_selectedTab)
+            using (new EditorGUILayout.HorizontalScope())
             {
-                case 0: DrawHomeTab(); break;
-                case 1: DrawLevelsTab(); break;
-                case 2: _uiStudio.DrawTab(); break;
-                case 3: DrawToolsTab(); break;
-                case 4: DrawDataTab(); break;
-            }
+                // ── Left Sidebar Navigation ──
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.Width(180f), GUILayout.ExpandHeight(true)))
+                {
+                    var prevColor = GUI.color;
+                    GUI.color = EditorPaths.EditorColors.Info;
+                    EditorGUILayout.LabelField("RINGFLOW", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField("Studio Dashboard", EditorStyles.miniLabel);
+                    GUI.color = prevColor;
 
-            EditorGUILayout.EndScrollView();
-            DrawStatusBar();
+                    EditorGUILayout.Space(8f);
+
+                    for (int i = 0; i < _tabs.Length; i++)
+                    {
+                        var prevBg = GUI.backgroundColor;
+                        if (_selectedTab == i)
+                        {
+                            GUI.backgroundColor = EditorPaths.EditorColors.HeaderAccent;
+                        }
+
+                        if (GUILayout.Button(_tabs[i], GUILayout.Height(32f)))
+                        {
+                            _selectedTab = i;
+                            EditorPrefs.SetInt(EditorPrefsKeys.SelectedTab, _selectedTab);
+                            if (_cachedAssetEditor != null)
+                            {
+                                DestroyImmediate(_cachedAssetEditor);
+                                _cachedAssetEditor = null;
+                                _cachedAssetObj = null;
+                            }
+                            GUI.FocusControl(null);
+                        }
+                        GUI.backgroundColor = prevBg;
+                        EditorGUILayout.Space(2f);
+                    }
+
+                    GUILayout.FlexibleSpace();
+
+                    // Sidebar logs overview
+                    DrawLogSummarySidebar();
+                }
+
+                // ── Vertical Line ──
+                GUILayout.Box("", GUILayout.Width(2f), GUILayout.ExpandHeight(true));
+
+                // ── Right Main Area ──
+                using (new EditorGUILayout.VerticalScope(GUILayout.ExpandWidth(true)))
+                {
+                    _scroll = EditorGUILayout.BeginScrollView(_scroll);
+
+                    // Show active tab header
+                    EditorGUILayout.LabelField(_tabs[_selectedTab].ToUpper(), RingFlowEditorUtils.HeaderStyle);
+                    EditorGUILayout.Space(4f);
+
+                    switch (_selectedTab)
+                    {
+                        case 0: DrawHomeTab(); break;
+                        case 1: DrawLevelsTab(); break;
+                        case 2: _uiStudio.DrawTab(); break;
+                        case 3: DrawDataTab(); break;
+                        case 4: DrawToolsTab(); break;
+                    }
+
+                    EditorGUILayout.EndScrollView();
+                    DrawStatusBar();
+                }
+            }
         }
 
-        private void DrawToolbar()
+        private void DrawLogSummarySidebar()
         {
-            var newTab = GUILayout.Toolbar(_selectedTab, _tabs, GUILayout.Height(EditorPaths.EditorSizes.ToolbarHeight));
-            if (newTab != _selectedTab)
-            {
-                _selectedTab = newTab;
-                EditorPrefs.SetInt(EditorPrefsKeys.SelectedTab, _selectedTab);
-            }
-            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionSpacing);
-        }
+            int errCount = LogMonitor.ErrorCount;
+            int warnCount = LogMonitor.WarningCount;
 
-        private static void DrawHeader(string title)
-        {
-            GUILayout.Box(title, RingFlowEditorUtils.HeaderStyle, GUILayout.ExpandWidth(true), GUILayout.Height(EditorPaths.EditorSizes.HeaderHeight));
-            EditorGUILayout.Space(2f);
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                EditorGUILayout.LabelField("Log Özeti", EditorStyles.boldLabel);
+                
+                var prevColor = GUI.color;
+                if (errCount > 0)
+                {
+                    GUI.color = EditorPaths.EditorColors.Error;
+                    EditorGUILayout.LabelField($"✘ Hatalar: {errCount}", EditorStyles.boldLabel);
+                }
+                else
+                {
+                    EditorGUILayout.LabelField("✔ Hata Yok", EditorStyles.miniLabel);
+                }
+
+                if (warnCount > 0)
+                {
+                    GUI.color = EditorPaths.EditorColors.Warning;
+                    EditorGUILayout.LabelField($"⚠ Uyarılar: {warnCount}", EditorStyles.boldLabel);
+                }
+                else
+                {
+                    EditorGUILayout.LabelField("✔ Uyarı Yok", EditorStyles.miniLabel);
+                }
+                GUI.color = prevColor;
+
+                EditorGUILayout.Space(2f);
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("Konsol", EditorStyles.miniButton))
+                        EditorApplication.ExecuteMenuItem("Window/General/Console");
+                    if (GUILayout.Button("Temizle", EditorStyles.miniButton))
+                        LogMonitor.Reset();
+                }
+            }
         }
 
         // ──────────────────────────────────────────────────────────────
@@ -323,25 +427,50 @@ namespace RingFlow.Editor
             {
                 EditorGUILayout.LabelField("Hızlı İşlemler", EditorStyles.boldLabel);
                 EditorGUILayout.LabelField("1) Üret → 2) Doğrula → 3) Sahneye Uygula", EditorStyles.miniLabel);
-                EditorGUILayout.Space(2f);
+                EditorGUILayout.Space(4f);
 
-                using (new EditorGUILayout.HorizontalScope())
+                float rightWidth = position.width - 200f;
+                int cols = 3;
+                if (rightWidth < 420f) cols = 1;
+                else if (rightWidth < 600f) cols = 2;
+
+                var cards = new System.Func<bool>[]
                 {
-                    if (ActionCard("Seviyeler", "Üret & Kur", EditorPaths.EditorColors.CardLevels,
-                        "Seviye üretici + veritabanı + sahne tahtası sekmesine atlar."))
-                        _selectedTab = 1;
-                    if (ActionCard("Arayüz", "Ekran & Sinyal", EditorPaths.EditorColors.CardInterface,
-                        "UI Studio sekmesine atlar: ekranlar, sinyaller, JSON dışa aktarımı."))
-                        _selectedTab = 2;
-                    if (ActionCard("Araçlar", "Çalışma & Ayar", EditorPaths.EditorColors.CardTools,
-                        "Runtime, reklam test, ayarlar, tanılama, game-feel sekmesine atlar."))
-                        _selectedTab = 3;
-                    if (ActionCard("Hızlı Üret", "Seçili Seviye", EditorPaths.EditorColors.CardQuickGen,
-                        "Seviye Üretici sekmesindeki parametrelerle tek seviye üretir."))
-                        _generator.GenerateFromDashboard();
-                    if (ActionCard("Hızlı Kur", "Sahne Tahtası", EditorPaths.EditorColors.CardQuickSetup,
-                        "Üretilen seviyeyi (veya aktif oyunu) sahnede tahta olarak kurar."))
-                        _visualBuilder.BuildFromDashboard();
+                    () => ActionCard("Seviyeler", "Üret & Kur", EditorPaths.EditorColors.CardLevels, "Seviye üretici + veritabanı + sahne tahtası sekmesine atlar."),
+                    () => ActionCard("Arayüz", "Ekran & Sinyal", EditorPaths.EditorColors.CardInterface, "UI Studio sekmesine atlar: ekranlar, sinyaller, JSON dışa aktarımı."),
+                    () => ActionCard("Araçlar", "Çalışma & Ayar", EditorPaths.EditorColors.CardTools, "Runtime, reklam test, ayarlar, tanılama, game-feel sekmesine atlar."),
+                    () => ActionCard("Hızlı Üret", "Seçili Seviye", EditorPaths.EditorColors.CardQuickGen, "Seviye Üretici sekmesindeki parametrelerle tek seviye üretir."),
+                    () => ActionCard("Hızlı Kur", "Sahne Tahtası", EditorPaths.EditorColors.CardQuickSetup, "Üretilen seviyeyi (veya aktif oyunu) sahnede tahta olarak kurar.")
+                };
+
+                int index = 0;
+                while (index < cards.Length)
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        for (int c = 0; c < cols && index < cards.Length; c++)
+                        {
+                            if (cards[index]())
+                            {
+                                // handle click actions
+                                if (index == 0) _selectedTab = 1;
+                                else if (index == 1) _selectedTab = 2;
+                                else if (index == 2) _selectedTab = 4; // Tools tab is 4
+                                else if (index == 3) _generator.GenerateFromDashboard();
+                                else if (index == 4) _visualBuilder.BuildFromDashboard();
+
+                                if (index < 3 && _cachedAssetEditor != null)
+                                {
+                                    DestroyImmediate(_cachedAssetEditor);
+                                    _cachedAssetEditor = null;
+                                    _cachedAssetObj = null;
+                                }
+                            }
+                            index++;
+                            if (c < cols - 1) EditorGUILayout.Space(4f);
+                        }
+                    }
+                    if (index < cards.Length) EditorGUILayout.Space(4f);
                 }
             }
         }
@@ -353,15 +482,19 @@ namespace RingFlow.Editor
 
             var content = new GUIContent(title, tooltip);
             bool clicked = GUILayout.Button(content, RingFlowEditorUtils.CompactBoldButton,
-                GUILayout.MinWidth(120f), GUILayout.ExpandWidth(true));
+                GUILayout.MinHeight(44f), GUILayout.ExpandWidth(true));
             GUI.backgroundColor = defaultBg;
 
             var r = GUILayoutUtility.GetLastRect();
             r.x += 2; r.y += 2; r.width -= 4; r.height -= 4;
-            EditorGUI.LabelField(
-                r, subtitle,
-                new GUIStyle(RingFlowEditorUtils.CenteredMiniLabel)
-                    { alignment = TextAnchor.LowerCenter, fontSize = 9 });
+            
+            var subStyle = new GUIStyle(RingFlowEditorUtils.CenteredMiniLabel)
+            {
+                alignment = TextAnchor.LowerCenter,
+                fontSize = 9,
+                normal = { textColor = Color.white }
+            };
+            EditorGUI.LabelField(r, subtitle, subStyle);
 
             return clicked;
         }
@@ -410,50 +543,125 @@ namespace RingFlow.Editor
 
         private void DrawToolsTab()
         {
-            DrawFoldableSection(EditorPrefsKeys.FoldRuntime, "PlayMode Çalışma Modları", _runtime.OnGUI);
-            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
-            DrawFoldableSection(EditorPrefsKeys.FoldAdTester, "Reklam ve Ödüllendirme Test Cihazı", _adTester.OnGUI);
-            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
-            DrawFoldableSection(EditorPrefsKeys.FoldSettings, "Genel Ayarlar", _settings.OnGUI);
-            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
-            DrawFoldableSection(EditorPrefsKeys.FoldDiagnostics, "Analiz ve Sinyal İnceleyici", _diagnostics.OnGUI);
-            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
-            DrawFoldableSection(EditorPrefsKeys.FoldGameFeel, "Oyun Hissiyatı (Game Feel) & Kamera", _gameFeel.OnGUI);
-            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
-            DrawFoldableSection(EditorPrefsKeys.FoldConfigAssets, "Yapılandırma Varlıkları (Config Assets)", _configSection.OnGUI);
-            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
-            DrawFoldableSection(EditorPrefsKeys.FoldStoreCatalog, "Mağaza Kataloğu (StoreCatalog)", () =>
+            using (new EditorGUILayout.HorizontalScope())
             {
-                var obj = Resources.Load<RingFlow.Gameplay.Economy.StoreCatalogSO>(EditorPaths.StoreCatalogKey);
-                if (obj == null) { EditorGUILayout.HelpBox("StoreCatalog.asset bulunamadı! Önce 'Config Assets' sekmesinden oluşturun.", MessageType.Warning); return; }
-                var editor = UnityEditor.Editor.CreateEditor(obj);
-                editor.OnInspectorGUI();
-            });
-            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
-            DrawFoldableSection(EditorPrefsKeys.FoldLocalization, "Yerelleştirme (LocalizationConfig)", () =>
+                // Left Sidebar
+                using (new EditorGUILayout.VerticalScope(GUILayout.Width(200f)))
+                {
+                    EditorGUILayout.LabelField("Kategoriler / Configler", EditorStyles.boldLabel);
+                    EditorGUILayout.Space(2f);
+
+                    for (int i = 0; i < _configSubTabs.Length; i++)
+                    {
+                        var prevBg = GUI.backgroundColor;
+                        if (_selectedConfigSubTab == i)
+                        {
+                            GUI.backgroundColor = EditorPaths.EditorColors.HeaderAccent;
+                        }
+
+                        if (GUILayout.Button(_configSubTabs[i], GUILayout.Height(28f)))
+                        {
+                            _selectedConfigSubTab = i;
+                            if (_cachedAssetEditor != null)
+                            {
+                                DestroyImmediate(_cachedAssetEditor);
+                                _cachedAssetEditor = null;
+                                _cachedAssetObj = null;
+                            }
+                            GUI.FocusControl(null);
+                        }
+                        GUI.backgroundColor = prevBg;
+                    }
+                }
+
+                // Divider line
+                GUILayout.Box("", GUILayout.Width(2f), GUILayout.ExpandHeight(true));
+
+                // Right Panel Content
+                using (new EditorGUILayout.VerticalScope(GUILayout.ExpandWidth(true)))
+                {
+                    DrawActiveConfigSubTab();
+                }
+            }
+        }
+
+        private void DrawActiveConfigSubTab()
+        {
+            switch (_selectedConfigSubTab)
             {
-                var obj = Resources.Load<RingFlow.Gameplay.Localization.LocalizationConfigSO>(EditorPaths.LocalizationConfigKey);
-                if (obj == null) { EditorGUILayout.HelpBox("LocalizationConfig.asset bulunamadı! Önce 'Config Assets' sekmesinden oluşturun.", MessageType.Warning); return; }
-                var editor = UnityEditor.Editor.CreateEditor(obj);
-                editor.OnInspectorGUI();
-            });
-            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
-            DrawFoldableSection(EditorPrefsKeys.FoldRingMechanics, "Halka Mekanik Verisi (RingMechanicData)", () =>
+                case 0:
+                    EditorGUILayout.LabelField("PlayMode Çalışma Modları", EditorStyles.boldLabel);
+                    EditorGUILayout.Space(4f);
+                    _runtime.OnGUI();
+                    break;
+                case 1:
+                    EditorGUILayout.LabelField("Reklam ve Ödüllendirme Test Cihazı", EditorStyles.boldLabel);
+                    EditorGUILayout.Space(4f);
+                    _adTester.OnGUI();
+                    break;
+                case 2:
+                    EditorGUILayout.LabelField("Genel Ayarlar", EditorStyles.boldLabel);
+                    EditorGUILayout.Space(4f);
+                    _settings.OnGUI();
+                    break;
+                case 3:
+                    EditorGUILayout.LabelField("Analiz ve Sinyal İnceleyici", EditorStyles.boldLabel);
+                    EditorGUILayout.Space(4f);
+                    _diagnostics.OnGUI();
+                    break;
+                case 4:
+                    DrawConfigAssetInspector(EditorPaths.GameFeelConfigKey, "Oyun Hissiyatı (Game Feel)");
+                    break;
+                case 5:
+                    DrawConfigAssetInspector(EditorPaths.GameConfigDatabaseKey, "Oyun Veritabanı (GameConfigDatabase)");
+                    break;
+                case 6:
+                    DrawConfigAssetInspector(EditorPaths.RingMechanicDataKey, "Halka Mekanik Verisi (RingMechanicData)");
+                    break;
+                case 7:
+                    DrawConfigAssetInspector(EditorPaths.AudioConfigKey, "Ses Yapılandırması (AudioConfig)");
+                    break;
+                case 8:
+                    DrawConfigAssetInspector(EditorPaths.UIThemeConfigKey, "Arayüz Teması (UIThemeConfig)");
+                    break;
+                case 9:
+                    DrawConfigAssetInspector(EditorPaths.StoreCatalogKey, "Mağaza Kataloğu (StoreCatalog)");
+                    break;
+                case 10:
+                    DrawConfigAssetInspector(EditorPaths.ThemeSkinDatabaseKey, "Tema/Skin Veritabanı (ThemeSkinDatabase)");
+                    break;
+                case 11:
+                    DrawConfigAssetInspector(EditorPaths.LocalizationConfigKey, "Yerelleştirme (LocalizationConfig)");
+                    break;
+            }
+        }
+
+        private void DrawConfigAssetInspector(string key, string title)
+        {
+            EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+            EditorGUILayout.Space(4f);
+
+            var obj = Resources.Load<ScriptableObject>(key);
+            if (obj == null)
             {
-                var obj = Resources.Load<RingFlow.Gameplay.Strategies.RingMechanicDataSO>(EditorPaths.RingMechanicDataKey);
-                if (obj == null) { EditorGUILayout.HelpBox("RingMechanicData.asset bulunamadı! Önce 'Config Assets' sekmesinden oluşturun.", MessageType.Warning); return; }
-                var editor = UnityEditor.Editor.CreateEditor(obj);
-                editor.OnInspectorGUI();
-            });
-            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
-            DrawFoldableSection(EditorPrefsKeys.FoldThemeSkin, "Tema/Skin Veritabanı (ThemeSkinDatabase)", () =>
+                EditorGUILayout.HelpBox($"{title} bulunamadı! Önce proje klasöründe oluşturulduğundan emin olun.", MessageType.Warning);
+                return;
+            }
+
+            if (_cachedAssetObj != obj)
             {
-                var obj = Resources.Load<RingFlow.Gameplay.Views.ThemeSkinDatabaseSO>(EditorPaths.ThemeSkinDatabaseKey);
-                if (obj == null) { EditorGUILayout.HelpBox("ThemeSkinDatabase.asset bulunamadı! Önce 'Config Assets' sekmesinden oluşturun.", MessageType.Warning); return; }
-                var editor = UnityEditor.Editor.CreateEditor(obj);
-                editor.OnInspectorGUI();
-            });
-            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionGap);
+                if (_cachedAssetEditor != null)
+                {
+                    DestroyImmediate(_cachedAssetEditor);
+                }
+                _cachedAssetObj = obj;
+                _cachedAssetEditor = UnityEditor.Editor.CreateEditor(obj);
+            }
+
+            if (_cachedAssetEditor != null)
+            {
+                _cachedAssetEditor.OnInspectorGUI();
+            }
         }
 
         // ──────────────────────────────────────────────────────────────
