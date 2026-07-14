@@ -17,6 +17,7 @@ namespace RingFlow.Gameplay.UI
         public Text TitleText { get; private set; }
         public Text LevelText { get; private set; }
         private GameObject _nextBtn, _quitBtn;
+        private ILocalizationService _loc;
         [Inject] private IAudioService _audio;
 
         private void Awake()
@@ -123,11 +124,18 @@ namespace RingFlow.Gameplay.UI
         {
             if (MovesText != null)
             {
-                MovesText.text = $"Moves: {moves}" + (targetMoves > 0 ? $" / {targetMoves}" : "");
+                string format = _loc != null
+                    ? _loc.GetString("win_moves_format", "Moves: {0}{1}")
+                    : "Moves: {0}{1}";
+                string targetPart = targetMoves > 0 ? $" / {targetMoves}" : string.Empty;
+                MovesText.text = string.Format(format, moves, targetPart);
             }
             if (RewardText != null)
             {
-                RewardText.text = $"+{coins} Coins   +{xp} XP";
+                string format = _loc != null
+                    ? _loc.GetString("win_reward_format", "+{0} Coins   +{1} XP")
+                    : "+{0} Coins   +{1} XP";
+                RewardText.text = string.Format(format, coins, xp);
             }
 
             for (int i = 0; i < StarIcons.Length; i++)
@@ -166,6 +174,7 @@ namespace RingFlow.Gameplay.UI
         public void Localize(ILocalizationService loc)
         {
             if (loc == null) return;
+            _loc = loc;
 
             if (TitleText != null)
             {
