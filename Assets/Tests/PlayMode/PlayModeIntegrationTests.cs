@@ -436,7 +436,9 @@ namespace RingFlow.Tests
 
     public class MockAdService : IAdService
     {
+        #pragma warning disable 0067
         public event Action<string, double, string> OnImpressionRecorded;
+        #pragma warning restore 0067
         public void SetNetworkAdapter(IAdNetworkAdapter adapter) { }
         public void SetInterstitialCooldown(float seconds) { }
         public bool IsInterstitialAvailable(string placement) => false;

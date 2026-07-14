@@ -254,12 +254,13 @@ namespace RingFlow.Tests
         [Test]
         public void WinReward_From_CreatesCorrectStruct()
         {
-            var reward = WinReward.From(moves: 10, targetMoves: 12, coins: 50, xp: 100, stars: 3);
+            var reward = WinReward.From(moves: 10, targetMoves: 12, coins: 50, xp: 100, stars: 3, level: 7);
             Assert.AreEqual(10, reward.Moves);
             Assert.AreEqual(12, reward.TargetMoves);
             Assert.AreEqual(50, reward.Coins);
             Assert.AreEqual(100, reward.Xp);
             Assert.AreEqual(3, reward.Stars);
+            Assert.AreEqual(7, reward.Level);
         }
 
         // ── UndoStack Tests ──────────────────────────────────────────────────

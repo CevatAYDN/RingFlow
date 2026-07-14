@@ -64,19 +64,19 @@ MonoBehaviour:
   ColorCurve:
   - LevelThreshold: 1
     ColorCount: 3
-  - LevelThreshold: 20
+  - LevelThreshold: 6
     ColorCount: 4
-  - LevelThreshold: 80
+  - LevelThreshold: 16
     ColorCount: 5
-  - LevelThreshold: 150
+  - LevelThreshold: 31
     ColorCount: 6
-  - LevelThreshold: 300
+  - LevelThreshold: 61
     ColorCount: 7
-  - LevelThreshold: 500
+  - LevelThreshold: 121
     ColorCount: 8
-  - LevelThreshold: 800
+  - LevelThreshold: 251
     ColorCount: 9
-  - LevelThreshold: 1200
+  - LevelThreshold: 501
     ColorCount: 10
   LevelThemes:
   - StartLevel: 1
@@ -101,7 +101,7 @@ MonoBehaviour:
     ForcedMechanics: 04000000
   - StartLevel: 26
     EndLevel: 30
-    ColorCount: 6
+    ColorCount: 5
     ForcedMechanics: 05000000
   - StartLevel: 31
     EndLevel: 35
@@ -113,931 +113,931 @@ MonoBehaviour:
     ForcedMechanics: 07000000
   - StartLevel: 41
     EndLevel: 45
-    ColorCount: 7
+    ColorCount: 6
     ForcedMechanics: 08000000
   - StartLevel: 46
     EndLevel: 50
-    ColorCount: 7
+    ColorCount: 6
     ForcedMechanics: 09000000
   - StartLevel: 51
     EndLevel: 55
-    ColorCount: 4
+    ColorCount: 6
     ForcedMechanics: 0a000000
   - StartLevel: 56
     EndLevel: 60
-    ColorCount: 4
+    ColorCount: 6
     ForcedMechanics: 0b000000
   - StartLevel: 61
     EndLevel: 65
-    ColorCount: 4
+    ColorCount: 7
     ForcedMechanics: 01000000
   - StartLevel: 66
     EndLevel: 70
-    ColorCount: 4
+    ColorCount: 7
     ForcedMechanics: 02000000
   - StartLevel: 71
     EndLevel: 75
-    ColorCount: 4
+    ColorCount: 7
     ForcedMechanics: 03000000
   - StartLevel: 76
     EndLevel: 80
-    ColorCount: 4
+    ColorCount: 7
     ForcedMechanics: 04000000
   - StartLevel: 81
     EndLevel: 85
-    ColorCount: 5
+    ColorCount: 7
     ForcedMechanics: 05000000
   - StartLevel: 86
     EndLevel: 90
-    ColorCount: 5
+    ColorCount: 7
     ForcedMechanics: 06000000
   - StartLevel: 91
     EndLevel: 95
-    ColorCount: 5
+    ColorCount: 7
     ForcedMechanics: 07000000
   - StartLevel: 96
     EndLevel: 100
-    ColorCount: 5
+    ColorCount: 7
     ForcedMechanics: 08000000
   - StartLevel: 101
     EndLevel: 105
-    ColorCount: 5
+    ColorCount: 7
     ForcedMechanics: 09000000
   - StartLevel: 106
     EndLevel: 110
-    ColorCount: 5
+    ColorCount: 7
     ForcedMechanics: 0a000000
   - StartLevel: 111
     EndLevel: 115
-    ColorCount: 5
+    ColorCount: 7
     ForcedMechanics: 0b000000
   - StartLevel: 116
     EndLevel: 120
-    ColorCount: 5
+    ColorCount: 7
     ForcedMechanics: 0c000000
   - StartLevel: 121
     EndLevel: 125
-    ColorCount: 5
+    ColorCount: 8
     ForcedMechanics: 0d000000
   - StartLevel: 126
     EndLevel: 130
-    ColorCount: 5
+    ColorCount: 8
     ForcedMechanics: 0e000000
   - StartLevel: 131
     EndLevel: 135
-    ColorCount: 5
+    ColorCount: 8
     ForcedMechanics: 0e000000
   - StartLevel: 136
     EndLevel: 140
-    ColorCount: 5
+    ColorCount: 8
     ForcedMechanics: 01000000
   - StartLevel: 141
     EndLevel: 145
-    ColorCount: 5
+    ColorCount: 8
     ForcedMechanics: 02000000
   - StartLevel: 146
     EndLevel: 150
-    ColorCount: 5
+    ColorCount: 8
     ForcedMechanics: 03000000
   - StartLevel: 151
     EndLevel: 155
-    ColorCount: 6
+    ColorCount: 8
     ForcedMechanics: 04000000
   - StartLevel: 156
     EndLevel: 160
-    ColorCount: 6
+    ColorCount: 8
     ForcedMechanics: 05000000
   - StartLevel: 161
     EndLevel: 165
-    ColorCount: 6
+    ColorCount: 8
     ForcedMechanics: 06000000
   - StartLevel: 166
     EndLevel: 170
-    ColorCount: 6
+    ColorCount: 8
     ForcedMechanics: 07000000
   - StartLevel: 171
     EndLevel: 175
-    ColorCount: 6
+    ColorCount: 8
     ForcedMechanics: 08000000
   - StartLevel: 176
     EndLevel: 180
-    ColorCount: 6
+    ColorCount: 8
     ForcedMechanics: 09000000
   - StartLevel: 181
     EndLevel: 185
-    ColorCount: 6
+    ColorCount: 8
     ForcedMechanics: 0a000000
   - StartLevel: 186
     EndLevel: 190
-    ColorCount: 6
+    ColorCount: 8
     ForcedMechanics: 0b000000
   - StartLevel: 191
     EndLevel: 195
-    ColorCount: 6
+    ColorCount: 8
     ForcedMechanics: 0c000000
   - StartLevel: 196
     EndLevel: 200
-    ColorCount: 6
+    ColorCount: 8
     ForcedMechanics: 0d000000
   - StartLevel: 201
     EndLevel: 205
-    ColorCount: 6
+    ColorCount: 8
     ForcedMechanics: 0e000000
   - StartLevel: 206
     EndLevel: 210
-    ColorCount: 6
+    ColorCount: 8
     ForcedMechanics: 0e000000
   - StartLevel: 211
     EndLevel: 215
-    ColorCount: 6
+    ColorCount: 8
     ForcedMechanics: 01000000
   - StartLevel: 216
     EndLevel: 220
-    ColorCount: 6
+    ColorCount: 8
     ForcedMechanics: 02000000
   - StartLevel: 221
     EndLevel: 225
-    ColorCount: 6
+    ColorCount: 8
     ForcedMechanics: 03000000
   - StartLevel: 226
     EndLevel: 230
-    ColorCount: 6
+    ColorCount: 8
     ForcedMechanics: 04000000
   - StartLevel: 231
     EndLevel: 235
-    ColorCount: 6
+    ColorCount: 8
     ForcedMechanics: 05000000
   - StartLevel: 236
     EndLevel: 240
-    ColorCount: 6
+    ColorCount: 8
     ForcedMechanics: 06000000
   - StartLevel: 241
     EndLevel: 245
-    ColorCount: 6
+    ColorCount: 8
     ForcedMechanics: 07000000
   - StartLevel: 246
     EndLevel: 250
-    ColorCount: 6
+    ColorCount: 8
     ForcedMechanics: 08000000
   - StartLevel: 251
     EndLevel: 255
-    ColorCount: 6
+    ColorCount: 9
     ForcedMechanics: 09000000
   - StartLevel: 256
     EndLevel: 260
-    ColorCount: 6
+    ColorCount: 9
     ForcedMechanics: 0a000000
   - StartLevel: 261
     EndLevel: 265
-    ColorCount: 6
+    ColorCount: 9
     ForcedMechanics: 0b000000
   - StartLevel: 266
     EndLevel: 270
-    ColorCount: 6
+    ColorCount: 9
     ForcedMechanics: 0c000000
   - StartLevel: 271
     EndLevel: 275
-    ColorCount: 6
+    ColorCount: 9
     ForcedMechanics: 0d000000
   - StartLevel: 276
     EndLevel: 280
-    ColorCount: 6
+    ColorCount: 9
     ForcedMechanics: 0e000000
   - StartLevel: 281
     EndLevel: 285
-    ColorCount: 6
+    ColorCount: 9
     ForcedMechanics: 0e000000
   - StartLevel: 286
     EndLevel: 290
-    ColorCount: 6
+    ColorCount: 9
     ForcedMechanics: 01000000
   - StartLevel: 291
     EndLevel: 295
-    ColorCount: 6
+    ColorCount: 9
     ForcedMechanics: 02000000
   - StartLevel: 296
     EndLevel: 300
-    ColorCount: 6
+    ColorCount: 9
     ForcedMechanics: 03000000
   - StartLevel: 301
     EndLevel: 305
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 04000000
   - StartLevel: 306
     EndLevel: 310
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 05000000
   - StartLevel: 311
     EndLevel: 315
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 06000000
   - StartLevel: 316
     EndLevel: 320
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 07000000
   - StartLevel: 321
     EndLevel: 325
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 08000000
   - StartLevel: 326
     EndLevel: 330
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 09000000
   - StartLevel: 331
     EndLevel: 335
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 0a000000
   - StartLevel: 336
     EndLevel: 340
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 0b000000
   - StartLevel: 341
     EndLevel: 345
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 0c000000
   - StartLevel: 346
     EndLevel: 350
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 0d000000
   - StartLevel: 351
     EndLevel: 355
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 0e000000
   - StartLevel: 356
     EndLevel: 360
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 0e000000
   - StartLevel: 361
     EndLevel: 365
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 01000000
   - StartLevel: 366
     EndLevel: 370
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 02000000
   - StartLevel: 371
     EndLevel: 375
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 03000000
   - StartLevel: 376
     EndLevel: 380
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 04000000
   - StartLevel: 381
     EndLevel: 385
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 05000000
   - StartLevel: 386
     EndLevel: 390
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 06000000
   - StartLevel: 391
     EndLevel: 395
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 07000000
   - StartLevel: 396
     EndLevel: 400
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 08000000
   - StartLevel: 401
     EndLevel: 405
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 09000000
   - StartLevel: 406
     EndLevel: 410
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 0a000000
   - StartLevel: 411
     EndLevel: 415
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 0b000000
   - StartLevel: 416
     EndLevel: 420
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 0c000000
   - StartLevel: 421
     EndLevel: 425
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 0d000000
   - StartLevel: 426
     EndLevel: 430
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 0e000000
   - StartLevel: 431
     EndLevel: 435
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 0e000000
   - StartLevel: 436
     EndLevel: 440
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 01000000
   - StartLevel: 441
     EndLevel: 445
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 02000000
   - StartLevel: 446
     EndLevel: 450
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 03000000
   - StartLevel: 451
     EndLevel: 455
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 04000000
   - StartLevel: 456
     EndLevel: 460
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 05000000
   - StartLevel: 461
     EndLevel: 465
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 06000000
   - StartLevel: 466
     EndLevel: 470
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 07000000
   - StartLevel: 471
     EndLevel: 475
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 08000000
   - StartLevel: 476
     EndLevel: 480
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 09000000
   - StartLevel: 481
     EndLevel: 485
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 0a000000
   - StartLevel: 486
     EndLevel: 490
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 0b000000
   - StartLevel: 491
     EndLevel: 495
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 0c000000
   - StartLevel: 496
     EndLevel: 500
-    ColorCount: 7
+    ColorCount: 9
     ForcedMechanics: 0d000000
   - StartLevel: 501
     EndLevel: 505
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0e000000
   - StartLevel: 506
     EndLevel: 510
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0e000000
   - StartLevel: 511
     EndLevel: 515
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 01000000
   - StartLevel: 516
     EndLevel: 520
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 02000000
   - StartLevel: 521
     EndLevel: 525
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 03000000
   - StartLevel: 526
     EndLevel: 530
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 04000000
   - StartLevel: 531
     EndLevel: 535
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 05000000
   - StartLevel: 536
     EndLevel: 540
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 06000000
   - StartLevel: 541
     EndLevel: 545
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 07000000
   - StartLevel: 546
     EndLevel: 550
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 08000000
   - StartLevel: 551
     EndLevel: 555
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 09000000
   - StartLevel: 556
     EndLevel: 560
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0a000000
   - StartLevel: 561
     EndLevel: 565
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0b000000
   - StartLevel: 566
     EndLevel: 570
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0c000000
   - StartLevel: 571
     EndLevel: 575
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0d000000
   - StartLevel: 576
     EndLevel: 580
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0e000000
   - StartLevel: 581
     EndLevel: 585
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0e000000
   - StartLevel: 586
     EndLevel: 590
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 01000000
   - StartLevel: 591
     EndLevel: 595
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 02000000
   - StartLevel: 596
     EndLevel: 600
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 03000000
   - StartLevel: 601
     EndLevel: 605
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 04000000
   - StartLevel: 606
     EndLevel: 610
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 05000000
   - StartLevel: 611
     EndLevel: 615
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 06000000
   - StartLevel: 616
     EndLevel: 620
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 07000000
   - StartLevel: 621
     EndLevel: 625
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 08000000
   - StartLevel: 626
     EndLevel: 630
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 09000000
   - StartLevel: 631
     EndLevel: 635
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0a000000
   - StartLevel: 636
     EndLevel: 640
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0b000000
   - StartLevel: 641
     EndLevel: 645
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0c000000
   - StartLevel: 646
     EndLevel: 650
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0d000000
   - StartLevel: 651
     EndLevel: 655
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0e000000
   - StartLevel: 656
     EndLevel: 660
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0e000000
   - StartLevel: 661
     EndLevel: 665
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 01000000
   - StartLevel: 666
     EndLevel: 670
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 02000000
   - StartLevel: 671
     EndLevel: 675
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 03000000
   - StartLevel: 676
     EndLevel: 680
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 04000000
   - StartLevel: 681
     EndLevel: 685
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 05000000
   - StartLevel: 686
     EndLevel: 690
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 06000000
   - StartLevel: 691
     EndLevel: 695
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 07000000
   - StartLevel: 696
     EndLevel: 700
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 08000000
   - StartLevel: 701
     EndLevel: 705
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 09000000
   - StartLevel: 706
     EndLevel: 710
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0a000000
   - StartLevel: 711
     EndLevel: 715
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0b000000
   - StartLevel: 716
     EndLevel: 720
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0c000000
   - StartLevel: 721
     EndLevel: 725
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0d000000
   - StartLevel: 726
     EndLevel: 730
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0e000000
   - StartLevel: 731
     EndLevel: 735
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0e000000
   - StartLevel: 736
     EndLevel: 740
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 01000000
   - StartLevel: 741
     EndLevel: 745
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 02000000
   - StartLevel: 746
     EndLevel: 750
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 03000000
   - StartLevel: 751
     EndLevel: 755
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 04000000
   - StartLevel: 756
     EndLevel: 760
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 05000000
   - StartLevel: 761
     EndLevel: 765
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 06000000
   - StartLevel: 766
     EndLevel: 770
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 07000000
   - StartLevel: 771
     EndLevel: 775
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 08000000
   - StartLevel: 776
     EndLevel: 780
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 09000000
   - StartLevel: 781
     EndLevel: 785
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0a000000
   - StartLevel: 786
     EndLevel: 790
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0b000000
   - StartLevel: 791
     EndLevel: 795
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0c000000
   - StartLevel: 796
     EndLevel: 800
-    ColorCount: 8
+    ColorCount: 10
     ForcedMechanics: 0d000000
   - StartLevel: 801
     EndLevel: 805
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0e000000
   - StartLevel: 806
     EndLevel: 810
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0e000000
   - StartLevel: 811
     EndLevel: 815
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 01000000
   - StartLevel: 816
     EndLevel: 820
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 02000000
   - StartLevel: 821
     EndLevel: 825
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 03000000
   - StartLevel: 826
     EndLevel: 830
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 04000000
   - StartLevel: 831
     EndLevel: 835
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 05000000
   - StartLevel: 836
     EndLevel: 840
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 06000000
   - StartLevel: 841
     EndLevel: 845
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 07000000
   - StartLevel: 846
     EndLevel: 850
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 08000000
   - StartLevel: 851
     EndLevel: 855
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 09000000
   - StartLevel: 856
     EndLevel: 860
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0a000000
   - StartLevel: 861
     EndLevel: 865
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0b000000
   - StartLevel: 866
     EndLevel: 870
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0c000000
   - StartLevel: 871
     EndLevel: 875
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0d000000
   - StartLevel: 876
     EndLevel: 880
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0e000000
   - StartLevel: 881
     EndLevel: 885
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0e000000
   - StartLevel: 886
     EndLevel: 890
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 01000000
   - StartLevel: 891
     EndLevel: 895
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 02000000
   - StartLevel: 896
     EndLevel: 900
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 03000000
   - StartLevel: 901
     EndLevel: 905
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 04000000
   - StartLevel: 906
     EndLevel: 910
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 05000000
   - StartLevel: 911
     EndLevel: 915
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 06000000
   - StartLevel: 916
     EndLevel: 920
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 07000000
   - StartLevel: 921
     EndLevel: 925
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 08000000
   - StartLevel: 926
     EndLevel: 930
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 09000000
   - StartLevel: 931
     EndLevel: 935
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0a000000
   - StartLevel: 936
     EndLevel: 940
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0b000000
   - StartLevel: 941
     EndLevel: 945
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0c000000
   - StartLevel: 946
     EndLevel: 950
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0d000000
   - StartLevel: 951
     EndLevel: 955
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0e000000
   - StartLevel: 956
     EndLevel: 960
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0e000000
   - StartLevel: 961
     EndLevel: 965
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 01000000
   - StartLevel: 966
     EndLevel: 970
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 02000000
   - StartLevel: 971
     EndLevel: 975
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 03000000
   - StartLevel: 976
     EndLevel: 980
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 04000000
   - StartLevel: 981
     EndLevel: 985
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 05000000
   - StartLevel: 986
     EndLevel: 990
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 06000000
   - StartLevel: 991
     EndLevel: 995
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 07000000
   - StartLevel: 996
     EndLevel: 1000
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 08000000
   - StartLevel: 1001
     EndLevel: 1005
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 09000000
   - StartLevel: 1006
     EndLevel: 1010
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0a000000
   - StartLevel: 1011
     EndLevel: 1015
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0b000000
   - StartLevel: 1016
     EndLevel: 1020
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0c000000
   - StartLevel: 1021
     EndLevel: 1025
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0d000000
   - StartLevel: 1026
     EndLevel: 1030
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0e000000
   - StartLevel: 1031
     EndLevel: 1035
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0e000000
   - StartLevel: 1036
     EndLevel: 1040
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 01000000
   - StartLevel: 1041
     EndLevel: 1045
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 02000000
   - StartLevel: 1046
     EndLevel: 1050
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 03000000
   - StartLevel: 1051
     EndLevel: 1055
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 04000000
   - StartLevel: 1056
     EndLevel: 1060
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 05000000
   - StartLevel: 1061
     EndLevel: 1065
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 06000000
   - StartLevel: 1066
     EndLevel: 1070
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 07000000
   - StartLevel: 1071
     EndLevel: 1075
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 08000000
   - StartLevel: 1076
     EndLevel: 1080
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 09000000
   - StartLevel: 1081
     EndLevel: 1085
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0a000000
   - StartLevel: 1086
     EndLevel: 1090
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0b000000
   - StartLevel: 1091
     EndLevel: 1095
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0c000000
   - StartLevel: 1096
     EndLevel: 1100
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0d000000
   - StartLevel: 1101
     EndLevel: 1105
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0e000000
   - StartLevel: 1106
     EndLevel: 1110
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0e000000
   - StartLevel: 1111
     EndLevel: 1115
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 01000000
   - StartLevel: 1116
     EndLevel: 1120
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 02000000
   - StartLevel: 1121
     EndLevel: 1125
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 03000000
   - StartLevel: 1126
     EndLevel: 1130
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 04000000
   - StartLevel: 1131
     EndLevel: 1135
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 05000000
   - StartLevel: 1136
     EndLevel: 1140
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 06000000
   - StartLevel: 1141
     EndLevel: 1145
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 07000000
   - StartLevel: 1146
     EndLevel: 1150
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 08000000
   - StartLevel: 1151
     EndLevel: 1155
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 09000000
   - StartLevel: 1156
     EndLevel: 1160
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0a000000
   - StartLevel: 1161
     EndLevel: 1165
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0b000000
   - StartLevel: 1166
     EndLevel: 1170
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0c000000
   - StartLevel: 1171
     EndLevel: 1175
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0d000000
   - StartLevel: 1176
     EndLevel: 1180
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0e000000
   - StartLevel: 1181
     EndLevel: 1185
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 0e000000
   - StartLevel: 1186
     EndLevel: 1190
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 01000000
   - StartLevel: 1191
     EndLevel: 1195
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 02000000
   - StartLevel: 1196
     EndLevel: 1200
-    ColorCount: 9
+    ColorCount: 10
     ForcedMechanics: 03000000
   - StartLevel: 1201
     EndLevel: 1205

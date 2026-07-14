@@ -405,20 +405,19 @@ namespace RingFlow.Gameplay
                 }
             };
 
-            // Default Color Curve Points (GDD §5)
-            // GDD explicitly stops the ramp at 9 colours and uses the last bucket (10 colours)
-            // only from level 1200+. The previous default transitioned to 10 colours at level 801,
-            // which compounded with the wider empty-pole drop to make Expert bands feel 1.5x harder.
+            // Renk eğrisi (revizyon notları §2–§5): erken seviyelerde belirgin ilerleme,
+            // sonrasında hiçbir zaman azalmadan (monotonik) artan renk çeşitliliği.
+            // Eşikler ComputeColorCountForLevel ile birebir aynıdır.
             ColorCurve = new List<ColorCurvePoint>
             {
                 new() { LevelThreshold = 1, ColorCount = 3 },
-                new() { LevelThreshold = 20, ColorCount = 4 },
-                new() { LevelThreshold = 80, ColorCount = 5 },
-                new() { LevelThreshold = 150, ColorCount = 6 },
-                new() { LevelThreshold = 300, ColorCount = 7 },
-                new() { LevelThreshold = 500, ColorCount = 8 },
-                new() { LevelThreshold = 800, ColorCount = 9 },
-                new() { LevelThreshold = 1200, ColorCount = 10 }
+                new() { LevelThreshold = 6, ColorCount = 4 },
+                new() { LevelThreshold = 16, ColorCount = 5 },
+                new() { LevelThreshold = 31, ColorCount = 6 },
+                new() { LevelThreshold = 61, ColorCount = 7 },
+                new() { LevelThreshold = 121, ColorCount = 8 },
+                new() { LevelThreshold = 251, ColorCount = 9 },
+                new() { LevelThreshold = 501, ColorCount = 10 }
             };
 
             // Default 40 Worlds configuration
@@ -461,24 +460,7 @@ namespace RingFlow.Gameplay
                 int startLevel = t * LevelsPerThemeStep + 1;
                 int endLevel = Mathf.Min(startLevel + LevelsPerThemeStep - 1, TotalLevels);
 
-                int colorCount;
-                if (startLevel <= 50)
-                {
-                    // Revizyon notları §2/§3/§4/§5: İlk 50 seviye için kademeli renk/zorluk
-                    // eğrisi. Her 5 seviyelik adımda (step) renk sayısı yumuşak biçimde artar
-                    // (3 → 7), böylece oyuncu belirgin bir ilerleme hissi yaşar.
-                    int step = (startLevel - 1) / LevelsPerThemeStep; // 0..9
-                    int[] earlyColorRamp = { 3, 4, 4, 5, 5, 6, 6, 6, 7, 7 };
-                    colorCount = earlyColorRamp[step];
-                }
-                else if (startLevel >= 1200) colorCount = 10;
-                else if (startLevel >= 800) colorCount = 9;
-                else if (startLevel >= 500) colorCount = 8;
-                else if (startLevel >= 300) colorCount = 7;
-                else if (startLevel >= 150) colorCount = 6;
-                else if (startLevel >= 80) colorCount = 5;
-                else if (startLevel >= 20) colorCount = 4;
-                else colorCount = 3;
+                int colorCount = ComputeColorCountForLevel(startLevel);
 
                 var forcedMechanics = new List<WorldMechanicType>();
                 if (t == 0)
@@ -536,6 +518,24 @@ namespace RingFlow.Gameplay
                 if (level <= b.MaxLevel) return b.Band;
             }
             return DifficultyBands[^1].Band;
+        }
+
+        /// <summary>
+        /// Seviye endeksinden kademeli, monotonik artan renk sayısını hesaplar
+        /// (revizyon notları §2–§5). Erken seviyelerde belirgin ilerleme hissi verir;
+        /// ilerledikçe renk çeşitliliği hiçbir zaman azalmaz, nihai tavan 10 renktir.
+        /// Eşikler <see cref="ColorCurve"/> ve varsayılan <see cref="LevelThemes"/> ile aynıdır.
+        /// </summary>
+        public static int ComputeColorCountForLevel(int level)
+        {
+            if (level <= 5) return 3;
+            if (level <= 15) return 4;
+            if (level <= 30) return 5;
+            if (level <= 60) return 6;
+            if (level <= 120) return 7;
+            if (level <= 250) return 8;
+            if (level <= 500) return 9;
+            return 10;
         }
 
         public int GetColorCountForLevel(int level)
