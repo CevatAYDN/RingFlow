@@ -471,6 +471,8 @@ namespace RingFlow.Editor
                     AuditStatus.Fail);
             }
 
+            AddAuditResult("Bomba Tick Modu", $"BombTickMode data-driven: {db.LevelGen.BombTickMode}.", AuditStatus.Pass);
+
             // E5: Localization CSV asset existence — verify the CSV localization table is accessible
             var locCsv = Resources.Load<TextAsset>(GameplayAssetKeys.Localization);
             if (locCsv != null)

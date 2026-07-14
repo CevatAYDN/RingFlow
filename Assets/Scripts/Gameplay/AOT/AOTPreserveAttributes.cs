@@ -170,6 +170,7 @@ namespace RingFlow.Gameplay.AOT
             typeof(EconomyService).ToString();
             typeof(ProgressionService).ToString();
             typeof(DailyRewardService).ToString();
+            typeof(RingFlow.Gameplay.Services.GameTimeService).ToString();
             typeof(VfxPrefabRegistry).ToString();
 
             // Data-driven ScriptableObject types (loaded via Resources.Load in GameplayLifecycle)

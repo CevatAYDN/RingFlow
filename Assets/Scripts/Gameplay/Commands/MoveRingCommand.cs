@@ -14,6 +14,7 @@ namespace RingFlow.Gameplay
         [Inject] private RingMoveStrategyManager _strategyManager;
         [Inject] private IProgressionService _progression;
         [Inject] private RingValidationStrategyManager _validationManager;
+        [Inject] private GameConfigDatabaseSO _dbConfig;
 
         public void Execute(MoveRingSignal signal)
         {
@@ -343,6 +344,7 @@ namespace RingFlow.Gameplay
                 {
                     var ring = pole.Rings[r];
                     if (ring.Type != RingType.Bomb) continue;
+                    if (!ShouldTickBomb(pole.Id, r, mainRecord, ring)) continue;
 
                     int newCounter = ring.AdditionalData - 1;
                     pole.Rings[r] = new RingData(ring.Color, RingType.Bomb, newCounter);
@@ -365,6 +367,26 @@ namespace RingFlow.Gameplay
                         pole.Rings.RemoveAt(idx);
                     }
                 }
+            }
+        }
+
+
+        private bool ShouldTickBomb(int poleId, int ringIndex, MoveRecord mainRecord, RingData ring)
+        {
+            var mode = _dbConfig != null ? _dbConfig.LevelGen.BombTickMode : BombTickMode.AllBombsPerMove;
+            switch (mode)
+            {
+                case BombTickMode.SourceAndTargetPolesOnly:
+                    return poleId == mainRecord.FromPoleId ||
+                           poleId == mainRecord.ToPoleId ||
+                           poleId == mainRecord.PortalTeleportTargetPoleId;
+                case BombTickMode.MovedBombOnly:
+                    if (ring.Type != RingType.Bomb) return false;
+                    if (poleId == mainRecord.ToPoleId && ringIndex >= 0)
+                        return mainRecord.Ring.Type == RingType.Bomb;
+                    return false;
+                default:
+                    return true;
             }
         }
 

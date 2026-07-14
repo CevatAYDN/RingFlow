@@ -46,6 +46,13 @@ namespace RingFlow.Gameplay
         FixedIntervalMinutes
     }
 
+    public enum BombTickMode
+    {
+        AllBombsPerMove,
+        SourceAndTargetPolesOnly,
+        MovedBombOnly
+    }
+
     [System.Serializable]
     public struct GameBalanceConfig
     {
@@ -144,6 +151,7 @@ namespace RingFlow.Gameplay
         public int MaxGenerationSeeds;
         public int MaxCandidates;
         public int BombCountdown;
+        public BombTickMode BombTickMode;
         public int MaxMechanicTypesPerLevel;
         public int MinSolverMoves;
         public int DefaultMaxMovesLimit;
@@ -185,6 +193,7 @@ namespace RingFlow.Gameplay
             MaxGenerationSeeds = 50,
             MaxCandidates = 5,
             BombCountdown = 5,
+            BombTickMode = BombTickMode.AllBombsPerMove,
             MaxMechanicTypesPerLevel = 4,
             MinSolverMoves = 2,
             DefaultMaxMovesLimit = 200,

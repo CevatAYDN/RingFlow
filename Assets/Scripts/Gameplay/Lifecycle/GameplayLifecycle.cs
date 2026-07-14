@@ -109,6 +109,7 @@ namespace RingFlow.Gameplay
             builder.BindService<IHapticService, HapticService>();
             builder.BindService<IFeedbackService, FeedbackService>();
             builder.BindService<ILocalizationService, LocalizationService>();
+            builder.BindService<Services.IGameTimeService, Services.GameTimeService>();
             builder.BindService<IAnalyticsService, AnalyticsService>();
             builder.BindService<IAdService, AdService>();
             builder.BindService<IIapService, IapService>();

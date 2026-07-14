@@ -354,6 +354,7 @@ namespace RingFlow.Editor
                     EditorGUILayout.Space(4f);
                     EditorGUILayout.LabelField("Mekanik / Çözücü", EditorStyles.miniBoldLabel);
                     db.LevelGen.BombCountdown = EditorGUILayout.IntField("Bomba Geri Sayım", db.LevelGen.BombCountdown);
+                    db.LevelGen.BombTickMode = (BombTickMode)EditorGUILayout.EnumPopup("Bomba Tick Modu", db.LevelGen.BombTickMode);
                     db.LevelGen.MaxMechanicTypesPerLevel = EditorGUILayout.IntField("Seviye Başına Maks. Mekanik", db.LevelGen.MaxMechanicTypesPerLevel);
                     db.LevelGen.MinSolverMoves = EditorGUILayout.IntField("Min Çözücü Hamlesi", db.LevelGen.MinSolverMoves);
                     db.LevelGen.DefaultMaxMovesLimit = EditorGUILayout.IntField("Varsayılan Maks. Hamle Sınırı", db.LevelGen.DefaultMaxMovesLimit);

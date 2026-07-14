@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Nexus.Core.Services;
+using RingFlow.Gameplay.Services;
 
 namespace RingFlow.Gameplay
 {
@@ -42,12 +43,16 @@ namespace RingFlow.Gameplay
     {
         private readonly PlayerProgressModel _progress;
         private readonly GameConfigDatabaseSO _dbConfig;
+        private readonly IGameTimeService _time;
 
-        public DailyRewardService(PlayerProgressModel progress, GameConfigDatabaseSO dbConfig)
+        public DailyRewardService(PlayerProgressModel progress, GameConfigDatabaseSO dbConfig, IGameTimeService time = null)
         {
             _progress = progress;
             _dbConfig = dbConfig;
+            _time = time;
         }
+
+        private DateTime UtcNow => _time?.UtcNow ?? DateTime.UtcNow;
 
         public int DayIndexPreview => _progress.DailyDayIndex.Value + 1;
 
@@ -67,7 +72,8 @@ namespace RingFlow.Gameplay
 
         public bool CanClaimNow(out string reason)
         {
-            var nowTicks = DateTime.UtcNow.Ticks;
+            var now = UtcNow;
+            var nowTicks = now.Ticks;
             var lastTicks = _progress.DailyLastClaimUtcTicks.Value;
 
             if (lastTicks > 0 && nowTicks < lastTicks)
@@ -90,7 +96,7 @@ namespace RingFlow.Gameplay
             }
             else
             {
-                if (!DailyRewardTable.IsDailyRewardClaimable(lastTicks, DateTime.UtcNow))
+                if (!DailyRewardTable.IsDailyRewardClaimable(lastTicks, now))
                 {
                     reason = "daily_reset_not_elapsed";
                     return false;
@@ -122,7 +128,7 @@ namespace RingFlow.Gameplay
 
             int cycle = DailyRewardTable.CycleLength(_dbConfig);
             _progress.DailyDayIndex.Value = nextIndex % cycle;
-            _progress.DailyLastClaimUtcTicks.Value = DateTime.UtcNow.Ticks;
+            _progress.DailyLastClaimUtcTicks.Value = UtcNow.Ticks;
 
             NexusLog.Info("DailyRewardService", nameof(Claim), nextIndex.ToString(),
                 $"Daily reward claimed — day {nextIndex % cycle}, reward: {reward.CurrencyId} x{reward.Amount}.");
