@@ -565,7 +565,22 @@ namespace RingFlow.Gameplay.UI
 
         private void OpenPopup(ScreenType popup)
         {
-            if (!_screens.TryGetValue(popup, out var go)) return;
+            if (!_screens.TryGetValue(popup, out var go) || go == null)
+            {
+                var prefab = LoadScreenPrefab(popup);
+                if (prefab == null)
+                {
+                    NexusLog.Error("UIRoot", nameof(OpenPopup), popup.ToString(),
+                        $"Cannot open popup {popup}: no scene object and no prefab at {GetPrefabAssetPath(popup)}");
+                    return;
+                }
+
+                EnsureCanvasExists();
+                go = UnityEngine.Object.Instantiate(prefab, _canvas.transform);
+                go.name = popup.ToString();
+                go.SetActive(false);
+                _screens[popup] = go;
+            }
 
             // Push current exclusive screen onto the stack before showing popup
             if (_popupStack.Count == 0 || _popupStack.Peek() != popup)

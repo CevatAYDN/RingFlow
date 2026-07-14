@@ -11,6 +11,7 @@ namespace RingFlow.Gameplay.UI
         [Inject] private IGameStateMachine _fsm;
         [Inject] private ILocalizationService _loc;
         [Inject] private ISignalBus _signalBus;
+        [Inject] private IPlayerPrefsService _prefs;
 
         protected override void OnBind()
         {
@@ -59,7 +60,11 @@ namespace RingFlow.Gameplay.UI
                 return;
             }
 
-            if (PlayerPrefs.GetInt(GameplayAssetKeys.PlayerPrefs.GdprAccepted, 0) == 1)
+            bool gdprAccepted = _prefs != null
+                ? _prefs.GetInt(GameplayAssetKeys.PlayerPrefs.GdprAccepted, 0) == 1
+                : PlayerPrefs.GetInt(GameplayAssetKeys.PlayerPrefs.GdprAccepted, 0) == 1;
+
+            if (gdprAccepted)
             {
                 try
                 {

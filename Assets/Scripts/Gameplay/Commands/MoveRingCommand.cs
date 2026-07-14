@@ -308,7 +308,7 @@ namespace RingFlow.Gameplay
 
             if (!partner.CanAddRing(ring))
             {
-                context.ToPole.AddRing(ring);
+                context.ToPole.InsertRingRaw(playerIdx, ring);
                 return;
             }
 

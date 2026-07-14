@@ -50,8 +50,8 @@ namespace RingFlow.Gameplay
 
                             if (subFrom != null && subTo != null)
                             {
-                                subTo.PopRing();
-                                subFrom.AddRing(sub.Ring);
+                                subTo.PopRingRaw();
+                                subFrom.AddRingRaw(sub.Ring);
                             }
                         }
                     }
@@ -73,7 +73,7 @@ namespace RingFlow.Gameplay
                     //   If the move included a portal teleport, the ring was actually
                     //   placed on ToPole first and then teleported to PortalTeleportTargetPoleId.
                     //   Sub-moves already reversed the teleport (step 3), so we just pop ToPole here.
-                    var movedRing = toPole.PopRing();
+                    var movedRing = toPole.PopRingRaw();
 
                     // ── 7. Undo paint effect ──
                     if (lastMove.WasPainted)
@@ -116,7 +116,7 @@ namespace RingFlow.Gameplay
                     }
 
                     // ── 9. Return moving ring to FROM pole ──
-                    fromPole.AddRing(movedRing);
+                    fromPole.AddRingRaw(movedRing);
 
                     // ── 10. Restore Ghost state if ring was revealed on FROM pole selection ──
                     //   SelectPoleCommand changes Ghost→Standard before firing MoveRingSignal.

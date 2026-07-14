@@ -11,7 +11,7 @@ namespace RingFlow.Gameplay
     /// <list type="bullet">
     /// <item>MAX_POLES = 12 (Pole0..Pole11, Types0..Types11, AddData0..AddData11 field count)</item>
     /// <item>MAX_COLORS = 15 (RingColor stored in 4 bits per ring slot; 0=None, 1-15 valid)</item>
-    /// <item>MAX_RING_COUNT_PER_POLE = 6 with the current layout (slots 0-5 use bits 0-23; bits 24-29 are count/flags)</item>
+    /// <item>MAX_RING_COUNT_PER_POLE = 4 per RingFlow GDD; bits 24-29 are reserved for count/flags</item>
     /// <item>MAX_ADDITIONAL_DATA = 15 (AddData uses 4 bits; BombCountdown MUST be ≤ 15)</item>
     /// </list>
     /// Exceeding any of these limits silently corrupts data — there is no overflow guard at runtime.
@@ -20,8 +20,8 @@ namespace RingFlow.Gameplay
     public struct BoardState : IEquatable<BoardState>
     {
         // ─── Pole storage fields ───────────────────────────────────────────────
-        // Each uint encodes up to 4 rings (4 bits per ring slot = 8 rings max in
-        // lower/upper halves) plus ring count and flags in upper bits.
+        // Each uint encodes RingFlow's 4-ring pole payload (4 bits per slot)
+        // plus ring count and flags in upper bits.
         // Hard limit: 12 poles (Pole0..Pole11). Accessing index ≥ 12 is out of range.
         public uint Pole0;
         public uint Pole1;
@@ -67,7 +67,7 @@ namespace RingFlow.Gameplay
         public uint AddData10;
         public uint AddData11;
 
-        public const int MaxSupportedCapacity = 6;
+        public const int MaxSupportedCapacity = GameplayAssetKeys.Tuning.MaxCapacity;
 
         public int PoleCount;
         public int MaxCapacity;
@@ -82,14 +82,35 @@ namespace RingFlow.Gameplay
             }
         }
 
+        private static void ValidatePoleIndex(int poleIndex)
+        {
+            if (poleIndex < 0 || poleIndex >= GameplayAssetKeys.Tuning.MaxPoleCount)
+            {
+                throw new ArgumentOutOfRangeException(nameof(poleIndex),
+                    $"BoardState supports pole indices 0-{GameplayAssetKeys.Tuning.MaxPoleCount - 1}; got {poleIndex}.");
+            }
+        }
+
+        private static int ValidateCapacity(int capacity)
+        {
+            if (capacity <= 0) return GameplayAssetKeys.Tuning.MaxCapacity;
+            if (capacity > MaxSupportedCapacity)
+            {
+                throw new ArgumentOutOfRangeException(nameof(capacity),
+                    $"RingFlow GDD supports pole capacity up to {MaxSupportedCapacity}; got {capacity}.");
+            }
+            return capacity;
+        }
+
         public void Initialize(int poleCount, int maxCapacity, int poleCapacity)
         {
             PoleCount = poleCount;
-            MaxCapacity = maxCapacity;
+            MaxCapacity = ValidateCapacity(maxCapacity);
         }
 
         public uint GetPoleRaw(int index)
         {
+            ValidatePoleIndex(index);
             return index switch
             {
                 0 => Pole0,
@@ -110,6 +131,7 @@ namespace RingFlow.Gameplay
 
         public void SetPoleRaw(int index, uint value)
         {
+            ValidatePoleIndex(index);
             switch (index)
             {
                 case 0: Pole0 = value; break;
@@ -129,6 +151,7 @@ namespace RingFlow.Gameplay
 
         public uint GetTypesRaw(int index)
         {
+            ValidatePoleIndex(index);
             return index switch
             {
                 0 => Types0,
@@ -149,6 +172,7 @@ namespace RingFlow.Gameplay
 
         public void SetTypesRaw(int index, uint value)
         {
+            ValidatePoleIndex(index);
             switch (index)
             {
                 case 0: Types0 = value; break;
@@ -242,6 +266,7 @@ namespace RingFlow.Gameplay
 
         private uint GetAddDataRaw(int index)
         {
+            ValidatePoleIndex(index);
             return index switch
             {
                 0 => AddData0,
@@ -262,6 +287,7 @@ namespace RingFlow.Gameplay
 
         private void SetAddDataRaw(int index, uint value)
         {
+            ValidatePoleIndex(index);
             switch (index)
             {
                 case 0: AddData0 = value; break;
@@ -381,8 +407,9 @@ namespace RingFlow.Gameplay
 
         public void AddRing(int poleIndex, RingData ring)
         {
+            int capacityLimit = ValidateCapacity(MaxCapacity);
             int count = GetRingCount(poleIndex);
-            if (MaxCapacity > 0 && count >= MaxCapacity) return;
+            if (count >= capacityLimit) return;
 
             if (IsPoleLocked(poleIndex) && ring.Type == RingType.Locked)
             {
@@ -433,7 +460,7 @@ namespace RingFlow.Gameplay
             // Mıknatıs (Magnet) kuralı: Aynı renkteki diğer halkaları çek
             if (ring.Type == RingType.Magnet)
             {
-                int capacityLimit = MaxCapacity > 0 ? MaxCapacity : GameplayAssetKeys.Tuning.MaxCapacity;
+                int capacityLimit = ValidateCapacity(MaxCapacity);
                 for (int p = 0; p < PoleCount; p++)
                 {
                     if (p == poleIndex) continue;
@@ -450,7 +477,7 @@ namespace RingFlow.Gameplay
             // Chain Kontrolü — Zincir halkası hareket ettiğinde eşini de yanına çeker
             if (ring.Type == RingType.Chain)
             {
-                int capacityLimit = MaxCapacity > 0 ? MaxCapacity : GameplayAssetKeys.Tuning.MaxCapacity;
+                int capacityLimit = ValidateCapacity(MaxCapacity);
                 if (GetRingCount(poleIndex) < capacityLimit)
                 {
                     for (int p = 0; p < PoleCount; p++)
@@ -470,7 +497,9 @@ namespace RingFlow.Gameplay
 
         public void AddRingSimple(int poleIndex, RingData ring, bool isSubMove = false)
         {
+            int capacityLimit = ValidateCapacity(MaxCapacity);
             int count = GetRingCount(poleIndex);
+            if (count >= capacityLimit) return;
 
             if (!isSubMove)
             {
@@ -497,6 +526,38 @@ namespace RingFlow.Gameplay
                 }
             }
             return false;
+        }
+
+
+        public RingData RemoveRingAtRaw(int poleIndex, int ringIndex)
+        {
+            int count = GetRingCount(poleIndex);
+            if (count == 0) return new RingData(RingColor.None);
+            ValidateRingIndex(ringIndex);
+            if (ringIndex >= count)
+                throw new ArgumentOutOfRangeException(nameof(ringIndex), $"Cannot remove ring {ringIndex}; pole {poleIndex} has {count} rings.");
+
+            var removed = new RingData(
+                GetRingColor(poleIndex, ringIndex),
+                GetRingType(poleIndex, ringIndex),
+                GetRingAdditional(poleIndex, ringIndex));
+
+            for (int i = ringIndex; i < count - 1; i++)
+            {
+                SetRingColor(poleIndex, i, GetRingColor(poleIndex, i + 1));
+                SetRingType(poleIndex, i, GetRingType(poleIndex, i + 1));
+                SetRingAdditional(poleIndex, i, GetRingAdditional(poleIndex, i + 1));
+            }
+
+            int lastIndex = count - 1;
+            SetRingColor(poleIndex, lastIndex, RingColor.None);
+            SetRingType(poleIndex, lastIndex, RingType.Standard);
+            SetRingAdditional(poleIndex, lastIndex, 0);
+            SetRingCount(poleIndex, count - 1);
+
+            int newCount = count - 1;
+            SetTopRingFrozen(poleIndex, newCount > 0 && GetRingType(poleIndex, newCount - 1) == RingType.Frozen);
+            return removed;
         }
 
         public RingData PopRing(int poleIndex)

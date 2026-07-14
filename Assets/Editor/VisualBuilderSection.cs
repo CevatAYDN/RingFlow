@@ -251,9 +251,10 @@ namespace RingFlow.Editor
                 var mv = _previewMoves[i];
                 if (currentBoard.CanPopRing(mv.FromPoleId) && currentBoard.GetRingCount(mv.ToPoleId) < currentBoard.MaxCapacity)
                 {
+                    int landingIndex = currentBoard.GetRingCount(mv.ToPoleId);
                     var ring = currentBoard.PopRing(mv.FromPoleId);
                     currentBoard.AddRing(mv.ToPoleId, ring);
-                    ApplyPortalTeleportForPreview(ref currentBoard, mv.ToPoleId, _initialPreviewPortalTargets);
+                    ApplyPortalTeleportForPreview(ref currentBoard, mv.ToPoleId, landingIndex, _initialPreviewPortalTargets);
                 }
             }
 
@@ -556,15 +557,18 @@ namespace RingFlow.Editor
             return portalTargets[poleId];
         }
 
-        private static void ApplyPortalTeleportForPreview(ref BoardState board, int targetPole, int[] portalTargets)
+        private static void ApplyPortalTeleportForPreview(ref BoardState board, int targetPole, int landingIndex, int[] portalTargets)
         {
             int partner = GetPortalTarget(portalTargets, targetPole);
             if (partner < 0 || partner >= board.PoleCount) return;
-            if (board.GetRingCount(targetPole) <= 0) return;
+            if (landingIndex < 0 || landingIndex >= board.GetRingCount(targetPole)) return;
             if (board.GetRingCount(partner) >= board.MaxCapacity) return;
 
-            var portalRing = board.PopRing(targetPole);
-            board.AddRing(partner, portalRing);
+            var portalRing = board.RemoveRingAtRaw(targetPole, landingIndex);
+            if (board.CanAddRing(partner, portalRing.Color, portalRing.Type, board.MaxCapacity, portalRing.AdditionalData))
+                board.AddRing(partner, portalRing);
+            else
+                board.AddRingSimple(targetPole, portalRing, true);
         }
 
         private static void ClearScene()

@@ -13,11 +13,12 @@ namespace RingFlow.Gameplay.Strategies
 
         public bool CanAddRing(RingData ring, RingData topRing, bool isPoleFull, bool isPoleLocked)
         {
-            // Key rings can only be placed on locked poles (to unlock them)
             if (isPoleLocked) return true;
-
-            // Key rings can be placed on unlocked poles — engine/solver handle color matching
-            return true;
+            if (isPoleFull) return false;
+            if (topRing.Color == RingColor.None) return true;
+            if (topRing.Type == RingType.Stone) return topRing.Color == ring.Color;
+            if (topRing.Type == RingType.Rainbow || topRing.Type == RingType.Paint) return true;
+            return topRing.Color == ring.Color;
         }
 
         public bool CanPopRing(RingData topRing, bool isPoleLocked)

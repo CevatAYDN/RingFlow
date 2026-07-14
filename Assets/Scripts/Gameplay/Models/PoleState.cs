@@ -73,6 +73,28 @@ namespace RingFlow.Gameplay
             }
         }
 
+        public RingData PopRingRaw()
+        {
+            if (IsEmpty) return new RingData(RingColor.None);
+            var ring = Rings[^1];
+            Rings.RemoveAt(Rings.Count - 1);
+            return ring;
+        }
+
+        public void AddRingRaw(RingData ring)
+        {
+            if (Rings.Count < RingCapacity)
+                Rings.Add(ring);
+        }
+
+        public void InsertRingRaw(int index, RingData ring)
+        {
+            if (index < 0) index = 0;
+            if (index > Rings.Count) index = Rings.Count;
+            if (Rings.Count < RingCapacity)
+                Rings.Insert(index, ring);
+        }
+
         public void SetCapacity(int capacity)
         {
             RingCapacity = capacity > 0 ? capacity : GameplayAssetKeys.Tuning.MaxCapacity;

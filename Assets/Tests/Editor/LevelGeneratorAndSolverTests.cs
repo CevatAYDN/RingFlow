@@ -677,19 +677,19 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void LevelSolver_Solve_LargeCapacity_DoesNotCrash()
+        public void LevelSolver_Solve_GddCapacity_DoesNotCrash()
         {
-            // Stress test: 6 poles, max 6, various colors - just ensure no crash
-            var board = new BoardState { PoleCount = 6, MaxCapacity = 6 };
+            // Stress test at RingFlow's supported GDD capacity.
+            var board = new BoardState { PoleCount = 6, MaxCapacity = BoardState.MaxSupportedCapacity };
             for (int i = 0; i < 6; i++)
             {
-                for (int j = 0; j < 6; j++)
+                for (int j = 0; j < BoardState.MaxSupportedCapacity; j++)
                 {
-                    board.AddRing(i, new RingData((RingColor)(i % 3), RingType.Standard));
+                    board.AddRing(i, new RingData((RingColor)(i % 3 + 1), RingType.Standard));
                 }
             }
             // Already solved, should return 0 moves
-            var result = LevelSolver.Solve(board, maxCapacity: 6, maxStatesLimit: 5000);
+            var result = LevelSolver.Solve(board, maxCapacity: BoardState.MaxSupportedCapacity, maxStatesLimit: 5000);
             Assert.IsTrue(result.IsSolvable);
         }
 

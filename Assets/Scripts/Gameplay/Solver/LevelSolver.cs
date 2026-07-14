@@ -156,17 +156,28 @@ namespace RingFlow.Gameplay
             {
                 var move = sortedMoves[i].Move;
                 var nextState = state;
+                int landingIndex = nextState.GetRingCount(move.To);
                 var ring = nextState.PopRing(move.From);
                 nextState.AddRing(move.To, ring);
 
-                // Portal teleport: if target is a portal pole, forward the ring to its partner
+                // Portal teleport: forward the moved ring from its landing index.
+                // Chain/magnet may append above it, so never blindly pop target top.
                 if (portalTargets != null && move.To >= 0 && move.To < portalTargets.Length && portalTargets[move.To] >= 0)
                 {
                     int partner = portalTargets[move.To];
-                    if (nextState.GetRingCount(partner) < nextState.MaxCapacity)
+                    if (partner >= 0 && partner < nextState.PoleCount &&
+                        landingIndex < nextState.GetRingCount(move.To) &&
+                        nextState.GetRingCount(partner) < nextState.MaxCapacity)
                     {
-                        var portalRing = nextState.PopRing(move.To);
-                        nextState.AddRing(partner, portalRing);
+                        var portalRing = nextState.RemoveRingAtRaw(move.To, landingIndex);
+                        if (nextState.CanAddRing(partner, portalRing.Color, portalRing.Type, maxCapacity, portalRing.AdditionalData))
+                        {
+                            nextState.AddRing(partner, portalRing);
+                        }
+                        else
+                        {
+                            nextState.AddRingSimple(move.To, portalRing, true);
+                        }
                     }
                 }
 
@@ -265,22 +276,32 @@ namespace RingFlow.Gameplay
                 {
                     if (i == j) continue;
 
-                    // Resolve portal target: if j is a portal pole, check the partner instead
-                    int effectiveTarget = j;
-                    if (portalTargets != null && portalTargets[j] >= 0)
-                        effectiveTarget = portalTargets[j];
+                    if (!state.CanAddRing(j, topRing.Color, topRing.Type, maxCapacity, topRing.AdditionalData))
+                        continue;
 
-                    // Chain: check if target has room for main ring + linked partners
+                    int effectiveTarget = j;
+                    if (portalTargets != null && j >= 0 && j < portalTargets.Length && portalTargets[j] >= 0)
+                    {
+                        var simulated = state;
+                        int landingIndex = simulated.GetRingCount(j);
+                        var moved = simulated.PopRing(i);
+                        simulated.AddRing(j, moved);
+                        int partner = portalTargets[j];
+                        if (partner < 0 || partner >= simulated.PoleCount || landingIndex >= simulated.GetRingCount(j))
+                            continue;
+                        var portalRing = simulated.RemoveRingAtRaw(j, landingIndex);
+                        if (!simulated.CanAddRing(partner, portalRing.Color, portalRing.Type, maxCapacity, portalRing.AdditionalData))
+                            continue;
+                        effectiveTarget = partner;
+                    }
+
+                    // Chain: check if final target has room for main ring + linked partners
                     if (topRing.Type == RingType.Chain && topRing.AdditionalData > 0)
                     {
                         int linked = CountChainLinkedPartners(state, topRing.AdditionalData, i);
                         int requiredSlots = 1 + linked;
                         if (!CanAddRingWithExtraCapacity(state, effectiveTarget, topRing.Color, topRing.Type, maxCapacity, requiredSlots))
                             continue;
-                    }
-                    else if (!state.CanAddRing(effectiveTarget, topRing.Color, topRing.Type, maxCapacity))
-                    {
-                        continue;
                     }
 
                     destination[count++] = new Move(i, j);

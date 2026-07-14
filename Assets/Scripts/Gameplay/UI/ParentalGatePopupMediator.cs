@@ -10,6 +10,7 @@ namespace RingFlow.Gameplay.UI
         [Inject] private IGameStateMachine _fsm;
         [Inject] private ISignalBus _signalBus;
         [Inject] private ILocalizationService _loc;
+        [Inject] private IPlayerPrefsService _prefs;
 
         protected override void OnBind()
         {
@@ -29,9 +30,17 @@ namespace RingFlow.Gameplay.UI
 
             if (View.ValidateAnswer())
             {
-                // Save acceptance state locally (device bound)
-                PlayerPrefs.SetInt(GameplayAssetKeys.PlayerPrefs.GdprAccepted, 1);
-                PlayerPrefs.Save();
+                // Save acceptance state locally (device bound) via the encrypted storage abstraction.
+                if (_prefs != null)
+                {
+                    _prefs.SetInt(GameplayAssetKeys.PlayerPrefs.GdprAccepted, 1);
+                    _prefs.Save();
+                }
+                else
+                {
+                    PlayerPrefs.SetInt(GameplayAssetKeys.PlayerPrefs.GdprAccepted, 1);
+                    PlayerPrefs.Save();
+                }
 
                 NexusLog.Info("ParentalGatePopupMediator", "HandleAccept", "", "Parental gate verification passed. GDPR accepted.");
                 

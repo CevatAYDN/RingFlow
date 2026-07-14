@@ -15,7 +15,10 @@ namespace RingFlow.Gameplay.Strategies
         {
             if (isPoleLocked) return false;
             if (isPoleFull) return false;
-            return true;
+            if (topRing.Color == RingColor.None) return true;
+            if (topRing.Type == RingType.Stone) return topRing.Color == ring.Color;
+            if (topRing.Type == RingType.Rainbow || topRing.Type == RingType.Paint) return true;
+            return topRing.Color == ring.Color;
         }
 
         public bool CanPopRing(RingData topRing, bool isPoleLocked)
