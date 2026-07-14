@@ -1,4 +1,3 @@
-using System.IO;
 using UnityEditor;
 using UnityEngine;
 using RingFlow.Gameplay;
@@ -90,9 +89,8 @@ namespace RingFlow.Editor
 
         private void EnsureCachedDatabase()
         {
-            // Reuse the Resources cache: Resources.Load is cheap after the first hit,
-            // but we avoid its internal dictionary lookup + managed wrap on every frame.
-            _cachedDatabase = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
+            if (_cachedDatabase == null)
+                _cachedDatabase = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
             if (_cachedDatabase == null) return;
 
             if (_cachedDatabase.TotalLevels != _cachedTotalLevels)
@@ -102,17 +100,29 @@ namespace RingFlow.Editor
             }
         }
 
+        private void RefreshExistenceCache()
+        {
+            if (_cachedExistsFlags != null && _cachedExistsFlags.Length == _cachedTotalLevels)
+                return;
+            _cachedExistsFlags = new bool[_cachedTotalLevels];
+
+            // Use AssetDatabase-level existence check (metadata only, no deserialization)
+            for (int i = 0; i < _cachedTotalLevels; i++)
+            {
+                string path = $"{EditorPaths.LevelsFolder}/Level_{i + 1}.asset";
+                _cachedExistsFlags[i] = AssetDatabase.GUIDFromAssetPath(path) != null
+                    && !string.IsNullOrEmpty(AssetDatabase.GUIDFromAssetPath(path).ToString());
+            }
+        }
+
         private int ComputeFilteredTill()
         {
-            if (_cachedExistsFlags == null || _cachedExistsFlags.Length != _cachedTotalLevels)
-                _cachedExistsFlags = new bool[_cachedTotalLevels];
+            RefreshExistenceCache();
 
             int count = 0;
             bool hasFilter = !string.IsNullOrEmpty(_searchFilter);
             for (int i = 0; i < _cachedTotalLevels; i++)
             {
-                bool exists = File.Exists($"{EditorPaths.LevelsFolder}/Level_{i + 1}.asset");
-                _cachedExistsFlags[i] = exists;
                 if (hasFilter && !(i + 1).ToString().Contains(_searchFilter))
                     continue;
                 count++;

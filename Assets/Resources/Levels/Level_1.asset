@@ -14,57 +14,57 @@ MonoBehaviour:
   m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.LevelDataSO
   Data:
     LevelIndex: 1
-    Seed: 8922
-    TargetMoves: 6
+    Seed: 102
+    TargetMoves: 9
     Poles:
-    - RingCapacity: 4
-      Rings:
-      - Color: 5
-        Type: 0
-        AdditionalData: 0
-      - Color: 5
-        Type: 0
-        AdditionalData: 0
-      - Color: 5
-        Type: 0
-        AdditionalData: 0
-      - Color: 5
-        Type: 0
-        AdditionalData: 0
-      IsLocked: 0
-      PortalTargetId: -1
     - RingCapacity: 4
       Rings: []
       IsLocked: 0
       PortalTargetId: -1
     - RingCapacity: 4
       Rings:
-      - Color: 4
+      - Color: 5
         Type: 0
         AdditionalData: 0
-      - Color: 4
+      - Color: 5
         Type: 0
         AdditionalData: 0
-      - Color: 1
+      - Color: 6
         Type: 0
         AdditionalData: 0
-      - Color: 1
+      - Color: 6
         Type: 0
         AdditionalData: 0
       IsLocked: 0
       PortalTargetId: -1
     - RingCapacity: 4
       Rings:
-      - Color: 4
+      - Color: 5
         Type: 0
         AdditionalData: 0
-      - Color: 1
+      - Color: 6
         Type: 0
         AdditionalData: 0
-      - Color: 4
+      - Color: 8
         Type: 0
         AdditionalData: 0
-      - Color: 1
+      - Color: 6
+        Type: 0
+        AdditionalData: 0
+      IsLocked: 0
+      PortalTargetId: -1
+    - RingCapacity: 4
+      Rings:
+      - Color: 8
+        Type: 0
+        AdditionalData: 0
+      - Color: 8
+        Type: 0
+        AdditionalData: 0
+      - Color: 5
+        Type: 0
+        AdditionalData: 0
+      - Color: 8
         Type: 0
         AdditionalData: 0
       IsLocked: 0

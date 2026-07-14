@@ -335,6 +335,7 @@ namespace RingFlow.Editor
 
             var torusModel = AssetDatabase.LoadAssetAtPath<GameObject>(EditorPaths.TorusPrefabPath);
             var f = Resources.Load<GameFeelConfigSO>(EditorPaths.GameFeelConfigKey);
+            var palette = Resources.Load<RingColorPaletteSO>(EditorPaths.RingColorPaletteKey);
             float spacing = f != null ? f.PoleSpacing : 2.5f;
             float boardWidth = (board.PoleCount - 1) * spacing;
             float startX = -boardWidth * 0.5f;
@@ -353,11 +354,11 @@ namespace RingFlow.Editor
                     ));
                 }
 
-                CreatePole(boardRoot.transform, p, startX, spacing, isLocked, board.MaxCapacity, rings, torusModel, f);
+                CreatePole(boardRoot.transform, p, startX, spacing, isLocked, board.MaxCapacity, rings, torusModel, f, palette);
             }
         }
 
-        private static void CreatePole(Transform parent, int index, float startX, float spacing, bool isLocked, int capacity, List<RingData> rings, GameObject torusModel, GameFeelConfigSO f)
+        private static void CreatePole(Transform parent, int index, float startX, float spacing, bool isLocked, int capacity, List<RingData> rings, GameObject torusModel, GameFeelConfigSO f, RingColorPaletteSO palette)
         {
             var poleObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             poleObj.name = $"Pole_{index}" + (isLocked ? " [LOCKED]" : "");
@@ -416,10 +417,10 @@ namespace RingFlow.Editor
 
             var shaderForRings = ResolveShader();
             for (int r = 0; r < rings.Count; r++)
-                CreateRing(poleObj.transform, r, rings[r], torusModel, shaderForRings, f);
+                CreateRing(poleObj.transform, r, rings[r], torusModel, shaderForRings, f, palette);
         }
 
-        private static void CreateRing(Transform parent, int index, RingData ringData, GameObject torusModel, Shader shader, GameFeelConfigSO f)
+        private static void CreateRing(Transform parent, int index, RingData ringData, GameObject torusModel, Shader shader, GameFeelConfigSO f, RingColorPaletteSO palette)
         {
             GameObject ringObj;
             float ringBaseY = f != null ? f.RingBaseYOffset : -0.9f;
@@ -438,10 +439,8 @@ namespace RingFlow.Editor
                 ringObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
                 ringObj.transform.SetParent(parent);
                 ringObj.transform.localPosition = new Vector3(0f, ringBaseY + (index * ringSpacing), 0f);
-                var feel = Resources.Load<Gameplay.GameFeelConfigSO>(EditorPaths.GameFeelConfigKey);
-                if (feel == null)
-                    throw new System.InvalidOperationException("[VisualBuilderSection] GameFeelConfigSO is required. Configurate GameFeelConfigSO asset.");
-                ringObj.transform.localScale = feel.RingScaleFallback;
+                float scale = f != null ? f.RingScaleFallback.x : 0.8f;
+                ringObj.transform.localScale = Vector3.one * scale;
             }
 
             ringObj.name = $"Ring_{index}_{ringData.Color}_{ringData.Type}";
@@ -450,7 +449,6 @@ namespace RingFlow.Editor
             if (ringRenderer != null)
             {
                 var mat = new Material(shader);
-                var palette = Resources.Load<RingColorPaletteSO>(EditorPaths.RingColorPaletteKey);
                 Color baseColor = palette != null ? palette.GetColor(ringData.Color, RingColorPaletteSO.ColorBlindMode.Off) : Color.grey;
                 mat.color = baseColor;
                 if (mat.HasProperty("_BaseColor"))

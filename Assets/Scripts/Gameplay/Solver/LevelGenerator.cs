@@ -277,12 +277,50 @@ namespace RingFlow.Gameplay
             return empty;
         }
 
+        private static int GetSmoothedIntensity(GameConfigDatabaseSO db, int levelIndex, int rawIntensity)
+        {
+            int transitionCount = db.LevelGen.TransitionLevelCount;
+            if (transitionCount <= 0) return rawIntensity;
+
+            var bands = db.DifficultyBands;
+            if (bands == null || bands.Count <= 1) return rawIntensity;
+
+            int levelCursor = 1;
+            for (int i = 0; i < bands.Count; i++)
+            {
+                int bandEnd = bands[i].MaxLevel;
+                if (levelIndex >= levelCursor && levelIndex <= bandEnd)
+                {
+                    if (i == 0) return rawIntensity;
+
+                    int bandStart = levelCursor;
+                    int offset = levelIndex - bandStart;
+
+                    if (offset < transitionCount)
+                    {
+                        var prevBand = bands[i - 1];
+                        int prevIntensity = Math.Max(1, prevBand.MechanicIntensity);
+
+                        float t = (float)offset / transitionCount;
+                        float smoothed = prevIntensity + t * (rawIntensity - prevIntensity);
+                        return Math.Max(1, (int)Math.Floor(smoothed));
+                    }
+
+                    break;
+                }
+                levelCursor = bandEnd + 1;
+            }
+
+            return rawIntensity;
+        }
+
         private static void InjectSpecialMechanics(GameConfigDatabaseSO db, ref BoardState board, int levelIndex, Random rand, int bombCountdown)
         {
             if (db == null) throw new System.ArgumentNullException(nameof(db));
             int worldIndex = db.GetWorldForLevel(levelIndex);
             var mechanic = db.GetMechanicForWorld(worldIndex);
-            int intensity = db.GetMechanicIntensityForLevel(levelIndex);
+            int rawIntensity = db.GetMechanicIntensityForLevel(levelIndex);
+            int intensity = GetSmoothedIntensity(db, levelIndex, rawIntensity);
             var allowedMechanics = db.GetAllowedMechanicsForLevel(levelIndex);
             var theme = db.GetLevelThemeForLevel(levelIndex);
 

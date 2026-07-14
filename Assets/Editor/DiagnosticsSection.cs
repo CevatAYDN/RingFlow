@@ -75,8 +75,10 @@ namespace RingFlow.Editor
                     _scrollPos = new Vector2(0, float.MaxValue);
                 }
 
-                foreach (var entry in entries.Reverse())
+                // Reverse iteration without LINQ allocation
+                for (int ei = entries.Count - 1; ei >= 0; ei--)
                 {
+                    var entry = entries[ei];
                     if (!string.IsNullOrEmpty(_filter) &&
                         !entry.Category.Contains(_filter) &&
                         !entry.Message.Contains(_filter))

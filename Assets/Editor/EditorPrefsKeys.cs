@@ -24,6 +24,7 @@ namespace RingFlow.Editor
         public const string FoldDataColor      = "RingFlow.Foldout.Data.Color";
         public const string FoldDataWorlds     = "RingFlow.Foldout.Data.Worlds";
         public const string FoldDataAssets     = "RingFlow.Foldout.Data.Assets";
+        public const string FoldDataCrossSO    = "RingFlow.Foldout.Data.CrossSO";
 
         // ── New data-driven config section foldout state (Bölüm 3.3) ──
         public const string FoldStoreCatalog     = "RingFlow.Foldout.StoreCatalog";

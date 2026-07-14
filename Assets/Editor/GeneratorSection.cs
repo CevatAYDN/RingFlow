@@ -26,6 +26,7 @@ namespace RingFlow.Editor
         private readonly List<string> _solutionSteps = new();
         private Vector2 _solutionScroll;
         private GameConfigDatabaseSO _cachedDatabase;
+        private static GUIStyle s_gddTitleStyle;
 
         public LevelData GeneratedLevel => _generatedLevel;
 
@@ -55,7 +56,8 @@ namespace RingFlow.Editor
             DrawFoldoutHeader();
             if (!IsFoldedOut) return;
 
-            _cachedDatabase = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
+            if (_cachedDatabase == null)
+                _cachedDatabase = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
             if (_cachedDatabase == null)
                 throw new System.InvalidOperationException("[GeneratorSection] GameConfigDatabaseSO is required.");
             using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
@@ -83,9 +85,10 @@ namespace RingFlow.Editor
                 // GDD'den gelen parametreler — salt okunur, manuel tweak yok
                 using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
-                    var titleStyle = new GUIStyle(EditorStyles.label)
-                        { fontStyle = FontStyle.Bold, normal = { textColor = EditorPaths.EditorColors.Info } };
-                    EditorGUILayout.LabelField("GDD Parametreleri:", titleStyle);
+                    if (s_gddTitleStyle == null)
+                        s_gddTitleStyle = new GUIStyle(EditorStyles.label)
+                            { fontStyle = FontStyle.Bold, normal = { textColor = EditorPaths.EditorColors.Info } };
+                    EditorGUILayout.LabelField("GDD Parametreleri:", s_gddTitleStyle);
                     EditorGUILayout.LabelField($"• Direk Sayısı: {poleCount}");
                     EditorGUILayout.LabelField($"• Renk Sayısı: {colorCount}");
                     EditorGUILayout.LabelField($"• Maks. Kapasite: {maxCapacity}");

@@ -1980,6 +1980,7 @@ MonoBehaviour:
     TargetScoreLevelDenominator: 2000
     TargetScoreMultiplier: 125
     ScrambleMinEmptyPolesFloor: 1
+    TransitionLevelCount: 10
     SolverLimitBuckets:
     - MaxColorCount: 3
       StateLimit: 20000

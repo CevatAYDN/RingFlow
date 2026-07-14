@@ -48,6 +48,7 @@ namespace RingFlow.Editor
 
         private UnityEditor.Editor _cachedAssetEditor;
         private ScriptableObject _cachedAssetObj;
+        private string _cachedAssetKey;
 
         private double _lastValidationUpdateTime;
         private string _cachedSceneName;
@@ -475,6 +476,8 @@ namespace RingFlow.Editor
             }
         }
 
+        private static GUIStyle s_cardSubStyle;
+
         private static bool ActionCard(string title, string subtitle, Color accent, string tooltip)
         {
             var defaultBg = GUI.backgroundColor;
@@ -487,14 +490,17 @@ namespace RingFlow.Editor
 
             var r = GUILayoutUtility.GetLastRect();
             r.x += 2; r.y += 2; r.width -= 4; r.height -= 4;
-            
-            var subStyle = new GUIStyle(RingFlowEditorUtils.CenteredMiniLabel)
+
+            if (s_cardSubStyle == null)
             {
-                alignment = TextAnchor.LowerCenter,
-                fontSize = 9,
-                normal = { textColor = Color.white }
-            };
-            EditorGUI.LabelField(r, subtitle, subStyle);
+                s_cardSubStyle = new GUIStyle(RingFlowEditorUtils.CenteredMiniLabel)
+                {
+                    alignment = TextAnchor.LowerCenter,
+                    fontSize = 9,
+                    normal = { textColor = Color.white }
+                };
+            }
+            EditorGUI.LabelField(r, subtitle, s_cardSubStyle);
 
             return clicked;
         }
@@ -641,21 +647,29 @@ namespace RingFlow.Editor
             EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
             EditorGUILayout.Space(4f);
 
-            var obj = Resources.Load<ScriptableObject>(key);
-            if (obj == null)
+            // Only load from Resources on tab switch (key change), not every frame
+            if (_cachedAssetObj == null || _cachedAssetKey != key)
+            {
+                if (_cachedAssetEditor != null)
+                {
+                    DestroyImmediate(_cachedAssetEditor);
+                    _cachedAssetEditor = null;
+                }
+                _cachedAssetKey = key;
+                _cachedAssetObj = Resources.Load<ScriptableObject>(key);
+            }
+
+            if (_cachedAssetObj == null)
             {
                 EditorGUILayout.HelpBox($"{title} bulunamadı! Önce proje klasöründe oluşturulduğundan emin olun.", MessageType.Warning);
                 return;
             }
 
-            if (_cachedAssetObj != obj)
+            if (_cachedAssetEditor == null || _cachedAssetEditor.target != _cachedAssetObj)
             {
                 if (_cachedAssetEditor != null)
-                {
                     DestroyImmediate(_cachedAssetEditor);
-                }
-                _cachedAssetObj = obj;
-                _cachedAssetEditor = UnityEditor.Editor.CreateEditor(obj);
+                _cachedAssetEditor = UnityEditor.Editor.CreateEditor(_cachedAssetObj);
             }
 
             if (_cachedAssetEditor != null)

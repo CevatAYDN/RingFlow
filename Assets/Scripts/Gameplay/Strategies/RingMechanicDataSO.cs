@@ -32,15 +32,38 @@ namespace RingFlow.Gameplay.Strategies
             new() { Type = WorldMechanicType.Portal,      IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Standard } }
         };
 
-        public string GetDisplayNameKey(WorldMechanicType type, GameConfigDatabaseSO dbConfig)
+        // ── Dictionary cache (lazy, built from MechanicUnlocks on first access) ──
+        private Dictionary<WorldMechanicType, MechanicUnlockEntry> _mechanicLookup;
+
+        private void OnEnable()
         {
+            _mechanicLookup = null; // Invalidates cache on domain reload / asset re-import
+        }
+
+        private Dictionary<WorldMechanicType, MechanicUnlockEntry> BuildLookup(GameConfigDatabaseSO dbConfig)
+        {
+            var lookup = new Dictionary<WorldMechanicType, MechanicUnlockEntry>();
             if (dbConfig != null && dbConfig.MechanicUnlocks != null)
             {
                 for (int i = 0; i < dbConfig.MechanicUnlocks.Count; i++)
                 {
-                    if (dbConfig.MechanicUnlocks[i].MechanicType == type)
-                        return dbConfig.MechanicUnlocks[i].DisplayNameKey;
+                    var entry = dbConfig.MechanicUnlocks[i];
+                    if (!lookup.ContainsKey(entry.MechanicType))
+                        lookup.Add(entry.MechanicType, entry);
                 }
+            }
+            return lookup;
+        }
+
+        public string GetDisplayNameKey(WorldMechanicType type, GameConfigDatabaseSO dbConfig)
+        {
+            if (dbConfig != null && dbConfig.MechanicUnlocks != null)
+            {
+                if (_mechanicLookup == null)
+                    _mechanicLookup = BuildLookup(dbConfig);
+
+                if (_mechanicLookup.TryGetValue(type, out var entry))
+                    return entry.DisplayNameKey;
             }
             return $"mechanic.{type.ToString().ToLower()}";
         }
@@ -49,13 +72,21 @@ namespace RingFlow.Gameplay.Strategies
         {
             if (dbConfig != null && dbConfig.MechanicUnlocks != null)
             {
-                for (int i = 0; i < dbConfig.MechanicUnlocks.Count; i++)
-                {
-                    if (dbConfig.MechanicUnlocks[i].MechanicType == type)
-                        return dbConfig.MechanicUnlocks[i].FirstAppearanceWorldIndex;
-                }
+                if (_mechanicLookup == null)
+                    _mechanicLookup = BuildLookup(dbConfig);
+
+                if (_mechanicLookup.TryGetValue(type, out var entry))
+                    return entry.FirstAppearanceWorldIndex;
             }
             return 0;
+        }
+
+        /// <summary>
+        /// Zorla yeniden derleme: dbConfig değiştiğinde veya test ortamında cache'i sıfırlar.
+        /// </summary>
+        public void InvalidateLookup()
+        {
+            _mechanicLookup = null;
         }
     }
 }

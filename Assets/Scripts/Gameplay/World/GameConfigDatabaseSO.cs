@@ -151,6 +151,7 @@ namespace RingFlow.Gameplay
         public float TargetScoreMultiplier;
         public int ScrambleMinEmptyPolesFloor;
         public List<SolverLimitBucket> SolverLimitBuckets;
+        public int TransitionLevelCount; // Band geçişlerinde yoğunluğu kademeli artırmak için geçiş seviye sayısı (Transition Sieve)
         public List<int> RetrySeedMultipliers;
         public List<int> MechanicPriorityOrder; // RingType enum values in priority order
     }
@@ -190,6 +191,7 @@ namespace RingFlow.Gameplay
             TargetScoreLevelDenominator = 2000f,
             TargetScoreMultiplier = 125f,
             ScrambleMinEmptyPolesFloor = 1,
+            TransitionLevelCount = 10,
             SolverLimitBuckets = new()
             {
                 new() { MaxColorCount = 3, StateLimit = 20000 },
@@ -407,7 +409,7 @@ namespace RingFlow.Gameplay
 
             // Renk eğrisi (revizyon notları §2–§5): erken seviyelerde belirgin ilerleme,
             // sonrasında hiçbir zaman azalmadan (monotonik) artan renk çeşitliliği.
-            // Eşikler ComputeColorCountForLevel ile birebir aynıdır.
+            // Artık veri odaklı — ColorCurve, ComputeColorCountForLevel()'a parametre geçilir.
             ColorCurve = new List<ColorCurvePoint>
             {
                 new() { LevelThreshold = 1, ColorCount = 3 },
@@ -460,7 +462,7 @@ namespace RingFlow.Gameplay
                 int startLevel = t * LevelsPerThemeStep + 1;
                 int endLevel = Mathf.Min(startLevel + LevelsPerThemeStep - 1, TotalLevels);
 
-                int colorCount = ComputeColorCountForLevel(startLevel);
+                int colorCount = ComputeColorCountForLevel(startLevel, ColorCurve);
 
                 var forcedMechanics = new List<WorldMechanicType>();
                 if (t == 0)
@@ -524,10 +526,22 @@ namespace RingFlow.Gameplay
         /// Seviye endeksinden kademeli, monotonik artan renk sayısını hesaplar
         /// (revizyon notları §2–§5). Erken seviyelerde belirgin ilerleme hissi verir;
         /// ilerledikçe renk çeşitliliği hiçbir zaman azalmaz, nihai tavan 10 renktir.
-        /// Eşikler <see cref="ColorCurve"/> ve varsayılan <see cref="LevelThemes"/> ile aynıdır.
+        /// <see cref="ColorCurve"/> listesini kullanarak SSOT ihlalini ortadan kaldırır.
         /// </summary>
-        public static int ComputeColorCountForLevel(int level)
+        public static int ComputeColorCountForLevel(int level, List<ColorCurvePoint> colorCurve = null)
         {
+            if (colorCurve != null && colorCurve.Count > 0)
+            {
+                int count = colorCurve[0].ColorCount;
+                foreach (var pt in colorCurve)
+                {
+                    if (level >= pt.LevelThreshold)
+                        count = pt.ColorCount;
+                }
+                return count;
+            }
+
+            // Fallback — yalnızca ColorCurve henüz başlatılmamışsa kullanılır (InitializeDefaults öncesi).
             if (level <= 5) return 3;
             if (level <= 15) return 4;
             if (level <= 30) return 5;

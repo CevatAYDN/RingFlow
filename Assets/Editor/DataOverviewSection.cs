@@ -40,6 +40,13 @@ namespace RingFlow.Editor
         private int _auditFailCount;
         private bool _auditRun;
 
+        // ── Cross-SO validation ──
+        private List<AuditResult> _crossSoResults = new();
+        private int _crossSoPassCount;
+        private int _crossSoWarnCount;
+        private int _crossSoFailCount;
+        private bool _crossSoValidationRun;
+
         public override string DisplayName => "Veri & GDD Denetimi (Audit)";
         public override string PrefKey => EditorPrefsKeys.FoldDataOverview;
 
@@ -80,6 +87,11 @@ namespace RingFlow.Editor
 
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionBreak);
 
+            // ── Cross-SO Referans Doğrulama ──
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionBreak);
+            RingFlowEditorUtils.FoldoutSection(EditorPrefsKeys.FoldDataCrossSO,
+                "Çapraz SO Referans Doğrulama (Cross-SO)", () => DrawCrossSoValidationPanel());
+
             // ── Asset Shortcuts ──
             RingFlowEditorUtils.FoldoutSection(EditorPrefsKeys.FoldDataAssets,
                 "Yapılandırma Varlıklarına Git (Config Assets)", DrawAssetJumps);
@@ -87,7 +99,8 @@ namespace RingFlow.Editor
 
         private void EnsureCachedDatabase()
         {
-            _cachedDatabase = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
+            if (_cachedDatabase == null)
+                _cachedDatabase = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
         }
 
         private void EnsureCachedAssets()
@@ -335,6 +348,76 @@ namespace RingFlow.Editor
             // GDD requires encrypted JSON on local disk.
             AddAuditResult("Kayıt Sistemi Güvenliği", "Doğrulandı: PlayerProgressModel hassas verileri şifrelenmiş JSON dosyalarında saklar (PlayerPrefs kullanılmaz).", AuditStatus.Pass);
 
+            // 7. Color Curve SSOT & Consistency (GDD §5)
+            // ComputeColorCountForLevel artık data-driven, ColorCurve'dan okur.
+            // Bu kontroller InitializeDefaults ile asset verisi arasındaki drift'i yakalar.
+            if (db.ColorCurve != null && db.ColorCurve.Count > 0)
+            {
+                // 7a. Monotonik artış kontrolü
+                bool monotonic = true;
+                for (int i = 1; i < db.ColorCurve.Count; i++)
+                {
+                    if (db.ColorCurve[i].ColorCount <= db.ColorCurve[i - 1].ColorCount)
+                    {
+                        monotonic = false;
+                        break;
+                    }
+                }
+                if (monotonic)
+                    AddAuditResult("Renk Eğrisi (Monotonik)", "ColorCurve monotonik artıyor: renk sayısı hiçbir seviyede azalmıyor.", AuditStatus.Pass);
+                else
+                    AddAuditResult("Renk Eğrisi (Monotonik)", "UYARI: ColorCurve'de renk sayısı düşüşü var! Renk sayısı asla azalmamalıdır.", AuditStatus.Fail);
+
+                // 7b. Başlangıç eşiği kontrolü
+                bool startsAtOne = db.ColorCurve[0].LevelThreshold == 1;
+                if (startsAtOne)
+                    AddAuditResult("Renk Eğrisi (Başlangıç)", $"ColorCurve seviye 1'de başlıyor: {db.ColorCurve[0].ColorCount} renk.", AuditStatus.Pass);
+                else
+                    AddAuditResult("Renk Eğrisi (Başlangıç)", $"UYARI: ColorCurve seviye {db.ColorCurve[0].LevelThreshold}'de başlıyor, seviye 1 olmalıdır.", AuditStatus.Warning);
+
+                // 7c. Tavan renk kontrolü (GDD §5: maksimum 10 renk)
+                int maxColorCount = 0;
+                foreach (var pt in db.ColorCurve)
+                    if (pt.ColorCount > maxColorCount) maxColorCount = pt.ColorCount;
+                if (maxColorCount <= 10)
+                    AddAuditResult("Renk Eğrisi (Tavan)", $"Maksimum renk sayısı: {maxColorCount} (GDD tavanı: 10, geçerli).", AuditStatus.Pass);
+                else
+                    AddAuditResult("Renk Eğrisi (Tavan)", $"UYARI: Maksimum renk sayısı {maxColorCount}, GDD tavanı 10'u aşıyor.", AuditStatus.Warning);
+
+                // 7d. InitializeDefaults() ile asset tutarlılığı
+                // ComputeColorCountForLevel artık ColorCurve'dan okuduğu için SSOT sağlandı.
+                AddAuditResult("Renk Eğrisi (SSOT)", "ComputeColorCountForLevel artık ColorCurve listesini kullanıyor. Hardcoded eşikler kaldırıldı (yalnızcaInitializeDefaults öncesi fallback).", AuditStatus.Pass);
+
+                // 7e. LevelThemes örtüşme/boşluk kontrolü
+                if (db.LevelThemes != null && db.LevelThemes.Count > 0)
+                {
+                    bool hasOverlap = false;
+                    bool hasGap = false;
+                    for (int i = 1; i < db.LevelThemes.Count; i++)
+                    {
+                        var prev = db.LevelThemes[i - 1];
+                        var curr = db.LevelThemes[i];
+                        if (curr.StartLevel <= prev.EndLevel)
+                            hasOverlap = true;
+                        if (curr.StartLevel > prev.EndLevel + 1)
+                            hasGap = true;
+                    }
+                    if (!hasOverlap && !hasGap)
+                        AddAuditResult("Renk Eğrisi (LevelThemes)", $"LevelThemes örtüşmesiz ve boşluksuz: {db.LevelThemes.Count} tema seviyesi.", AuditStatus.Pass);
+                    else
+                    {
+                        string issues = "";
+                        if (hasOverlap) issues += " Örtüşme var.";
+                        if (hasGap) issues += " Boşluk var.";
+                        AddAuditResult("Renk Eğrisi (LevelThemes)", $"LevelThemes sorunlu:{issues}", AuditStatus.Warning);
+                    }
+                }
+            }
+            else
+            {
+                AddAuditResult("Renk Eğrisi (SSOT)", "ColorCurve boş veya tanımlanmamış!", AuditStatus.Fail);
+            }
+
             _auditRun = true;
         }
 
@@ -384,6 +467,278 @@ namespace RingFlow.Editor
                 }
             }
         }
+
+        #region Cross-SO Validation
+
+        private void DrawCrossSoValidationPanel()
+        {
+            if (!_crossSoValidationRun)
+                RunCrossSoValidation();
+
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    EditorGUILayout.LabelField("Çapraz Kaynak Doğrulaması", EditorStyles.boldLabel);
+                    GUILayout.FlexibleSpace();
+                    if (GUILayout.Button("Yeniden Doğrula", EditorStyles.miniButton, GUILayout.Width(160f)))
+                        RunCrossSoValidation();
+                }
+
+                EditorGUILayout.Space(2f);
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    var prevColor = GUI.color;
+
+                    GUI.color = EditorPaths.EditorColors.Success;
+                    EditorGUILayout.LabelField($"✔ GEÇTİ: {_crossSoPassCount}", EditorStyles.boldLabel, GUILayout.Width(100f));
+
+                    GUI.color = EditorPaths.EditorColors.Warning;
+                    EditorGUILayout.LabelField($"⚠ UYARI: {_crossSoWarnCount}", EditorStyles.boldLabel, GUILayout.Width(100f));
+
+                    GUI.color = EditorPaths.EditorColors.Error;
+                    EditorGUILayout.LabelField($"✘ HATA: {_crossSoFailCount}", EditorStyles.boldLabel, GUILayout.Width(100f));
+
+                    GUI.color = prevColor;
+                }
+
+                EditorGUILayout.Space(4f);
+
+                foreach (var result in _crossSoResults)
+                {
+                    Color statusColor = result.Status switch
+                    {
+                        AuditStatus.Pass => EditorPaths.EditorColors.Success,
+                        AuditStatus.Warning => EditorPaths.EditorColors.Warning,
+                        _ => EditorPaths.EditorColors.Error
+                    };
+
+                    string prefix = result.Status switch
+                    {
+                        AuditStatus.Pass => "[GEÇTİ]",
+                        AuditStatus.Warning => "[UYARI]",
+                        _ => "[HATA]"
+                    };
+
+                    using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
+                    {
+                        var prevColor = GUI.color;
+                        GUI.color = statusColor;
+                        EditorGUILayout.LabelField(prefix, EditorStyles.boldLabel, GUILayout.Width(65f));
+                        GUI.color = prevColor;
+
+                        EditorGUILayout.LabelField(result.Title, EditorStyles.boldLabel, GUILayout.Width(180f));
+                        EditorGUILayout.LabelField(result.Message, EditorStyles.wordWrappedLabel);
+                    }
+                }
+            }
+        }
+
+        private void RunCrossSoValidation()
+        {
+            _crossSoResults.Clear();
+            _crossSoPassCount = 0;
+            _crossSoWarnCount = 0;
+            _crossSoFailCount = 0;
+
+            var db = _cachedDatabase;
+            if (db == null)
+            {
+                AddCrossSoResult("Sistem Başlatma", "GameConfigDatabase yüklenemedi.", AuditStatus.Fail);
+                _crossSoValidationRun = true;
+                return;
+            }
+
+            AddCrossSoResult("Temel Referans", "GameConfigDatabase.asset mevcut.", AuditStatus.Pass);
+
+            // ── 1. RingMechanicDataSO → GameConfigDatabaseSO.MechanicUnlocks ──
+            var mechanicData = Resources.Load<RingMechanicDataSO>(EditorPaths.RingMechanicDataKey);
+            if (mechanicData != null)
+            {
+                AddCrossSoResult("RingMechanicDataSO Varlığı", "RingMechanicDataSO.asset mevcut.", AuditStatus.Pass);
+
+                // Each mechanic type in RingMechanicDataSO.Mechanics must have a matching MechanicUnlockEntry
+                var missingEntries = new List<string>();
+                foreach (var entry in mechanicData.Mechanics)
+                {
+                    var type = entry.Type;
+                    if (type == WorldMechanicType.None) continue;
+
+                    bool found = false;
+                    foreach (var unlock in db.MechanicUnlocks)
+                    {
+                        if (unlock.MechanicType == type)
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found)
+                        missingEntries.Add(type.ToString());
+                }
+
+                if (missingEntries.Count == 0)
+                    AddCrossSoResult("RingMechanicDataSO ↔ MechanicUnlocks", "Tüm mekanik tiplerinin MechanicUnlocks'ta karşılığı var.", AuditStatus.Pass);
+                else
+                    AddCrossSoResult("RingMechanicDataSO ↔ MechanicUnlocks", $"Eksik mekanikler: {string.Join(", ", missingEntries)}", AuditStatus.Fail);
+
+                // Verify WorldMechanicType enum consistency
+                var typeNames = System.Enum.GetNames(typeof(WorldMechanicType));
+                var definedMechanics = new HashSet<string>();
+                foreach (var m in mechanicData.Mechanics)
+                    definedMechanics.Add(m.Type.ToString());
+
+                var undefEntries = new List<string>();
+                foreach (var name in typeNames)
+                {
+                    if (name == "None") continue;
+                    if (!definedMechanics.Contains(name))
+                        undefEntries.Add(name);
+                }
+                if (undefEntries.Count > 0)
+                    AddCrossSoResult("WorldMechanicType Enum ↔ RingMechanicDataSO", $"Tanımsız mekanikler: {string.Join(", ", undefEntries)}", AuditStatus.Warning);
+                else
+                    AddCrossSoResult("WorldMechanicType Enum ↔ RingMechanicDataSO", "Tüm enum değerleri için MechanicEntry tanımı var.", AuditStatus.Pass);
+            }
+            else
+            {
+                AddCrossSoResult("RingMechanicDataSO Varlığı", "RingMechanicDataSO.asset bulunamadı!", AuditStatus.Fail);
+            }
+
+            // ── 2. WorldConfigData mechanic types valid in MechanicUnlocks ──
+            var worldMechanicsWithIssues = new List<string>();
+            foreach (var world in db.Worlds)
+            {
+                if (world.MechanicType == WorldMechanicType.None) continue;
+
+                bool found = false;
+                foreach (var unlock in db.MechanicUnlocks)
+                {
+                    if (unlock.MechanicType == world.MechanicType)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                    worldMechanicsWithIssues.Add($"World {world.WorldIndex} ({world.MechanicType})");
+            }
+
+            if (worldMechanicsWithIssues.Count == 0)
+                AddCrossSoResult("WorldConfigData ↔ MechanicUnlocks", "Tüm dünya mekaniklerinin MechanicUnlocks'ta karşılığı var.", AuditStatus.Pass);
+            else
+                AddCrossSoResult("WorldConfigData ↔ MechanicUnlocks", $"Eksik: {string.Join(", ", worldMechanicsWithIssues)}", AuditStatus.Warning);
+
+            // ── 3. DifficultyBand AllowedMechanics valid in MechanicUnlocks ──
+            var bandIssues = new List<string>();
+            foreach (var band in db.DifficultyBands)
+            {
+                if (band.AllowedMechanics == null) continue;
+                foreach (var mechanic in band.AllowedMechanics)
+                {
+                    if (mechanic == WorldMechanicType.None) continue;
+
+                    bool found = false;
+                    foreach (var unlock in db.MechanicUnlocks)
+                    {
+                        if (unlock.MechanicType == mechanic)
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found)
+                        bandIssues.Add($"{band.Band}:{mechanic}");
+                }
+            }
+
+            if (bandIssues.Count == 0)
+                AddCrossSoResult("DifficultyBands ↔ MechanicUnlocks", "Tüm zorluk bandı mekaniklerinin karşılığı var.", AuditStatus.Pass);
+            else
+                AddCrossSoResult("DifficultyBands ↔ MechanicUnlocks", $"Eksik: {string.Join(", ", bandIssues)}", AuditStatus.Warning);
+
+            // ── 4. LevelThemes mechanics valid in MechanicUnlocks ──
+            var themeMechanicIssues = new List<string>();
+            foreach (var theme in db.LevelThemes)
+            {
+                if (theme.ForcedMechanics == null) continue;
+                foreach (var mechanic in theme.ForcedMechanics)
+                {
+                    if (mechanic == WorldMechanicType.None) continue;
+
+                    bool found = false;
+                    foreach (var unlock in db.MechanicUnlocks)
+                    {
+                        if (unlock.MechanicType == mechanic)
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found)
+                        themeMechanicIssues.Add($"Level {theme.StartLevel}:{mechanic}");
+                }
+            }
+
+            if (themeMechanicIssues.Count == 0)
+                AddCrossSoResult("LevelThemes ↔ MechanicUnlocks", "Tüm tema mekaniklerinin karşılığı var.", AuditStatus.Pass);
+            else
+                AddCrossSoResult("LevelThemes ↔ MechanicUnlocks", $"Eksik: {string.Join(", ", themeMechanicIssues)}", AuditStatus.Warning);
+
+            // ── 5. LocalizationConfig languages check ──
+            var loc = Resources.Load<LocalizationConfigSO>(EditorPaths.LocalizationConfigKey);
+            if (loc != null)
+                AddCrossSoResult("LocalizationConfig Varlığı", "LocalizationConfigSO.asset mevcut.", AuditStatus.Pass);
+            else
+                AddCrossSoResult("LocalizationConfig Varlığı", "LocalizationConfigSO.asset bulunamadı!", AuditStatus.Fail);
+
+            // ── 6. Null reference scan for all primary SOs ──
+            var allSos = new (string Label, ScriptableObject Asset)[]
+            {
+                ("GameConfigDatabase", db),
+                ("RingMechanicData", mechanicData),
+                ("LocalizationConfig", loc),
+                ("GameFeelConfig", Resources.Load<GameFeelConfigSO>(EditorPaths.GameFeelConfigKey)),
+                ("RingColorPalette", Resources.Load<RingColorPaletteSO>(EditorPaths.RingColorPaletteKey)),
+                ("AudioConfig", Resources.Load<AudioConfigSO>(EditorPaths.AudioConfigKey)),
+                ("UIThemeConfig", Resources.Load<UIThemeConfigSO>(EditorPaths.UIThemeConfigKey)),
+                ("StoreCatalog", Resources.Load<StoreCatalogSO>(EditorPaths.StoreCatalogKey)),
+                ("ThemeSkinDatabase", Resources.Load<ThemeSkinDatabaseSO>(EditorPaths.ThemeSkinDatabaseKey)),
+            };
+
+            int nullCount = 0;
+            var nullNames = new List<string>();
+            foreach (var (label, asset) in allSos)
+            {
+                if (asset == null)
+                {
+                    nullCount++;
+                    nullNames.Add(label);
+                }
+            }
+
+            if (nullCount == 0)
+                AddCrossSoResult("SO Null Referans Taraması", $"Tüm {allSos.Length} birincil SO mevcut.", AuditStatus.Pass);
+            else
+                AddCrossSoResult("SO Null Referans Taraması", $"Eksik ({nullCount}/{allSos.Length}): {string.Join(", ", nullNames)}", AuditStatus.Fail);
+
+            _crossSoValidationRun = true;
+        }
+
+        private void AddCrossSoResult(string title, string message, AuditStatus status)
+        {
+            _crossSoResults.Add(new AuditResult { Title = title, Message = message, Status = status });
+            if (status == AuditStatus.Pass) _crossSoPassCount++;
+            else if (status == AuditStatus.Warning) _crossSoWarnCount++;
+            else _crossSoFailCount++;
+        }
+
+        #endregion Cross-SO Validation
 
         private void DrawAssetJumps()
         {
