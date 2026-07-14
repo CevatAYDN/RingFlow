@@ -769,6 +769,195 @@ namespace RingFlow.Tests
             Assert.IsFalse(_signalBus.HasFiredPortalTeleport);
         }
 
+        // ── Missing Undo Tests (Phase 2 Audit) ─────────────────────────────────────
+
+        [Test]
+        public void UndoCommand_RestoresPaintEffect()
+        {
+            var moveCommand = new MoveRingCommand();
+            InjectDependencies(moveCommand);
+            var undoCommand = new UndoCommand();
+            InjectDependencies(undoCommand);
+
+            var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };
+            var pole1 = new PoleState { Id = 1, MaxCapacity = 4 };
+
+            pole1.AddRing(new RingData(RingColor.Blue, RingType.Paint));
+            pole0.AddRing(new RingData(RingColor.Red, RingType.Standard));
+
+            _gameplayModel.Poles.Add(pole0);
+            _gameplayModel.Poles.Add(pole1);
+
+            moveCommand.Execute(new MoveRingSignal(0, 1));
+
+            Assert.AreEqual(0, pole0.Rings.Count);
+            Assert.AreEqual(2, pole1.Rings.Count);
+            Assert.AreEqual(RingColor.Blue, pole1.Rings[0].Color);
+            Assert.AreEqual(RingType.Standard, pole1.Rings[0].Type);
+            Assert.AreEqual(RingColor.Blue, pole1.Rings[1].Color);
+            Assert.AreEqual(1, _gameplayModel.MoveHistory.Count);
+
+            undoCommand.Execute(new UndoSignal());
+
+            Assert.AreEqual(1, pole0.Rings.Count);
+            Assert.AreEqual(RingColor.Red, pole0.Rings[0].Color);
+            Assert.AreEqual(RingType.Standard, pole0.Rings[0].Type);
+            Assert.AreEqual(1, pole1.Rings.Count);
+            Assert.AreEqual(RingColor.Blue, pole1.Rings[0].Color);
+            Assert.AreEqual(RingType.Paint, pole1.Rings[0].Type);
+            Assert.AreEqual(0, _gameplayModel.MoveHistory.Count);
+        }
+
+        [Test]
+        public void UndoCommand_RestoresRainbowConversion()
+        {
+            var moveCommand = new MoveRingCommand();
+            InjectDependencies(moveCommand);
+            var undoCommand = new UndoCommand();
+            InjectDependencies(undoCommand);
+
+            var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };
+            var pole1 = new PoleState { Id = 1, MaxCapacity = 4 };
+
+            pole0.AddRing(new RingData(RingColor.None, RingType.Rainbow));
+            pole1.AddRing(new RingData(RingColor.Red, RingType.Standard));
+
+            _gameplayModel.Poles.Add(pole0);
+            _gameplayModel.Poles.Add(pole1);
+
+            moveCommand.Execute(new MoveRingSignal(0, 1));
+
+            Assert.AreEqual(2, pole1.Rings.Count);
+            Assert.AreEqual(RingColor.Red, pole1.Rings[0].Color);
+            Assert.AreEqual(RingType.Standard, pole1.Rings[0].Type);
+            Assert.AreEqual(RingColor.Red, pole1.Rings[1].Color);
+            Assert.AreEqual(RingType.Standard, pole1.Rings[1].Type);
+            Assert.AreEqual(1, _gameplayModel.MoveHistory.Count);
+
+            undoCommand.Execute(new UndoSignal());
+
+            Assert.AreEqual(1, pole0.Rings.Count);
+            Assert.AreEqual(RingType.Rainbow, pole0.Rings[0].Type);
+            Assert.AreEqual(1, pole1.Rings.Count);
+            Assert.AreEqual(RingColor.Red, pole1.Rings[0].Color);
+            Assert.AreEqual(0, _gameplayModel.MoveHistory.Count);
+        }
+
+        [Test]
+        public void UndoCommand_RestoresGhostRevealOnFromPole()
+        {
+            var selectCommand = new SelectPoleCommand();
+            InjectDependencies(selectCommand);
+            var moveCommand = new MoveRingCommand();
+            InjectDependencies(moveCommand);
+            var undoCommand = new UndoCommand();
+            InjectDependencies(undoCommand);
+
+            var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };
+            var pole1 = new PoleState { Id = 1, MaxCapacity = 4 };
+
+            pole0.AddRing(new RingData(RingColor.Green, RingType.Ghost));
+
+            _gameplayModel.Poles.Add(pole0);
+            _gameplayModel.Poles.Add(pole1);
+
+            selectCommand.Execute(new SelectPoleSignal(0));
+            Assert.AreEqual(RingType.Standard, pole0.Rings[0].Type);
+            Assert.IsTrue(_gameplayModel.PendingGhostRevealOnFrom);
+
+            moveCommand.Execute(new MoveRingSignal(0, 1));
+
+            Assert.AreEqual(0, pole0.Rings.Count);
+            Assert.AreEqual(1, pole1.Rings.Count);
+            Assert.AreEqual(RingType.Standard, pole1.Rings[0].Type);
+            Assert.IsFalse(_gameplayModel.PendingGhostRevealOnFrom);
+            Assert.AreEqual(1, _gameplayModel.MoveHistory.Count);
+
+            undoCommand.Execute(new UndoSignal());
+
+            Assert.AreEqual(1, pole0.Rings.Count);
+            Assert.AreEqual(RingType.Ghost, pole0.Rings[0].Type);
+            Assert.AreEqual(RingColor.Green, pole0.Rings[0].Color);
+            Assert.AreEqual(0, pole1.Rings.Count);
+            Assert.AreEqual(0, _gameplayModel.MoveHistory.Count);
+        }
+
+        [Test]
+        public void UndoCommand_RestoresChainSubMove()
+        {
+            var moveCommand = new MoveRingCommand();
+            InjectDependencies(moveCommand);
+            var undoCommand = new UndoCommand();
+            InjectDependencies(undoCommand);
+
+            var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };
+            var pole1 = new PoleState { Id = 1, MaxCapacity = 4 };
+            var pole2 = new PoleState { Id = 2, MaxCapacity = 4 };
+
+            pole0.AddRing(new RingData(RingColor.Yellow, RingType.Chain, 99));
+            pole1.AddRing(new RingData(RingColor.Yellow, RingType.Chain, 99));
+
+            _gameplayModel.Poles.Add(pole0);
+            _gameplayModel.Poles.Add(pole1);
+            _gameplayModel.Poles.Add(pole2);
+
+            moveCommand.Execute(new MoveRingSignal(0, 2));
+
+            Assert.AreEqual(0, pole0.Rings.Count);
+            Assert.AreEqual(0, pole1.Rings.Count);
+            Assert.AreEqual(2, pole2.Rings.Count);
+            Assert.AreEqual(1, _gameplayModel.MoveHistory.Count);
+
+            undoCommand.Execute(new UndoSignal());
+
+            Assert.AreEqual(1, pole0.Rings.Count);
+            Assert.AreEqual(RingType.Chain, pole0.Rings[0].Type);
+            Assert.AreEqual(99, pole0.Rings[0].AdditionalData);
+            Assert.AreEqual(1, pole1.Rings.Count);
+            Assert.AreEqual(RingType.Chain, pole1.Rings[0].Type);
+            Assert.AreEqual(99, pole1.Rings[0].AdditionalData);
+            Assert.AreEqual(0, pole2.Rings.Count);
+            Assert.AreEqual(0, _gameplayModel.MoveHistory.Count);
+        }
+
+        [Test]
+        public void UndoCommand_RestoresMagnetSubMove()
+        {
+            var moveCommand = new MoveRingCommand();
+            InjectDependencies(moveCommand);
+            var undoCommand = new UndoCommand();
+            InjectDependencies(undoCommand);
+
+            var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };
+            var pole1 = new PoleState { Id = 1, MaxCapacity = 4 };
+            var pole2 = new PoleState { Id = 2, MaxCapacity = 4 };
+
+            pole0.AddRing(new RingData(RingColor.Red, RingType.Magnet));
+            pole1.AddRing(new RingData(RingColor.Red, RingType.Standard));
+
+            _gameplayModel.Poles.Add(pole0);
+            _gameplayModel.Poles.Add(pole1);
+            _gameplayModel.Poles.Add(pole2);
+
+            moveCommand.Execute(new MoveRingSignal(0, 2));
+
+            Assert.AreEqual(0, pole0.Rings.Count);
+            Assert.AreEqual(0, pole1.Rings.Count);
+            Assert.AreEqual(2, pole2.Rings.Count);
+            Assert.AreEqual(1, _gameplayModel.MoveHistory.Count);
+
+            undoCommand.Execute(new UndoSignal());
+
+            Assert.AreEqual(1, pole0.Rings.Count);
+            Assert.AreEqual(RingType.Magnet, pole0.Rings[0].Type);
+            Assert.AreEqual(RingColor.Red, pole0.Rings[0].Color);
+            Assert.AreEqual(1, pole1.Rings.Count);
+            Assert.AreEqual(RingType.Standard, pole1.Rings[0].Type);
+            Assert.AreEqual(RingColor.Red, pole1.Rings[0].Color);
+            Assert.AreEqual(0, pole2.Rings.Count);
+            Assert.AreEqual(0, _gameplayModel.MoveHistory.Count);
+        }
+
         // ── ChestClaimCommand Tests (GDD §9) ──────────────────────────────────────
 
         [Test]

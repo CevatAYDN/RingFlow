@@ -47,6 +47,7 @@ namespace RingFlow.Editor
         public const string BatchStartLevel  = "RingFlow.BatchStartLevel";
         public const string BatchEndLevel    = "RingFlow.BatchEndLevel";
         public const string AutoSave         = "RingFlow.AutoSave";
+        public const string MaxEmptyPoles    = "RingFlow.MaxEmptyPoles";
 
         // ── Window state ──
         public const string SelectedTab      = "RingFlow.SelectedTab";

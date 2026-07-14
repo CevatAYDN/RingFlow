@@ -14,6 +14,7 @@ namespace RingFlow.Gameplay.UI
         public Text DayText { get; private set; }
         public Text RewardText { get; private set; }
         private GameObject _claimBtn, _closeBtn;
+        private ILocalizationService _locService;
 
         private void Awake()
         {
@@ -83,6 +84,7 @@ namespace RingFlow.Gameplay.UI
 
         public void Localize(ILocalizationService loc)
         {
+            _locService = loc;
             if (TitleText != null) GameUIResources.LocalizeText(TitleText.gameObject, "daily_reward_title", loc);
             GameUIResources.LocalizeButtonText(_claimBtn, "daily_reward_claim", loc);
             GameUIResources.LocalizeButtonText(_closeBtn, "settings_close", loc);
@@ -90,7 +92,13 @@ namespace RingFlow.Gameplay.UI
 
         public void ShowReward(int dayIndex, string rewardText)
         {
-            if (DayText != null) DayText.text = $"Day {dayIndex + 1}";
+            if (DayText != null)
+            {
+                string dayFormat = _locService != null
+                    ? _locService.GetString("daily_day_format", "Day {0}")
+                    : "Day {0}";
+                DayText.text = string.Format(dayFormat, dayIndex + 1);
+            }
             if (RewardText != null) RewardText.text = rewardText;
             if (ClaimButton != null) ClaimButton.interactable = true;
         }

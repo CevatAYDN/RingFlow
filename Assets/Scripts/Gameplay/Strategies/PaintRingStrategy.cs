@@ -1,4 +1,3 @@
-using Nexus.Core;
 using Nexus.Core.Services;
 
 namespace RingFlow.Gameplay.Strategies
@@ -24,6 +23,8 @@ namespace RingFlow.Gameplay.Strategies
                     var paintColor = movingRing.Color;
                     context.PaintedRingIndex = ringBelowIndex;
                     context.PaintedRingOriginalColor = ringBelow.Color;
+                    context.PaintConsumedRingIndex = movingRingIndex;
+                    context.PaintConsumedRingData = new RingData(movingRing.Color, RingType.Paint);
                     context.WasPaintApplied = true;
 
                     var paintedRing = new RingData(paintColor, RingType.Standard);
@@ -44,6 +45,8 @@ namespace RingFlow.Gameplay.Strategies
 
                     context.PaintedRingIndex = movingRingIndex;
                     context.PaintedRingOriginalColor = movingRing.Color;
+                    context.PaintConsumedRingIndex = ringBelowIndex;
+                    context.PaintConsumedRingData = new RingData(ringBelow.Color, RingType.Paint);
                     context.WasPaintApplied = true;
 
                     var paintedRing = new RingData(paintColor, RingType.Standard);

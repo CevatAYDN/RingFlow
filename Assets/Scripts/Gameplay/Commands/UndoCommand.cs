@@ -80,26 +80,30 @@ namespace RingFlow.Gameplay
                     {
                         movedRing.Color = lastMove.OriginalColor;
 
-                        int paintTargetIndex = lastMove.PaintedRingIndex;
-                        if (paintTargetIndex >= 0 && paintTargetIndex < toPole.Rings.Count)
+                        // Restore the consumed Paint ring (Standard → back to Paint)
+                        if (lastMove.PaintConsumedRingIndex >= 0 &&
+                            lastMove.PaintConsumedRingIndex < toPole.Rings.Count)
                         {
-                            var painted = toPole.Rings[paintTargetIndex];
-                            painted.Type = RingType.Paint;
-                            toPole.Rings[paintTargetIndex] = painted;
+                            toPole.Rings[lastMove.PaintConsumedRingIndex] = lastMove.PaintConsumedRingData;
+                        }
+
+                        // Restore the painted ring's original color
+                        if (lastMove.PaintedRingIndex >= 0 &&
+                            lastMove.PaintedRingIndex < toPole.Rings.Count)
+                        {
+                            var painted = toPole.Rings[lastMove.PaintedRingIndex];
+                            painted.Color = lastMove.PaintedRingOriginalColor;
+                            toPole.Rings[lastMove.PaintedRingIndex] = painted;
                         }
                     }
 
                     // ── 8. Undo rainbow conversion ──
+                    //   The rainbow WAS the movedRing (already popped from toPole in step 6).
+                    //   We restore its original Type and Color directly.
                     if (lastMove.WasRainbowTargetConverted)
                     {
-                        int rainbowIdx = lastMove.RainbowTargetRingIndex - 1;
-                        if (rainbowIdx >= 0 && rainbowIdx < toPole.Rings.Count)
-                        {
-                            var rainbow = toPole.Rings[rainbowIdx];
-                            rainbow.Type  = RingType.Rainbow;
-                            rainbow.Color = lastMove.RainbowTargetOriginalColor;
-                            toPole.Rings[rainbowIdx] = rainbow;
-                        }
+                        movedRing.Type  = RingType.Rainbow;
+                        movedRing.Color = lastMove.RainbowTargetOriginalColor;
                     }
 
                     // ── 9. Return moving ring to FROM pole ──

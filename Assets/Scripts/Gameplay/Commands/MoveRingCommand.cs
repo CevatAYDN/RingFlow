@@ -148,16 +148,17 @@ namespace RingFlow.Gameplay
             record.ToPoleId = context.ToPoleId;
             record.Ring = context.MovingRing;
             record.WasMysteryRevealedOnFrom = context.WasMysteryRevealed;
-            // Record whether the FROM pole's top ring was a Ghost that was revealed on selection
-            // (SelectPoleCommand changes Ghost→Standard before the move fires).
-            // UndoCommand uses this flag to restore it back to Ghost.
-            record.WasGhostRevealedOnFrom = context.FromPole.Rings.Count > 0 &&
-                                            context.MovingRing.Type == RingType.Standard &&
-                                            context.WasGhostOnFrom;
+            // Consume the ghost-reveal flag set by SelectPoleCommand.
+            // Clear it immediately so stale flags never leak into subsequent moves.
+            bool ghostRevealed = _model.PendingGhostRevealOnFrom;
+            _model.PendingGhostRevealOnFrom = false;
+            record.WasGhostRevealedOnFrom = ghostRevealed;
             record.WasTargetPoleUnlocked = context.WasPoleUnlocked;
             record.WasPainted = context.WasPaintApplied;
             record.PaintedRingIndex = context.PaintedRingIndex;
             record.PaintedRingOriginalColor = context.PaintedRingOriginalColor;
+            record.PaintConsumedRingIndex = context.PaintConsumedRingIndex;
+            record.PaintConsumedRingData = context.PaintConsumedRingData;
             record.OriginalColor = context.MovingRing.Color;
             record.WasRainbowTargetConverted = context.WasRainbowConverted;
             record.RainbowTargetRingIndex = context.RainbowTargetIndex;

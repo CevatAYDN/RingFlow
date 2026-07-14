@@ -67,6 +67,8 @@ namespace RingFlow.Gameplay
         public uint AddData10;
         public uint AddData11;
 
+        public const int MaxSupportedCapacity = 8;
+
         public int PoleCount;
         public int MaxCapacity;
 

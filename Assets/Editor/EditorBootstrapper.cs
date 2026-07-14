@@ -101,23 +101,32 @@ namespace RingFlow.Editor
         {
             var eventSystem = Object.FindAnyObjectByType<EventSystem>();
             if (eventSystem == null)
-                throw new System.InvalidOperationException("[EditorBootstrapper] EventSystem is required.");
+            {
+                var go = new GameObject("EventSystem");
+                Undo.RegisterCreatedObjectUndo(go, "Create EventSystem");
+                eventSystem = go.AddComponent<EventSystem>();
+            }
 
             var inputModuleType = ResolveInputSystemUIInputModuleType();
             if (inputModuleType == null)
                 throw new System.InvalidOperationException("[EditorBootstrapper] Input System UI module type is required.");
 
-            var existing = eventSystem.GetComponent<BaseInputModule>();
-            if (existing == null || !inputModuleType.IsInstanceOfType(existing))
-                throw new System.InvalidOperationException("[EditorBootstrapper] EventSystem must already contain the correct input module.");
+            if (eventSystem.GetComponent<BaseInputModule>() == null)
+            {
+                eventSystem.gameObject.AddComponent(inputModuleType);
+            }
         }
 
         private static void EnsureMainCamera()
         {
             var camera = Camera.main;
             if (camera == null)
-                throw new System.InvalidOperationException(
-                    "[EditorBootstrapper] Main Camera tag bulunamadı. Scene'de bir Main Camera tag'i tanımlanmalıdır.");
+            {
+                var go = new GameObject("Main Camera");
+                Undo.RegisterCreatedObjectUndo(go, "Create Main Camera");
+                camera = go.AddComponent<Camera>();
+                camera.tag = "MainCamera";
+            }
 
             var feel = Resources.Load<Gameplay.GameFeelConfigSO>(EditorPaths.GameFeelConfigKey);
             if (feel == null)

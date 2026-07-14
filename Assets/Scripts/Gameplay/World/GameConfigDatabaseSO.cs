@@ -1,6 +1,5 @@
 using UnityEngine;
 using System.Collections.Generic;
-using Nexus.Core.Services;
 
 namespace RingFlow.Gameplay
 {
@@ -39,6 +38,12 @@ namespace RingFlow.Gameplay
     {
         public string CurrencyId;
         public int Amount;
+    }
+
+    public enum DailyRewardResetMode
+    {
+        CalendarDayUtc,
+        FixedIntervalMinutes
     }
 
     [System.Serializable]
@@ -80,6 +85,7 @@ namespace RingFlow.Gameplay
         public int XpThresholdDefault;
 
         [Header("Daily Rewards")]
+        public DailyRewardResetMode ResetMode;
         public int MinClaimIntervalMinutes;
         public List<DailyRewardEntry> DailyRewards;
 
@@ -257,6 +263,7 @@ namespace RingFlow.Gameplay
                 XpThresholdLevel2 = 250,
                 XpThresholdLevel3 = 500,
                 XpThresholdDefault = 1000,
+                ResetMode = DailyRewardResetMode.CalendarDayUtc,
                 MinClaimIntervalMinutes = 5,
                 DailyRewards = new List<DailyRewardEntry>
                 {

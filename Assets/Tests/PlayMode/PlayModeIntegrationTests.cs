@@ -258,7 +258,7 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void SaveChecksum_CorruptedData_LogsErrorButStillLoads()
+        public void SaveChecksum_CorruptedData_LoadsFromBackup()
         {
             // Arrange
             var prefs = new InMemoryPlayerPrefs();
@@ -271,12 +271,12 @@ namespace RingFlow.Tests
             var loaded = new PlayerProgressModel();
 
             // Act: load must not throw, even with checksum mismatch.
-            // Checksum mismatch is logged at Warning level (non-fatal for tests).
+            // Backup snapshot should restore last valid state.
             Assert.DoesNotThrow(() => PlayerProgressSaveSystem.Load(prefs, loaded));
 
-            // Assert: corrupt data is loaded (best-effort) rather than silently reset
-            Assert.That(loaded.Coins.Value, Is.EqualTo(-99999),
-                "Corrupt save should still load data — silent reset is worse than letting the player manually reset.");
+            // Assert: backup restore recovers original value instead of loading corrupted data
+            Assert.That(loaded.Coins.Value, Is.EqualTo(300),
+                "Checksum mismatch should trigger backup restore, recovering last valid state.");
         }
 
         [Test]

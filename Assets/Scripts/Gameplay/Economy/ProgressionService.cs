@@ -15,6 +15,8 @@ namespace RingFlow.Gameplay
         {
             _progress = progress;
             _dbConfig = dbConfig;
+            if (dbConfig != null && dbConfig.TotalWorlds > 0)
+                progress.SetTotalWorldCount(dbConfig.TotalWorlds);
             CurrentLevel = _progress.CurrentLevel;
             MaxUnlockedLevel = _progress.MaxUnlockedLevel;
         }
@@ -40,7 +42,7 @@ namespace RingFlow.Gameplay
             }
 
             int totalLevels = _dbConfig != null
-                ? _dbConfig.LevelsPerWorld * _dbConfig.TotalWorlds
+                ? _dbConfig.TotalLevels
                 : 40;
             if (levelIndex > totalLevels)
             {

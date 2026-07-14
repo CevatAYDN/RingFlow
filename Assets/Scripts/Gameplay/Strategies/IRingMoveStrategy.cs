@@ -53,6 +53,8 @@ namespace RingFlow.Gameplay.Strategies
         public bool WasPaintApplied;
         public int PaintedRingIndex;
         public RingColor PaintedRingOriginalColor;
+        public int PaintConsumedRingIndex;
+        public RingData PaintConsumedRingData;
         public bool WasRainbowConverted;
         public int RainbowTargetIndex;
         public RingColor RainbowTargetOriginalColor;

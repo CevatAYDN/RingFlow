@@ -39,6 +39,7 @@ namespace RingFlow.Gameplay
                 {
                     NexusLog.Info("SelectPoleCommand", "Execute", signal.PoleId.ToString(), "Deselecting same pole.");
                     _model.SelectedPoleId.Value = -1;
+                    _model.PendingGhostRevealOnFrom = false;
                 }
                 else
                 {
@@ -84,13 +85,16 @@ namespace RingFlow.Gameplay
         /// The move that follows will record this in MoveRecord.WasGhostRevealedOnFrom
         /// so UndoCommand can restore it. Only fires GhostRevealedSignal — no game-state
         /// mutation here beyond the ring type change (which is deliberate game design).
+        /// Also flags model.PendingGhostRevealOnFrom so MoveRingCommand can capture it
+        /// for undo.
         /// </summary>
-        private static void TryRevealGhost(PoleState pole, int poleId, ISignalBus signalBus)
+        private void TryRevealGhost(PoleState pole, int poleId, ISignalBus signalBus)
         {
             if (pole.TopRing.Type != RingType.Ghost) return;
             var ghostCopy = pole.Rings[^1];
             ghostCopy.Type = RingType.Standard;
             pole.Rings[^1] = ghostCopy;
+            _model.PendingGhostRevealOnFrom = true;
             signalBus?.Fire(new GhostRevealedSignal(poleId, ghostCopy));
         }
 

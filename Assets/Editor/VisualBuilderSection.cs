@@ -306,14 +306,18 @@ namespace RingFlow.Editor
                     string[] parts = rTrans.name.Split('_');
                     RingColor color = RingColor.None;
                     RingType type = RingType.Standard;
+                    int additional = 0;
 
                     if (parts.Length >= 4)
                     {
                         System.Enum.TryParse(parts[2], out color);
                         System.Enum.TryParse(parts[3], out type);
+                        if (parts.Length >= 5)
+                            int.TryParse(parts[4], out additional);
                     }
                     board.SetRingColor(p, r, color);
                     board.SetRingType(p, r, type);
+                    board.SetRingAdditional(p, r, additional);
                 }
 
                 if (ringsList.Count > 0)
@@ -397,7 +401,7 @@ namespace RingFlow.Editor
                 if (isLocked)
                 {
                     var darkColor = new Color(0.12f, 0.12f, 0.14f);
-                    poleMat = new Material(shader) { color = darkColor, name = "PoleMat_Locked" };
+                    poleMat = new Material(shader) { color = darkColor, name = "PoleMat_Locked", hideFlags = HideFlags.DontSave };
                     if (poleMat.HasProperty("_BaseColor"))
                         poleMat.SetColor("_BaseColor", darkColor);
                     poleMat.SetFloat("_Metallic", 0.9f);
@@ -406,7 +410,7 @@ namespace RingFlow.Editor
                 else
                 {
                     var slateColor = new Color(0.20f, 0.22f, 0.25f);
-                    poleMat = new Material(shader) { color = slateColor, name = "PoleMat_Open" };
+                    poleMat = new Material(shader) { color = slateColor, name = "PoleMat_Open", hideFlags = HideFlags.DontSave };
                     if (poleMat.HasProperty("_BaseColor"))
                         poleMat.SetColor("_BaseColor", slateColor);
                     poleMat.SetFloat("_Metallic", 0.8f);
@@ -443,12 +447,14 @@ namespace RingFlow.Editor
                 ringObj.transform.localScale = Vector3.one * scale;
             }
 
-            ringObj.name = $"Ring_{index}_{ringData.Color}_{ringData.Type}";
+            ringObj.name = ringData.AdditionalData > 0
+                ? $"Ring_{index}_{ringData.Color}_{ringData.Type}_{ringData.AdditionalData}"
+                : $"Ring_{index}_{ringData.Color}_{ringData.Type}";
 
             var ringRenderer = ringObj.GetComponentInChildren<Renderer>();
             if (ringRenderer != null)
             {
-                var mat = new Material(shader);
+                var mat = new Material(shader) { hideFlags = HideFlags.DontSave };
                 Color baseColor = palette != null ? palette.GetColor(ringData.Color, RingColorPaletteSO.ColorBlindMode.Off) : Color.grey;
                 mat.color = baseColor;
                 if (mat.HasProperty("_BaseColor"))
@@ -487,7 +493,18 @@ namespace RingFlow.Editor
         private static void ClearScene()
         {
             var boardRoot = GameObject.Find(EditorPaths.VisualBoardName);
-            if (boardRoot != null) Undo.DestroyObjectImmediate(boardRoot);
+            if (boardRoot == null) return;
+
+            // Destroy editor-created materials to prevent leaking
+            var renderers = boardRoot.GetComponentsInChildren<Renderer>(true);
+            foreach (var r in renderers)
+            {
+                if (r.sharedMaterial != null && (r.sharedMaterial.hideFlags & HideFlags.DontSave) != 0)
+                    Object.DestroyImmediate(r.sharedMaterial);
+                r.sharedMaterial = null;
+            }
+
+            Undo.DestroyObjectImmediate(boardRoot);
         }
     }
 }

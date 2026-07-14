@@ -76,16 +76,25 @@ namespace RingFlow.Gameplay
                 return false;
             }
 
-            if (lastTicks > 0 && (nowTicks - lastTicks) < MinClaimIntervalTicks)
-            {
-                reason = "too_soon";
-                return false;
-            }
+            var resetMode = _dbConfig != null
+                ? _dbConfig.BalanceConfig.ResetMode
+                : DailyRewardResetMode.CalendarDayUtc;
 
-            if (!DailyRewardTable.IsDailyRewardClaimable(lastTicks, DateTime.UtcNow))
+            if (resetMode == DailyRewardResetMode.FixedIntervalMinutes)
             {
-                reason = "daily_reset_not_elapsed";
-                return false;
+                if (lastTicks > 0 && (nowTicks - lastTicks) < MinClaimIntervalTicks)
+                {
+                    reason = "too_soon";
+                    return false;
+                }
+            }
+            else
+            {
+                if (!DailyRewardTable.IsDailyRewardClaimable(lastTicks, DateTime.UtcNow))
+                {
+                    reason = "daily_reset_not_elapsed";
+                    return false;
+                }
             }
 
             reason = string.Empty;

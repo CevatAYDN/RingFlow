@@ -1,6 +1,5 @@
 using UnityEditor;
 using UnityEngine;
-using System.IO;
 using System.Collections.Generic;
 using RingFlow.Gameplay;
 using RingFlow.Gameplay.Economy;
@@ -416,6 +415,96 @@ namespace RingFlow.Editor
             else
             {
                 AddAuditResult("Renk Eğrisi (SSOT)", "ColorCurve boş veya tanımlanmamış!", AuditStatus.Fail);
+            }
+
+            // E5: TotalLevels should equal LevelsPerWorld * TotalWorlds
+            int computedTotal = db.LevelsPerWorld * db.TotalWorlds;
+            if (db.TotalLevels == computedTotal)
+            {
+                AddAuditResult("Toplam Seviye Tutarlılığı",
+                    $"TotalLevels ({db.TotalLevels}) == LevelsPerWorld ({db.LevelsPerWorld}) x TotalWorlds ({db.TotalWorlds}) = {computedTotal}.",
+                    AuditStatus.Pass);
+            }
+            else
+            {
+                AddAuditResult("Toplam Seviye Tutarlılığı",
+                    $"TotalLevels={db.TotalLevels}, LevelsPerWorld x TotalWorlds={db.LevelsPerWorld}x{db.TotalWorlds}={computedTotal}. Değerler uyuşmuyor!",
+                    AuditStatus.Fail);
+            }
+
+            // E5: BoardState MaxSupportedCapacity vs difficulty band MaxCapacity
+            int maxCapConst = BoardState.MaxSupportedCapacity;
+            bool maxCapExceeded = false;
+            string maxCapMsg = "";
+            for (int i = 0; i < db.DifficultyBands.Count; i++)
+            {
+                if (db.DifficultyBands[i].MaxCapacity > maxCapConst)
+                {
+                    maxCapExceeded = true;
+                    maxCapMsg += $"{db.DifficultyBands[i].Band}:{db.DifficultyBands[i].MaxCapacity} ";
+                }
+            }
+            if (!maxCapExceeded)
+            {
+                AddAuditResult("Halka Kapasite Sınırı",
+                    $"BoardState.MaxSupportedCapacity={maxCapConst}, tüm zorluk bandı MaxCapacity değerleri bu sınır içinde ({db.DifficultyBands[^1].MaxCapacity}).",
+                    AuditStatus.Pass);
+            }
+            else
+            {
+                AddAuditResult("Halka Kapasite Sınırı",
+                    $"BoardState.MaxSupportedCapacity={maxCapConst} ancak şu band(ler) bu sınırı aşıyor: {maxCapMsg}",
+                    AuditStatus.Fail);
+            }
+
+            // E5: BombCountdown must fit in 4-bit AdditionalData field (max 15)
+            if (db.LevelGen.BombCountdown <= 15)
+            {
+                AddAuditResult("Bomba Geri Sayım (4-bit Sınırı)",
+                    $"BombCountdown={db.LevelGen.BombCountdown} ≤ 15, 4-bit AdditionalData alanına sığıyor.",
+                    AuditStatus.Pass);
+            }
+            else
+            {
+                AddAuditResult("Bomba Geri Sayım (4-bit Sınırı)",
+                    $"BombCountdown={db.LevelGen.BombCountdown}, 4-bit AdditionalData maksimum 15 değer alabilir! BoardState veri bozulmasını önlemek için ≤15 ayarlayın.",
+                    AuditStatus.Fail);
+            }
+
+            // E5: Localization CSV asset existence — verify the CSV localization table is accessible
+            var locCsv = Resources.Load<TextAsset>(GameplayAssetKeys.Localization);
+            if (locCsv != null)
+            {
+                string[] csvLines = locCsv.text.Split(new[] { "\r\n", "\n" }, System.StringSplitOptions.RemoveEmptyEntries);
+                if (csvLines.Length >= 2)
+                {
+                    string[] csvHeaders = csvLines[0].Split(',');
+                    int langColumnCount = csvHeaders.Length - 1; // First column is Key
+                    if (langColumnCount >= 15)
+                    {
+                        AddAuditResult("Yerelleştirme CSV Dosyası",
+                            $"Localization.csv mevcut: {csvLines.Length - 1} satır, {langColumnCount} dil sütunu (hedef: 15).",
+                            AuditStatus.Pass);
+                    }
+                    else
+                    {
+                        AddAuditResult("Yerelleştirme CSV Dosyası",
+                            $"Localization.csv mevcut ancak {langColumnCount} dil sütunu var (hedef: 15).",
+                            AuditStatus.Warning);
+                    }
+                }
+                else
+                {
+                    AddAuditResult("Yerelleştirme CSV Dosyası",
+                        "Localization.csv yalnızca başlık satırı içeriyor, veri yok.",
+                        AuditStatus.Warning);
+                }
+            }
+            else
+            {
+                AddAuditResult("Yerelleştirme CSV Dosyası",
+                    "Localization.csv bulunamadı! Resources'dan yüklenemedi.",
+                    AuditStatus.Fail);
             }
 
             _auditRun = true;

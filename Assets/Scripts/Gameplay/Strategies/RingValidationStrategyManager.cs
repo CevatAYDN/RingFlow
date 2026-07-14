@@ -22,18 +22,20 @@ namespace RingFlow.Gameplay.Strategies
             RegisterStrategy(new KeyRingValidationStrategy());
             RegisterStrategy(new StoneRingValidationStrategy());
             RegisterStrategy(new FrozenRingValidationStrategy());
-            RegisterStrategy(new GlassValidationStrategy());
             RegisterStrategy(new BombValidationStrategy());
             RegisterStrategy(new ChainValidationStrategy());
             RegisterStrategy(new MagnetValidationStrategy());
-            RegisterStrategy(new GhostValidationStrategy());
-            RegisterStrategy(new MysteryValidationStrategy());
             RegisterStrategy(new RainbowValidationStrategy());
             RegisterStrategy(new PaintValidationStrategy());
 
-            _defaultStrategy = _strategies.TryGetValue(RingType.Standard, out var std)
-                ? std
-                : new StandardRingValidationStrategy();
+            // Glass, Ghost, and Mystery use standard movement rules (identical logic).
+            // Map them to the Standard strategy instead of maintaining duplicate classes.
+            var standardStrategy = _strategies[RingType.Standard];
+            _strategies[RingType.Glass] = standardStrategy;
+            _strategies[RingType.Ghost] = standardStrategy;
+            _strategies[RingType.Mystery] = standardStrategy;
+
+            _defaultStrategy = standardStrategy;
         }
 
         /// <summary>

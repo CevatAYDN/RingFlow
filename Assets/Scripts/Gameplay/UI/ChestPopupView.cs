@@ -22,6 +22,7 @@ namespace RingFlow.Gameplay.UI
         public Text DiamondText { get; private set; }
         public Text TotalXpText { get; private set; }
         private GameObject _claimBtn, _closeBtn;
+        private ILocalizationService _locService;
 
         private void Awake()
         {
@@ -113,6 +114,7 @@ namespace RingFlow.Gameplay.UI
 
         public void Localize(ILocalizationService loc)
         {
+            _locService = loc;
             if (loc == null) return;
             if (TitleText != null) GameUIResources.LocalizeText(TitleText.gameObject, "chest_title", loc);
             GameUIResources.LocalizeButtonText(_claimBtn, "chest_claim_all", loc);
@@ -145,16 +147,41 @@ namespace RingFlow.Gameplay.UI
         public void ShowChestCounts(int bronze, int silver, int gold, int diamond, 
             int xpBronze = 100, int xpSilver = 250, int xpGold = 500, int xpDiamond = 1000)
         {
-            if (BronzeText != null) BronzeText.text = $"Bronze: x{bronze}  (+{bronze * xpBronze} XP)";
-            if (SilverText != null) SilverText.text = $"Silver: x{silver}  (+{silver * xpSilver} XP)";
-            if (GoldText != null) GoldText.text = $"Gold: x{gold}  (+{gold * xpGold} XP)";
-            if (DiamondText != null) DiamondText.text = $"Diamond: x{diamond}  (+{diamond * xpDiamond} XP)";
-
             int totalXp = bronze * xpBronze + silver * xpSilver + gold * xpGold + diamond * xpDiamond;
-            if (TotalXpText != null) TotalXpText.text = $"Total XP: +{totalXp}";
+
+            if (BronzeText != null)
+            {
+                string fmt = GetLocalizedFormat("chest_bronze_format", "Bronze: x{0}  (+{1} XP)");
+                BronzeText.text = string.Format(fmt, bronze, bronze * xpBronze);
+            }
+            if (SilverText != null)
+            {
+                string fmt = GetLocalizedFormat("chest_silver_format", "Silver: x{0}  (+{1} XP)");
+                SilverText.text = string.Format(fmt, silver, silver * xpSilver);
+            }
+            if (GoldText != null)
+            {
+                string fmt = GetLocalizedFormat("chest_gold_format", "Gold: x{0}  (+{1} XP)");
+                GoldText.text = string.Format(fmt, gold, gold * xpGold);
+            }
+            if (DiamondText != null)
+            {
+                string fmt = GetLocalizedFormat("chest_diamond_format", "Diamond: x{0}  (+{1} XP)");
+                DiamondText.text = string.Format(fmt, diamond, diamond * xpDiamond);
+            }
+            if (TotalXpText != null)
+            {
+                string fmt = GetLocalizedFormat("chest_total_xp_format", "Total XP: +{0}");
+                TotalXpText.text = string.Format(fmt, totalXp);
+            }
 
             bool hasAny = (bronze + silver + gold + diamond) > 0;
             if (ClaimButton != null) ClaimButton.interactable = hasAny;
+        }
+
+        private string GetLocalizedFormat(string key, string fallback)
+        {
+            return _locService != null ? _locService.GetString(key, fallback) : fallback;
         }
     }
 }

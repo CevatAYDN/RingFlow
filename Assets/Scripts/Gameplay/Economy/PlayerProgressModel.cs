@@ -131,6 +131,10 @@ namespace RingFlow.Gameplay
         private const string KeySchemaVersion = GameplayAssetKeys.PlayerPrefs.SaveSchemaVersion;
         private const string KeyChecksum = GameplayAssetKeys.PlayerPrefs.SaveChecksum;
 
+        // Backup save keys — snapshot of current state before overwriting
+        private const string KeyBackupInts = "RingFlow_Bak_Ints";
+        private const string KeyBackupStrings = "RingFlow_Bak_Strs";
+
         public static void Save(IPlayerPrefsService prefs, PlayerProgressModel m)
         {
             prefs.SetInt(KeySchemaVersion, CurrentSchemaVersion);
@@ -153,6 +157,9 @@ namespace RingFlow.Gameplay
             SaveBoolList(prefs, PlayerProgressModel.KeyWorlds, m.UnlockedWorlds);
             SaveStringList(prefs, PlayerProgressModel.KeyThemes, m.OwnedThemes);
             SaveStringList(prefs, PlayerProgressModel.KeyAchieves, m.Achievements);
+
+            // S2: snapshot current values as backup before checksum
+            BackupCurrentState(prefs);
 
             // P0 fix: write a checksum so we can detect corrupted saves on next load.
             var checksum = ComputeProgressChecksum(prefs);
@@ -177,7 +184,19 @@ namespace RingFlow.Gameplay
                 {
                     NexusLog.Warn("PlayerProgress", nameof(Load), "",
                         $"Save data checksum mismatch (stored={storedChecksum}, computed={computedChecksum}). " +
-                        "Data may be corrupted — loading anyway. Reset from Settings menu if issues occur.");
+                        "Attempting restore from backup snapshot.");
+                    if (!TryRestoreFromBackup(prefs, m))
+                    {
+                        NexusLog.Warn("PlayerProgress", nameof(Load), "",
+                            "Backup restore failed. Loading potentially corrupted data. " +
+                            "Player can reset from Settings menu if issues occur.");
+                    }
+                    else
+                    {
+                        NexusLog.Info("PlayerProgress", nameof(Load), "",
+                            "Backup restore succeeded. Progress restored from backup snapshot.");
+                        return;
+                    }
                 }
             }
 
@@ -321,6 +340,104 @@ namespace RingFlow.Gameplay
                 hash = hash * 31 + Djb2Hash(prefs.GetString(PlayerProgressModel.KeyAchieves, ""));
                 return hash;
             }
+        }
+
+        // S2: Backup current progress state before overwriting during Save().
+        // On checksum mismatch during Load(), the backup is restored automatically.
+        private static void BackupCurrentState(IPlayerPrefsService prefs)
+        {
+            var intSb = new System.Text.StringBuilder();
+            intSb.Append(prefs.GetInt(KeySchemaVersion, 0)); intSb.Append('|');
+            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyCoins, 0)); intSb.Append('|');
+            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyDiamonds, 0)); intSb.Append('|');
+            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyXp, 0)); intSb.Append('|');
+            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyCurrentLevel, 0)); intSb.Append('|');
+            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyMaxUnlocked, 0)); intSb.Append('|');
+            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyPlayerLvl, 0)); intSb.Append('|');
+            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyChestsBronze, 0)); intSb.Append('|');
+            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyChestsSilver, 0)); intSb.Append('|');
+            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyChestsGold, 0)); intSb.Append('|');
+            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyChestsDiamond, 0)); intSb.Append('|');
+            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyDailyDay, 0)); intSb.Append('|');
+            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyUndoUsed, 0)); intSb.Append('|');
+            intSb.Append(prefs.GetInt(PlayerProgressModel.KeyHintCount, 0));
+            prefs.SetString(KeyBackupInts, intSb.ToString());
+
+            var strSb = new System.Text.StringBuilder();
+            strSb.Append(prefs.GetString(PlayerProgressModel.KeyDailyStamp, "")); strSb.Append('|');
+            strSb.Append(prefs.GetString(PlayerProgressModel.KeyWorlds, "")); strSb.Append('|');
+            strSb.Append(prefs.GetString(PlayerProgressModel.KeyThemes, "")); strSb.Append('|');
+            strSb.Append(prefs.GetString(PlayerProgressModel.KeyAchieves, ""));
+            prefs.SetString(KeyBackupStrings, strSb.ToString());
+        }
+
+        private static bool TryRestoreFromBackup(IPlayerPrefsService prefs, PlayerProgressModel m)
+        {
+            var intsRaw = prefs.GetString(KeyBackupInts, "");
+            var strsRaw = prefs.GetString(KeyBackupStrings, "");
+            if (string.IsNullOrEmpty(intsRaw) && string.IsNullOrEmpty(strsRaw))
+                return false;
+
+            var intParts = intsRaw.Split('|');
+            int idx = 0;
+
+            int ReadInt(int fallback)
+            {
+                return idx < intParts.Length && int.TryParse(intParts[idx], out var val) ? val : fallback;
+            }
+
+            if (intParts.Length >= 2)
+            {
+                // Apply backup int values only if they seem valid (at least have the right key count)
+                var version = ReadInt(2); idx++;
+                var coins = ReadInt(0); idx++;
+                var diamonds = ReadInt(0); idx++;
+                var xp = ReadInt(0); idx++;
+                var cl = ReadInt(1); idx++;
+                var mu = ReadInt(1); idx++;
+                var pl = ReadInt(1); idx++;
+                var cb = ReadInt(0); idx++;
+                var cs = ReadInt(0); idx++;
+                var cg = ReadInt(0); idx++;
+                var cd = ReadInt(0); idx++;
+                var dd = ReadInt(-1); idx++;
+                var undoUsed = ReadInt(0); idx++;
+                var hint = ReadInt(0);
+
+                // Re-apply key values to restore state
+                prefs.SetInt(KeySchemaVersion, version);
+                prefs.SetInt(PlayerProgressModel.KeyCoins, coins);
+                prefs.SetInt(PlayerProgressModel.KeyDiamonds, diamonds);
+                prefs.SetInt(PlayerProgressModel.KeyXp, xp);
+                prefs.SetInt(PlayerProgressModel.KeyCurrentLevel, cl);
+                prefs.SetInt(PlayerProgressModel.KeyMaxUnlocked, mu);
+                prefs.SetInt(PlayerProgressModel.KeyPlayerLvl, pl);
+                prefs.SetInt(PlayerProgressModel.KeyChestsBronze, cb);
+                prefs.SetInt(PlayerProgressModel.KeyChestsSilver, cs);
+                prefs.SetInt(PlayerProgressModel.KeyChestsGold, cg);
+                prefs.SetInt(PlayerProgressModel.KeyChestsDiamond, cd);
+                prefs.SetInt(PlayerProgressModel.KeyDailyDay, dd);
+                prefs.SetInt(PlayerProgressModel.KeyUndoUsed, undoUsed);
+                prefs.SetInt(PlayerProgressModel.KeyHintCount, hint);
+            }
+
+            var strParts = strsRaw.Split('|');
+            if (strParts.Length >= 1)
+            {
+                prefs.SetString(PlayerProgressModel.KeyDailyStamp, strParts.Length > 0 ? strParts[0] : "0");
+                if (strParts.Length > 1) prefs.SetString(PlayerProgressModel.KeyWorlds, strParts[1]);
+                if (strParts.Length > 2) prefs.SetString(PlayerProgressModel.KeyThemes, strParts[2]);
+                if (strParts.Length > 3) prefs.SetString(PlayerProgressModel.KeyAchieves, strParts[3]);
+            }
+
+            // Now re-run the standard load with restored values
+            int newChecksum = ComputeProgressChecksum(prefs);
+            prefs.SetInt(KeyChecksum, newChecksum);
+            prefs.Save();
+
+            // Load the model from the restored prefs
+            Load(prefs, m);
+            return true;
         }
     }
 }

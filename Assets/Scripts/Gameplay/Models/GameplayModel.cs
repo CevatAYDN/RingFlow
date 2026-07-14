@@ -15,6 +15,13 @@ namespace RingFlow.Gameplay
         public ObservableProperty<bool> IsGameWon { get; } = new(false);
         public ObservableProperty<WinReward> LastReward { get; } = new(default);
 
+        /// <summary>
+        /// Set by SelectPoleCommand when it reveals a Ghost ring on selection
+        /// (Ghost → Standard type change). MoveRingCommand reads and clears this
+        /// flag to populate MoveRecord.WasGhostRevealedOnFrom for undo.
+        /// </summary>
+        public bool PendingGhostRevealOnFrom;
+
         public UndoStack<MoveRecord> MoveHistory { get; } = new(1000);
 
         public ValueTask OnBind(CancellationToken ct)
@@ -69,6 +76,8 @@ namespace RingFlow.Gameplay
         public bool WasPainted;
         public int PaintedRingIndex;
         public RingColor PaintedRingOriginalColor;
+        public int PaintConsumedRingIndex = -1;
+        public RingData PaintConsumedRingData;
         public RingColor OriginalColor;
         public bool WasRainbowTargetConverted;
         public int RainbowTargetRingIndex;
@@ -138,6 +147,8 @@ namespace RingFlow.Gameplay
             WasPainted = false;
             PaintedRingIndex = -1;
             PaintedRingOriginalColor = RingColor.None;
+            PaintConsumedRingIndex = -1;
+            PaintConsumedRingData = default;
             OriginalColor = RingColor.None;
             WasRainbowTargetConverted = false;
             RainbowTargetRingIndex = -1;

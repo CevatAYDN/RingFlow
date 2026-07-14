@@ -285,9 +285,10 @@ namespace RingFlow.Editor
             var solveResult = LevelSolver.Solve(board, maxCapacity);
             int emptyPoleCount = CountEmptyPoles(_generatedLevel);
 
-            if (emptyPoleCount > 1)
+            int maxEmptyPoles = EditorPrefs.GetInt(EditorPrefsKeys.MaxEmptyPoles, 1);
+            if (emptyPoleCount > maxEmptyPoles)
             {
-                _solveStatus = $"Geçersiz: en fazla 1 boş direk olmalı, bulunan: {emptyPoleCount}.";
+                _solveStatus = $"Geçersiz: en fazla {maxEmptyPoles} boş direk olmalı, bulunan: {emptyPoleCount}.";
                 _solutionSteps.Clear();
             }
             else if (solveResult.IsSolvable && solveResult.MoveCount > 0)

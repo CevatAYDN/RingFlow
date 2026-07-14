@@ -68,6 +68,12 @@ namespace RingFlow.Tests
         public void DailyRewardService_BlocksClockRollbackAndRapidReplay()
         {
             var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase);
+            // Use FixedIntervalMinutes mode to test the interval check
+            var originalMode = db.BalanceConfig.ResetMode;
+            var cfg = db.BalanceConfig;
+            cfg.ResetMode = DailyRewardResetMode.FixedIntervalMinutes;
+            db.BalanceConfig = cfg;
+
             var service = new DailyRewardService(_progress, db);
             _progress.DailyDayIndex.Value = 0;
             _progress.DailyLastClaimUtcTicks.Value = DateTime.UtcNow.AddMinutes(-1).Ticks;
@@ -78,6 +84,10 @@ namespace RingFlow.Tests
             _progress.DailyLastClaimUtcTicks.Value = DateTime.UtcNow.AddHours(2).Ticks;
             Assert.IsFalse(service.CanClaimNow(out var reason2));
             Assert.AreEqual("clock_rollback", reason2);
+
+            // Restore original mode
+            cfg.ResetMode = originalMode;
+            db.BalanceConfig = cfg;
         }
 
         [Test]
