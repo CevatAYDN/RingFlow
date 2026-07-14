@@ -68,7 +68,7 @@ namespace RingFlow.Editor
         public const double RootCacheSeconds         = 0.5;
 
         // ── Window sizing ──
-        public static readonly Vector2 MinWindowSize = new(720f, 760f);
+        public static readonly Vector2 MinWindowSize = new(880f, 760f);
 
         // ── Editor visual palette (single source for dashboard colors) ──
         // Semantic status colors: route every success/error/info/warning tint here.

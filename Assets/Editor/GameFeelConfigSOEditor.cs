@@ -175,7 +175,7 @@ namespace RingFlow.Editor
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                EditorGUILayout.LabelField(new GUIContent(label, tooltip), GUILayout.Width(200f));
+                EditorGUILayout.LabelField(new GUIContent(label, tooltip), GUILayout.Width(RingFlowEditorUtils.GetResponsiveLabelWidth()));
                 EditorGUILayout.PropertyField(prop, GUIContent.none);
             }
         }

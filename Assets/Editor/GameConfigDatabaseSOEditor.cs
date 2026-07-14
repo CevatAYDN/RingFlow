@@ -15,6 +15,7 @@ namespace RingFlow.Editor
         public override void OnInspectorGUI()
         {
             var db = (GameConfigDatabaseSO)target;
+            float responsiveLabelWidth = RingFlowEditorUtils.GetResponsiveLabelWidth(80f, 140f, 0.16f);
 
             EditorGUILayout.LabelField("RingFlow Veritabanı Editörü (Database)", RingFlowEditorUtils.HeaderStyle);
             EditorGUILayout.Space(4f);
@@ -62,17 +63,17 @@ namespace RingFlow.Editor
 
                 for (int i = 0; i < db.DifficultyBands.Count; i++)
                 {
-                    var band = db.DifficultyBands[i];
-                    using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-                    {
-                        EditorGUILayout.LabelField(band.Band.ToString(), EditorStyles.boldLabel);
-
-                        using (new EditorGUILayout.HorizontalScope())
+                        var band = db.DifficultyBands[i];
+                        using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                         {
-                            band.MaxLevel = EditorGUILayout.IntField("Maks. Seviye", band.MaxLevel);
-                            band.MinEmptyPoles = EditorGUILayout.IntField("Min. Boş Direk", band.MinEmptyPoles);
-                            band.MaxCapacity = EditorGUILayout.IntField("Maks. Kapasite", band.MaxCapacity);
-                        }
+                            EditorGUILayout.LabelField(band.Band.ToString(), EditorStyles.boldLabel);
+
+                            using (new EditorGUILayout.HorizontalScope())
+                            {
+                                band.MaxLevel = EditorGUILayout.IntField("Maks. Seviye", band.MaxLevel, GUILayout.Width(RingFlowEditorUtils.GetResponsiveWidth(110f, 160f, 0.14f)));
+                                band.MinEmptyPoles = EditorGUILayout.IntField("Min. Boş Direk", band.MinEmptyPoles, GUILayout.Width(RingFlowEditorUtils.GetResponsiveWidth(100f, 150f, 0.13f)));
+                                band.MaxCapacity = EditorGUILayout.IntField("Maks. Kapasite", band.MaxCapacity, GUILayout.Width(RingFlowEditorUtils.GetResponsiveWidth(100f, 150f, 0.13f)));
+                            }
 
                         EditorGUILayout.Space(2f);
                         EditorGUILayout.LabelField("İzin Verilen Halka/Mekanik Tipleri:");
@@ -94,7 +95,7 @@ namespace RingFlow.Editor
                                     if (idx >= mechNames.Length) break;
 
                                     bool allowed = band.AllowedMechanics.Contains(mechValues[idx]);
-                                    bool newAllowed = EditorGUILayout.ToggleLeft(mechNames[idx], allowed, GUILayout.Width(130f));
+                                    bool newAllowed = EditorGUILayout.ToggleLeft(mechNames[idx], allowed, GUILayout.Width(responsiveLabelWidth));
                                     if (newAllowed != allowed)
                                     {
                                         if (newAllowed)
@@ -132,10 +133,10 @@ namespace RingFlow.Editor
                         var pt = db.ColorCurve[i];
                         using (new EditorGUILayout.HorizontalScope())
                         {
-                            EditorGUILayout.LabelField($"Nokta {i + 1}", GUILayout.Width(60f));
-                            EditorGUILayout.LabelField("Seviye ≥", GUILayout.Width(55f));
-                            pt.LevelThreshold = EditorGUILayout.IntField(pt.LevelThreshold, GUILayout.Width(50f));
-                            EditorGUILayout.LabelField("Renkler", GUILayout.Width(50f));
+                            EditorGUILayout.LabelField($"Nokta {i + 1}", GUILayout.Width(RingFlowEditorUtils.GetResponsiveWidth(50f, 70f, 0.07f)));
+                            EditorGUILayout.LabelField("Seviye ≥", GUILayout.Width(RingFlowEditorUtils.GetResponsiveWidth(50f, 80f, 0.07f)));
+                            pt.LevelThreshold = EditorGUILayout.IntField(pt.LevelThreshold, GUILayout.Width(RingFlowEditorUtils.GetResponsiveWidth(50f, 90f, 0.08f)));
+                            EditorGUILayout.LabelField("Renkler", GUILayout.Width(RingFlowEditorUtils.GetResponsiveWidth(50f, 70f, 0.07f)));
                             pt.ColorCount = EditorGUILayout.IntSlider(pt.ColorCount, 2, 10);
                             db.ColorCurve[i] = pt;
                         }

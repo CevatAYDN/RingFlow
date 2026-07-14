@@ -201,30 +201,68 @@ namespace RingFlow.Editor
         {
             RefreshValidationCache();
 
-            using (new EditorGUILayout.HorizontalScope())
+            float windowWidth = position.width;
+            bool compactLayout = windowWidth < 980f;
+            float sidebarWidth = compactLayout ? windowWidth : Mathf.Clamp(windowWidth * 0.22f, 190f, 260f);
+
+            if (compactLayout)
             {
-                // ── Left Sidebar Navigation ──
-                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.Width(180f), GUILayout.ExpandHeight(true)))
+                using (new EditorGUILayout.VerticalScope())
                 {
-                    var prevColor = GUI.color;
-                    GUI.color = EditorPaths.EditorColors.Info;
-                    EditorGUILayout.LabelField("RINGFLOW", EditorStyles.boldLabel);
-                    EditorGUILayout.LabelField("Studio Dashboard", EditorStyles.miniLabel);
-                    GUI.color = prevColor;
+                    DrawSidebar(sidebarWidth, compactLayout);
+                    EditorGUILayout.Space(6f);
+                    DrawMainArea(compactLayout);
+                }
+            }
+            else
+            {
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    DrawSidebar(sidebarWidth, compactLayout);
+                    GUILayout.Box("", GUILayout.Width(2f), GUILayout.ExpandHeight(true));
+                    DrawMainArea(compactLayout);
+                }
+            }
+        }
 
-                    EditorGUILayout.Space(8f);
+        private void DrawSidebar(float sidebarWidth, bool compactLayout)
+        {
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.Width(sidebarWidth), GUILayout.ExpandHeight(true)))
+            {
+                var prevColor = GUI.color;
+                GUI.color = EditorPaths.EditorColors.Info;
+                EditorGUILayout.LabelField("RINGFLOW", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Studio Dashboard", EditorStyles.miniLabel);
+                GUI.color = prevColor;
 
-                    for (int i = 0; i < _tabs.Length; i++)
+                EditorGUILayout.Space(8f);
+
+                int buttonsPerRow = compactLayout
+                    ? Mathf.Clamp(Mathf.FloorToInt((sidebarWidth - 16f) / 145f), 1, 2)
+                    : 1;
+                DrawTabButtons(buttonsPerRow);
+
+                GUILayout.FlexibleSpace();
+                DrawLogSummarySidebar();
+            }
+        }
+
+        private void DrawTabButtons(int buttonsPerRow)
+        {
+            int index = 0;
+            while (index < _tabs.Length)
+            {
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    for (int col = 0; col < buttonsPerRow && index < _tabs.Length; col++)
                     {
                         var prevBg = GUI.backgroundColor;
-                        if (_selectedTab == i)
-                        {
+                        if (_selectedTab == index)
                             GUI.backgroundColor = EditorPaths.EditorColors.HeaderAccent;
-                        }
 
-                        if (GUILayout.Button(_tabs[i], GUILayout.Height(32f)))
+                        if (GUILayout.Button(_tabs[index], GUILayout.MinHeight(36f), GUILayout.ExpandWidth(true)))
                         {
-                            _selectedTab = i;
+                            _selectedTab = index;
                             EditorPrefs.SetInt(EditorPrefsKeys.SelectedTab, _selectedTab);
                             if (_cachedAssetEditor != null)
                             {
@@ -235,40 +273,48 @@ namespace RingFlow.Editor
                             GUI.FocusControl(null);
                         }
                         GUI.backgroundColor = prevBg;
-                        EditorGUILayout.Space(2f);
+                        if (col < buttonsPerRow - 1)
+                            EditorGUILayout.Space(4f);
+                        index++;
                     }
-
-                    GUILayout.FlexibleSpace();
-
-                    // Sidebar logs overview
-                    DrawLogSummarySidebar();
                 }
-
-                // ── Vertical Line ──
-                GUILayout.Box("", GUILayout.Width(2f), GUILayout.ExpandHeight(true));
-
-                // ── Right Main Area ──
-                using (new EditorGUILayout.VerticalScope(GUILayout.ExpandWidth(true)))
-                {
-                    _scroll = EditorGUILayout.BeginScrollView(_scroll);
-
-                    // Show active tab header
-                    EditorGUILayout.LabelField(_tabs[_selectedTab].ToUpper(), RingFlowEditorUtils.HeaderStyle);
-                    EditorGUILayout.Space(4f);
-
-                    switch (_selectedTab)
-                    {
-                        case 0: DrawHomeTab(); break;
-                        case 1: DrawLevelsTab(); break;
-                        case 2: _uiStudio.DrawTab(); break;
-                        case 3: DrawDataTab(); break;
-                        case 4: DrawToolsTab(); break;
-                    }
-
-                    EditorGUILayout.EndScrollView();
-                    DrawStatusBar();
-                }
+                EditorGUILayout.Space(2f);
             }
+        }
+
+        private void DrawMainArea(bool compactLayout)
+        {
+            using (new EditorGUILayout.VerticalScope(GUILayout.ExpandWidth(true)))
+            {
+                _scroll = EditorGUILayout.BeginScrollView(_scroll);
+
+                // Show active tab header
+                EditorGUILayout.LabelField(_tabs[_selectedTab].ToUpper(), RingFlowEditorUtils.HeaderStyle);
+                EditorGUILayout.Space(4f);
+
+                if (compactLayout)
+                {
+                    using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                    {
+                        EditorGUILayout.LabelField("Kompakt Düzen", EditorStyles.boldLabel);
+                        EditorGUILayout.LabelField("Dar pencerede sekmeler üst üste gösterilir.", EditorStyles.wordWrappedMiniLabel);
+                    }
+                    EditorGUILayout.Space(4f);
+                }
+
+                switch (_selectedTab)
+                {
+                    case 0: DrawHomeTab(); break;
+                    case 1: DrawLevelsTab(); break;
+                    case 2: _uiStudio.DrawTab(); break;
+                    case 3: DrawDataTab(); break;
+                    case 4: DrawToolsTab(); break;
+                }
+
+                EditorGUILayout.EndScrollView();
+            }
+
+            DrawStatusBar();
         }
 
         private void DrawLogSummarySidebar()
@@ -303,12 +349,22 @@ namespace RingFlow.Editor
                 GUI.color = prevColor;
 
                 EditorGUILayout.Space(2f);
-                using (new EditorGUILayout.HorizontalScope())
+                if (RingFlowEditorUtils.IsNarrowWidth(260f))
                 {
                     if (GUILayout.Button("Konsol", EditorStyles.miniButton))
                         EditorApplication.ExecuteMenuItem("Window/General/Console");
                     if (GUILayout.Button("Temizle", EditorStyles.miniButton))
                         LogMonitor.Reset();
+                }
+                else
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        if (GUILayout.Button("Konsol", EditorStyles.miniButton))
+                            EditorApplication.ExecuteMenuItem("Window/General/Console");
+                        if (GUILayout.Button("Temizle", EditorStyles.miniButton))
+                            LogMonitor.Reset();
+                    }
                 }
             }
         }
@@ -325,41 +381,51 @@ namespace RingFlow.Editor
             var scene = EditorSceneManager.GetActiveScene();
             string mode = RingFlowEditorUtils.GetEditorModeLabel();
             Color modeColor = RingFlowEditorUtils.GetEditorModeColor();
+            bool compact = RingFlowEditorUtils.IsNarrowWidth(760f);
 
             EditorGUILayout.Space(2f);
-            using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                GUI.color = modeColor;
-                EditorGUILayout.LabelField($"  [{mode}]", EditorStyles.boldLabel, GUILayout.Width(70f));
-                GUI.color = Color.white;
-                EditorGUILayout.LabelField(scene.name, GUILayout.MinWidth(120f));
-
-                if (_cachedHasRoot)
-                    EditorGUILayout.LabelField("Root: Tamam", GUILayout.Width(80f));
-                if (_cachedHasUIRoot)
-                    EditorGUILayout.LabelField("UI: Tamam", GUILayout.Width(65f));
-
-                GUILayout.FlexibleSpace();
-
-                int errCount = LogMonitor.ErrorCount;
-                int warnCount = LogMonitor.WarningCount;
-                if (errCount > 0)
+                using (new EditorGUILayout.HorizontalScope())
                 {
-                    GUI.color = EditorPaths.EditorColors.Error;
-                    EditorGUILayout.LabelField($"Hatalar: {errCount}", EditorStyles.boldLabel, GUILayout.Width(80f));
+                    GUI.color = modeColor;
+                    EditorGUILayout.LabelField($"[{mode}]", EditorStyles.boldLabel, GUILayout.Width(66f));
                     GUI.color = Color.white;
-                }
-                if (warnCount > 0)
-                {
-                    GUI.color = EditorPaths.EditorColors.Warning;
-                    EditorGUILayout.LabelField($"Uyarılar: {warnCount}", EditorStyles.boldLabel, GUILayout.Width(90f));
-                    GUI.color = Color.white;
+                    EditorGUILayout.LabelField(string.IsNullOrEmpty(scene.name) ? "Untitled Scene" : scene.name, EditorStyles.label);
+                    if (!compact)
+                    {
+                        if (_cachedHasRoot)
+                            EditorGUILayout.LabelField("Root: Tamam", GUILayout.Width(80f));
+                        if (_cachedHasUIRoot)
+                            EditorGUILayout.LabelField("UI: Tamam", GUILayout.Width(65f));
+                        GUILayout.FlexibleSpace();
+                    }
                 }
 
-                if (GUILayout.Button("Konsol", EditorStyles.miniButton, GUILayout.Width(65f)))
-                    EditorApplication.ExecuteMenuItem("Window/General/Console");
-                if (GUILayout.Button("Temizle", EditorStyles.miniButton, GUILayout.Width(55f)))
-                    LogMonitor.Reset();
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    int errCount = LogMonitor.ErrorCount;
+                    int warnCount = LogMonitor.WarningCount;
+                    if (errCount > 0)
+                    {
+                        GUI.color = EditorPaths.EditorColors.Error;
+                        EditorGUILayout.LabelField($"Hatalar: {errCount}", EditorStyles.boldLabel, GUILayout.Width(80f));
+                        GUI.color = Color.white;
+                    }
+                    if (warnCount > 0)
+                    {
+                        GUI.color = EditorPaths.EditorColors.Warning;
+                        EditorGUILayout.LabelField($"Uyarılar: {warnCount}", EditorStyles.boldLabel, GUILayout.Width(90f));
+                        GUI.color = Color.white;
+                    }
+
+                    GUILayout.FlexibleSpace();
+                    if (GUILayout.Button("Konsol", EditorStyles.miniButton, GUILayout.Width(65f)))
+                        EditorApplication.ExecuteMenuItem("Window/General/Console");
+                    if (GUILayout.Button("Temizle", EditorStyles.miniButton, GUILayout.Width(55f)))
+                        LogMonitor.Reset();
+                    GUI.color = Color.white;
+                }
             }
         }
 
@@ -549,46 +615,70 @@ namespace RingFlow.Editor
 
         private void DrawToolsTab()
         {
-            using (new EditorGUILayout.HorizontalScope())
+            bool compact = RingFlowEditorUtils.IsNarrowWidth(860f);
+            using (new EditorGUILayout.VerticalScope())
             {
                 // Left Sidebar
-                using (new EditorGUILayout.VerticalScope(GUILayout.Width(200f)))
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
                     EditorGUILayout.LabelField("Kategoriler / Configler", EditorStyles.boldLabel);
                     EditorGUILayout.Space(2f);
 
-                    for (int i = 0; i < _configSubTabs.Length; i++)
+                    if (compact)
                     {
-                        var prevBg = GUI.backgroundColor;
-                        if (_selectedConfigSubTab == i)
+                        int columns = RingFlowEditorUtils.GetResponsiveColumns(150f, 2, 3);
+                        int index = 0;
+                        while (index < _configSubTabs.Length)
                         {
-                            GUI.backgroundColor = EditorPaths.EditorColors.HeaderAccent;
-                        }
-
-                        if (GUILayout.Button(_configSubTabs[i], GUILayout.Height(28f)))
-                        {
-                            _selectedConfigSubTab = i;
-                            if (_cachedAssetEditor != null)
+                            using (new EditorGUILayout.HorizontalScope())
                             {
-                                DestroyImmediate(_cachedAssetEditor);
-                                _cachedAssetEditor = null;
-                                _cachedAssetObj = null;
+                                for (int col = 0; col < columns && index < _configSubTabs.Length; col++)
+                                {
+                                    DrawConfigTabButton(index++);
+                                    if (col < columns - 1)
+                                        EditorGUILayout.Space(4f);
+                                }
                             }
-                            GUI.FocusControl(null);
                         }
-                        GUI.backgroundColor = prevBg;
+                    }
+                    else
+                    {
+                        for (int i = 0; i < _configSubTabs.Length; i++)
+                            DrawConfigTabButton(i);
                     }
                 }
 
-                // Divider line
-                GUILayout.Box("", GUILayout.Width(2f), GUILayout.ExpandHeight(true));
+                if (!compact)
+                {
+                    EditorGUILayout.Space(6f);
+                    GUILayout.Box("", GUILayout.Height(2f), GUILayout.ExpandWidth(true));
+                }
 
-                // Right Panel Content
                 using (new EditorGUILayout.VerticalScope(GUILayout.ExpandWidth(true)))
                 {
                     DrawActiveConfigSubTab();
                 }
             }
+        }
+
+        private void DrawConfigTabButton(int index)
+        {
+            var prevBg = GUI.backgroundColor;
+            if (_selectedConfigSubTab == index)
+                GUI.backgroundColor = EditorPaths.EditorColors.HeaderAccent;
+
+            if (GUILayout.Button(_configSubTabs[index], GUILayout.MinHeight(28f), GUILayout.ExpandWidth(true)))
+            {
+                _selectedConfigSubTab = index;
+                if (_cachedAssetEditor != null)
+                {
+                    DestroyImmediate(_cachedAssetEditor);
+                    _cachedAssetEditor = null;
+                    _cachedAssetObj = null;
+                }
+                GUI.FocusControl(null);
+            }
+            GUI.backgroundColor = prevBg;
         }
 
         private void DrawActiveConfigSubTab()

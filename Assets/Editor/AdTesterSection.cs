@@ -55,27 +55,50 @@ namespace RingFlow.Editor
                     return;
                 }
 
-                using (new EditorGUILayout.HorizontalScope())
+                bool narrow = RingFlowEditorUtils.IsNarrowWidth(520f);
+                if (narrow)
                 {
-                    if (GUILayout.Button("Show Rewarded"))
+                    if (GUILayout.Button("Show Rewarded", GUILayout.Height(ButtonHeight)))
                     {
                         SafeInvoke(() => ads.ShowRewarded(_placement, success =>
                         {
                             _lastResult = $"Rewarded '{_placement}': success={success}";
                         }));
                     }
-                    if (GUILayout.Button("Show Interstitial"))
+                    if (GUILayout.Button("Show Interstitial", GUILayout.Height(ButtonHeight)))
                     {
                         SafeInvoke(() => ads.ShowInterstitial(_placement, () =>
                         {
                             _lastResult = $"Interstitial '{_placement}' closed";
                         }));
                     }
+                    if (GUILayout.Button("Show Banner", GUILayout.Height(ButtonHeight)))  SafeInvoke(() => ads.ShowBanner(_placement, "bottom"));
+                    if (GUILayout.Button("Hide Banner", GUILayout.Height(ButtonHeight)))  SafeInvoke(() => ads.HideBanner());
                 }
-                using (new EditorGUILayout.HorizontalScope())
+                else
                 {
-                    if (GUILayout.Button("Show Banner"))  SafeInvoke(() => ads.ShowBanner(_placement, "bottom"));
-                    if (GUILayout.Button("Hide Banner"))  SafeInvoke(() => ads.HideBanner());
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        if (GUILayout.Button("Show Rewarded", GUILayout.Height(ButtonHeight)))
+                        {
+                            SafeInvoke(() => ads.ShowRewarded(_placement, success =>
+                            {
+                                _lastResult = $"Rewarded '{_placement}': success={success}";
+                            }));
+                        }
+                        if (GUILayout.Button("Show Interstitial", GUILayout.Height(ButtonHeight)))
+                        {
+                            SafeInvoke(() => ads.ShowInterstitial(_placement, () =>
+                            {
+                                _lastResult = $"Interstitial '{_placement}' closed";
+                            }));
+                        }
+                    }
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        if (GUILayout.Button("Show Banner", GUILayout.Height(ButtonHeight)))  SafeInvoke(() => ads.ShowBanner(_placement, "bottom"));
+                        if (GUILayout.Button("Hide Banner", GUILayout.Height(ButtonHeight)))  SafeInvoke(() => ads.HideBanner());
+                    }
                 }
 
                 EditorGUILayout.Space();

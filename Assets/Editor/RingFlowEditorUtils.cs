@@ -12,6 +12,7 @@ namespace RingFlow.Editor
         private static GUIStyle s_cachedCenteredBoldLabel;
         private static GUIStyle s_cachedHeaderStyle;
         private static GUIStyle s_cachedButtonStyle;
+        private static GUIStyle s_cachedSectionBoxStyle;
         private static Texture2D s_headerTex;
 
         private static readonly Color HeaderColor = new(0.15f, 0.15f, 0.18f);
@@ -62,8 +63,37 @@ namespace RingFlow.Editor
                 fontSize = 11,
                 fontStyle = FontStyle.Bold,
                 padding = new RectOffset(8, 8, 10, 10),
-                fixedHeight = 60,
+                wordWrap = true
             };
+
+        public static GUIStyle SectionBoxStyle =>
+            s_cachedSectionBoxStyle ??= new GUIStyle(EditorStyles.helpBox)
+            {
+                padding = new RectOffset(10, 10, 8, 8),
+                margin = new RectOffset(0, 0, 4, 4)
+            };
+
+        public static float GetResponsiveWidth(float minWidth, float maxWidth, float fraction = 0.4f)
+        {
+            return Mathf.Clamp(EditorGUIUtility.currentViewWidth * fraction, minWidth, maxWidth);
+        }
+
+        public static float GetResponsiveLabelWidth(float minWidth = 120f, float maxWidth = 240f, float fraction = 0.38f)
+        {
+            return GetResponsiveWidth(minWidth, maxWidth, fraction);
+        }
+
+        public static bool IsNarrowWidth(float threshold = 520f)
+        {
+            return EditorGUIUtility.currentViewWidth < threshold;
+        }
+
+        public static int GetResponsiveColumns(float targetCellWidth, int minColumns = 1, int maxColumns = 6)
+        {
+            float usableWidth = Mathf.Max(1f, EditorGUIUtility.currentViewWidth - 24f);
+            int columns = Mathf.Max(minColumns, Mathf.FloorToInt(usableWidth / Mathf.Max(1f, targetCellWidth)));
+            return Mathf.Clamp(columns, minColumns, maxColumns);
+        }
 
         // -----------------------------------------------------------------
         //  Ring / Level helpers
@@ -118,6 +148,16 @@ namespace RingFlow.Editor
                 GUILayout.Box("", GUILayout.Width(3f), GUILayout.Height(16f));
                 GUI.backgroundColor = prev;
                 EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+            }
+        }
+
+        public static void SectionHeader(string title, string subtitle = null)
+        {
+            using (new EditorGUILayout.VerticalScope(SectionBoxStyle))
+            {
+                SectionTitle(title);
+                if (!string.IsNullOrEmpty(subtitle))
+                    EditorGUILayout.LabelField(subtitle, WordWrappedMiniLabel);
             }
         }
 

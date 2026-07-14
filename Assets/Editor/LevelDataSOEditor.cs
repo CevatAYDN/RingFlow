@@ -489,8 +489,8 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(5f);
             EditorGUILayout.LabelField("Görsel Seviye Tasarımcısı (Düzenlemek için Tıklayın):", EditorStyles.boldLabel);
 
-            float poleWidth = 70f;
-            float ringHeight = 20f;
+            float poleWidth = Mathf.Clamp((EditorGUIUtility.currentViewWidth - 48f) / Mathf.Max(1, levelData.Poles.Count), 56f, 96f);
+            float ringHeight = Mathf.Clamp(poleWidth * 0.28f, 18f, 24f);
             float poleGap = 8f;
             var palette = GetCachedPalette();
 

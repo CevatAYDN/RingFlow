@@ -19,14 +19,33 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(4f);
 
             // ── Visual Palette Preview ──
-            using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
+            bool narrowPreview = RingFlowEditorUtils.IsNarrowWidth(560f);
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                DrawColorBox(config.PrimaryColor, "Primary");
-                DrawColorBox(config.AccentColor, "Accent");
-                DrawColorBox(config.BgColor, "BG");
-                DrawColorBox(config.SurfaceColor, "Surface");
-                DrawColorBox(config.PanelColor, "Panel");
-                DrawColorBox(config.TextColor, "Text");
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    DrawColorBox(config.PrimaryColor, "Primary");
+                    DrawColorBox(config.AccentColor, "Accent");
+                    DrawColorBox(config.BgColor, "BG");
+                }
+                if (narrowPreview)
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        DrawColorBox(config.SurfaceColor, "Surface");
+                        DrawColorBox(config.PanelColor, "Panel");
+                        DrawColorBox(config.TextColor, "Text");
+                    }
+                }
+                else
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        DrawColorBox(config.SurfaceColor, "Surface");
+                        DrawColorBox(config.PanelColor, "Panel");
+                        DrawColorBox(config.TextColor, "Text");
+                    }
+                }
             }
             EditorGUILayout.Space(4f);
 
@@ -96,11 +115,12 @@ namespace RingFlow.Editor
 
         private static void DrawColorBox(Color color, string label)
         {
-            using (new EditorGUILayout.VerticalScope(GUILayout.Width(55f)))
+            float width = RingFlowEditorUtils.GetResponsiveWidth(42f, 70f, 0.08f);
+            using (new EditorGUILayout.VerticalScope(GUILayout.Width(width)))
             {
-                var rect = GUILayoutUtility.GetRect(50f, 20f);
+                var rect = GUILayoutUtility.GetRect(width, 20f);
                 EditorGUI.DrawRect(rect, color);
-                EditorGUILayout.LabelField(label, RingFlowEditorUtils.CenteredMiniLabel, GUILayout.Width(50f));
+                EditorGUILayout.LabelField(label, RingFlowEditorUtils.CenteredMiniLabel, GUILayout.Width(width));
             }
         }
     }

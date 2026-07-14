@@ -56,23 +56,45 @@ namespace RingFlow.Editor
                 return;
             }
 
-            // Compose search box + jump field in a single row.
-            using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
+            bool narrow = RingFlowEditorUtils.IsNarrowWidth(620f);
+
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                EditorGUI.BeginChangeCheck();
-                _searchFilter = EditorGUILayout.TextField("Ara", _searchFilter, GUILayout.Width(220f));
-                if (EditorGUI.EndChangeCheck())
-                    _searchFilter = _searchFilter ?? string.Empty;
-                GUILayout.FlexibleSpace();
-                _jumpToLevel = Mathf.Clamp(
-                    EditorGUILayout.IntField("Seviye #", _jumpToLevel, GUILayout.Width(160f)),
-                    1, _cachedTotalLevels);
-                if (GUILayout.Button("Aç", GUILayout.Width(80f)))
-                    OpenLevel(_jumpToLevel);
-                if (GUILayout.Button("Sonraki", GUILayout.Width(80f)))
+                if (narrow)
                 {
-                    _jumpToLevel = Mathf.Clamp(_jumpToLevel + 1, 1, _cachedTotalLevels);
-                    OpenLevel(_jumpToLevel);
+                    _searchFilter = EditorGUILayout.TextField("Ara", _searchFilter);
+                    _jumpToLevel = Mathf.Clamp(EditorGUILayout.IntField("Seviye #", _jumpToLevel), 1, _cachedTotalLevels);
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        if (GUILayout.Button("Aç"))
+                            OpenLevel(_jumpToLevel);
+                        if (GUILayout.Button("Sonraki"))
+                        {
+                            _jumpToLevel = Mathf.Clamp(_jumpToLevel + 1, 1, _cachedTotalLevels);
+                            OpenLevel(_jumpToLevel);
+                        }
+                    }
+                }
+                else
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        EditorGUI.BeginChangeCheck();
+                        _searchFilter = EditorGUILayout.TextField("Ara", _searchFilter, GUILayout.Width(RingFlowEditorUtils.GetResponsiveWidth(180f, 300f, 0.28f)));
+                        if (EditorGUI.EndChangeCheck())
+                            _searchFilter = _searchFilter ?? string.Empty;
+                        GUILayout.FlexibleSpace();
+                        _jumpToLevel = Mathf.Clamp(
+                            EditorGUILayout.IntField("Seviye #", _jumpToLevel, GUILayout.Width(160f)),
+                            1, _cachedTotalLevels);
+                        if (GUILayout.Button("Aç", GUILayout.Width(80f)))
+                            OpenLevel(_jumpToLevel);
+                        if (GUILayout.Button("Sonraki", GUILayout.Width(80f)))
+                        {
+                            _jumpToLevel = Mathf.Clamp(_jumpToLevel + 1, 1, _cachedTotalLevels);
+                            OpenLevel(_jumpToLevel);
+                        }
+                    }
                 }
             }
 
@@ -134,9 +156,8 @@ namespace RingFlow.Editor
         {
             const float visibleHeight = 220f;
 
-            // Calculate grid columns dynamically based on window width to ensure responsiveness
-            float availableWidth = EditorGUIUtility.currentViewWidth - 240f;
-            int cols = Mathf.Max(2, Mathf.FloorToInt(availableWidth / (GridButtonWidth + RowSpacing)));
+            int cols = RingFlowEditorUtils.GetResponsiveColumns(GridButtonWidth + 10f, 2, 10);
+            float gridButtonWidth = Mathf.Clamp((EditorGUIUtility.currentViewWidth - 72f) / cols, 36f, 60f);
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
@@ -151,7 +172,7 @@ namespace RingFlow.Editor
                     int col = (row % cols);
                     if (col == 0)
                         EditorGUILayout.BeginHorizontal();
-                    DrawLevelButton(level);
+                    DrawLevelButton(level, gridButtonWidth);
                     if (col == cols - 1 || level == _cachedTotalLevels)
                     {
                         GUILayout.FlexibleSpace();
@@ -168,7 +189,7 @@ namespace RingFlow.Editor
                 MessageType.Info);
         }
 
-        private void DrawLevelButton(int level)
+        private void DrawLevelButton(int level, float width)
         {
             bool exists = _cachedExistsFlags[level - 1];
             var prev = GUI.backgroundColor;
@@ -176,7 +197,7 @@ namespace RingFlow.Editor
 
             LevelButtonStyle.normal.textColor = exists ? Color.white : EditorPaths.EditorColors.MutedText;
 
-            if (GUILayout.Button(level.ToString(), LevelButtonStyle, GUILayout.Width(GridButtonWidth), GUILayout.Height(GridButtonHeight)))
+            if (GUILayout.Button(level.ToString(), LevelButtonStyle, GUILayout.Width(width), GUILayout.Height(GridButtonHeight)))
                 OpenLevel(level);
 
             GUI.backgroundColor = prev;

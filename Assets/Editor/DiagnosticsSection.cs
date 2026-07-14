@@ -44,11 +44,24 @@ namespace RingFlow.Editor
                 }
 
                 // Controls
-                EditorGUILayout.BeginHorizontal();
-                diag.IsEnabled = EditorGUILayout.Toggle("Enabled", diag.IsEnabled);
-                if (GUILayout.Button("Clear", GUILayout.Width(60))) diag.Clear();
-                if (GUILayout.Button("Export Report", GUILayout.Width(100))) ExportReport(diag);
-                EditorGUILayout.EndHorizontal();
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                {
+                    diag.IsEnabled = EditorGUILayout.Toggle("Enabled", diag.IsEnabled);
+                    bool narrowControls = RingFlowEditorUtils.IsNarrowWidth(520f);
+                    if (narrowControls)
+                    {
+                        if (GUILayout.Button("Clear", GUILayout.MinWidth(60))) diag.Clear();
+                        if (GUILayout.Button("Export Report", GUILayout.MinWidth(100))) ExportReport(diag);
+                    }
+                    else
+                    {
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            if (GUILayout.Button("Clear", GUILayout.MinWidth(60))) diag.Clear();
+                            if (GUILayout.Button("Export Report", GUILayout.MinWidth(100))) ExportReport(diag);
+                        }
+                    }
+                }
 
                 EditorGUILayout.Space(4f);
 
@@ -63,8 +76,20 @@ namespace RingFlow.Editor
                 }
 
                 // Filter
-                _filter = EditorGUILayout.TextField("Filter", _filter);
-                _autoScroll = EditorGUILayout.Toggle("Auto-scroll", _autoScroll);
+                bool narrow = EditorGUIUtility.currentViewWidth < 480f;
+                if (narrow)
+                {
+                    _filter = EditorGUILayout.TextField("Filter", _filter);
+                    _autoScroll = EditorGUILayout.Toggle("Auto-scroll", _autoScroll);
+                }
+                else
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        _filter = EditorGUILayout.TextField("Filter", _filter);
+                        _autoScroll = EditorGUILayout.Toggle("Auto-scroll", _autoScroll, GUILayout.Width(90f));
+                    }
+                }
 
                 // Entry list
                 _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos, GUILayout.Height(300));

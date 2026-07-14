@@ -22,12 +22,23 @@ namespace RingFlow.Editor
             {
                 _previewMode = (RingColorPaletteSO.ColorBlindMode)EditorGUILayout.EnumPopup("Preview Mode", _previewMode);
 
-                using (new EditorGUILayout.HorizontalScope())
+                bool narrow = RingFlowEditorUtils.IsNarrowWidth(520f);
+                if (narrow)
                 {
                     if (GUILayout.Button("Off")) _previewMode = RingColorPaletteSO.ColorBlindMode.Off;
                     if (GUILayout.Button("Protanopia")) _previewMode = RingColorPaletteSO.ColorBlindMode.Protanopia;
                     if (GUILayout.Button("Deuteranopia")) _previewMode = RingColorPaletteSO.ColorBlindMode.Deuteranopia;
                     if (GUILayout.Button("Tritanopia")) _previewMode = RingColorPaletteSO.ColorBlindMode.Tritanopia;
+                }
+                else
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        if (GUILayout.Button("Off")) _previewMode = RingColorPaletteSO.ColorBlindMode.Off;
+                        if (GUILayout.Button("Protanopia")) _previewMode = RingColorPaletteSO.ColorBlindMode.Protanopia;
+                        if (GUILayout.Button("Deuteranopia")) _previewMode = RingColorPaletteSO.ColorBlindMode.Deuteranopia;
+                        if (GUILayout.Button("Tritanopia")) _previewMode = RingColorPaletteSO.ColorBlindMode.Tritanopia;
+                    }
                 }
             }
 
@@ -45,11 +56,12 @@ namespace RingFlow.Editor
                 // Header
                 using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
                 {
-                    EditorGUILayout.LabelField("Color", GUILayout.Width(90f));
-                    EditorGUILayout.LabelField("Normal", GUILayout.Width(70f));
-                    EditorGUILayout.LabelField("Protanopia", GUILayout.Width(70f));
-                    EditorGUILayout.LabelField("Deuteranopia", GUILayout.Width(70f));
-                    EditorGUILayout.LabelField("Tritanopia", GUILayout.Width(70f));
+                    float labelWidth = RingFlowEditorUtils.GetResponsiveWidth(70f, 100f, 0.1f);
+                    EditorGUILayout.LabelField("Color", GUILayout.Width(labelWidth));
+                    EditorGUILayout.LabelField("Normal", GUILayout.Width(labelWidth * 0.8f));
+                    EditorGUILayout.LabelField("Protanopia", GUILayout.Width(labelWidth * 0.8f));
+                    EditorGUILayout.LabelField("Deuteranopia", GUILayout.Width(labelWidth * 0.9f));
+                    EditorGUILayout.LabelField("Tritanopia", GUILayout.Width(labelWidth * 0.8f));
                 }
 
                 for (int i = 0; i < entriesProp.arraySize; i++)

@@ -44,25 +44,51 @@ namespace RingFlow.Editor
 
         private void DrawRow<T>(string label, string resourceKey, string assetPath) where T : ScriptableObject
         {
-            using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                EditorGUILayout.LabelField(label, EditorStyles.boldLabel, GUILayout.MinWidth(220f));
+                EditorGUILayout.LabelField(label, EditorStyles.boldLabel);
 
                 var asset = Resources.Load<T>(resourceKey);
                 bool exists = asset != null;
+                bool positionWidthIsNarrow = RingFlowEditorUtils.IsNarrowWidth(460f);
 
-                using (new EditorGUI.DisabledScope(!exists))
+                if (positionWidthIsNarrow)
                 {
-                    if (GUILayout.Button("Aç", GUILayout.Width(70f)) && exists)
+                    using (new EditorGUILayout.VerticalScope())
                     {
-                        Selection.activeObject = asset;
-                        EditorGUIUtility.PingObject(asset);
+                        using (new EditorGUI.DisabledScope(!exists))
+                        {
+                            if (GUILayout.Button("Aç", GUILayout.MinWidth(70f)) && exists)
+                            {
+                                Selection.activeObject = asset;
+                                EditorGUIUtility.PingObject(asset);
+                            }
+                        }
+
+                        if (GUILayout.Button(exists ? "Yeniden Oluştur" : "Oluştur", GUILayout.MinWidth(130f)))
+                        {
+                            CreateConfig<T>(assetPath, exists);
+                        }
                     }
                 }
-
-                if (GUILayout.Button(exists ? "Yeniden Oluştur" : "Oluştur", GUILayout.Width(130f)))
+                else
                 {
-                    CreateConfig<T>(assetPath, exists);
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        using (new EditorGUI.DisabledScope(!exists))
+                        {
+                            if (GUILayout.Button("Aç", GUILayout.MinWidth(70f)) && exists)
+                            {
+                                Selection.activeObject = asset;
+                                EditorGUIUtility.PingObject(asset);
+                            }
+                        }
+
+                        if (GUILayout.Button(exists ? "Yeniden Oluştur" : "Oluştur", GUILayout.MinWidth(130f)))
+                        {
+                            CreateConfig<T>(assetPath, exists);
+                        }
+                    }
                 }
             }
         }

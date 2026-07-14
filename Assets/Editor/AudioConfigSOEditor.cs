@@ -192,7 +192,7 @@ namespace RingFlow.Editor
 
         private static float F(string label, float value)
         {
-            return EditorGUILayout.FloatField(label, value);
+            return EditorGUILayout.FloatField(label, value, GUILayout.Width(RingFlowEditorUtils.GetResponsiveLabelWidth()));
         }
 
         private static float Slider(string label, float value, float min, float max)

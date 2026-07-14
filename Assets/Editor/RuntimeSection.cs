@@ -153,16 +153,28 @@ namespace RingFlow.Editor
         {
             if (fsm == null) return;
             EditorGUILayout.LabelField($"Active State: {fsm.CurrentState?.GetType().Name ?? "None"}", EditorStyles.boldLabel);
-            using (new EditorGUILayout.HorizontalScope())
+            bool narrow = RingFlowEditorUtils.IsNarrowWidth(620f);
+            if (narrow)
             {
-                if (GUILayout.Button("MainMenu"))   fsm.ChangeStateAsync<MainMenuState>();
+                if (GUILayout.Button("MainMenu")) fsm.ChangeStateAsync<MainMenuState>();
                 if (GUILayout.Button("LevelSelect")) fsm.ChangeStateAsync<LevelSelectState>();
-                if (GUILayout.Button("Playing"))    fsm.ChangeStateAsync<PlayingState>();
-            }
-            using (new EditorGUILayout.HorizontalScope())
-            {
+                if (GUILayout.Button("Playing")) fsm.ChangeStateAsync<PlayingState>();
                 if (GUILayout.Button("Paused")) fsm.ChangeStateAsync<PausedState>();
-                if (GUILayout.Button("Win"))    fsm.ChangeStateAsync<WinState>();
+                if (GUILayout.Button("Win")) fsm.ChangeStateAsync<WinState>();
+            }
+            else
+            {
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("MainMenu"))   fsm.ChangeStateAsync<MainMenuState>();
+                    if (GUILayout.Button("LevelSelect")) fsm.ChangeStateAsync<LevelSelectState>();
+                    if (GUILayout.Button("Playing"))    fsm.ChangeStateAsync<PlayingState>();
+                }
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("Paused")) fsm.ChangeStateAsync<PausedState>();
+                    if (GUILayout.Button("Win"))    fsm.ChangeStateAsync<WinState>();
+                }
             }
         }
 
@@ -180,11 +192,21 @@ namespace RingFlow.Editor
             EditorGUILayout.LabelField($"Coins: {progress.Coins.Value}  Diamonds: {progress.Diamonds.Value}");
             EditorGUILayout.LabelField($"Player Lvl: {progress.PlayerLevel.Value}  XP: {progress.Xp.Value}");
 
-            using (new EditorGUILayout.HorizontalScope())
+            bool narrow = RingFlowEditorUtils.IsNarrowWidth(620f);
+            if (narrow)
             {
                 if (GUILayout.Button("+100 Coins")) economy.Earn("Coins", 100);
                 if (GUILayout.Button("+10 Diamonds")) economy.Earn("Diamonds", 10);
             }
+            else
+            {
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("+100 Coins")) economy.Earn("Coins", 100);
+                    if (GUILayout.Button("+10 Diamonds")) economy.Earn("Diamonds", 10);
+                }
+            }
+
             if (GUILayout.Button("Unlock All Levels"))
             {
                 var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
