@@ -363,6 +363,7 @@ namespace RingFlow.Gameplay
             public string Worlds;
             public string Themes;
             public string Achievements;
+            public int SnapshotChecksum;
         }
 
         // S2: Backup current progress state before overwriting during Save().
@@ -391,6 +392,7 @@ namespace RingFlow.Gameplay
                 Themes = prefs.GetString(PlayerProgressModel.KeyThemes, ""),
                 Achievements = prefs.GetString(PlayerProgressModel.KeyAchieves, "")
             };
+            snapshot.SnapshotChecksum = ComputeSnapshotChecksum(snapshot);
 
             prefs.SetString(KeyBackupSnapshot, UnityEngine.JsonUtility.ToJson(snapshot));
         }
@@ -459,7 +461,36 @@ namespace RingFlow.Gameplay
             if (snapshot.Coins < 0 || snapshot.Diamonds < 0 || snapshot.Xp < 0) return false;
             if (snapshot.ChestBronze < 0 || snapshot.ChestSilver < 0 || snapshot.ChestGold < 0 || snapshot.ChestDiamond < 0) return false;
             if (snapshot.UndoUsed < 0 || snapshot.HintCount < 0) return false;
+            if (snapshot.SnapshotChecksum != ComputeSnapshotChecksum(snapshot)) return false;
             return true;
+        }
+
+        private static int ComputeSnapshotChecksum(ProgressBackupSnapshot s)
+        {
+            unchecked
+            {
+                int hash = 23;
+                hash = hash * 31 + s.SchemaVersion;
+                hash = hash * 31 + s.Coins;
+                hash = hash * 31 + s.Diamonds;
+                hash = hash * 31 + s.Xp;
+                hash = hash * 31 + s.CurrentLevel;
+                hash = hash * 31 + s.MaxUnlocked;
+                hash = hash * 31 + s.PlayerLevel;
+                hash = hash * 31 + s.ChestBronze;
+                hash = hash * 31 + s.ChestSilver;
+                hash = hash * 31 + s.ChestGold;
+                hash = hash * 31 + s.ChestDiamond;
+                hash = hash * 31 + s.DailyDayIndex;
+                hash = hash * 31 + s.UndoUsed;
+                hash = hash * 31 + s.HintCount;
+                hash = hash * 31 + (s.RemoveAds ? 1 : 0);
+                hash = hash * 31 + Djb2Hash(s.DailyStamp ?? "");
+                hash = hash * 31 + Djb2Hash(s.Worlds ?? "");
+                hash = hash * 31 + Djb2Hash(s.Themes ?? "");
+                hash = hash * 31 + Djb2Hash(s.Achievements ?? "");
+                return hash;
+            }
         }
     }
 }

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -21,15 +22,17 @@ namespace RingFlow.Editor
                 return BootstrapResult.Fail("Nexus Bootstrapper already exists in the scene.");
 
             GameObject rootObj = null;
+            var createdObjects = new List<GameObject>(4);
             try
             {
                 var contextData = EnsureContextData();
                 rootObj = CreateRootWithContext(contextData);
+                createdObjects.Add(rootObj);
                 Undo.RegisterCreatedObjectUndo(rootObj, "Create Nexus Root");
                 AttachComponents(rootObj);
-                EnsureEventSystem();
-                EnsureMainCamera();
-                EnsureDirectionalLight();
+                EnsureEventSystem(createdObjects);
+                EnsureMainCamera(createdObjects);
+                EnsureDirectionalLight(createdObjects);
                 EnsureCameraRaycasters();
                 EnsureEditorSceneReady(rootObj);
                 MarkSceneDirty();
@@ -40,8 +43,11 @@ namespace RingFlow.Editor
             }
             catch (System.Exception ex)
             {
-                if (rootObj != null)
-                    Object.DestroyImmediate(rootObj);
+                for (int i = createdObjects.Count - 1; i >= 0; i--)
+                {
+                    if (createdObjects[i] != null)
+                        Object.DestroyImmediate(createdObjects[i]);
+                }
                 NexusLog.Error("EditorBootstrapper", nameof(Bootstrap), "", ex.Message);
                 return BootstrapResult.Fail(ex.Message);
             }
@@ -108,12 +114,13 @@ namespace RingFlow.Editor
             Undo.RegisterCreatedObjectUndo(uiRoot, "Attach UIRoot");
         }
 
-        private static void EnsureEventSystem()
+        private static void EnsureEventSystem(List<GameObject> createdObjects)
         {
             var eventSystem = Object.FindAnyObjectByType<EventSystem>();
             if (eventSystem == null)
             {
                 var go = new GameObject("EventSystem");
+                createdObjects.Add(go);
                 Undo.RegisterCreatedObjectUndo(go, "Create EventSystem");
                 eventSystem = go.AddComponent<EventSystem>();
             }
@@ -128,12 +135,13 @@ namespace RingFlow.Editor
             }
         }
 
-        private static void EnsureMainCamera()
+        private static void EnsureMainCamera(List<GameObject> createdObjects)
         {
             var camera = Camera.main;
             if (camera == null)
             {
                 var go = new GameObject("Main Camera");
+                createdObjects.Add(go);
                 Undo.RegisterCreatedObjectUndo(go, "Create Main Camera");
                 camera = go.AddComponent<Camera>();
                 camera.tag = "MainCamera";
@@ -156,7 +164,7 @@ namespace RingFlow.Editor
             t.rotation = Quaternion.Euler(feel.CameraRotation);
         }
 
-        private static void EnsureDirectionalLight()
+        private static void EnsureDirectionalLight(List<GameObject> createdObjects)
         {
             var existingLights = Object.FindObjectsByType<Light>(FindObjectsInactive.Include);
             var dirLight = (Light)null;
@@ -179,6 +187,7 @@ namespace RingFlow.Editor
             else
             {
                 lightObj = new GameObject("Directional Light");
+                createdObjects.Add(lightObj);
                 Undo.RegisterCreatedObjectUndo(lightObj, "Create Directional Light");
                 dirLight = lightObj.AddComponent<Light>();
                 isNew = true;

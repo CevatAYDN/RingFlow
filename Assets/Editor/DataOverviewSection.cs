@@ -478,10 +478,10 @@ namespace RingFlow.Editor
                 string[] csvLines = locCsv.text.Split(new[] { "\r\n", "\n" }, System.StringSplitOptions.RemoveEmptyEntries);
                 if (csvLines.Length >= 2)
                 {
-                    string[] csvHeaders = csvLines[0].Split(',');
-                    int langColumnCount = csvHeaders.Length - 1; // First column is Key
+                    var csvHeaders = ParseCsvLine(csvLines[0]);
+                    int langColumnCount = csvHeaders.Count - 1; // First column is Key
                     var csvLangCodes = new HashSet<string>();
-                    for (int i = 1; i < csvHeaders.Length; i++)
+                    for (int i = 1; i < csvHeaders.Count; i++)
                         csvLangCodes.Add(csvHeaders[i].Trim());
 
                     var missingInCsv = new List<string>();
@@ -529,6 +529,47 @@ namespace RingFlow.Editor
             }
 
             _auditRun = true;
+        }
+
+
+        private static List<string> ParseCsvLine(string line)
+        {
+            var result = new List<string>();
+            if (line == null)
+            {
+                result.Add(string.Empty);
+                return result;
+            }
+
+            var current = new System.Text.StringBuilder(line.Length);
+            bool inQuotes = false;
+            for (int i = 0; i < line.Length; i++)
+            {
+                char c = line[i];
+                if (c == '"')
+                {
+                    if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
+                    {
+                        current.Append('"');
+                        i++;
+                    }
+                    else
+                    {
+                        inQuotes = !inQuotes;
+                    }
+                }
+                else if (c == ',' && !inQuotes)
+                {
+                    result.Add(current.ToString());
+                    current.Length = 0;
+                }
+                else
+                {
+                    current.Append(c);
+                }
+            }
+            result.Add(current.ToString());
+            return result;
         }
 
         private void AddAuditResult(string title, string message, AuditStatus status)
