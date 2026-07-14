@@ -84,6 +84,14 @@ namespace RingFlow.Gameplay
             if (IsEmpty) return new RingData(RingColor.None);
             var ring = Rings[^1];
             Rings.RemoveAt(Rings.Count - 1);
+
+            // Auto-thaw: if the new top ring is Frozen, thaw it to prevent softlock
+            if (Rings.Count > 0 && Rings[^1].Type == RingType.Frozen)
+            {
+                var newTop = Rings[^1];
+                Rings[^1] = new RingData(newTop.Color, RingType.Standard, newTop.AdditionalData);
+            }
+
             return ring;
         }
 

@@ -201,7 +201,7 @@ namespace RingFlow.Gameplay
                 new() { MaxColorCount = 99, StateLimit = 8000 }
             },
             RetrySeedMultipliers = new() { 27779, 31415, 16180 },
-            MechanicPriorityOrder = new() { 3, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 15 }
+            MechanicPriorityOrder = new() { 3, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12 }
         };
 
         private void OnEnable()

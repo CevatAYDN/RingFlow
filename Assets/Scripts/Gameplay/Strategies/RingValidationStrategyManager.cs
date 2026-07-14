@@ -22,6 +22,14 @@ namespace RingFlow.Gameplay.Strategies
             RegisterStrategy(new KeyRingValidationStrategy());
             RegisterStrategy(new StoneRingValidationStrategy());
             RegisterStrategy(new FrozenRingValidationStrategy());
+            RegisterStrategy(new GlassValidationStrategy());
+            RegisterStrategy(new BombValidationStrategy());
+            RegisterStrategy(new ChainValidationStrategy());
+            RegisterStrategy(new MagnetValidationStrategy());
+            RegisterStrategy(new GhostValidationStrategy());
+            RegisterStrategy(new MysteryValidationStrategy());
+            RegisterStrategy(new RainbowValidationStrategy());
+            RegisterStrategy(new PaintValidationStrategy());
 
             _defaultStrategy = _strategies.TryGetValue(RingType.Standard, out var std)
                 ? std

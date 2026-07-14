@@ -31,13 +31,14 @@ namespace RingFlow.Gameplay.Strategies
             RegisterStrategy(new MysteryRingStrategy(db));
             RegisterStrategy(new PaintRingStrategy());
             RegisterStrategy(new RainbowRingStrategy(db));
-            // Future mechanics just drop in:
-            //   RegisterStrategy(new BombRingStrategy());
-            //   RegisterStrategy(new ChainRingStrategy());
-            //   RegisterStrategy(new MagnetRingStrategy());
-            //   RegisterStrategy(new FrozenRingStrategy());
-            //   RegisterStrategy(new StoneRingStrategy());
-            //   RegisterStrategy(new GhostRingStrategy());
+            RegisterStrategy(new BombMoveStrategy());
+            RegisterStrategy(new ChainMoveStrategy());
+            RegisterStrategy(new MagnetMoveStrategy());
+            RegisterStrategy(new FrozenMoveStrategy());
+            RegisterStrategy(new StoneMoveStrategy());
+            RegisterStrategy(new GhostMoveStrategy());
+            RegisterStrategy(new GlassMoveStrategy());
+            RegisterStrategy(new LockedRingMoveStrategy());
 
             _defaultStrategy = _strategies.TryGetValue(RingType.Standard, out var std)
                 ? std
@@ -97,7 +98,7 @@ namespace RingFlow.Gameplay.Strategies
     /// <summary>
     /// Default strategy for standard rings (no special behavior).
     /// </summary>
-    internal sealed class StandardRingStrategy : IRingMoveStrategy
+    public sealed class StandardRingStrategy : IRingMoveStrategy
     {
         public bool CanHandle(RingType ringType)
         {

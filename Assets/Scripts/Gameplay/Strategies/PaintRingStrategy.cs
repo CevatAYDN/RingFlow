@@ -15,14 +15,35 @@ namespace RingFlow.Gameplay.Strategies
             {
                 var ringBelowIndex = context.ToPole.Rings.Count - 2;
                 var ringBelow = context.ToPole.Rings[ringBelowIndex];
+                var movingRingIndex = context.ToPole.Rings.Count - 1;
+                var movingRing = context.ToPole.Rings[movingRingIndex];
 
-                if (ringBelow.Type == RingType.Paint)
+                if (movingRing.Type == RingType.Paint && ringBelow.Type != RingType.Paint)
                 {
+                    // Paint ring placed on another ring: ring below gets painted, Paint consumed
+                    var paintColor = movingRing.Color;
+                    context.PaintedRingIndex = ringBelowIndex;
+                    context.PaintedRingOriginalColor = ringBelow.Color;
+                    context.WasPaintApplied = true;
+
+                    var paintedRing = new RingData(paintColor, RingType.Standard);
+                    context.ToPole.Rings[ringBelowIndex] = paintedRing;
+
+                    var consumedPaint = new RingData(paintColor, RingType.Standard);
+                    context.ToPole.Rings[movingRingIndex] = consumedPaint;
+
+                    context.SignalBus?.Fire(new PaintRingSignal(context.ToPoleId, paintColor));
+
+                    NexusLog.Info("PaintRingStrategy", nameof(PostMoveExecution), context.ToPoleId.ToString(),
+                        $"Paint applied by moving Paint ring: ring[{ringBelowIndex}] colored {paintColor} (was {context.PaintedRingOriginalColor}). Paint consumed at index {movingRingIndex}.");
+                }
+                else if (ringBelow.Type == RingType.Paint)
+                {
+                    // Ring placed on existing Paint ring: moving ring gets painted, Paint consumed
                     var paintColor = ringBelow.Color;
-                    var movingRingIndex = context.ToPole.Rings.Count - 1;
 
                     context.PaintedRingIndex = movingRingIndex;
-                    context.PaintedRingOriginalColor = context.ToPole.Rings[movingRingIndex].Color;
+                    context.PaintedRingOriginalColor = movingRing.Color;
                     context.WasPaintApplied = true;
 
                     var paintedRing = new RingData(paintColor, RingType.Standard);

@@ -23,7 +23,12 @@ namespace RingFlow.Gameplay.Strategies
                 var topRing = context.FromPole.TopRing;
                 if (topRing.Type == RingType.Mystery)
                 {
-                    var revealedColor = DetermineMysteryColor(context);
+                    // Use pre-assigned color from generation; fall back to deterministic compute
+                    var revealedColor = topRing.Color;
+                    if (revealedColor == RingColor.None)
+                    {
+                        revealedColor = DetermineMysteryColor(context);
+                    }
                     topRing = new RingData(revealedColor, RingType.Standard);
                     context.FromPole.Rings[^1] = topRing;
                     context.WasMysteryRevealed = true;

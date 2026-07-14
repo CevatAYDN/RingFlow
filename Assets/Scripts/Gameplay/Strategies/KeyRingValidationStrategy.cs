@@ -15,9 +15,9 @@ namespace RingFlow.Gameplay.Strategies
         {
             // Key rings can only be placed on locked poles (to unlock them)
             if (isPoleLocked) return true;
-            
-            // Cannot be placed on unlocked poles (GDD §4)
-            return false;
+
+            // Key rings can be placed on unlocked poles — engine/solver handle color matching
+            return true;
         }
 
         public bool CanPopRing(RingData topRing, bool isPoleLocked)

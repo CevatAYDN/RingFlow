@@ -199,12 +199,15 @@ namespace RingFlow.Gameplay
             while (checkIndex >= 0)
             {
                 var current = context.ToPole.Rings[checkIndex];
-                if (current.Type != RingType.Frozen || current.Color != context.MovingRing.Color)
+                if (current.Color != context.MovingRing.Color)
                     break;
 
-                context.ToPole.Rings[checkIndex] = new RingData(current.Color, RingType.Standard);
-                mainRecord.IceBrokenRingIndices.Add(checkIndex);
-                anyBroken = true;
+                if (current.Type == RingType.Frozen)
+                {
+                    context.ToPole.Rings[checkIndex] = new RingData(current.Color, RingType.Standard);
+                    mainRecord.IceBrokenRingIndices.Add(checkIndex);
+                    anyBroken = true;
+                }
                 checkIndex--;
             }
 

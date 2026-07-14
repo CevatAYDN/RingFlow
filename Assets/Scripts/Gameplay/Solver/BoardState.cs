@@ -389,12 +389,16 @@ namespace RingFlow.Gameplay
             int newCount = GetRingCount(poleIndex);
             int belowIndex = newCount - 2;
             bool anyIceBroken = false;
-            while (belowIndex >= 0
-                && GetRingType(poleIndex, belowIndex) == RingType.Frozen
-                && GetRingColor(poleIndex, belowIndex) == ring.Color)
+            while (belowIndex >= 0)
             {
-                SetRingType(poleIndex, belowIndex, RingType.Standard);
-                anyIceBroken = true;
+                if (GetRingColor(poleIndex, belowIndex) != ring.Color)
+                    break;
+
+                if (GetRingType(poleIndex, belowIndex) == RingType.Frozen)
+                {
+                    SetRingType(poleIndex, belowIndex, RingType.Standard);
+                    anyIceBroken = true;
+                }
                 belowIndex--;
             }
             if (anyIceBroken && ring.Type != RingType.Frozen)
@@ -487,16 +491,13 @@ namespace RingFlow.Gameplay
             SetRingAdditional(poleIndex, lastIndex, 0);
             SetRingCount(poleIndex, lastIndex);
 
-            // Frozen flag maintenance: update based on new top ring
+            // Frozen auto-thaw: if new top ring is Frozen, thaw it to prevent softlock
             int newCount = count - 1;
             if (newCount > 0 && GetRingType(poleIndex, newCount - 1) == RingType.Frozen)
             {
-                SetTopRingFrozen(poleIndex, true);
+                SetRingType(poleIndex, newCount - 1, RingType.Standard);
             }
-            else
-            {
-                SetTopRingFrozen(poleIndex, false);
-            }
+            SetTopRingFrozen(poleIndex, false);
 
             // Ghost Kontrolü: Pop edilen halka Ghost ise standartlaşır (oyun içi seçilince standartlaşmasıyla uyumlu)
             if (ring.Type == RingType.Ghost)
