@@ -120,10 +120,17 @@ poetry.lock
 
 # AI / LLM / Agent Workspace Ignores
 /.agents/
-/.devin/
 /.omo/
 /-p/
 /.commandcode/
 /.codegraph
+
+# Devin environment config (allow blueprint and MCP config to be shared)
+!/.devin/
+/.devin/*
+!/.devin/blueprint.yaml
+!/.devin/config.json
+!/.devin/mcp-client-config.example.json
+!/.devin/start-unity-mcp-server.ps1
 /AGENTS.md
 

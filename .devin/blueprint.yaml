@@ -1,0 +1,15 @@
+runs-on: windows
+
+initialize:
+  - name: install uv
+    run: |
+      powershell -ExecutionPolicy ByPass -Command "irm https://astral.sh/uv/install.ps1 | iex"
+  - name: cache mcpforunityserver
+    run: |
+      powershell -Command "$env:Path = \"$env:USERPROFILE\.local\bin;$env:Path\"; if (-not ([Environment]::GetEnvironmentVariable('Path', 'User') -like '*\.local\bin*')) { [Environment]::SetEnvironmentVariable('Path', \"$env:USERPROFILE\.local\bin;\" + [Environment]::GetEnvironmentVariable('Path', 'User'), 'User') }; uvx --from mcpforunityserver mcp-for-unity --help"
+
+knowledge:
+  - name: unity-mcp
+    contents: |
+      Start the Unity MCP HTTP server: .devin/start-unity-mcp-server.ps1
+      Devin auto-starts the MCP server via stdio using .devin/config.json
