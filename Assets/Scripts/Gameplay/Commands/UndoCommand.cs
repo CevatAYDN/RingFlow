@@ -81,10 +81,19 @@ namespace RingFlow.Gameplay
                         movedRing.Color = lastMove.OriginalColor;
 
                         // Restore the consumed Paint ring (Standard → back to Paint)
-                        if (lastMove.PaintConsumedRingIndex >= 0 &&
-                            lastMove.PaintConsumedRingIndex < toPole.Rings.Count)
+                    // Two scenarios:
+                    //   1. consumed ring still on target pole (ring placed on an existing Paint ring)
+                    //   2. consumed ring was the moved ring itself (Paint ring painted ring below)
+                    if (lastMove.PaintConsumedRingIndex >= 0)
                         {
-                            toPole.Rings[lastMove.PaintConsumedRingIndex] = lastMove.PaintConsumedRingData;
+                            if (lastMove.PaintConsumedRingIndex < toPole.Rings.Count)
+                            {
+                                toPole.Rings[lastMove.PaintConsumedRingIndex] = lastMove.PaintConsumedRingData;
+                            }
+                            else
+                            {
+                                movedRing = lastMove.PaintConsumedRingData;
+                            }
                         }
 
                         // Restore the painted ring's original color

@@ -44,6 +44,7 @@ namespace RingFlow.Gameplay
             TargetMovesCount.Value = 0;
             IsGameWon.Value = false;
             LastReward.Value = default;
+            PendingGhostRevealOnFrom = false;
         }
     }
 

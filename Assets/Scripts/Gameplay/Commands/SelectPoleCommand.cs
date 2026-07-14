@@ -90,7 +90,11 @@ namespace RingFlow.Gameplay
         /// </summary>
         private void TryRevealGhost(PoleState pole, int poleId, ISignalBus signalBus)
         {
-            if (pole.TopRing.Type != RingType.Ghost) return;
+            if (pole.TopRing.Type != RingType.Ghost)
+            {
+                _model.PendingGhostRevealOnFrom = false;
+                return;
+            }
             var ghostCopy = pole.Rings[^1];
             ghostCopy.Type = RingType.Standard;
             pole.Rings[^1] = ghostCopy;

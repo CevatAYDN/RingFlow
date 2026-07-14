@@ -336,7 +336,7 @@ namespace RingFlow.Editor
 
             if (allExists)
             {
-                AddAuditResult("Yapılandırma Dosyaları", "Tüm 10 veri/config kaynağı ScriptableObject olarak Resources klasöründe mevcut.", AuditStatus.Pass);
+                AddAuditResult("Yapılandırma Dosyaları", $"Tüm {AssetEntries.Length} veri/config kaynağı ScriptableObject olarak Resources klasöründe mevcut.", AuditStatus.Pass);
             }
             else
             {
