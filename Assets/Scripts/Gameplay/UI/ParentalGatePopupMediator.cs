@@ -10,15 +10,25 @@ namespace RingFlow.Gameplay.UI
     {
         [Inject] private IGameStateMachine _fsm;
         [Inject] private ISignalBus _signalBus;
+        [Inject] private ILocalizationService _loc;
 
         protected override void OnBind()
         {
             if (View == null) return;
 
+            View.EnsureInitialized();
+            View.Localize(_loc);
+
             View.AcceptButton?.onClick.AddListener(HandleAccept);
             View.TermsButton?.onClick.AddListener(HandleOpenTerms);
             View.PrivacyButton?.onClick.AddListener(HandleOpenPrivacy);
+            if (View.AgeInputField != null)
+            {
+                View.AgeInputField.onEndEdit.AddListener(HandleSubmit);
+            }
         }
+
+        private void HandleSubmit(string _) => HandleAccept();
 
         private void HandleAccept()
         {
@@ -57,6 +67,10 @@ namespace RingFlow.Gameplay.UI
             View.AcceptButton?.onClick.RemoveListener(HandleAccept);
             View.TermsButton?.onClick.RemoveListener(HandleOpenTerms);
             View.PrivacyButton?.onClick.RemoveListener(HandleOpenPrivacy);
+            if (View.AgeInputField != null)
+            {
+                View.AgeInputField.onEndEdit.RemoveListener(HandleSubmit);
+            }
         }
     }
 }

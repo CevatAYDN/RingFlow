@@ -106,9 +106,15 @@ namespace RingFlow.Tests
         [Test]
         public void ParentalGatePopupView_CanBeConstructed_WithoutScene()
         {
+            var theme = UnityEngine.Resources.Load<RingFlow.Gameplay.UIThemeConfigSO>(RingFlow.Gameplay.GameplayAssetKeys.UIThemeConfig);
+            if (theme != null) GameUIResources.Bind(theme);
             var go = new UnityEngine.GameObject("ParentalGatePopupView");
             var view = go.AddComponent<ParentalGatePopupView>();
+            view.EnsureInitialized();
             Assert.IsNotNull(view);
+            Assert.IsNotNull(view.AcceptButton, "Parental gate must always have an accept button so first-run users are not trapped.");
+            Assert.IsNotNull(view.AgeInputField, "Parental gate must always have an input field for the verification answer.");
+            Assert.IsNotNull(view.QuestionText, "Parental gate must show the generated math question.");
             UnityEngine.Object.DestroyImmediate(go);
         }
 

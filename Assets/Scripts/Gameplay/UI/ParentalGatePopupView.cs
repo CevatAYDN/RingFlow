@@ -27,9 +27,23 @@ namespace RingFlow.Gameplay.UI
         private int _num1;
         private int _num2;
         private int _correctAnswer;
+        private ILocalizationService _loc;
+        private bool _initialized;
 
         private void Awake()
         {
+            EnsureInitialized();
+        }
+
+        /// <summary>
+        /// Idempotently wires view references. Mediators can call this before adding listeners;
+        /// this protects authored/inactive prefab flows where mediator binding may happen
+        /// before the view Awake path has populated public fields.
+        /// </summary>
+        public void EnsureInitialized()
+        {
+            if (_initialized && AcceptButton != null) return;
+
             if (NeedsSelfBuild())
             {
                 BuildUI();
@@ -39,16 +53,19 @@ namespace RingFlow.Gameplay.UI
                 BindReferencesFromChildren();
             }
 
+            _initialized = true;
+
             // Validate critical references; self-build guarantees non-null but
             // authored prefabs might have missing children.
             if (AcceptButton == null)
-                NexusLog.Warn("ParentalGatePopupView", nameof(Awake), "",
+                NexusLog.Warn("ParentalGatePopupView", nameof(EnsureInitialized), "",
                     "AcceptButton not found in prefab hierarchy. The popup will be unclosable.");
         }
 
         protected override void OnEnable()
         {
             base.OnEnable();
+            EnsureInitialized();
             GenerateQuestion();
             if (ErrorText != null) ErrorText.text = "";
             if (AgeInputField != null) AgeInputField.text = "";
@@ -181,7 +198,9 @@ namespace RingFlow.Gameplay.UI
 
             if (QuestionText != null)
             {
-                QuestionText.text = $"Parental Verification: {_num1} x {_num2} = ?";
+                string format = _loc?.GetString("parental_question", "Parental Verification: {0} x {1} = ?")
+                    ?? "Parental Verification: {0} x {1} = ?";
+                QuestionText.text = string.Format(format, _num1, _num2);
             }
         }
 
@@ -199,7 +218,8 @@ namespace RingFlow.Gameplay.UI
 
             if (ErrorText != null)
             {
-                ErrorText.text = "Incorrect answer. Verification failed.";
+                ErrorText.text = _loc?.GetString("parental_error", "Incorrect answer. Verification failed.")
+                    ?? "Incorrect answer. Verification failed.";
             }
             GenerateQuestion();
             return false;
@@ -208,9 +228,11 @@ namespace RingFlow.Gameplay.UI
         public void Localize(ILocalizationService loc)
         {
             if (loc == null) return;
+            _loc = loc;
+            EnsureInitialized();
 
             if (QuestionText != null)
-                GameUIResources.LocalizeText(QuestionText.gameObject, "parental_question", loc);
+                GenerateQuestion();
 
             if (AcceptButton != null)
                 GameUIResources.LocalizeButtonText(AcceptButton.gameObject, "parental_accept", loc);
@@ -221,8 +243,8 @@ namespace RingFlow.Gameplay.UI
             if (PrivacyButton != null)
                 GameUIResources.LocalizeButtonText(PrivacyButton.gameObject, "parental_privacy", loc);
 
-            if (ErrorText != null)
-                GameUIResources.LocalizeText(ErrorText.gameObject, "parental_error", loc);
+            if (ErrorText != null && !string.IsNullOrEmpty(ErrorText.text))
+                ErrorText.text = loc.GetString("parental_error", ErrorText.text);
 
             if (AgeInputField != null && AgeInputField.placeholder is Text ph)
                 ph.text = loc.GetString("parental_placeholder", "Enter answer...");
