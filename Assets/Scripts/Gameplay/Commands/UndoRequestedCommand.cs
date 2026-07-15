@@ -78,7 +78,9 @@ namespace RingFlow.Gameplay
                             _analyticsService.UndoUse(level, wasFree: false);
                             _analyticsService.RewardedAd("Undo", true);
                         }
-                        _signalBus.Fire(new UndoSignal());
+                        // Ad SDK callbacks may arrive on a background thread.
+                        // FireThreadSafe marshals execution to the main Unity thread.
+                        _signalBus.FireThreadSafe(new UndoSignal());
                     }
                     else
                     {

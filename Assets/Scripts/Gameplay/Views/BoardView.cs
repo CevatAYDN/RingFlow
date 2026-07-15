@@ -23,7 +23,6 @@ namespace RingFlow.Gameplay
         [Inject] private IAudioService _audioService;
         [Inject] private IHapticService _hapticService;
         [Inject] private SettingsModel _settingsModel;
-        [Inject] private GameplayModel _model;
         [Inject] private GameFeelConfigSO _feelConfig;
         [Inject] private RingColorPaletteSO _colorPalette;
 
@@ -50,6 +49,10 @@ namespace RingFlow.Gameplay
 
         private readonly List<PoleView> _spawnedPoles = new();
         private readonly List<List<GameObject>> _spawnedRings = new();
+        // Pre-allocated buffers for celebration animation (avoids GC during gameplay)
+        private readonly List<Transform> _celebrationRingBuffer = new(8);
+        private static readonly System.Comparison<Transform> _ringYComparer =
+            (a, b) => a.localPosition.y.CompareTo(b.localPosition.y);
         private int _lastSelectedPoleId = -1;
         private int _animatingTargetPoleId = -1;
         private bool _ringPrewarmed;
@@ -294,6 +297,8 @@ namespace RingFlow.Gameplay
         public void AnimateRingUndo(int fromPoleId, int toPoleId, List<PoleState> poles)
         {
             if (fromPoleId < 0 || toPoleId < 0) return;
+            if (poles == null) return;
+            if (fromPoleId >= poles.Count || toPoleId >= poles.Count) return;
 
             bool reduceMotion = _settingsModel != null && _settingsModel.ReduceMotion.Value;
             bool slowMode = _settingsModel != null && _settingsModel.SlowMode.Value;
@@ -386,19 +391,12 @@ namespace RingFlow.Gameplay
                 _audioService.PlaySfx(ProceduralAudio.GetOrCreateErrorClip(), 1.0f);
         }
 
-        public void CelebratePoleComplete(int poleId)
+        public void CelebratePoleComplete(int poleId, int ringCount, int completedCount, bool isFinalPole)
         {
             var pv = GetPoleView(poleId);
             if (pv == null) return;
 
-            // Determine ring count on this pole for intensity scaling
-            int ringCount = 0;
-            if (_model != null && poleId >= 0 && poleId < _model.Poles.Count)
-                ringCount = _model.Poles[poleId].Rings.Count;
-
             // --- 3-Tier Feedback System ---
-            int completedCount = _model?.CompletedPoles.Count ?? 0;
-            bool isFinalPole = _model != null && completedCount >= _model.Poles.Count - 1;
             int tier = isFinalPole ? 2 : (completedCount >= F.MediumTierThreshold ? 1 : 0);
 
             // ----- Tier 0/1: Flash pole with success color -----
@@ -428,38 +426,31 @@ namespace RingFlow.Gameplay
             ShakeCamera(shakeIntensity, shakeDuration);
 
             // ----- Tier 0/1: Staggered ring bounce animation -----
-            var ringsList = new List<Transform>();
-            foreach (Transform child in pv.transform)
+            // Reuse pre-allocated list to avoid GC pressure during gameplay.
+            _celebrationRingBuffer.Clear();
+            int childCount = pv.transform.childCount;
+            for (int c = 0; c < childCount; c++)
             {
-                if (child.name.StartsWith("Ring_"))
-                    ringsList.Add(child);
+                var child = pv.transform.GetChild(c);
+                if (child.name.Length > 5 && child.name[0] == 'R' && child.name[4] == '_')
+                    _celebrationRingBuffer.Add(child);
             }
-            ringsList.Sort((a, b) => a.localPosition.y.CompareTo(b.localPosition.y));
+            _celebrationRingBuffer.Sort(_ringYComparer);
 
-            for (int i = 0; i < ringsList.Count; i++)
+            for (int i = 0; i < _celebrationRingBuffer.Count; i++)
             {
-                var ringTrans = ringsList[i];
+                var ringTrans = _celebrationRingBuffer[i];
                 float originalY = ringTrans.localPosition.y;
                 float originalScaleY = ringTrans.localScale.y;
+                float bounceHeight = isFinalPole ? 0.5f : 0.35f;
 
-                ringTrans.DOLocalMoveY(originalY + (isFinalPole ? 0.5f : 0.35f), 0.15f)
-                         .SetEase(Ease.OutQuad)
-                         .SetDelay(i * 0.04f)
-                         .OnComplete(() =>
-                         {
-                             ringTrans.DOLocalMoveY(originalY, 0.20f)
-                                      .SetEase(Ease.InQuad)
-                                      .OnComplete(() =>
-                                      {
-                                          ringTrans.DOScaleY(originalScaleY * 0.7f, 0.08f)
-                                                   .SetEase(Ease.OutQuad)
-                                                   .OnComplete(() =>
-                                                   {
-                                                       ringTrans.DOScaleY(originalScaleY, 0.12f)
-                                                                .SetEase(Ease.OutBack);
-                                                   });
-                                      });
-                         });
+                // Use DOTween Sequence to avoid nested OnComplete lambda closures (zero GC).
+                var seq = DOTween.Sequence();
+                seq.AppendInterval(i * 0.04f);
+                seq.Append(ringTrans.DOLocalMoveY(originalY + bounceHeight, 0.15f).SetEase(Ease.OutQuad));
+                seq.Append(ringTrans.DOLocalMoveY(originalY, 0.20f).SetEase(Ease.InQuad));
+                seq.Append(ringTrans.DOScaleY(originalScaleY * 0.7f, 0.08f).SetEase(Ease.OutQuad));
+                seq.Append(ringTrans.DOScaleY(originalScaleY, 0.12f).SetEase(Ease.OutBack));
             }
 
             // ----- Tier 0/1: Merge effect (replaces legacy RingPop burst) -----

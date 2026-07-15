@@ -139,9 +139,17 @@ namespace RingFlow.Gameplay
         private void OnPoleCompleted(PoleCompletedSignal signal)
         {
             _logger?.Log($"[BoardMediator] Pole {signal.PoleId} completed! Celebrating.");
-            if (View != null)
+            if (View != null && _model != null)
             {
-                View.CelebratePoleComplete(signal.PoleId);
+                int poleId = signal.PoleId;
+                int ringCount = 0;
+                if (poleId >= 0 && poleId < _model.Poles.Count)
+                    ringCount = _model.Poles[poleId].Rings.Count;
+
+                int completedCount = _model.CompletedPoles.Count;
+                bool isFinalPole = completedCount >= _model.Poles.Count - 1;
+
+                View.CelebratePoleComplete(poleId, ringCount, completedCount, isFinalPole);
             }
         }
 

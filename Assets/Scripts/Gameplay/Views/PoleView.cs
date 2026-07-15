@@ -46,6 +46,11 @@ namespace RingFlow.Gameplay
         private bool _isLocked;
         private MaterialPropertyBlock _propBlock;
 
+        // Cached WaitForSeconds instances — avoids per-flash GC allocation (M6).
+        // Keyed by duration: error (0.35 s) and success (0.8 s) are the only values used.
+        private WaitForSeconds _waitError;
+        private WaitForSeconds _waitSuccess;
+
         private void Awake()
         {
             EnsureMaterialAccess();
@@ -73,7 +78,13 @@ namespace RingFlow.Gameplay
         private IEnumerator FlashRoutine(float duration)
         {
             SetColor(GetErrorTint());
-            yield return new WaitForSeconds(duration);
+            // Reuse cached instance for the default 0.35 s error duration (zero GC, M6).
+            // A non-default duration is rare (only the public overload with a custom value),
+            // so allocating once there is acceptable.
+            if (_waitError == null) _waitError = new WaitForSeconds(0.35f);
+            yield return Mathf.Approximately(duration, 0.35f)
+                ? _waitError
+                : new WaitForSeconds(duration);
             ApplyTint();
             _flashRoutine = null;
         }
@@ -92,7 +103,11 @@ namespace RingFlow.Gameplay
         private IEnumerator FlashSuccessRoutine(float duration, Color color)
         {
             SetColor(color);
-            yield return new WaitForSeconds(duration);
+            // Reuse cached instance for the default 0.8 s success duration (zero GC, M6).
+            if (_waitSuccess == null) _waitSuccess = new WaitForSeconds(0.8f);
+            yield return Mathf.Approximately(duration, 0.8f)
+                ? _waitSuccess
+                : new WaitForSeconds(duration);
             ApplyTint();
             _flashRoutine = null;
         }
@@ -106,19 +121,7 @@ namespace RingFlow.Gameplay
 
         private void SetColor(Color c)
         {
-            if (_renderers == null || _renderers.Length == 0)
-            {
-                var childRenderers = GetComponentsInChildren<Renderer>(true);
-                var list = new System.Collections.Generic.List<Renderer>();
-                foreach (var r in childRenderers)
-                {
-                    if (r.name == "Body" || r.name == "Cap" || r.gameObject == gameObject)
-                    {
-                        list.Add(r);
-                    }
-                }
-                _renderers = list.ToArray();
-            }
+            EnsureRenderers();
             if (_renderers == null || _renderers.Length == 0) return;
             if (_propBlock == null) _propBlock = new MaterialPropertyBlock();
             
@@ -132,21 +135,36 @@ namespace RingFlow.Gameplay
             }
         }
 
+        /// <summary>
+        /// Consolidated renderer discovery — called only when cache is empty.
+        /// Avoids redundant GetComponentsInChildren allocations across
+        /// SetColor, EnsureMaterialAccess, and SyncMaterial.
+        /// </summary>
+        private void EnsureRenderers()
+        {
+            if (_renderers != null && _renderers.Length > 0) return;
+
+            var childRenderers = GetComponentsInChildren<Renderer>(true);
+            int count = 0;
+            for (int i = 0; i < childRenderers.Length; i++)
+            {
+                var r = childRenderers[i];
+                if (r.name == "Body" || r.name == "Cap" || r.gameObject == gameObject)
+                    count++;
+            }
+            _renderers = new Renderer[count];
+            int idx = 0;
+            for (int i = 0; i < childRenderers.Length; i++)
+            {
+                var r = childRenderers[i];
+                if (r.name == "Body" || r.name == "Cap" || r.gameObject == gameObject)
+                    _renderers[idx++] = r;
+            }
+        }
+
         private void EnsureMaterialAccess()
         {
-            if (_renderers == null || _renderers.Length == 0)
-            {
-                var childRenderers = GetComponentsInChildren<Renderer>(true);
-                var list = new System.Collections.Generic.List<Renderer>();
-                foreach (var r in childRenderers)
-                {
-                    if (r.name == "Body" || r.name == "Cap" || r.gameObject == gameObject)
-                    {
-                        list.Add(r);
-                    }
-                }
-                _renderers = list.ToArray();
-            }
+            EnsureRenderers();
             if (_renderers != null && _renderers.Length > 0 && _renderers[0] != null && _renderers[0].sharedMaterial != null)
             {
                 _baseColor = _renderers[0].sharedMaterial.color;
@@ -159,16 +177,9 @@ namespace RingFlow.Gameplay
         /// </summary>
         public void SyncMaterial()
         {
-            var childRenderers = GetComponentsInChildren<Renderer>(true);
-            var list = new System.Collections.Generic.List<Renderer>();
-            foreach (var r in childRenderers)
-            {
-                if (r.name == "Body" || r.name == "Cap" || r.gameObject == gameObject)
-                {
-                    list.Add(r);
-                }
-            }
-            _renderers = list.ToArray();
+            // Force re-discovery since materials changed
+            _renderers = null;
+            EnsureRenderers();
 
             if (_renderers != null && _renderers.Length > 0 && _renderers[0] != null && _renderers[0].sharedMaterial != null)
             {

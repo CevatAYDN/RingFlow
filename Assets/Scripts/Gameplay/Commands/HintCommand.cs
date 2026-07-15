@@ -196,6 +196,9 @@ namespace RingFlow.Gameplay
         /// Zero-GC callback struct for rewarded ad completion.
         /// Prevents memory leak by avoiding lambda closure capture of command instance.
         /// Follows Nexus 0-GC allocation pattern for async callbacks.
+        /// IMPORTANT: Ad SDK callbacks may arrive on a background thread.
+        /// We use FireThreadSafe to marshal signal dispatch to the main Unity thread.
+        /// Economy spend is skipped for ad-rewarded hints (the ad IS the payment).
         /// </summary>
         private struct HintRewardCallback
         {
@@ -207,11 +210,14 @@ namespace RingFlow.Gameplay
             {
                 if (success)
                 {
-                    Command.ResolveAndFire(FirstMove, false);
+                    // Ad SDK callbacks may arrive on a background thread.
+                    // FireThreadSafe marshals to the main Unity thread.
+                    // No economy spend needed — the ad itself is the payment.
+                    SignalBus?.FireThreadSafe(new HintResolvedSignal(FirstMove.From, FirstMove.To, true));
                 }
                 else
                 {
-                    SignalBus?.Fire(HintResolvedSignal.Empty);
+                    SignalBus?.FireThreadSafe(HintResolvedSignal.Empty);
                 }
             }
         }

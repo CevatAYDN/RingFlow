@@ -168,10 +168,34 @@ namespace RingFlow.Gameplay
 
         private async Task DeferWinStateTransitionAsync()
         {
-            await Task.Delay(500);
-            if (_fsm != null)
+            try
             {
-                await _fsm.ChangeStateAsync<WinState>();
+                await Task.Delay(500);
+                if (_fsm != null)
+                {
+                    await _fsm.ChangeStateAsync<WinState>();
+                }
+            }
+            catch (System.Exception ex)
+            {
+                // Prevent silent failure — if WinState transition fails,
+                // the player would be stuck on the gameplay screen forever.
+                NexusLog.Error("LevelWonCommand", "DeferWinStateTransitionAsync", "",
+                    $"Win state transition failed: {ex.Message}. Attempting recovery.");
+                try
+                {
+                    // Recovery attempt: try again after a brief delay
+                    await Task.Delay(1000);
+                    if (_fsm != null)
+                    {
+                        await _fsm.ChangeStateAsync<WinState>();
+                    }
+                }
+                catch (System.Exception retryEx)
+                {
+                    NexusLog.Error("LevelWonCommand", "DeferWinStateTransitionAsync", "",
+                        $"Recovery also failed: {retryEx.Message}. Player may be stuck.");
+                }
             }
         }
     }

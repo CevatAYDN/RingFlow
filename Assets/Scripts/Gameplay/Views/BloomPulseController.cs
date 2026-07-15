@@ -25,6 +25,10 @@ namespace RingFlow.Gameplay
         private FieldInfo _intensityField;
         private FieldInfo _thresholdField;
 
+        // Cached PropertyInfo for "value" and "overrideState" — avoids per-frame reflection lookups.
+        private PropertyInfo _cachedValueProp;
+        private PropertyInfo _cachedOverrideStateProp;
+
         private float _originalIntensity;
         private float _originalThreshold;
         private Sequence _pulseSequence;
@@ -183,12 +187,15 @@ namespace RingFlow.Gameplay
             object paramObj = field.GetValue(_bloom);
             if (paramObj == null) return 0f;
 
-            // FloatParameter / VolumeParameter<T> has a 'value' property
-            Type paramType = paramObj.GetType();
-            PropertyInfo valueProp = paramType.GetProperty("value");
-            if (valueProp != null)
+            // Cache PropertyInfo on first access to avoid per-call reflection.
+            if (_cachedValueProp == null)
             {
-                return (float)valueProp.GetValue(paramObj);
+                Type paramType = paramObj.GetType();
+                _cachedValueProp = paramType.GetProperty("value");
+            }
+            if (_cachedValueProp != null)
+            {
+                return (float)_cachedValueProp.GetValue(paramObj);
             }
 
             return 0f;
@@ -199,12 +206,12 @@ namespace RingFlow.Gameplay
             object paramObj = field.GetValue(_bloom);
             if (paramObj == null) return;
 
-            Type paramType = paramObj.GetType();
-            PropertyInfo valueProp = paramType.GetProperty("value");
-            if (valueProp != null)
+            if (_cachedValueProp == null)
             {
-                valueProp.SetValue(paramObj, value);
+                Type paramType = paramObj.GetType();
+                _cachedValueProp = paramType.GetProperty("value");
             }
+            _cachedValueProp?.SetValue(paramObj, value);
         }
 
         private void SetOverrideState(FieldInfo field, bool state)
@@ -212,12 +219,12 @@ namespace RingFlow.Gameplay
             object paramObj = field.GetValue(_bloom);
             if (paramObj == null) return;
 
-            Type paramType = paramObj.GetType();
-            PropertyInfo overrideProp = paramType.GetProperty("overrideState");
-            if (overrideProp != null)
+            if (_cachedOverrideStateProp == null)
             {
-                overrideProp.SetValue(paramObj, state);
+                Type paramType = paramObj.GetType();
+                _cachedOverrideStateProp = paramType.GetProperty("overrideState");
             }
+            _cachedOverrideStateProp?.SetValue(paramObj, state);
         }
 
         /// <summary>
