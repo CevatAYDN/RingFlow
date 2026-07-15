@@ -15,7 +15,7 @@
         "com.unity.nuget.newtonsoft-json": "3.0.2",
         "com.unity.test-framework": "1.1.31"
       },
-      "hash": "63c7439535bfc387dbecff0c489ff807efc2f2f7"
+      "hash": "bd72241ab91c664176091789c9408d676783abec"
     },
     "com.nexus.core": {
       "version": "file:../Submodules/GameContainer/Nexus/Packages/com.nexus.core",

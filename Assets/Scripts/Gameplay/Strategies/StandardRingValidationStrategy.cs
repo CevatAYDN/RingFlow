@@ -24,7 +24,10 @@ namespace RingFlow.Gameplay.Strategies
             
             // Can always add to empty pole
             if (topRing.Color == RingColor.None) return true;
-            
+
+            // Jokers (Rainbow/Paint) accept any ring placed on top (GDD §35/#39)
+            if (topRing.Type == RingType.Rainbow || topRing.Type == RingType.Paint) return true;
+
             // Can only add if colors match
             return topRing.Color == ring.Color;
         }

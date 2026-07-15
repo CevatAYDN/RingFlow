@@ -201,14 +201,13 @@ namespace RingFlow.Gameplay
 
         public static bool IsSolved(BoardState state, int maxCapacity)
         {
-            int nonEmptyCount = 0;
+            bool hasCompletedPole = false;
             for (int i = 0; i < state.PoleCount; i++)
             {
                 int count = state.GetRingCount(i);
                 if (count == 0) continue;
-                nonEmptyCount++;
-
-                if (count != maxCapacity) return false;
+                if (count < maxCapacity) return false;
+                hasCompletedPole = true;
 
                 RingColor firstColor = state.GetRingColor(i, 0);
                 for (int r = 1; r < count; r++)
@@ -216,13 +215,13 @@ namespace RingFlow.Gameplay
                     if (state.GetRingColor(i, r) != firstColor) return false;
                 }
             }
-            return nonEmptyCount > 0;
+            return hasCompletedPole;
         }
 
         public static bool IsSolved(PoleState pole, int maxCapacity)
         {
             if (pole == null || pole.IsEmpty) return false;
-            if (pole.Rings.Count != pole.RingCapacity) return false;
+            if (pole.Rings.Count < maxCapacity) return false;
 
             var firstRing = pole.Rings[0];
             for (int i = 1; i < pole.Rings.Count; i++)

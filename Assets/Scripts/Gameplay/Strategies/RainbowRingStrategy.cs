@@ -33,37 +33,13 @@ namespace RingFlow.Gameplay.Strategies
                 }
                 else
                 {
-                    var randomColor = GetRandomColorForLevel(context);
-                    var convertedRing = new RingData(randomColor, RingType.Standard);
-                    context.ToPole.Rings[context.ToPole.Rings.Count - 1] = convertedRing;
-                    context.RainbowTargetIndex = context.ToPole.Rings.Count - 1;
-                    context.WasRainbowConverted = true;
-
-                    int level = context.Progression?.CurrentLevel.Value ?? 1;
-                    int seed = unchecked((int)((long)level * 2654435761L) ^ (context.ToPoleId * 31));
-                    NexusLog.Info("RainbowRingStrategy", nameof(PostMoveExecution), context.ToPoleId.ToString(),
-                        $"Rainbow on empty pole became {randomColor}. Level={level}, ToPole={context.ToPoleId}, Seed={seed}.");
+                    // Placed on an empty/otherwise-empty pole: leave the Rainbow unconverted.
+                    // This matches BoardState.ResolvePaintAndRainbowSpecial (GDD §35: a Rainbow
+                    // converts only when it contacts a ring). The ring stays Rainbow and converts
+                    // the moment a ring is stacked on top of it.
                 }
             }
         }
 
-        private RingColor GetRandomColorForLevel(MoveContext context)
-        {
-            // P0 fix: derive seed from level + pole identity (deterministic), NOT from
-            // MovesCount. Same as MysteryRingStrategy — guarantees reproducible color
-            // for QA replay and undo consistency.
-            if (_db == null) throw new System.InvalidOperationException("[RainbowRingStrategy] GameConfigDatabaseSO not injected!");
-            var colorCount = _db.GetColorCountForLevel(
-                context.Progression?.CurrentLevel.Value ?? 1);
-
-            int level = context.Progression?.CurrentLevel.Value ?? 1;
-            int seed = unchecked((int)((long)level * 2654435761L) ^ (context.ToPoleId * 31));
-            int safeSeed = seed == int.MinValue ? 0 : System.Math.Abs(seed);
-            int colorIndex = 1 + (safeSeed % colorCount);
-
-            if (colorIndex > GameplayAssetKeys.Tuning.ColorIndexMax) colorIndex = GameplayAssetKeys.Tuning.ColorIndexFallback;
-
-            return (RingColor)colorIndex;
-        }
     }
 }

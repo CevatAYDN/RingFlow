@@ -68,9 +68,23 @@ namespace RingFlow.Gameplay
 
         public void AddRing(RingData ring)
         {
-            if (Rings.Count < RingCapacity)
+            if (Rings.Count >= RingCapacity)
             {
-                Rings.Add(ring);
+                return;
+            }
+
+            int frozenBelowIndex = Rings.Count - 1;
+            bool breaksIce = ring.Type == RingType.Standard &&
+                             frozenBelowIndex >= 0 &&
+                             Rings[frozenBelowIndex].Type == RingType.Frozen &&
+                             Rings[frozenBelowIndex].Color == ring.Color;
+
+            Rings.Add(ring);
+
+            if (breaksIce)
+            {
+                var frozen = Rings[frozenBelowIndex];
+                Rings[frozenBelowIndex] = new RingData(frozen.Color, RingType.Standard, frozen.AdditionalData);
             }
         }
 

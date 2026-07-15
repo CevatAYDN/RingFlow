@@ -10,7 +10,7 @@ namespace RingFlow.Gameplay.Rules
         public static bool CanAddRing(RingData movingRing, RingData topRing, bool isPoleFull, bool isPoleLocked)
         {
             if (isPoleLocked)
-                return movingRing.Type == RingType.Locked;
+                return movingRing.Type == RingType.Locked || movingRing.Type == RingType.Key;
 
             if (isPoleFull)
                 return false;
@@ -20,6 +20,9 @@ namespace RingFlow.Gameplay.Rules
 
             if (topRing.Type == RingType.Stone)
                 return topRing.Color == movingRing.Color;
+
+            if (topRing.Type == RingType.Frozen)
+                return true;
 
             if (movingRing.Type == RingType.Rainbow || movingRing.Type == RingType.Paint)
                 return true;

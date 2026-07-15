@@ -369,7 +369,7 @@ namespace RingFlow.Gameplay
         {
             if (IsPoleLocked(poleIndex))
             {
-                return type == RingType.Locked;
+                return type == RingType.Locked || type == RingType.Key;
             }
             if (GetRingCount(poleIndex) >= maxCapacity) return false;
 
@@ -407,7 +407,7 @@ namespace RingFlow.Gameplay
             int count = GetRingCount(poleIndex);
             if (count >= capacityLimit) return;
 
-            if (IsPoleLocked(poleIndex) && ring.Type == RingType.Locked)
+            if (IsPoleLocked(poleIndex) && (ring.Type == RingType.Locked || ring.Type == RingType.Key))
             {
                 SetPoleLocked(poleIndex, false);
                 ring.Type = RingType.Standard;
@@ -415,43 +415,24 @@ namespace RingFlow.Gameplay
 
             ResolvePaintAndRainbowSpecial(ref ring, poleIndex, count);
 
+            int frozenBelowIndex = count - 1;
+            bool breaksIce = ring.Type == RingType.Standard &&
+                             frozenBelowIndex >= 0 &&
+                             GetRingType(poleIndex, frozenBelowIndex) == RingType.Frozen &&
+                             GetRingColor(poleIndex, frozenBelowIndex) == ring.Color;
+
             SetRingColor(poleIndex, count, ring.Color);
             SetRingType(poleIndex, count, ring.Type);
             SetRingAdditional(poleIndex, count, ring.AdditionalData);
             SetRingCount(poleIndex, count + 1);
 
+            if (breaksIce)
+            {
+                SetRingType(poleIndex, frozenBelowIndex, RingType.Standard);
+            }
+
             // Update TopRingFrozen based on the added ring
-            if (ring.Type == RingType.Frozen)
-            {
-                SetTopRingFrozen(poleIndex, true);
-            }
-            else
-            {
-                SetTopRingFrozen(poleIndex, false);
-            }
-
-            // Buz kırma — gerçek oyun TryBreakIceOnTarget mantığı:
-            // yeni eklenen halkanın altındaki tüm contiguous Frozen halkaları
-            // renk eşleşiyorsa kır (while döngüsü)
-            int newCount = GetRingCount(poleIndex);
-            int belowIndex = newCount - 2;
-            bool anyIceBroken = false;
-            while (belowIndex >= 0)
-            {
-                if (GetRingColor(poleIndex, belowIndex) != ring.Color)
-                    break;
-
-                if (GetRingType(poleIndex, belowIndex) == RingType.Frozen)
-                {
-                    SetRingType(poleIndex, belowIndex, RingType.Standard);
-                    anyIceBroken = true;
-                }
-                belowIndex--;
-            }
-            if (anyIceBroken && ring.Type != RingType.Frozen)
-            {
-                SetTopRingFrozen(poleIndex, false);
-            }
+            SetTopRingFrozen(poleIndex, ring.Type == RingType.Frozen);
 
             // Mıknatıs (Magnet) kuralı: Aynı renkteki diğer halkaları çek
             if (ring.Type == RingType.Magnet)

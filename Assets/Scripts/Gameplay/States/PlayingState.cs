@@ -74,7 +74,7 @@ namespace RingFlow.Gameplay
         public ValueTask OnExitAsync(CancellationToken ct) => default;
         public void OnTick(float deltaTime)
         {
-            if (_progression == null || _dbConfig == null || _signalBus == null)
+            if (_progression == null || _signalBus == null)
                 return;
 
             if (_model == null || !_model.IsChallengeMode.Value || _model.HasChallengeFailed.Value || _model.IsGameWon.Value)

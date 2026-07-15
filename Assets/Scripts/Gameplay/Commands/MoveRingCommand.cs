@@ -86,7 +86,7 @@ namespace RingFlow.Gameplay
 
             fromPole.PopRing();
 
-            if (toPole.IsLocked && ring.Type == RingType.Locked)
+            if (toPole.IsLocked && (ring.Type == RingType.Locked || ring.Type == RingType.Key))
             {
                 toPole.IsLocked = false;
                 context.WasPoleUnlocked = true;
@@ -95,7 +95,19 @@ namespace RingFlow.Gameplay
                     $"Locked pole {context.ToPoleId} unlocked with Key ring.");
             }
 
+            int frozenBelowIndex = toPole.Rings.Count - 1;
+            bool breaksIce = ring.Type == RingType.Standard &&
+                             frozenBelowIndex >= 0 &&
+                             toPole.Rings[frozenBelowIndex].Type == RingType.Frozen &&
+                             toPole.Rings[frozenBelowIndex].Color == ring.Color;
+
             toPole.AddRing(ring);
+
+            if (breaksIce)
+            {
+                context.WasIceBroken = true;
+                _signalBus.Fire(new BreakIceSignal(context.ToPoleId));
+            }
 
             _strategyManager.ExecutePostMoveExecution(ring.Type, ref context);
 
@@ -105,6 +117,12 @@ namespace RingFlow.Gameplay
                 if (targetType == RingType.Paint || targetType == RingType.Rainbow)
                 {
                     _strategyManager.ExecutePostMoveExecution(targetType, ref context);
+                }
+                else if (targetType == RingType.Ghost)
+                {
+                    // GDD §40: a Ghost ring becomes visible when another ring lands on it.
+                    // Reveal is visual only — no gameplay state mutation, so no undo handling needed.
+                    _signalBus.Fire(new GhostRevealedSignal(context.ToPoleId, toPole.Rings[toPole.Rings.Count - 2]));
                 }
             }
 
@@ -119,7 +137,6 @@ namespace RingFlow.Gameplay
             context.PlayerRingIndex = context.ToPole.Rings.Count - 1;
             ApplyChainSubMove(ref context, mainRecord);
             ApplyMagnetPull(ref context, mainRecord);
-            TryBreakIceOnTarget(ref context, mainRecord);
             ApplyPortalTeleport(ref context, mainRecord);
         }
 
@@ -174,6 +191,10 @@ namespace RingFlow.Gameplay
             bool ghostRevealed = _model.PendingGhostRevealPoleId == context.FromPoleId;
             _model.PendingGhostRevealPoleId = -1;
             record.WasGhostRevealedOnFrom = ghostRevealed;
+            if (context.WasIceBroken)
+            {
+                record.IceBrokenRingIndices.Add(context.ToPole.Rings.Count - 2);
+            }
             record.WasTargetPoleUnlocked = context.WasPoleUnlocked;
             record.WasPainted = context.WasPaintApplied;
             record.PaintedRingIndex = context.PaintedRingIndex;
@@ -220,41 +241,6 @@ namespace RingFlow.Gameplay
                 }
             }
             return true;
-        }
-
-        private void TryBreakIceOnTarget(ref MoveContext context, MoveRecord mainRecord)
-        {
-            if (context.ToPole.Rings.Count < 2) return;
-
-            int checkIndex = context.ToPole.Rings.Count - 2;
-            bool anyBroken = false;
-
-            while (checkIndex >= 0)
-            {
-                var current = context.ToPole.Rings[checkIndex];
-                if (current.Color != context.MovingRing.Color)
-                    break;
-
-                if (current.Type == RingType.Frozen)
-                {
-                    context.ToPole.Rings[checkIndex] = new RingData(current.Color, RingType.Standard);
-                    mainRecord.IceBrokenRingIndices.Add(checkIndex);
-                    anyBroken = true;
-                }
-                checkIndex--;
-            }
-
-            if (anyBroken)
-            {
-                context.WasIceBroken = true;
-                context.IceBrokenRingIndices = mainRecord.IceBrokenRingIndices;
-                _signalBus.Fire(new BreakIceSignal(context.ToPoleId));
-#if DEVELOPMENT_BUILD
-                // string.Join allocates — guard behind dev-build flag to avoid release GC pressure
-                NexusLog.Info("MoveRingCommand", "TryBreakIceOnTarget", context.ToPoleId.ToString(),
-                    $"Ice broken on pole {context.ToPoleId}: {mainRecord.IceBrokenRingIndices.Count} rings melted at indices [{string.Join(",", mainRecord.IceBrokenRingIndices)}].");
-#endif
-            }
         }
 
         private void ApplyChainSubMove(ref MoveContext context, MoveRecord mainRecord)
