@@ -80,8 +80,11 @@ namespace RingFlow.Gameplay
 
         public void BuildBoard(List<PoleState> poles)
         {
-            var visualBoard = GameplayHelpers.FindRootGameObject("RingFlow_VisualBoard");
-            if (visualBoard != null) Destroy(visualBoard);
+            // Incremental sync: return previously spawned poles/rings to their pool
+            // before re-spawning from the current pole data. Preserves pool integrity
+            // and avoids destroying the visual root hierarchy (which would orphan the
+            // pool and break Undo/Move visual restore).
+            ClearBoard();
 
             EnsureRingPoolPrewarmed();
             EnsureFloorPlaneCreated();
@@ -213,8 +216,6 @@ namespace RingFlow.Gameplay
             float speed = slowMode ? F.SlowModeMultiplier : 1f;
             float duration = F.MoveDuration * speed;
 
-            _animatingTargetPoleId = toPoleId;
-
             Vector3 oldRingWorldPos = Vector3.zero;
             RingColor movedColor = RingColor.None;
             if (fromPoleId >= 0 && fromPoleId < _spawnedRings.Count && _spawnedRings[fromPoleId].Count > 0)
@@ -286,6 +287,72 @@ namespace RingFlow.Gameplay
                             });
                     }
                 }
+            }
+            else { _animatingTargetPoleId = -1; }
+        }
+
+        public void AnimateRingUndo(int fromPoleId, int toPoleId, List<PoleState> poles)
+        {
+            if (fromPoleId < 0 || toPoleId < 0) return;
+
+            bool reduceMotion = _settingsModel != null && _settingsModel.ReduceMotion.Value;
+            bool slowMode = _settingsModel != null && _settingsModel.SlowMode.Value;
+            float speed = slowMode ? F.SlowModeMultiplier : 1f;
+            float duration = F.MoveDuration * speed;
+
+            // The original move was from→to. Undo reverses it: to→from.
+            // Capture the ring's current visual position on toPole BEFORE rebuilding.
+            Vector3 oldRingWorldPos = Vector3.zero;
+            RingColor movedColor = RingColor.None;
+            if (toPoleId < _spawnedRings.Count && _spawnedRings[toPoleId].Count > 0)
+            {
+                var topRing = _spawnedRings[toPoleId][^1];
+                if (topRing != null)
+                {
+                    oldRingWorldPos = topRing.transform.position;
+                    if (toPoleId < poles.Count && poles[toPoleId].Rings.Count > 0)
+                        movedColor = poles[toPoleId].Rings[^1].Color;
+                }
+            }
+
+            // Rebuild board to match reverted model state (ring now on fromPole).
+            BuildBoard(poles);
+
+            // After rebuild, ring is at fromPole. Move it back to old visual position
+            // on toPole, then animate to its correct position on fromPole.
+            if (fromPoleId < _spawnedRings.Count && _spawnedRings[fromPoleId].Count > 0)
+            {
+                var movedRing = _spawnedRings[fromPoleId][^1];
+                if (movedRing == null) return;
+
+                DOTween.Kill(movedRing.transform);
+                movedRing.transform.position = oldRingWorldPos;
+
+                int ringIndex = _spawnedRings[fromPoleId].Count - 1;
+                var targetLocal = new Vector3(0f, F.RingBaseYOffset + (ringIndex * F.RingStackSpacing), 0f);
+
+                _animatingTargetPoleId = fromPoleId;
+
+                if (reduceMotion)
+                {
+                    movedRing.transform.localPosition = targetLocal;
+                    _animatingTargetPoleId = -1;
+                    TriggerMoveEffects(movedRing.transform.position, movedColor);
+                    _hapticService?.Vibrate(HapticType.Light);
+                    ApplySelection();
+                    return;
+                }
+
+                movedRing.transform.DOLocalJump(targetLocal, F.MoveJumpPower, 1, duration)
+                    .SetEase(Ease.InOutQuad)
+                    .SetAutoKill(true)
+                    .OnComplete(() =>
+                    {
+                        _animatingTargetPoleId = -1;
+                        TriggerMoveEffects(movedRing.transform.position, movedColor);
+                        _hapticService?.Vibrate(HapticType.Light);
+                        ApplySelection();
+                    });
             }
             else { _animatingTargetPoleId = -1; }
         }

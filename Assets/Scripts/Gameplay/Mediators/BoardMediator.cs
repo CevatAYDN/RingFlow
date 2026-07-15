@@ -35,6 +35,9 @@ namespace RingFlow.Gameplay
         private Action<HintResolvedSignal> _hintResolvedHandler;
         private Action<MoveBlockedSignal> _moveBlockedHandler;
         private Action<PoleCompletedSignal> _poleCompletedHandler;
+        private Action<UndoRequestedSignal> _undoRequestedHandler;
+
+        private readonly System.Collections.Generic.Stack<(int From, int To)> _recentMoves = new(16);
 
         protected override void OnBind()
         {
@@ -54,7 +57,8 @@ namespace RingFlow.Gameplay
             // Initialize and cache delegate handlers to avoid closure allocation garbage
             _levelLoadedHandler ??= OnLevelLoaded;
             _ringMovedHandler ??= OnRingMoved;
-            _undoHandler ??= _ => RebuildBoard();
+            _undoHandler ??= OnUndoVisualRestore;
+            _undoRequestedHandler ??= OnUndoRequested;
             _revealMysteryHandler ??= _ => RebuildBoard();
             _breakIceHandler ??= _ => RebuildBoard();
             _unlockPoleHandler ??= _ => RebuildBoard();
@@ -68,6 +72,7 @@ namespace RingFlow.Gameplay
             Subscribe<LevelLoadedSignal>(_levelLoadedHandler);
             Subscribe<RingMovedSignal>(_ringMovedHandler);
             Subscribe<UndoSignal>(_undoHandler);
+            Subscribe<UndoRequestedSignal>(_undoRequestedHandler);
             Subscribe<RevealMysterySignal>(_revealMysteryHandler);
             Subscribe<BreakIceSignal>(_breakIceHandler);
             Subscribe<UnlockPoleSignal>(_unlockPoleHandler);
@@ -93,8 +98,40 @@ namespace RingFlow.Gameplay
         private void OnRingMoved(RingMovedSignal signal)
         {
             _logger?.Log($"[BoardMediator] Move {signal.FromPoleId} -> {signal.ToPoleId} completed. Animating.");
+            _recentMoves.Push((signal.FromPoleId, signal.ToPoleId));
             if (View != null && _model != null)
                 View.AnimateRingMove(signal.FromPoleId, signal.ToPoleId, _model.Poles);
+            View?.SetSelectedPole(_model?.SelectedPoleId.Value ?? -1);
+            UpdateTutorialStateAsync();
+        }
+
+        private void OnUndoRequested(UndoRequestedSignal _)
+        {
+            // With the corrected execution order (commands before subscriptions),
+            // UndoCommand has already reverted the model by the time this runs.
+            // No flag needed — OnUndoVisualRestore detects success via count comparison.
+        }
+
+        private void OnUndoVisualRestore(UndoSignal _)
+        {
+            if (View == null || _model == null) return;
+
+            // Detect if undo actually succeeded: _recentMoves tracks visual moves,
+            // MovesCount is already decremented by UndoCommand (commands run first).
+            // If _recentMoves has more entries than MovesCount, a move was undone.
+            if (_recentMoves.Count > 0 && _recentMoves.Count > _model.MovesCount.Value)
+            {
+                var (fromPoleId, toPoleId) = _recentMoves.Pop();
+                // AnimateRingUndo handles BuildBoard + animation internally
+                // (same self-contained pattern as AnimateRingMove).
+                View.AnimateRingUndo(fromPoleId, toPoleId, _model.Poles);
+            }
+            else
+            {
+                // No successful undo or complex state — fallback to full rebuild
+                RebuildBoard();
+            }
+
             View?.SetSelectedPole(_model?.SelectedPoleId.Value ?? -1);
             UpdateTutorialStateAsync();
         }
@@ -167,21 +204,52 @@ namespace RingFlow.Gameplay
         private void OnLevelLoaded(LevelLoadedSignal signal)
         {
             _logger?.Log($"[BoardMediator] Level {signal.LevelIndex} loaded. Rebuilding visual board for {_model.Poles.Count} poles.");
+            _recentMoves.Clear();
             RebuildBoard();
             View?.FitCameraToBoard(_model.Poles.Count);
             UpdateTutorialStateAsync();
         }
 
+        private bool _rebuildPending;
+        private bool _rebuildRequestedThisFrame;
+
         private void RebuildBoard()
         {
-            if (View != null && _model != null)
+            if (View == null || _model == null)
             {
-                _diag?.Checkpoint("BoardRebuild");
-                View.BuildBoard(_model.Poles);
-                View.SetSelectedPole(_model.SelectedPoleId.Value);
-                var elapsed = _diag != null ? _diag.GetElapsedSinceCheckpoint("BoardRebuild") : System.TimeSpan.Zero;
-                _diag?.Log("Performance", $"Board rebuilt. Time: {elapsed.TotalMilliseconds}ms");
-                UpdateTutorialStateAsync();
+                return;
+            }
+
+            // Coalesce rebuilds triggered in the same frame (undo/redo/animation chains).
+            // AGENTS.md performance budget: 16.6 ms / frame, 0 GC during gameplay.
+            if (_rebuildPending)
+            {
+                _rebuildRequestedThisFrame = true;
+                return;
+            }
+
+            DoRebuildBoard();
+        }
+
+        private void DoRebuildBoard()
+        {
+            _rebuildPending = true;
+
+            _diag?.Checkpoint("BoardRebuild");
+            View.BuildBoard(_model.Poles);
+            View.SetSelectedPole(_model.SelectedPoleId.Value);
+            var elapsed = _diag != null ? _diag.GetElapsedSinceCheckpoint("BoardRebuild") : System.TimeSpan.Zero;
+            _diag?.Log("Performance", $"Board rebuilt. Time: {elapsed.TotalMilliseconds}ms");
+            UpdateTutorialStateAsync();
+
+            _rebuildPending = false;
+            if (_rebuildRequestedThisFrame)
+            {
+                _rebuildRequestedThisFrame = false;
+                if (View != null && _model != null)
+                {
+                    DoRebuildBoard();
+                }
             }
         }
 

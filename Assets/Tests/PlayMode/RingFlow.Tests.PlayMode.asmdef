@@ -3,11 +3,11 @@
     "rootNamespace": "RingFlow.Tests",
     "references": [
         "RingFlow",
-        "com.nexus.core"
+        "com.nexus.core",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
