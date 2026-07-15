@@ -265,13 +265,10 @@ namespace RingFlow.Editor
 
             var f = Resources.Load<GameFeelConfigSO>(EditorPaths.GameFeelConfigKey);
             var polesList = new List<Transform>();
-            for (int i = 0; i < 12; i++)
+            foreach (Transform child in boardRoot.transform)
             {
-                var pTrans = boardRoot.transform.Find($"Pole_{i}") ?? boardRoot.transform.Find($"Pole_{i} [LOCKED]");
-                if (pTrans != null)
-                {
-                    polesList.Add(pTrans);
-                }
+                if (child.name.StartsWith("Pole_"))
+                    polesList.Add(child);
             }
 
             int resolvedMaxCapacity = 4;
@@ -297,16 +294,10 @@ namespace RingFlow.Editor
                     portalTargets[p] = poleMeta.PortalTargetId;
 
                 var ringsList = new List<Transform>();
-                for (int r = 0; r < 10; r++)
+                foreach (Transform child in pTrans)
                 {
-                    foreach (Transform child in pTrans)
-                    {
-                        if (child.name.StartsWith($"Ring_{r}_"))
-                        {
-                            ringsList.Add(child);
-                            break;
-                        }
-                    }
+                    if (child.name.StartsWith("Ring_"))
+                        ringsList.Add(child);
                 }
 
                 board.SetRingCount(p, ringsList.Count);

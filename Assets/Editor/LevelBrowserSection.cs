@@ -56,6 +56,12 @@ namespace RingFlow.Editor
                 return;
             }
 
+            if (_cachedTotalLevels <= 0)
+            {
+                EditorGUILayout.HelpBox("Zorluk Veritabanında geçerli seviye sayısı yok (TotalLevels ≤ 0).", MessageType.Warning);
+                return;
+            }
+
             bool narrow = RingFlowEditorUtils.IsNarrowWidth(620f);
 
             RingFlowEditorUtils.BeginSectionBox("Seviye Arama & Hızlı Atlama", "Seviye numarasına göre hızlı arama ve doğrudan düzenleme yapın.");
@@ -133,8 +139,8 @@ namespace RingFlow.Editor
             for (int i = 0; i < _cachedTotalLevels; i++)
             {
                 string path = $"{EditorPaths.LevelsFolder}/Level_{i + 1}.asset";
-                _cachedExistsFlags[i] = AssetDatabase.GUIDFromAssetPath(path) != null
-                    && !string.IsNullOrEmpty(AssetDatabase.GUIDFromAssetPath(path).ToString());
+                var guid = AssetDatabase.GUIDFromAssetPath(path);
+                _cachedExistsFlags[i] = guid != null && !string.IsNullOrEmpty(guid.ToString());
             }
         }
 
@@ -204,6 +210,9 @@ namespace RingFlow.Editor
 
         private void DrawLevelButton(int level, float width)
         {
+            if (_cachedExistsFlags == null || level - 1 < 0 || level - 1 >= _cachedExistsFlags.Length)
+                return;
+
             bool exists = _cachedExistsFlags[level - 1];
             var prev = GUI.backgroundColor;
             GUI.backgroundColor = exists ? EditorPaths.EditorColors.Success : EditorPaths.EditorColors.PanelSlate;

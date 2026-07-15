@@ -53,6 +53,8 @@ namespace RingFlow.Editor
             EditorGUILayout.ObjectField("Asset Dosyası", _database, typeof(GameConfigDatabaseSO), false);
             EditorGUILayout.Space(2f);
 
+            Undo.RecordObject(_database, "Edit GameConfigDatabase");
+
             EditorGUI.BeginChangeCheck();
 
             _database.TotalLevels = EditorGUILayout.IntField("Toplam Seviye Sayısı", _database.TotalLevels);

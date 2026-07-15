@@ -460,9 +460,6 @@ namespace RingFlow.Editor
         //  Status Bar
         // ──────────────────────────────────────────────────────────────
 
-        private void DrawFoldableSection(string foldKey, string title, System.Action drawContent)
-            => RingFlowEditorUtils.FoldoutSection(foldKey, title, drawContent);
-
         private void DrawStatusBar()
         {
             var scene = EditorSceneManager.GetActiveScene();
@@ -686,13 +683,13 @@ namespace RingFlow.Editor
 
         private void DrawLevelsTab()
         {
-            DrawFoldableSection(EditorPrefsKeys.FoldGenerator, "Seviye Üretici & Çözücü Ayarları", _generator.OnGUI);
+                RingFlowEditorUtils.FoldoutSection(EditorPrefsKeys.FoldGenerator, "Seviye Üretici & Çözücü Ayarları", _generator.OnGUI);
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionBreak);
-            DrawFoldableSection(EditorPrefsKeys.FoldDatabase, "Seviye Denetleyici", _databaseSection.OnGUI);
+            RingFlowEditorUtils.FoldoutSection(EditorPrefsKeys.FoldDatabase, "Seviye Denetleyici", _databaseSection.OnGUI);
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionBreak);
-            DrawFoldableSection(EditorPrefsKeys.FoldLevelBrowser, "Seviye Tarayıcı (Level Browser)", _levelBrowser.OnGUI);
+            RingFlowEditorUtils.FoldoutSection(EditorPrefsKeys.FoldLevelBrowser, "Seviye Tarayıcı (Level Browser)", _levelBrowser.OnGUI);
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionBreak);
-            DrawFoldableSection(EditorPrefsKeys.FoldBuilder, "Sahne Tahtası Oluşturucu", _visualBuilder.OnGUI);
+            RingFlowEditorUtils.FoldoutSection(EditorPrefsKeys.FoldBuilder, "Sahne Tahtası Oluşturucu", _visualBuilder.OnGUI);
         }
 
         // ──────────────────────────────────────────────────────────────

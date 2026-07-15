@@ -105,8 +105,6 @@ namespace RingFlow.Editor
                 throw new System.InvalidOperationException("[EditorBootstrapper] Torus prefab is required.");
             boardView.SetTorusPrefab(torusPrefab);
 
-            EnsureEditorSceneReady(rootObj);
-
             var lifecycle = rootObj.AddComponent<GameplayLifecycle>();
             Undo.RegisterCreatedObjectUndo(lifecycle, "Attach GameplayLifecycle");
 
