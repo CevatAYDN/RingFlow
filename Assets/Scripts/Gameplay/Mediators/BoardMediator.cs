@@ -210,10 +210,10 @@ namespace RingFlow.Gameplay
                     return;
                 }
 
-                var (board, maxCapacity) = BuildBoardStateFromModel(_model);
+                var (board, maxCapacity, portalTargets) = BuildBoardStateFromModel(_model);
                 var ct = _tutorialSolveCts.Token;
 
-                var result = await LevelSolver.SolveAsync(board, maxCapacity, cancellationToken: ct,
+                var result = await LevelSolver.SolveAsync(board, maxCapacity, portalTargets: portalTargets, cancellationToken: ct,
                     bombTickMode: _dbConfig?.LevelGen.BombTickMode ?? BombTickMode.AllBombsPerMove);
                 if (ct.IsCancellationRequested) return;
 
@@ -250,7 +250,7 @@ namespace RingFlow.Gameplay
             }
         }
 
-        private static (BoardState Board, int MaxCapacity) BuildBoardStateFromModel(GameplayModel m)
+        private static (BoardState Board, int MaxCapacity, int[] PortalTargets) BuildBoardStateFromModel(GameplayModel m)
         {
             var board = new BoardState { PoleCount = m.Poles.Count };
             int maxCapacity = 0;
@@ -276,7 +276,7 @@ namespace RingFlow.Gameplay
                     board.SetTopRingFrozen(p, top.Type == RingType.Frozen);
                 }
             }
-            return (board, maxCapacity);
+            return (board, maxCapacity, GameplayHelpers.BuildPortalTargets(m.Poles));
         }
     }
 }

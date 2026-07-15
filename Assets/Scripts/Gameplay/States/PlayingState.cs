@@ -10,11 +10,13 @@ namespace RingFlow.Gameplay
     public class PlayingState : IGameState
     {
         [Inject] private ISignalBus _signalBus;
+        [Inject] private GameplayModel _model;
         [Inject] private IAudioService _audio;
         [Inject] private IProgressionService _progression;
         [Inject] private IGameDiagnostics _diag;
         [Inject] private GameConfigDatabaseSO _dbConfig;
         [Inject] private AudioConfigSO _audioConfig;
+        [Inject] private Services.IGameTimeService _time;
 
         public async ValueTask OnEnterAsync(object args, CancellationToken ct)
         {
@@ -70,6 +72,29 @@ namespace RingFlow.Gameplay
         }
 
         public ValueTask OnExitAsync(CancellationToken ct) => default;
-        public void OnTick(float deltaTime) {}
+        public void OnTick(float deltaTime)
+        {
+            if (_progression == null || _dbConfig == null || _signalBus == null)
+                return;
+
+            if (_model == null || !_model.IsChallengeMode.Value || _model.HasChallengeFailed.Value || _model.IsGameWon.Value)
+                return;
+
+            int timeLimitSeconds = _model.ChallengeTimeLimitSeconds.Value;
+            if (timeLimitSeconds <= 0)
+                return;
+
+            long startTicks = _model.LevelStartUtcTicks.Value;
+            if (startTicks <= 0)
+                return;
+
+            var nowTicks = _time?.UtcNow.Ticks ?? System.DateTime.UtcNow.Ticks;
+            var elapsedSeconds = (nowTicks - startTicks) / (double)System.TimeSpan.TicksPerSecond;
+            if (elapsedSeconds >= timeLimitSeconds)
+            {
+                _model.HasChallengeFailed.Value = true;
+                _signalBus.Fire(new LevelLostSignal($"Time limit reached ({elapsedSeconds:0.0}s/{timeLimitSeconds}s)"));
+            }
+        }
     }
 }

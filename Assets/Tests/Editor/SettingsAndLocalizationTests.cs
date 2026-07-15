@@ -59,7 +59,7 @@ namespace RingFlow.Tests
             Assert.AreEqual(777, _progress.Coins.Value);
             Assert.AreEqual(12, _progress.CurrentLevel.Value);
             Assert.AreEqual(12, _progress.MaxUnlockedLevel.Value);
-            Assert.AreEqual(2, _prefs.GetInt(GameplayAssetKeys.PlayerPrefs.SaveSchemaVersion, 0));
+            Assert.AreEqual("2", _prefs.GetString(GameplayAssetKeys.PlayerPrefs.SaveSchemaVersion, string.Empty));
             Assert.AreEqual(40, _progress.UnlockedWorlds.Count);
             Assert.IsTrue(_progress.UnlockedWorlds[0]);
         }

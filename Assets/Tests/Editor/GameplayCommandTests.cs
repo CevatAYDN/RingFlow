@@ -18,6 +18,7 @@ namespace RingFlow.Tests
         private MockSignalBus _signalBus;
         private MockEconomyService _economyService;
         private MockAdService _adService;
+        private MockGameStateMachine _fsm;
         private RingFlow.Gameplay.ProgressionService _progressionService;
 
         [SetUp]
@@ -28,6 +29,7 @@ namespace RingFlow.Tests
             _signalBus = new MockSignalBus();
             _economyService = new MockEconomyService();
             _adService = new MockAdService();
+            _fsm = new MockGameStateMachine();
             var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase);
             _progressionService = new RingFlow.Gameplay.ProgressionService(_progressModel, db);
 
@@ -71,7 +73,7 @@ namespace RingFlow.Tests
                         f.SetValue(target, new RingMoveStrategyManager(db));
                     }
                     else if (f.FieldType == typeof(Nexus.Core.FSM.IGameStateMachine))
-                        f.SetValue(target, new MockGameStateMachine());
+                        f.SetValue(target, _fsm);
                     else if (f.FieldType == typeof(GameConfigDatabaseSO))
                     {
                         var db = UnityEngine.Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase);
@@ -84,10 +86,20 @@ namespace RingFlow.Tests
                     }
                     else if (f.FieldType == typeof(IAnalyticsService))
                         f.SetValue(target, new MockAnalyticsService());
-                }
+                    else if (f.FieldType == typeof(RingFlow.Gameplay.Services.IGameTimeService))
+                        f.SetValue(target, new FakeGameTimeService(new DateTime(2026, 7, 15, 12, 0, 0, DateTimeKind.Utc)));
             }
         }
+        }
 
+        private static void InjectField(object target, string fieldName, object value)
+        {
+            var field = target.GetType().GetField(fieldName, BindingFlags.NonPublic | BindingFlags.Instance);
+            if (field != null)
+            {
+                field.SetValue(target, value);
+            }
+        }
         [Test]
         public void SelectPoleCommand_SelectsEmptyOrValidPoles()
         {
@@ -304,6 +316,56 @@ namespace RingFlow.Tests
 
             // Move history was pushed (for potential undo replay).
             Assert.AreEqual(1, _gameplayModel.MoveHistory.Count);
+        }
+
+        [Test]
+        public void GameConfigDatabaseSO_ChallengeModeIsDataDriven()
+        {
+            var db = UnityEngine.ScriptableObject.CreateInstance<GameConfigDatabaseSO>();
+            db.ChallengeMode = new ChallengeModeConfig
+            {
+                Enabled = true,
+                LevelInterval = 10,
+                MoveLimit = 7,
+                TimeLimitSeconds = 30
+            };
+
+            Assert.IsTrue(db.IsChallengeLevel(10));
+            Assert.AreEqual(7, db.GetChallengeMoveLimitForLevel(10));
+            Assert.AreEqual(30, db.GetChallengeTimeLimitSecondsForLevel(10));
+
+            Assert.IsFalse(db.IsChallengeLevel(11));
+            Assert.AreEqual(0, db.GetChallengeMoveLimitForLevel(11));
+            Assert.AreEqual(0, db.GetChallengeTimeLimitSecondsForLevel(11));
+        }
+
+        [Test]
+        public void LevelLostCommand_SetsChallengeFailureAndRequestsLoseState()
+        {
+            var command = new LevelLostCommand();
+            InjectDependencies(command);
+
+            command.Execute(new LevelLostSignal("test"));
+
+            Assert.IsTrue(_gameplayModel.HasChallengeFailed.Value);
+            Assert.AreEqual(typeof(LoseState), _fsm.RequestedStateType);
+        }
+
+        [Test]
+        public void PlayingState_TimeLimitExpires_FiresLevelLost()
+        {
+            var state = new PlayingState();
+            InjectDependencies(state);
+            InjectField(state, "_time", new FakeGameTimeService(new DateTime(2026, 7, 15, 12, 0, 5, DateTimeKind.Utc)));
+
+            _gameplayModel.IsChallengeMode.Value = true;
+            _gameplayModel.ChallengeTimeLimitSeconds.Value = 3;
+            _gameplayModel.LevelStartUtcTicks.Value = new DateTime(2026, 7, 15, 12, 0, 0, DateTimeKind.Utc).Ticks;
+
+            state.OnTick(0.016f);
+
+            Assert.IsTrue(_signalBus.HasFiredLevelLost);
+            Assert.IsTrue(_gameplayModel.HasChallengeFailed.Value);
         }
 
         [Test]
@@ -765,6 +827,23 @@ namespace RingFlow.Tests
             Assert.AreEqual(RingColor.Red, pole1.TopRing.Color);
             Assert.AreEqual(1, pole2.Rings.Count);
             Assert.IsFalse(_signalBus.HasFiredPortalTeleport);
+        }
+
+        [Test]
+        public void GameplayHelpers_BuildPortalTargets_UsesPolePartnerIds()
+        {
+            var poles = new System.Collections.Generic.List<PoleState>
+            {
+                new PoleState { Id = 0, MaxCapacity = 4, PortalPartnerId = -1 },
+                new PoleState { Id = 1, MaxCapacity = 4, PortalPartnerId = 2 },
+                new PoleState { Id = 2, MaxCapacity = 4, PortalPartnerId = 1 }
+            };
+
+            var portalTargets = GameplayHelpers.BuildPortalTargets(poles);
+
+            Assert.AreEqual(-1, portalTargets[0]);
+            Assert.AreEqual(2, portalTargets[1]);
+            Assert.AreEqual(1, portalTargets[2]);
         }
 
         // ── Missing Undo Tests (Phase 2 Audit) ─────────────────────────────────────
@@ -1244,10 +1323,37 @@ namespace RingFlow.Tests
     public class MockGameStateMachine : Nexus.Core.FSM.IGameStateMachine
     {
         public Nexus.Core.FSM.IGameState CurrentState => null;
+        public Type RequestedStateType { get; private set; }
+        public object RequestedArgs { get; private set; }
         public void RegisterState<TState>(TState state) where TState : class, Nexus.Core.FSM.IGameState {}
-        public Task ChangeStateAsync<TState>(object args = null) where TState : class, Nexus.Core.FSM.IGameState => Task.CompletedTask;
-        public Task ChangeStateAsync(Type stateType, object args = null) => Task.CompletedTask;
-        public Task ChangeStateAsync(Type stateType, CancellationToken ct, object args = null) => Task.CompletedTask;
+        public Task ChangeStateAsync<TState>(object args = null) where TState : class, Nexus.Core.FSM.IGameState
+        {
+            RequestedStateType = typeof(TState);
+            RequestedArgs = args;
+            return Task.CompletedTask;
+        }
+        public Task ChangeStateAsync(Type stateType, object args = null)
+        {
+            RequestedStateType = stateType;
+            RequestedArgs = args;
+            return Task.CompletedTask;
+        }
+        public Task ChangeStateAsync(Type stateType, CancellationToken ct, object args = null)
+        {
+            RequestedStateType = stateType;
+            RequestedArgs = args;
+            return Task.CompletedTask;
+        }
+    }
+
+    public sealed class FakeGameTimeService : RingFlow.Gameplay.Services.IGameTimeService
+    {
+        public FakeGameTimeService(DateTime utcNow)
+        {
+            UtcNow = utcNow;
+        }
+
+        public DateTime UtcNow { get; }
     }
 
     public class MockAnalyticsService : Nexus.Core.Services.IAnalyticsService

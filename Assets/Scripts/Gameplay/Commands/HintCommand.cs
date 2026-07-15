@@ -40,12 +40,12 @@ namespace RingFlow.Gameplay
             // C3: Pre-validate solver BEFORE any payment path.
             // This prevents the ad-race problem where a user watches a rewarded ad
             // but the solver cannot find a valid move, leaving the user unrewarded.
-            var (current, maxCapacity) = BuildBoardStateFromModel(_model);
+            var (current, maxCapacity, portalTargets) = BuildBoardStateFromModel(_model);
 
             Move firstMove;
             try
             {
-                firstMove = await TryFindFirstMoveAsync(current, maxCapacity, ct, _dbConfig?.LevelGen.BombTickMode ?? BombTickMode.AllBombsPerMove);
+                firstMove = await TryFindFirstMoveAsync(current, maxCapacity, portalTargets, ct, _dbConfig?.LevelGen.BombTickMode ?? BombTickMode.AllBombsPerMove);
             }
             catch (System.OperationCanceledException)
             {
@@ -135,7 +135,7 @@ namespace RingFlow.Gameplay
             _signalBus?.Fire(new HintResolvedSignal(firstMove.From, firstMove.To, true));
         }
 
-        private static (BoardState Board, int MaxCapacity) BuildBoardStateFromModel(GameplayModel m)
+        private static (BoardState Board, int MaxCapacity, int[] PortalTargets) BuildBoardStateFromModel(GameplayModel m)
         {
             var board = new BoardState { PoleCount = m.Poles.Count };
             int maxCapacity = 0;
@@ -178,12 +178,12 @@ namespace RingFlow.Gameplay
                     "Board built from model has zero rings — solver will return unsolvable.");
             }
 
-            return (board, maxCapacity);
+            return (board, maxCapacity, GameplayHelpers.BuildPortalTargets(m.Poles));
         }
 
-        private static async ValueTask<Move> TryFindFirstMoveAsync(BoardState initial, int maxCapacity, CancellationToken ct, BombTickMode tickMode)
+        private static async ValueTask<Move> TryFindFirstMoveAsync(BoardState initial, int maxCapacity, int[] portalTargets, CancellationToken ct, BombTickMode tickMode)
         {
-            var result = await LevelSolver.SolveAsync(initial, maxCapacity, cancellationToken: ct, bombTickMode: tickMode);
+            var result = await LevelSolver.SolveAsync(initial, maxCapacity, portalTargets: portalTargets, cancellationToken: ct, bombTickMode: tickMode);
             if (!result.IsSolvable || result.MoveCount <= 0 || result.Moves == null)
             {
                 return new Move(-1, -1, default);

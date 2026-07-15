@@ -30,6 +30,37 @@ namespace RingFlow.Gameplay
         public const string KeyRemoveAds     = GameplayAssetKeys.PlayerPrefs.RemoveAds;
         public const string KeyHintCount     = GameplayAssetKeys.PlayerPrefs.HintCount;
 
+        internal static void WriteSchemaVersion(IPlayerPrefsService prefs, int version)
+        {
+            prefs.SetString(GameplayAssetKeys.PlayerPrefs.SaveSchemaVersion,
+                version.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        }
+
+        internal static int ReadSchemaVersion(IPlayerPrefsService prefs, int defaultValue)
+        {
+            try
+            {
+                var schemaVersionText = prefs.GetString(GameplayAssetKeys.PlayerPrefs.SaveSchemaVersion, string.Empty);
+                if (int.TryParse(schemaVersionText, System.Globalization.NumberStyles.Integer,
+                        System.Globalization.CultureInfo.InvariantCulture, out int parsed))
+                {
+                    return parsed;
+                }
+            }
+            catch (System.InvalidCastException)
+            {
+            }
+
+            try
+            {
+                return prefs.GetInt(GameplayAssetKeys.PlayerPrefs.SaveSchemaVersion, defaultValue);
+            }
+            catch (System.InvalidCastException)
+            {
+                return defaultValue;
+            }
+        }
+
         public ObservableProperty<int> Coins { get; } = new(0);
         public ObservableProperty<int> Diamonds { get; } = new(0);
         public ObservableProperty<int> Xp { get; } = new(0);
@@ -136,7 +167,7 @@ namespace RingFlow.Gameplay
 
         public static void Save(IPlayerPrefsService prefs, PlayerProgressModel m)
         {
-            prefs.SetInt(KeySchemaVersion, CurrentSchemaVersion);
+            PlayerProgressModel.WriteSchemaVersion(prefs, CurrentSchemaVersion);
             prefs.SetInt(PlayerProgressModel.KeyCoins, m.Coins.Value);
             prefs.SetInt(PlayerProgressModel.KeyDiamonds, m.Diamonds.Value);
             prefs.SetInt(PlayerProgressModel.KeyXp, m.Xp.Value);
@@ -169,7 +200,7 @@ namespace RingFlow.Gameplay
 
         public static void Load(IPlayerPrefsService prefs, PlayerProgressModel m)
         {
-            int schemaVersion = prefs.GetInt(KeySchemaVersion, 1);
+            int schemaVersion = PlayerProgressModel.ReadSchemaVersion(prefs, 1);
 
             // Verify checksum before populating model fields. If mismatch is detected,
             // log an error but continue loading — silently resetting all progress is
@@ -239,7 +270,7 @@ namespace RingFlow.Gameplay
                 }
                 if (m.CurrentLevel.Value < 1) m.CurrentLevel.Value = 1;
                 if (m.MaxUnlockedLevel.Value < 1) m.MaxUnlockedLevel.Value = 1;
-                prefs.SetInt(KeySchemaVersion, CurrentSchemaVersion);
+                PlayerProgressModel.WriteSchemaVersion(prefs, CurrentSchemaVersion);
                 prefs.Save();
             }
         }
@@ -318,7 +349,7 @@ namespace RingFlow.Gameplay
             unchecked
             {
                 int hash = 17;
-                hash = hash * 31 + prefs.GetInt(KeySchemaVersion, 0);
+                hash = hash * 31 + PlayerProgressModel.ReadSchemaVersion(prefs, 0);
                 hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyCoins, 0);
                 hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyDiamonds, 0);
                 hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyXp, 0);
@@ -372,7 +403,7 @@ namespace RingFlow.Gameplay
         {
             var snapshot = new ProgressBackupSnapshot
             {
-                SchemaVersion = prefs.GetInt(KeySchemaVersion, 0),
+                SchemaVersion = PlayerProgressModel.ReadSchemaVersion(prefs, 0),
                 Coins = prefs.GetInt(PlayerProgressModel.KeyCoins, 0),
                 Diamonds = prefs.GetInt(PlayerProgressModel.KeyDiamonds, 0),
                 Xp = prefs.GetInt(PlayerProgressModel.KeyXp, 0),
@@ -422,7 +453,7 @@ namespace RingFlow.Gameplay
                 return false;
             }
 
-            prefs.SetInt(KeySchemaVersion, snapshot.SchemaVersion);
+            PlayerProgressModel.WriteSchemaVersion(prefs, snapshot.SchemaVersion);
             prefs.SetInt(PlayerProgressModel.KeyCoins, snapshot.Coins);
             prefs.SetInt(PlayerProgressModel.KeyDiamonds, snapshot.Diamonds);
             prefs.SetInt(PlayerProgressModel.KeyXp, snapshot.Xp);

@@ -170,6 +170,15 @@ namespace RingFlow.Gameplay
         public List<int> MechanicPriorityOrder; // RingType enum values in priority order
     }
 
+    [System.Serializable]
+    public struct ChallengeModeConfig
+    {
+        public bool Enabled;
+        public int LevelInterval;
+        public int MoveLimit;
+        public int TimeLimitSeconds;
+    }
+
     [CreateAssetMenu(fileName = "GameConfigDatabase", menuName = "RingFlow/Game Config Database")]
     public class GameConfigDatabaseSO : ScriptableObject
     {
@@ -217,6 +226,13 @@ namespace RingFlow.Gameplay
             },
             RetrySeedMultipliers = new() { 27779, 31415, 16180 },
             MechanicPriorityOrder = new() { 3, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12 }
+        };
+        public ChallengeModeConfig ChallengeMode = new()
+        {
+            Enabled = false,
+            LevelInterval = 0,
+            MoveLimit = 0,
+            TimeLimitSeconds = 0
         };
 
         private void OnEnable()
@@ -688,6 +704,24 @@ namespace RingFlow.Gameplay
             throw new System.InvalidOperationException(
                 $"[GameConfigDatabaseSO] DifficultyBand '{band}' için MechanicIntensity DB'de tanımlı değil veya 0. " +
                 "Lütfen DifficultyBands verisine bu alanı ekleyin.");
+        }
+
+        public bool IsChallengeLevel(int level)
+        {
+            return ChallengeMode.Enabled
+                   && ChallengeMode.LevelInterval > 0
+                   && level > 0
+                   && level % ChallengeMode.LevelInterval == 0;
+        }
+
+        public int GetChallengeMoveLimitForLevel(int level)
+        {
+            return IsChallengeLevel(level) ? ChallengeMode.MoveLimit : 0;
+        }
+
+        public int GetChallengeTimeLimitSecondsForLevel(int level)
+        {
+            return IsChallengeLevel(level) ? ChallengeMode.TimeLimitSeconds : 0;
         }
 
         public int GetWorldForLevel(int level)

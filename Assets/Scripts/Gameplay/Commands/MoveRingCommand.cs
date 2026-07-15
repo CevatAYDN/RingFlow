@@ -13,6 +13,8 @@ namespace RingFlow.Gameplay
         [Inject] private IGameStateMachine _fsm;
         [Inject] private RingMoveStrategyManager _strategyManager;
         [Inject] private IProgressionService _progression;
+        [Inject] private IEconomyService _economyService;
+        [Inject] private IAdService _adService;
         [Inject] private RingValidationStrategyManager _validationManager;
         [Inject] private GameConfigDatabaseSO _dbConfig;
 
@@ -127,7 +129,7 @@ namespace RingFlow.Gameplay
 
             _model.MovesCount.Value++;
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if DEVELOPMENT_BUILD
             NexusLog.Info("MoveRingCommand", "CompleteMove", $"{context.FromPoleId}->{context.ToPoleId}",
                 $"Move {context.FromPoleId}->{context.ToPoleId} OK. Total moves={_model.MovesCount.Value}. Subs={mainRecord.SubMoves?.Count ?? 0}.");
 #endif
@@ -141,7 +143,7 @@ namespace RingFlow.Gameplay
             if (bombExploded)
             {
                 int explodedPoleId = mainRecord.BombExplodedRings[0].PoleId;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if DEVELOPMENT_BUILD
                 NexusLog.Warn("MoveRingCommand", "CompleteMove", $"{context.FromPoleId}->{context.ToPoleId}",
                     $"Bomb exploded on pole {explodedPoleId}. Level failed per GDD §36.");
 #endif
@@ -151,6 +153,13 @@ namespace RingFlow.Gameplay
             else
             {
                 _signalBus.Fire(new CheckWinSignal());
+                if (_model.IsChallengeMode.Value
+                    && _model.ChallengeMoveLimit.Value > 0
+                    && _model.MovesCount.Value >= _model.ChallengeMoveLimit.Value
+                    && !_model.IsGameWon.Value)
+                {
+                    _signalBus.Fire(new LevelLostSignal($"Move limit reached ({_model.MovesCount.Value}/{_model.ChallengeMoveLimit.Value})"));
+                }
             }
         }
 
@@ -240,7 +249,7 @@ namespace RingFlow.Gameplay
                 context.WasIceBroken = true;
                 context.IceBrokenRingIndices = mainRecord.IceBrokenRingIndices;
                 _signalBus.Fire(new BreakIceSignal(context.ToPoleId));
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if DEVELOPMENT_BUILD
                 // string.Join allocates — guard behind dev-build flag to avoid release GC pressure
                 NexusLog.Info("MoveRingCommand", "TryBreakIceOnTarget", context.ToPoleId.ToString(),
                     $"Ice broken on pole {context.ToPoleId}: {mainRecord.IceBrokenRingIndices.Count} rings melted at indices [{string.Join(",", mainRecord.IceBrokenRingIndices)}].");
@@ -274,7 +283,7 @@ namespace RingFlow.Gameplay
                 subRecord.Ring = topR;
                 mainRecord.SubMoves.Add(subRecord);
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if DEVELOPMENT_BUILD
                 NexusLog.Info("MoveRingCommand", "ApplyChainSubMove", context.ToPoleId.ToString(),
                     $"Chain sub-move: partner from pole {pole.Id} → {context.ToPoleId}, color={topR.Color}.");
 #endif
@@ -312,7 +321,7 @@ namespace RingFlow.Gameplay
 
             if (pullCount > 0)
             {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if DEVELOPMENT_BUILD
                 NexusLog.Info("MoveRingCommand", "ApplyMagnetPull", context.ToPoleId.ToString(),
                     $"Magnet pulled {pullCount} matching ring(s) from all poles to pole {context.ToPoleId}, color={context.MovingRing.Color}.");
 #endif
@@ -352,7 +361,7 @@ namespace RingFlow.Gameplay
 
             _signalBus.Fire(new PortalTeleportSignal(context.ToPoleId, portalPartnerId));
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if DEVELOPMENT_BUILD
             NexusLog.Info("MoveRingCommand", nameof(ApplyPortalTeleport), $"portal{context.ToPoleId}->{portalPartnerId}",
                 $"Ring teleported from portal pole {context.ToPoleId} to partner pole {portalPartnerId}, color={ring.Color}.");
 #endif

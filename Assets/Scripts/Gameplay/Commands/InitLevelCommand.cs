@@ -14,6 +14,7 @@ namespace RingFlow.Gameplay
         [Inject] private Services.IAssetService _assetService;
         [Inject] private GameConfigDatabaseSO _dbConfig;
         [Inject] private IAnalyticsService _analyticsService;
+        [Inject] private Services.IGameTimeService _time;
 
         public async ValueTask ExecuteAsync(InitLevelSignal signal, CancellationToken ct)
         {
@@ -116,6 +117,7 @@ namespace RingFlow.Gameplay
                 $"Initialized level {currentLevel} with {_model.Poles.Count} poles. Target moves: {_model.TargetMovesCount.Value}.");
 
             int worldIndex = _dbConfig.GetWorldForLevel(currentLevel);
+            ApplyChallengeState(currentLevel);
 
             if (levelData != null)
             {
@@ -134,6 +136,19 @@ namespace RingFlow.Gameplay
             }
 
             _signalBus?.Fire(new LevelLoadedSignal(currentLevel));
+        }
+
+        private void ApplyChallengeState(int currentLevel)
+        {
+            if (_model == null || _dbConfig == null)
+                return;
+
+            bool isChallenge = _dbConfig.IsChallengeLevel(currentLevel);
+            _model.IsChallengeMode.Value = isChallenge;
+            _model.ChallengeMoveLimit.Value = _dbConfig.GetChallengeMoveLimitForLevel(currentLevel);
+            _model.ChallengeTimeLimitSeconds.Value = _dbConfig.GetChallengeTimeLimitSecondsForLevel(currentLevel);
+            _model.LevelStartUtcTicks.Value = _time?.UtcNow.Ticks ?? System.DateTime.UtcNow.Ticks;
+            _model.HasChallengeFailed.Value = false;
         }
 
         private void PopulatePoles(LevelData levelData)

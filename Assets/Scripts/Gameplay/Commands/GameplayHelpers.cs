@@ -42,5 +42,37 @@ namespace RingFlow.Gameplay
             if (toPole.TopRing.Type == RingType.Stone) return "Stone blocks";
             return "Color mismatch";
         }
+
+        public static int[] BuildPortalTargets(List<PoleState> poles)
+        {
+            if (poles == null || poles.Count == 0)
+                return System.Array.Empty<int>();
+
+            int poleCount = poles.Count;
+            var portalTargets = new int[poleCount];
+            for (int i = 0; i < poleCount; i++)
+            {
+                portalTargets[i] = -1;
+            }
+
+            int maxPoleCount = GameplayAssetKeys.Tuning.MaxPoleCount;
+            int limit = poleCount < maxPoleCount ? poleCount : maxPoleCount;
+            for (int i = 0; i < limit; i++)
+            {
+                var pole = poles[i];
+                if (pole == null) continue;
+
+                if (pole.Id < 0 || pole.Id >= poleCount)
+                    continue;
+
+                int partnerId = pole.PortalPartnerId;
+                if (partnerId < 0 || partnerId >= poleCount || partnerId == pole.Id)
+                    continue;
+
+                portalTargets[pole.Id] = partnerId;
+            }
+
+            return portalTargets;
+        }
     }
 }

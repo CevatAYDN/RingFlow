@@ -67,49 +67,45 @@ namespace RingFlow.Tests
             return board;
         }
 
-        [TestCase(BombTickMode.AllBombsPerMove, true)]
-        [TestCase(BombTickMode.SourceAndTargetPolesOnly, false)]
-        [TestCase(BombTickMode.MovedBombOnly, false)]
-        public void Solver_BombExplosionPrunesBranch_BasedOnBombTickMode(BombTickMode tickMode, bool shouldExplodeInOneMove)
+        [TestCase(BombTickMode.AllBombsPerMove)]
+        [TestCase(BombTickMode.SourceAndTargetPolesOnly)]
+        [TestCase(BombTickMode.MovedBombOnly)]
+        public void Solver_BombBoard_RemainsUnsolved_WithinOneMove(BombTickMode tickMode)
         {
             // Arrange:
-            // 3 poles, capacity 1: pole0 has a standard ring, pole2 has a bomb with counter=1,
-            // move pole0 -> pole1.
-            // Bomb explodes after tick if tickMode decrements pole2 bomb for this move.
-            // With capacity=1 and each pole's top is only ring, solver pruning is observable:
-            // if explosion happens, that move branch is discarded (no solution from this state).
-            var board = new BoardState { PoleCount = 3, MaxCapacity = 1 };
-            board.Initialize(3, 1, 1);
+            var board = new BoardState { PoleCount = 3, MaxCapacity = 2 };
+            board.Initialize(3, 2, 2);
 
-            // pole0: standard red
-            board.SetRingCount(0, 1);
+            board.SetRingCount(0, 2);
             board.SetRingColor(0, 0, RingColor.Red);
-            board.SetRingType(0, 0, RingType.Standard);
-            board.SetRingAdditional(0, 0, 0);
+            board.SetRingType(0, 0, RingType.Bomb);
+            board.SetRingAdditional(0, 0, 1);
+            board.SetRingColor(0, 1, RingColor.Blue);
+            board.SetRingType(0, 1, RingType.Standard);
+            board.SetRingAdditional(0, 1, 0);
 
-            // pole2: bomb red counter=1
+            board.SetRingCount(1, 2);
+            board.SetRingColor(1, 0, RingColor.Red);
+            board.SetRingType(1, 0, RingType.Standard);
+            board.SetRingAdditional(1, 0, 0);
+            board.SetRingColor(1, 1, RingColor.Red);
+            board.SetRingType(1, 1, RingType.Standard);
+            board.SetRingAdditional(1, 1, 0);
+
             board.SetRingCount(2, 1);
-            board.SetRingColor(2, 0, RingColor.Red);
-            board.SetRingType(2, 0, RingType.Bomb);
-            board.SetRingAdditional(2, 0, 1);
+            board.SetRingColor(2, 0, RingColor.Blue);
+            board.SetRingType(2, 0, RingType.Standard);
+            board.SetRingAdditional(2, 0, 0);
 
             int maxMoves = 1;
 
+            Assert.IsFalse(LevelSolver.IsSolved(board, 2), "Board must start unsolved for the bomb-mode solver check.");
+
             // Act:
-            var res = LevelSolver.Solve(board, maxCapacity: 1, maxStatesLimit: 5000, maxMovesLimit: maxMoves, bombTickMode: tickMode);
+            var res = LevelSolver.Solve(board, maxCapacity: 2, maxStatesLimit: 5000, maxMovesLimit: maxMoves, bombTickMode: tickMode);
 
             // Assert:
-            if (shouldExplodeInOneMove)
-            {
-                Assert.IsFalse(res.IsSolvable, "Expected no solvable branch because bomb exploded prunes moves.");
-            }
-            else
-            {
-                // If bomb shouldn't tick/explode, solver can potentially consider the move without pruning.
-                // However, IsSolved requires non-empty poles with full capacity, which won't be satisfied in 1 move for this setup.
-                // So we only assert that solver doesn't immediately report solvable due to pruning mismatch.
-                Assert.IsFalse(res.IsSolvable, "Even if explosion doesn't prune, the board shouldn't be solvable in 1 move with capacity=1 + bomb present.");
-            }
+            Assert.IsFalse(res.IsSolvable, "The board is intentionally one move short of a full solve.");
         }
 
         [TestCase(BombTickMode.AllBombsPerMove, true)]
@@ -121,8 +117,6 @@ namespace RingFlow.Tests
             // Undo/revert is covered by existing tests.
 
             var command = new MoveRingCommand();
-            var undo = new UndoCommand();
-
             // Reuse existing minimal test infrastructure by copying logic from GameplayCommandTests:
             var model = new GameplayModel();
             var progress = new PlayerProgressModel();
@@ -144,12 +138,6 @@ namespace RingFlow.Tests
             SetPrivateField(command, "_economyService", economy);
             SetPrivateField(command, "_adService", ad);
             SetPrivateField(command, "_dbConfig", dbWithMode);
-
-            SetPrivateField(undo, "_model", model);
-            SetPrivateField(undo, "_signalBus", signalBus);
-            SetPrivateField(undo, "_economyService", economy);
-            SetPrivateField(undo, "_progressionService", new RingFlow.Gameplay.ProgressionService(progress, dbWithMode));
-            SetPrivateField(undo, "_dbConfig", dbWithMode);
 
             // Setup board:
             var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };

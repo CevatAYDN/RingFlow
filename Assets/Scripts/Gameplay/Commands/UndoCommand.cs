@@ -7,6 +7,8 @@ namespace RingFlow.Gameplay
     {
         [Inject] private GameplayModel _model;
         [Inject] private ISignalBus _signalBus;
+        [Inject] private IEconomyService _economyService;
+        [Inject] private IProgressionService _progressionService;
 
         public void Execute(UndoSignal signal)
         {
@@ -14,8 +16,10 @@ namespace RingFlow.Gameplay
             {
                 var lastMove = _model.MoveHistory.Pop();
                 int depthAfterPop = _model.MoveHistory.Count;
+#if DEVELOPMENT_BUILD
                 NexusLog.Info("UndoCommand", "Execute", $"{lastMove.FromPoleId}->{lastMove.ToPoleId}",
                     $"Undoing move. History depth: {depthAfterPop} remaining.");
+#endif
 
                 var fromPole = _model.Poles.GetPoleById(lastMove.FromPoleId);
                 var toPole   = _model.Poles.GetPoleById(lastMove.ToPoleId);
@@ -34,21 +38,27 @@ namespace RingFlow.Gameplay
                         return;
                     }
 
+#if DEVELOPMENT_BUILD
                     NexusLog.Warn("UndoCommand", "Execute", $"{lastMove.FromPoleId}->{lastMove.ToPoleId}",
                         "Undo failed: no board snapshot captured for this move.");
+#endif
                     MoveRecordPool.Return(lastMove);
                 }
                 else
                 {
+#if DEVELOPMENT_BUILD
                     NexusLog.Warn("UndoCommand", "Execute", $"{lastMove.FromPoleId}->{lastMove.ToPoleId}",
                         $"Undo failed: pole lookup returned null. fromNull={fromPole == null}, toNull={toPole == null}");
+#endif
 
                     MoveRecordPool.Return(lastMove);
                 }
             }
             else
             {
+#if DEVELOPMENT_BUILD
                 NexusLog.Warn("UndoCommand", "Execute", "", "Undo requested but MoveHistory is empty.");
+#endif
             }
         }
 
@@ -105,8 +115,10 @@ namespace RingFlow.Gameplay
 
             _model.SelectedPoleId.Value = -1;
             _model.PendingGhostRevealPoleId = -1;
+#if DEVELOPMENT_BUILD
             NexusLog.Info("UndoCommand", "Execute", $"{lastMove.FromPoleId}->{lastMove.ToPoleId}",
                 $"Undo complete. Moves now: {_model.MovesCount.Value}");
+#endif
 
             MoveRecordPool.Return(lastMove);
             _signalBus.Fire(new CheckWinSignal());

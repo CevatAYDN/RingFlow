@@ -117,19 +117,18 @@ namespace RingFlow.Tests
             for (int i = 0; i < 12; i++)
                 _model.Poles.Add(new PoleState { Id = i, MaxCapacity = 4 });
 
-            // Warm-up via reflection to hit the private method
             var method = typeof(MoveRingCommand).GetMethod("AnyPoleHasBomb",
                 BindingFlags.NonPublic | BindingFlags.Instance);
             Assert.IsNotNull(method, "AnyPoleHasBomb not found via reflection.");
+            var invoker = (System.Func<MoveRingCommand, bool>)System.Delegate.CreateDelegate(
+                typeof(System.Func<MoveRingCommand, bool>), method);
 
-            for (int i = 0; i < 5; i++) method.Invoke(_moveCmd, null);
+            for (int i = 0; i < 5; i++) invoker(_moveCmd);
 
             long before = System.GC.GetTotalMemory(false);
-            for (int i = 0; i < 1000; i++) method.Invoke(_moveCmd, null);
+            for (int i = 0; i < 1000; i++) invoker(_moveCmd);
             long after = System.GC.GetTotalMemory(false);
 
-            // Reflection itself may box but the underlying logic must not allocate.
-            // We allow small reflection overhead (< 4 KB for 1000 calls).
             Assert.LessOrEqual(after - before, 4096L,
                 $"AnyPoleHasBomb allocated {after - before} bytes across 1000 calls.");
         }

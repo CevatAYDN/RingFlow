@@ -14,6 +14,11 @@ namespace RingFlow.Gameplay
         public ObservableProperty<int> TargetMovesCount { get; } = new(0);
         public ObservableProperty<bool> IsGameWon { get; } = new(false);
         public ObservableProperty<WinReward> LastReward { get; } = new(default);
+        public ObservableProperty<bool> IsChallengeMode { get; } = new(false);
+        public ObservableProperty<int> ChallengeMoveLimit { get; } = new(0);
+        public ObservableProperty<int> ChallengeTimeLimitSeconds { get; } = new(0);
+        public ObservableProperty<long> LevelStartUtcTicks { get; } = new(0);
+        public ObservableProperty<bool> HasChallengeFailed { get; } = new(false);
 
         /// <summary>
         /// Pole id whose top Ghost ring was revealed on selection (Ghost → Standard).
@@ -51,6 +56,11 @@ namespace RingFlow.Gameplay
             TargetMovesCount.Value = 0;
             IsGameWon.Value = false;
             LastReward.Value = default;
+            IsChallengeMode.Value = false;
+            ChallengeMoveLimit.Value = 0;
+            ChallengeTimeLimitSeconds.Value = 0;
+            LevelStartUtcTicks.Value = 0;
+            HasChallengeFailed.Value = false;
             PendingGhostRevealPoleId = -1;
         }
     }
