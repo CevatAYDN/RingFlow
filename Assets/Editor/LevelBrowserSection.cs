@@ -79,6 +79,8 @@ namespace RingFlow.Editor
                         _jumpToLevel = Mathf.Clamp(_jumpToLevel + 1, 1, _cachedTotalLevels);
                         OpenLevel(_jumpToLevel);
                     }
+                    if (GUILayout.Button("▶ Oyna"))
+                        EditorPlayFromLevel.Play(_jumpToLevel);
                 }
             }
             else
@@ -100,6 +102,8 @@ namespace RingFlow.Editor
                         _jumpToLevel = Mathf.Clamp(_jumpToLevel + 1, 1, _cachedTotalLevels);
                         OpenLevel(_jumpToLevel);
                     }
+                    if (GUILayout.Button("▶ Oyna", GUILayout.Width(80f)))
+                        EditorPlayFromLevel.Play(_jumpToLevel);
                 }
             }
 
