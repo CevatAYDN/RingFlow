@@ -36,13 +36,25 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(5f);
             EditorGUILayout.LabelField("Seviye Önizleme Görseli:", EditorStyles.boldLabel);
 
-            using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
+            int columns = RingFlowEditorUtils.GetResponsiveColumns(PoleWidth + PoleGap, 2, 8);
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                for (int p = 0; p < levelData.Poles.Count; p++)
+                int p = 0;
+                while (p < levelData.Poles.Count)
                 {
-                    DrawPole(levelData.Poles[p], p);
-                    if (p < levelData.Poles.Count - 1)
-                        GUILayout.Space(PoleGap);
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        for (int col = 0; col < columns && p < levelData.Poles.Count; col++)
+                        {
+                            DrawPole(levelData.Poles[p], p);
+                            if (col < columns - 1 && p < levelData.Poles.Count - 1)
+                                GUILayout.Space(PoleGap);
+                            p++;
+                        }
+                        GUILayout.FlexibleSpace();
+                    }
+                    if (p < levelData.Poles.Count)
+                        EditorGUILayout.Space(6f);
                 }
             }
             EditorGUILayout.Space(5f);
@@ -109,17 +121,68 @@ namespace RingFlow.Editor
 
             var palette = Resources.Load<RingColorPaletteSO>(EditorPaths.RingColorPaletteKey);
             Color ringColor = palette != null ? palette.GetColor(ring.Color, RingColorPaletteSO.ColorBlindMode.Off) : Color.grey;
-            EditorGUI.DrawRect(ringRect, ringColor);
-            RingFlowEditorUtils.DrawRectBorder(ringRect, Color.black, 1);
-
+            
+            Color borderColor = Color.black;
             string ringLabel = RingFlowEditorUtils.GetRingShortLabel(ring.Type);
-            if (ring.AdditionalData > 0 && ring.Type == RingType.Bomb)
-                ringLabel += ring.AdditionalData;
+            Color labelColor = RingFlowEditorUtils.GetContrastColor(ringColor);
+
+            if (ring.Type == RingType.Mystery)
+            {
+                ringColor = new Color(0.24f, 0.25f, 0.28f);
+                borderColor = new Color(0.45f, 0.45f, 0.50f);
+                ringLabel = "?";
+                labelColor = Color.white;
+            }
+            else if (ring.Type == RingType.Frozen)
+            {
+                borderColor = new Color(0.4f, 0.8f, 1.0f);
+                ringLabel = "❄️" + ringLabel;
+            }
+            else if (ring.Type == RingType.Locked)
+            {
+                borderColor = new Color(0.9f, 0.7f, 0.1f);
+                ringLabel = "🔒" + ringLabel;
+            }
+            else if (ring.Type == RingType.Ghost)
+            {
+                ringColor.a = 0.5f;
+                borderColor = new Color(0.8f, 0.8f, 0.9f, 0.5f);
+                ringLabel = "👻" + ringLabel;
+            }
+            else if (ring.Type == RingType.Bomb)
+            {
+                borderColor = new Color(0.85f, 0.2f, 0.2f);
+                if (ring.AdditionalData > 0)
+                    ringLabel = $"💣{ring.AdditionalData}";
+            }
+            else if (ring.Type == RingType.Rainbow)
+            {
+                borderColor = new Color(0.9f, 0.4f, 0.8f);
+                ringLabel = "🌈" + ringLabel;
+            }
+            else if (ring.Type == RingType.Chain)
+            {
+                borderColor = new Color(0.6f, 0.6f, 0.65f);
+                ringLabel = "🔗" + ringLabel;
+            }
+            else if (ring.Type == RingType.Magnet)
+            {
+                borderColor = new Color(0.8f, 0.3f, 0.3f);
+                ringLabel = "🧲" + ringLabel;
+            }
+            else if (ring.Type == RingType.Paint)
+            {
+                borderColor = new Color(0.2f, 0.75f, 0.2f);
+                ringLabel = "🎨" + ringLabel;
+            }
+
+            EditorGUI.DrawRect(ringRect, ringColor);
+            RingFlowEditorUtils.DrawRectBorder(ringRect, borderColor, 1);
 
             var textStyle = new GUIStyle(RingFlowEditorUtils.CenteredMiniLabel)
             {
                 fontStyle = FontStyle.Bold,
-                normal = { textColor = RingFlowEditorUtils.GetContrastColor(ringColor) }
+                normal = { textColor = labelColor }
             };
             GUI.Label(ringRect, ringLabel, textStyle);
         }

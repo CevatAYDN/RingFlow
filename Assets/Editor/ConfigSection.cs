@@ -1,6 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 using RingFlow.Gameplay;
+using RingFlow.Gameplay.UI;
 using RingFlow.Gameplay.Economy;
 using RingFlow.Gameplay.Localization;
 using RingFlow.Gameplay.Strategies;
@@ -22,75 +23,72 @@ namespace RingFlow.Editor
             DrawFoldoutHeader();
             if (!IsFoldedOut) return;
 
-            EditorGUILayout.HelpBox(
-                "Tüm oyun yapılandırma varlıklarına (tek veri kaynağı) buradan ulaşın. " +
-                "Varlık yoksa 'Oluştur', varsa 'Aç' ile düzenleyiciye gidin.",
-                MessageType.Info);
+            RingFlowEditorUtils.BeginSectionBox("Yapılandırma Varlıkları (Config Assets)", "Tüm oyun yapılandırma varlıklarına (tek veri kaynağı) buradan ulaşın.");
 
-            DrawRow<GameConfigDatabaseSO>("Oyun Veritabanı (GameConfigDatabase)", EditorPaths.GameConfigDatabaseKey, EditorPaths.GameConfigDbPath);
-            DrawRow<GameFeelConfigSO>("Oyun Hissiyatı (Game Feel)", EditorPaths.GameFeelConfigKey, EditorPaths.GameFeelConfigPath);
-            DrawRow<RingColorPaletteSO>("Halka Renk Paleti", EditorPaths.RingColorPaletteKey, EditorPaths.RingColorPalettePath);
-            DrawRow<AudioConfigSO>("Ses Yapılandırması (Audio)", EditorPaths.AudioConfigKey, EditorPaths.AudioConfigPath);
-            DrawRow<UIThemeConfigSO>("Arayüz Teması (UI Theme)", EditorPaths.UIThemeConfigKey, EditorPaths.UIThemeConfigPath);
+            using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
+            {
+                EditorGUILayout.LabelField("Yapılandırma Adı", EditorStyles.miniBoldLabel, GUILayout.Width(280f));
+                EditorGUILayout.LabelField("Durum", EditorStyles.miniBoldLabel, GUILayout.Width(60f));
+                EditorGUILayout.LabelField("İşlemler", EditorStyles.miniBoldLabel, GUILayout.ExpandWidth(true));
+            }
 
-            EditorGUILayout.Space(4);
-            EditorGUILayout.LabelField("Data-Driven Varlıklar", EditorStyles.boldLabel);
+            DrawRow<GameConfigDatabaseSO>("Oyun Veritabanı (GameConfigDatabase)", EditorPaths.GameConfigDatabaseKey, EditorPaths.GameConfigDbPath, 0);
+            DrawRow<GameFeelConfigSO>("Oyun Hissiyatı (Game Feel)", EditorPaths.GameFeelConfigKey, EditorPaths.GameFeelConfigPath, 1);
+            DrawRow<RingColorPaletteSO>("Halka Renk Paleti", EditorPaths.RingColorPaletteKey, EditorPaths.RingColorPalettePath, 2);
+            DrawRow<AudioConfigSO>("Ses Yapılandırması (Audio)", EditorPaths.AudioConfigKey, EditorPaths.AudioConfigPath, 3);
+            DrawRow<UIThemeConfigSO>("Arayüz Teması (UI Theme)", EditorPaths.UIThemeConfigKey, EditorPaths.UIThemeConfigPath, 4);
 
-            DrawRow<StoreCatalogSO>("Mağaza Kataloğu (StoreCatalog)", EditorPaths.StoreCatalogKey, EditorPaths.StoreCatalogPath);
-            DrawRow<LocalizationConfigSO>("Yerelleştirme (LocalizationConfig)", EditorPaths.LocalizationConfigKey, EditorPaths.LocalizationConfigPath);
-            DrawRow<RingMechanicDataSO>("Halka Mekanik Verisi (RingMechanicData)", EditorPaths.RingMechanicDataKey, EditorPaths.RingMechanicDataPath);
-            DrawRow<ThemeSkinDatabaseSO>("Tema/Skin Veritabanı (ThemeSkinDatabase)", EditorPaths.ThemeSkinDatabaseKey, EditorPaths.ThemeSkinDatabasePath);
+            EditorGUILayout.Space(6f);
+            EditorGUILayout.LabelField("DATA-DRIVEN VARLIKLAR", EditorStyles.boldLabel);
+            EditorGUILayout.Space(2f);
+
+            DrawRow<StoreCatalogSO>("Mağaza Kataloğu (StoreCatalog)", EditorPaths.StoreCatalogKey, EditorPaths.StoreCatalogPath, 5);
+            DrawRow<LocalizationConfigSO>("Yerelleştirme (LocalizationConfig)", EditorPaths.LocalizationConfigKey, EditorPaths.LocalizationConfigPath, 6);
+            DrawRow<RingMechanicDataSO>("Halka Mekanik Verisi (RingMechanicData)", EditorPaths.RingMechanicDataKey, EditorPaths.RingMechanicDataPath, 7);
+            DrawRow<ThemeSkinDatabaseSO>("Tema/Skin Veritabanı (ThemeSkinDatabase)", EditorPaths.ThemeSkinDatabaseKey, EditorPaths.ThemeSkinDatabasePath, 8);
+            DrawRow<ScreenRegistrySO>("Ekran Kayıt Defteri (ScreenRegistry)", EditorPaths.ScreenRegistryKey, EditorPaths.ScreenRegistryPath, 9);
+
+            RingFlowEditorUtils.EndSectionBox();
         }
 
-        private void DrawRow<T>(string label, string resourceKey, string assetPath) where T : ScriptableObject
+        private void DrawRow<T>(string label, string resourceKey, string assetPath, int rowIndex) where T : ScriptableObject
         {
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            var asset = Resources.Load<T>(resourceKey);
+            bool exists = asset != null;
+
+            Rect rect = EditorGUILayout.BeginHorizontal(GUILayout.Height(22f));
+            
+            Color bgColor = rowIndex % 2 == 0 ? new Color(0.2f, 0.22f, 0.25f, 0.3f) : new Color(0.15f, 0.17f, 0.2f, 0.3f);
+            EditorGUI.DrawRect(rect, bgColor);
+
+            EditorGUILayout.LabelField(label, GUILayout.Width(280f));
+
+            var statusStyle = new GUIStyle(EditorStyles.miniLabel)
             {
-                EditorGUILayout.LabelField(label, EditorStyles.boldLabel);
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = exists ? EditorPaths.EditorColors.Success : EditorPaths.EditorColors.Error }
+            };
+            EditorGUILayout.LabelField(exists ? "VAR" : "EKSİK", statusStyle, GUILayout.Width(60f));
 
-                var asset = Resources.Load<T>(resourceKey);
-                bool exists = asset != null;
-                bool positionWidthIsNarrow = RingFlowEditorUtils.IsNarrowWidth(460f);
-
-                if (positionWidthIsNarrow)
+            using (new EditorGUILayout.HorizontalScope(GUILayout.ExpandWidth(true)))
+            {
+                using (new EditorGUI.DisabledScope(!exists))
                 {
-                    using (new EditorGUILayout.VerticalScope())
+                    if (GUILayout.Button("Aç", GUILayout.Width(50f), GUILayout.Height(16f)) && exists)
                     {
-                        using (new EditorGUI.DisabledScope(!exists))
-                        {
-                            if (GUILayout.Button("Aç", GUILayout.MinWidth(70f)) && exists)
-                            {
-                                Selection.activeObject = asset;
-                                EditorGUIUtility.PingObject(asset);
-                            }
-                        }
-
-                        if (GUILayout.Button(exists ? "Yeniden Oluştur" : "Oluştur", GUILayout.MinWidth(130f)))
-                        {
-                            CreateConfig<T>(assetPath, exists);
-                        }
+                        Selection.activeObject = asset;
+                        EditorGUIUtility.PingObject(asset);
                     }
                 }
-                else
-                {
-                    using (new EditorGUILayout.HorizontalScope())
-                    {
-                        using (new EditorGUI.DisabledScope(!exists))
-                        {
-                            if (GUILayout.Button("Aç", GUILayout.MinWidth(70f)) && exists)
-                            {
-                                Selection.activeObject = asset;
-                                EditorGUIUtility.PingObject(asset);
-                            }
-                        }
 
-                        if (GUILayout.Button(exists ? "Yeniden Oluştur" : "Oluştur", GUILayout.MinWidth(130f)))
-                        {
-                            CreateConfig<T>(assetPath, exists);
-                        }
-                    }
+                if (GUILayout.Button(exists ? "Yeniden Oluştur" : "Oluştur", GUILayout.Width(110f), GUILayout.Height(16f)))
+                {
+                    CreateConfig<T>(assetPath, exists);
                 }
             }
+
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.Space(2f);
         }
 
         private static void CreateConfig<T>(string assetPath, bool exists) where T : ScriptableObject

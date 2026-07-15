@@ -14,7 +14,21 @@ namespace RingFlow.Editor
         private const string ScreenPrefabFolder = EditorPaths.UiScreensFolder;
 
         public static string GetPrefabPathForScreen(ScreenType screen)
-            => $"{ScreenPrefabFolder}/{screen}.prefab";
+        {
+            var registry = Resources.Load<ScreenRegistrySO>(GameplayAssetKeys.ScreenRegistry);
+            if (registry != null && registry.TryGetMapping(screen, out var mapping))
+            {
+                if (!string.IsNullOrEmpty(mapping.PrefabPath))
+                {
+                    if (mapping.PrefabPath.EndsWith(".prefab"))
+                        return mapping.PrefabPath;
+                    if (mapping.PrefabPath.StartsWith("UI/"))
+                        return $"Assets/Resources/{mapping.PrefabPath}.prefab";
+                    return mapping.PrefabPath;
+                }
+            }
+            return $"{ScreenPrefabFolder}/{screen}.prefab";
+        }
 
         public static void CreateMissingUIScreenPrefabs()
         {
@@ -63,6 +77,15 @@ namespace RingFlow.Editor
 
         private static IEnumerable<ScreenType> GetRequiredUiScreens()
         {
+            var registry = Resources.Load<ScreenRegistrySO>(GameplayAssetKeys.ScreenRegistry);
+            if (registry != null && registry.Mappings.Count > 0)
+            {
+                var list = new List<ScreenType>();
+                foreach (var m in registry.Mappings)
+                    list.Add(m.Screen);
+                return list;
+            }
+
             return new[]
             {
                 ScreenType.Splash,
@@ -100,6 +123,27 @@ namespace RingFlow.Editor
 
         private static void AttachScreenView(GameObject root, ScreenType screen)
         {
+            // Try resolving via ScreenRegistrySO reflection first
+            var registry = Resources.Load<ScreenRegistrySO>(GameplayAssetKeys.ScreenRegistry);
+            if (registry != null && registry.TryGetMapping(screen, out var mapping))
+            {
+                if (!string.IsNullOrEmpty(mapping.ViewTypeName))
+                {
+                    var resolvedType = System.Type.GetType(mapping.ViewTypeName);
+                    if (resolvedType != null)
+                    {
+                        root.AddComponent(resolvedType);
+                        return;
+                    }
+                    else
+                    {
+                        NexusLog.Warn("RingFlowEditorUiStudio", nameof(AttachScreenView), screen.ToString(),
+                            $"Failed to resolve view class type from type name: {mapping.ViewTypeName}. Falling back to default switch-case.");
+                    }
+                }
+            }
+
+            // Fallback hardcoded switch-case
             var viewType = screen switch
             {
                 ScreenType.Splash => typeof(SplashView),

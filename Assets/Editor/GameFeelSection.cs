@@ -22,10 +22,10 @@ namespace RingFlow.Editor
             if (_config == null)
             {
                 EditorGUILayout.HelpBox(
-                    "GameFeelConfig asset not found.\nCreate it from Assets → Create → RingFlow → Game Feel Config, then place it in Assets/Resources/.",
+                    "GameFeelConfig asset dosyası bulunamadı.\nAssets → Create → RingFlow → Game Feel Config menüsünden oluşturup Assets/Resources/ klasörüne yerleştirin.",
                     MessageType.Warning);
 
-                if (GUILayout.Button("Create GameFeelConfig Asset", GUILayout.Height(36)))
+                if (GUILayout.Button("GameFeelConfig Dosyası Oluştur", GUILayout.Height(36)))
                     CreateConfigAsset();
                 return;
             }
@@ -33,128 +33,84 @@ namespace RingFlow.Editor
             var serialized = new SerializedObject(_config);
             EditorGUI.BeginChangeCheck();
 
-            EditorGUILayout.LabelField("Board Layout", EditorStyles.boldLabel);
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-            {
-                DrawProp(serialized, "PoleSpacing");
-                DrawProp(serialized, "PoleYPosition");
-                DrawProp(serialized, "PoleScale");
-                DrawProp(serialized, "PoleColliderWidthFraction");
-            }
+            RingFlowEditorUtils.BeginSectionBox("Tahta Düzeni (Board Layout)");
+            DrawProp(serialized, "PoleSpacing");
+            DrawProp(serialized, "PoleYPosition");
+            DrawProp(serialized, "PoleScale");
+            DrawProp(serialized, "PoleColliderWidthFraction");
+            RingFlowEditorUtils.EndSectionBox();
 
-            EditorGUILayout.Space(4f);
+            RingFlowEditorUtils.BeginSectionBox("Halka Boyutlandırması (Ring Sizing)");
+            DrawProp(serialized, "RingScaleTorus");
+            DrawProp(serialized, "RingScaleFallback");
+            DrawProp(serialized, "RingBaseYOffset");
+            DrawProp(serialized, "RingStackSpacing");
+            DrawProp(serialized, "RingSelectionLift");
+            RingFlowEditorUtils.EndSectionBox();
 
-            EditorGUILayout.LabelField("Ring Sizing", EditorStyles.boldLabel);
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-            {
-                DrawProp(serialized, "RingScaleTorus");
-                DrawProp(serialized, "RingScaleFallback");
-                DrawProp(serialized, "RingBaseYOffset");
-                DrawProp(serialized, "RingStackSpacing");
-                DrawProp(serialized, "RingSelectionLift");
-            }
+            RingFlowEditorUtils.BeginSectionBox("Hareket Animasyonu (Move Animation)");
+            DrawProp(serialized, "MoveDuration");
+            DrawProp(serialized, "MoveJumpPower");
+            DrawProp(serialized, "RingPlacePulseScale");
+            DrawProp(serialized, "RingPlacePulseDuration");
+            DrawProp(serialized, "SelectionLiftDuration");
+            DrawProp(serialized, "SlowModeMultiplier");
+            RingFlowEditorUtils.EndSectionBox();
 
-            EditorGUILayout.Space(4f);
+            RingFlowEditorUtils.BeginSectionBox("Kamera Ayarları (Camera)");
+            DrawProp(serialized, "CameraBaseOrtho");
+            DrawProp(serialized, "CameraMaxOrtho");
+            DrawProp(serialized, "CameraBasePoles");
+            DrawProp(serialized, "CameraMaxPoles");
+            RingFlowEditorUtils.EndSectionBox();
 
-            EditorGUILayout.LabelField("Move Animation", EditorStyles.boldLabel);
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-            {
-                DrawProp(serialized, "MoveDuration");
-                DrawProp(serialized, "MoveJumpPower");
-                DrawProp(serialized, "RingPlacePulseScale");
-                DrawProp(serialized, "RingPlacePulseDuration");
-                DrawProp(serialized, "SelectionLiftDuration");
-                DrawProp(serialized, "SlowModeMultiplier");
-            }
+            RingFlowEditorUtils.BeginSectionBox("Kamera Sarsıntısı (Camera Shake)");
+            DrawProp(serialized, "ShakeErrorIntensity");
+            DrawProp(serialized, "ShakeErrorDuration");
+            DrawProp(serialized, "ShakeExplosionIntensity");
+            DrawProp(serialized, "ShakeExplosionDuration");
+            RingFlowEditorUtils.EndSectionBox();
 
-            EditorGUILayout.Space(4f);
+            RingFlowEditorUtils.BeginSectionBox("Direk Renkleri (Pole Colors)");
+            DrawProp(serialized, "SelectedTint");
+            DrawProp(serialized, "ErrorTint");
+            DrawProp(serialized, "LockedTint");
+            DrawProp(serialized, "ErrorFlashDuration");
+            RingFlowEditorUtils.EndSectionBox();
 
-            EditorGUILayout.LabelField("Camera", EditorStyles.boldLabel);
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-            {
-                DrawProp(serialized, "CameraBaseOrtho");
-                DrawProp(serialized, "CameraMaxOrtho");
-                DrawProp(serialized, "CameraBasePoles");
-                DrawProp(serialized, "CameraMaxPoles");
-            }
+            RingFlowEditorUtils.BeginSectionBox("Gökkuşağı Efekti (Rainbow Cycle)");
+            DrawProp(serialized, "RainbowHueSpeed");
+            DrawProp(serialized, "RainbowSaturation");
+            DrawProp(serialized, "RainbowValue");
+            RingFlowEditorUtils.EndSectionBox();
 
-            EditorGUILayout.Space(4f);
+            RingFlowEditorUtils.BeginSectionBox("Efektler (VFX)");
+            DrawProp(serialized, "RingPopCount");
+            DrawProp(serialized, "RingPopDuration");
+            DrawProp(serialized, "RingPopDespawnDelay");
+            DrawProp(serialized, "ConfettiCount");
+            DrawProp(serialized, "ConfettiFallDuration");
+            DrawProp(serialized, "ConfettiDespawnDelay");
+            RingFlowEditorUtils.EndSectionBox();
 
-            EditorGUILayout.LabelField("Camera Shake", EditorStyles.boldLabel);
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-            {
-                DrawProp(serialized, "ShakeErrorIntensity");
-                DrawProp(serialized, "ShakeErrorDuration");
-                DrawProp(serialized, "ShakeExplosionIntensity");
-                DrawProp(serialized, "ShakeExplosionDuration");
-            }
+            RingFlowEditorUtils.BeginSectionBox("Zemin Görselleri (Floor & Ground)");
+            DrawProp(serialized, "FloorMesh");
+            DrawProp(serialized, "FloorColor");
+            DrawProp(serialized, "FloorMetallic");
+            DrawProp(serialized, "FloorSmoothness");
+            RingFlowEditorUtils.EndSectionBox();
 
-            EditorGUILayout.Space(4f);
+            RingFlowEditorUtils.BeginSectionBox("Model Örgüleri (Meshes)");
+            DrawProp(serialized, "RingMesh");
+            DrawProp(serialized, "PoleBodyMesh");
+            DrawProp(serialized, "PoleCapMesh");
+            RingFlowEditorUtils.EndSectionBox();
 
-            EditorGUILayout.LabelField("Pole Colors", EditorStyles.boldLabel);
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-            {
-                DrawProp(serialized, "SelectedTint");
-                DrawProp(serialized, "ErrorTint");
-                DrawProp(serialized, "LockedTint");
-                DrawProp(serialized, "ErrorFlashDuration");
-            }
-
-            EditorGUILayout.Space(4f);
-
-            EditorGUILayout.LabelField("Rainbow Cycle", EditorStyles.boldLabel);
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-            {
-                DrawProp(serialized, "RainbowHueSpeed");
-                DrawProp(serialized, "RainbowSaturation");
-                DrawProp(serialized, "RainbowValue");
-            }
-
-            EditorGUILayout.Space(4f);
-
-            EditorGUILayout.LabelField("VFX", EditorStyles.boldLabel);
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-            {
-                DrawProp(serialized, "RingPopCount");
-                DrawProp(serialized, "RingPopDuration");
-                DrawProp(serialized, "RingPopDespawnDelay");
-                DrawProp(serialized, "ConfettiCount");
-                DrawProp(serialized, "ConfettiFallDuration");
-                DrawProp(serialized, "ConfettiDespawnDelay");
-            }
-
-            EditorGUILayout.Space(4f);
-
-            EditorGUILayout.LabelField("Floor/Ground Visuals", EditorStyles.boldLabel);
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-            {
-                DrawProp(serialized, "FloorMesh");
-                DrawProp(serialized, "FloorColor");
-                DrawProp(serialized, "FloorMetallic");
-                DrawProp(serialized, "FloorSmoothness");
-            }
-
-            EditorGUILayout.Space(4f);
-
-            EditorGUILayout.LabelField("Model Meshes", EditorStyles.boldLabel);
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-            {
-                DrawProp(serialized, "RingMesh");
-                DrawProp(serialized, "PoleBodyMesh");
-                DrawProp(serialized, "PoleCapMesh");
-            }
-
-            EditorGUILayout.Space(4f);
-
-            EditorGUILayout.LabelField("Object Pools", EditorStyles.boldLabel);
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-            {
-                DrawProp(serialized, "RingPoolSize");
-                DrawProp(serialized, "RingPopPoolSize");
-                DrawProp(serialized, "ConfettiPoolSize");
-            }
-
-            EditorGUILayout.Space(8f);
+            RingFlowEditorUtils.BeginSectionBox("Bellek Havuzları (Object Pools)");
+            DrawProp(serialized, "RingPoolSize");
+            DrawProp(serialized, "RingPopPoolSize");
+            DrawProp(serialized, "ConfettiPoolSize");
+            RingFlowEditorUtils.EndSectionBox();
 
             if (EditorGUI.EndChangeCheck())
             {

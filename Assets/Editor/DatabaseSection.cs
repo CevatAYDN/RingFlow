@@ -48,173 +48,174 @@ namespace RingFlow.Editor
                 return;
             }
 
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            RingFlowEditorUtils.BeginSectionBox("Veritabanı Yapılandırması", "Oyun veritabanındaki zorluk derecelerini, renk eğrilerini ve dünyaları yönetin.");
+
+            EditorGUILayout.ObjectField("Asset Dosyası", _database, typeof(GameConfigDatabaseSO), false);
+            EditorGUILayout.Space(2f);
+
+            EditorGUI.BeginChangeCheck();
+
+            _database.TotalLevels = EditorGUILayout.IntField("Toplam Seviye Sayısı", _database.TotalLevels);
+            _database.LevelsPerThemeStep = EditorGUILayout.IntField("Tema Başına Seviye Adımı", _database.LevelsPerThemeStep);
+            _database.MinimumEmptyPoles = EditorGUILayout.IntField("Minimum Boş Direk Sayısı", _database.MinimumEmptyPoles);
+
+            EditorGUILayout.Space(10f);
+
+            // --- 1. ZORLUK DERECELERİ (inline editable) ---
+            RingFlowEditorUtils.BeginSectionBox("Zorluk Dereceleri Ayarları", "Zorluk seviyelerine göre direk kapasitesi ve boş direk sayısı sınırları.");
+            for (int i = 0; i < _database.DifficultyBands.Count; i++)
             {
-                EditorGUILayout.LabelField("Veritabanı Asset Özellikleri", EditorStyles.boldLabel);
-                EditorGUILayout.ObjectField("Asset Dosyası", _database, typeof(GameConfigDatabaseSO), false);
+                var bandData = _database.DifficultyBands[i];
+                Rect rowRect = EditorGUILayout.BeginHorizontal(GUILayout.Height(22f));
+                Color rowBg = i % 2 == 0 ? new Color(0.2f, 0.22f, 0.25f, 0.3f) : new Color(0.15f, 0.17f, 0.2f, 0.3f);
+                EditorGUI.DrawRect(rowRect, rowBg);
 
-                EditorGUILayout.Space(5f);
+                EditorGUILayout.LabelField(bandData.Band.ToString(), EditorStyles.boldLabel, GUILayout.Width(80f));
 
-                EditorGUI.BeginChangeCheck();
+                int maxLvl = EditorGUILayout.IntField("Maks Seviye", bandData.MaxLevel, GUILayout.Width(130f));
+                int minEmpty = EditorGUILayout.IntField("Boş Direk", bandData.MinEmptyPoles, GUILayout.Width(110f));
+                int maxCap = EditorGUILayout.IntField("Kapasite", bandData.MaxCapacity, GUILayout.Width(100f));
 
-                _database.TotalLevels = EditorGUILayout.IntField("Toplam Seviye Sayısı", _database.TotalLevels);
-                _database.LevelsPerThemeStep = EditorGUILayout.IntField("Tema Başına Seviye Adımı", _database.LevelsPerThemeStep);
-                _database.MinimumEmptyPoles = EditorGUILayout.IntField("Minimum Boş Direk Sayısı", _database.MinimumEmptyPoles);
+                bandData.MaxLevel = maxLvl;
+                bandData.MinEmptyPoles = minEmpty;
+                bandData.MaxCapacity = maxCap;
+                _database.DifficultyBands[i] = bandData;
 
-                EditorGUILayout.Space(10f);
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.Space(2f);
+            }
+            RingFlowEditorUtils.EndSectionBox();
 
-                // --- 1. ZORLUK DERECELERİ (inline editable) ---
-                RingFlowEditorUtils.SectionTitle("Zorluk Dereceleri Ayarları");
-                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            EditorGUILayout.Space(6f);
+
+            // --- 2. RENK İLERLEME EĞRİSİ (inline editable) ---
+            RingFlowEditorUtils.BeginSectionBox("Renk İlerleme Eğrisi", "Bölüm seviyelerine göre kullanılacak halka renk miktarları.");
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField("Seviye Eşiği (≥)", EditorStyles.miniBoldLabel, GUILayout.Width(120f));
+                EditorGUILayout.LabelField("Renk Sayısı", EditorStyles.miniBoldLabel, GUILayout.Width(100f));
+            }
+
+            for (int i = 0; i < _database.ColorCurve.Count; i++)
+            {
+                var pt = _database.ColorCurve[i];
+                Rect rowRect = EditorGUILayout.BeginHorizontal(GUILayout.Height(22f));
+                Color rowBg = i % 2 == 0 ? new Color(0.2f, 0.22f, 0.25f, 0.3f) : new Color(0.15f, 0.17f, 0.2f, 0.3f);
+                EditorGUI.DrawRect(rowRect, rowBg);
+
+                int threshold = EditorGUILayout.IntField(pt.LevelThreshold, GUILayout.Width(120f));
+                int colors = EditorGUILayout.IntSlider(pt.ColorCount, 2, 10, GUILayout.Width(200f));
+                pt.LevelThreshold = threshold;
+                pt.ColorCount = colors;
+                _database.ColorCurve[i] = pt;
+
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.Space(2f);
+            }
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("+ Yeni Nokta Ekle", GUILayout.Width(140f)))
+                    _database.ColorCurve.Add(new ColorCurvePoint { LevelThreshold = 2000, ColorCount = 10 });
+
+                if (_database.ColorCurve.Count > 0 && GUILayout.Button("- Son Noktayı Sil", GUILayout.Width(140f)))
+                    _database.ColorCurve.RemoveAt(_database.ColorCurve.Count - 1);
+            }
+            RingFlowEditorUtils.EndSectionBox();
+
+            EditorGUILayout.Space(6f);
+
+            // --- 3. DÜNYA VE TEMA AYARLARI (inline editable) ---
+            RingFlowEditorUtils.BeginSectionBox("Dünyalar ve Tema Ayarları", "Dünyaların tema isimleri ve mekanik konfigürasyonları.");
+            int worldCount = _database.Worlds.Count;
+            string[] worldNames = new string[worldCount];
+            for (int i = 0; i < worldCount; i++)
+                worldNames[i] = $"Dünya {i + 1}: {_database.Worlds[i].Theme}";
+
+            _selectedWorldIndex = EditorGUILayout.Popup("Düzenlenecek Dünyayı Seç", _selectedWorldIndex, worldNames);
+
+            EditorGUILayout.Space(5f);
+
+            if (_selectedWorldIndex >= 0 && _selectedWorldIndex < worldCount)
+            {
+                var wData = _database.Worlds[_selectedWorldIndex];
+
+                wData.Theme = EditorGUILayout.TextField("Tema Görünen Adı", wData.Theme);
+                wData.UnlockedByWorldIndex = EditorGUILayout.IntField("Kilit Açan Dünya Endeksi", wData.UnlockedByWorldIndex);
+                wData.IsEventWorld = EditorGUILayout.Toggle("Boss (Etkinlik) Dünyası mı", wData.IsEventWorld);
+                wData.MechanicType = (WorldMechanicType)EditorGUILayout.EnumPopup("Özel Mekanik Tipi", wData.MechanicType);
+
+                _database.Worlds[_selectedWorldIndex] = wData;
+            }
+            RingFlowEditorUtils.EndSectionBox();
+
+            EditorGUILayout.Space(10f);
+
+            if (EditorGUI.EndChangeCheck())
+                EditorUtility.SetDirty(_database);
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("Değişiklikleri Kaydet", GUILayout.Height(36)))
+                    SaveDatabase();
+
+                if (GUILayout.Button("Varsayılan Ayarlara Sıfırla", GUILayout.Height(36)))
                 {
-                    for (int i = 0; i < _database.DifficultyBands.Count; i++)
+                    if (EditorUtility.DisplayDialog("Veritabanını Sıfırla",
+                        "Tüm veritabanı ayarlarını varsayılan GDD kurallarına sıfırlamak istediğinize emin misiniz? Özel ayarlarınızın üzerine yazılacaktır.",
+                        "Sıfırla", "İptal"))
                     {
-                        var bandData = _database.DifficultyBands[i];
-                        using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
-                        {
-                            EditorGUILayout.LabelField(bandData.Band.ToString(), EditorStyles.boldLabel, GUILayout.Width(80f));
-
-                            int maxLvl = EditorGUILayout.IntField("Maks Seviye", bandData.MaxLevel, GUILayout.Width(130f));
-                            int minEmpty = EditorGUILayout.IntField("Boş Direk", bandData.MinEmptyPoles, GUILayout.Width(110f));
-                            int maxCap = EditorGUILayout.IntField("Kapasite", bandData.MaxCapacity, GUILayout.Width(100f));
-
-                            bandData.MaxLevel = maxLvl;
-                            bandData.MinEmptyPoles = minEmpty;
-                            bandData.MaxCapacity = maxCap;
-                            _database.DifficultyBands[i] = bandData;
-                        }
-                    }
-                }
-
-                EditorGUILayout.Space(10f);
-
-                // --- 2. RENK İLERLEME EĞRİSİ (inline editable) ---
-                RingFlowEditorUtils.SectionTitle("Renk İlerleme Eğrisi");
-                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-                {
-                    using (new EditorGUILayout.HorizontalScope())
-                    {
-                        EditorGUILayout.LabelField("Seviye Eşiği (≥)", EditorStyles.miniBoldLabel, GUILayout.Width(120f));
-                        EditorGUILayout.LabelField("Renk Sayısı", EditorStyles.miniBoldLabel, GUILayout.Width(100f));
-                    }
-
-                    for (int i = 0; i < _database.ColorCurve.Count; i++)
-                    {
-                        var pt = _database.ColorCurve[i];
-                        using (new EditorGUILayout.HorizontalScope())
-                        {
-                            int threshold = EditorGUILayout.IntField(pt.LevelThreshold, GUILayout.Width(120f));
-                            int colors = EditorGUILayout.IntSlider(pt.ColorCount, 2, 10, GUILayout.Width(200f));
-                            pt.LevelThreshold = threshold;
-                            pt.ColorCount = colors;
-                            _database.ColorCurve[i] = pt;
-                        }
-                    }
-
-                    using (new EditorGUILayout.HorizontalScope())
-                    {
-                        if (GUILayout.Button("+ Yeni Nokta Ekle", GUILayout.Width(140f)))
-                            _database.ColorCurve.Add(new ColorCurvePoint { LevelThreshold = 2000, ColorCount = 10 });
-
-                        if (_database.ColorCurve.Count > 0 && GUILayout.Button("- Son Noktayı Sil", GUILayout.Width(140f)))
-                            _database.ColorCurve.RemoveAt(_database.ColorCurve.Count - 1);
-                    }
-                }
-
-                EditorGUILayout.Space(10f);
-
-                // --- 3. DÜNYA VE TEMA AYARLARI (inline editable) ---
-                RingFlowEditorUtils.SectionTitle("Dünyalar ve Tema Ayarları");
-                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-                {
-                    int worldCount = _database.Worlds.Count;
-                    string[] worldNames = new string[worldCount];
-                    for (int i = 0; i < worldCount; i++)
-                        worldNames[i] = $"Dünya {i + 1}: {_database.Worlds[i].Theme}";
-
-                    _selectedWorldIndex = EditorGUILayout.Popup("Düzenlenecek Dünyayı Seç", _selectedWorldIndex, worldNames);
-
-                    EditorGUILayout.Space(5f);
-
-                    if (_selectedWorldIndex >= 0 && _selectedWorldIndex < worldCount)
-                    {
-                        var wData = _database.Worlds[_selectedWorldIndex];
-
-                        wData.Theme = EditorGUILayout.TextField("Tema Görünen Adı", wData.Theme);
-                        wData.UnlockedByWorldIndex = EditorGUILayout.IntField("Kilit Açan Dünya Endeksi", wData.UnlockedByWorldIndex);
-                        wData.IsEventWorld = EditorGUILayout.Toggle("Boss (Etkinlik) Dünyası mı", wData.IsEventWorld);
-                        wData.MechanicType = (WorldMechanicType)EditorGUILayout.EnumPopup("Özel Mekanik Tipi", wData.MechanicType);
-
-                        _database.Worlds[_selectedWorldIndex] = wData;
-                    }
-                }
-
-                EditorGUILayout.Space(15f);
-
-                if (EditorGUI.EndChangeCheck())
-                    EditorUtility.SetDirty(_database);
-
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    if (GUILayout.Button("Değişiklikleri Kaydet", GUILayout.Height(36)))
+                        _database.InitializeDefaults();
+                        EditorUtility.SetDirty(_database);
                         SaveDatabase();
-
-                    if (GUILayout.Button("Varsayılan Ayarlara Sıfırla", GUILayout.Height(36)))
-                    {
-                        if (EditorUtility.DisplayDialog("Veritabanını Sıfırla",
-                            "Tüm veritabanı ayarlarını varsayılan GDD kurallarına sıfırlamak istediğinize emin misiniz? Özel ayarlarınızın üzerine yazılacaktır.",
-                            "Sıfırla", "İptal"))
-                        {
-                            _database.InitializeDefaults();
-                            EditorUtility.SetDirty(_database);
-                            SaveDatabase();
-                        }
-                    }
-                }
-
-                // --- 4. TOPLU SEVİYE DOĞRULAYICI ---
-                EditorGUILayout.Space(15f);
-                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-                {
-                    EditorGUILayout.LabelField("Toplu Seviye Doğrulayıcı ve Çözücü Testi", EditorStyles.boldLabel);
-                    EditorGUILayout.HelpBox(
-                        "Seçilen seviye aralığındaki bölümleri tek tek üretir, çözücü ile doğrular, süre ve çözülebilirlik raporu sunar.",
-                        MessageType.Info);
-
-                    using (new EditorGUILayout.HorizontalScope())
-                    {
-                        _valStartLevel = EditorGUILayout.IntField("Başlangıç Seviyesi", _valStartLevel, GUILayout.Width(180f));
-                        _valEndLevel = EditorGUILayout.IntField("Bitiş Seviyesi", _valEndLevel, GUILayout.Width(180f));
-                    }
-
-                    if (GUILayout.Button("Toplu Doğrulamayı Başlat", GUILayout.Height(30)))
-                        RunBatchValidation();
-
-                    if (_validationResults.Count > 0)
-                    {
-                        EditorGUILayout.Space(6f);
-                        EditorGUILayout.LabelField($"Sonuçlar ({_validationResults.Count})", EditorStyles.boldLabel);
-
-                        _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos, GUILayout.Height(200f));
-                        var resultLabelStyle = EditorStyles.label;
-                        for (int i = 0; i < _validationResults.Count; i++)
-                        {
-                            var res = _validationResults[i];
-                            using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
-                            {
-                                resultLabelStyle.fontStyle = FontStyle.Bold;
-                                resultLabelStyle.normal.textColor = res.Success ? EditorPaths.EditorColors.Success : EditorPaths.EditorColors.Error;
-                                EditorGUILayout.LabelField($"Lvl {res.LevelIndex}", resultLabelStyle, GUILayout.Width(60f));
-                                EditorGUILayout.LabelField(res.Log);
-                            }
-                        }
-                        EditorGUILayout.EndScrollView();
-
-                        if (GUILayout.Button("Sonuçları Temizle", GUILayout.Width(140f)))
-                            _validationResults.Clear();
                     }
                 }
             }
+
+            // --- 4. TOPLU SEVİYE DOĞRULAYICI ---
+            EditorGUILayout.Space(15f);
+            RingFlowEditorUtils.BeginSectionBox("Toplu Seviye Doğrulayıcı ve Çözücü Testi", "Seçilen seviye aralığındaki bölümleri tek tek üretir, çözücü ile doğrular, süre ve çözülebilirlik raporu sunar.");
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                _valStartLevel = EditorGUILayout.IntField("Başlangıç Seviyesi", _valStartLevel, GUILayout.Width(180f));
+                _valEndLevel = EditorGUILayout.IntField("Bitiş Seviyesi", _valEndLevel, GUILayout.Width(180f));
+            }
+
+            if (GUILayout.Button("Toplu Doğrulamayı Başlat", GUILayout.Height(30)))
+                RunBatchValidation();
+
+            if (_validationResults.Count > 0)
+            {
+                EditorGUILayout.Space(6f);
+                EditorGUILayout.LabelField($"Sonuçlar ({_validationResults.Count})", EditorStyles.boldLabel);
+
+                _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos, GUILayout.Height(200f));
+                var resultLabelStyle = new GUIStyle(EditorStyles.label);
+                for (int i = 0; i < _validationResults.Count; i++)
+                {
+                    var res = _validationResults[i];
+                    Rect rowRect = EditorGUILayout.BeginHorizontal(GUILayout.Height(20f));
+                    Color rowBg = i % 2 == 0 ? new Color(0.2f, 0.22f, 0.25f, 0.3f) : new Color(0.15f, 0.17f, 0.2f, 0.3f);
+                    EditorGUI.DrawRect(rowRect, rowBg);
+
+                    resultLabelStyle.fontStyle = FontStyle.Bold;
+                    resultLabelStyle.normal.textColor = res.Success ? EditorPaths.EditorColors.Success : EditorPaths.EditorColors.Error;
+                    EditorGUILayout.LabelField($"Lvl {res.LevelIndex}", resultLabelStyle, GUILayout.Width(60f));
+                    EditorGUILayout.LabelField(res.Log);
+
+                    EditorGUILayout.EndHorizontal();
+                    EditorGUILayout.Space(1f);
+                }
+                EditorGUILayout.EndScrollView();
+
+                if (GUILayout.Button("Sonuçları Temizle", GUILayout.Width(140f)))
+                    _validationResults.Clear();
+            }
+
+            RingFlowEditorUtils.EndSectionBox();
+
+            RingFlowEditorUtils.EndSectionBox();
         }
 
         private void RunBatchValidation()

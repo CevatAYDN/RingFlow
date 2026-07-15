@@ -16,6 +16,7 @@ namespace RingFlow.Gameplay.UI
         private Action<int, int> _levelHandler;
         private Action<int, int> _coinsHandler;
         private Action<int, int> _diamondsHandler;
+        private Action<bool, bool> _isGameWonHandler;
 
         protected override void OnBind()
         {
@@ -49,9 +50,28 @@ namespace RingFlow.Gameplay.UI
 
             if (_model != null)
             {
-                _movesHandler = (_, n) => View?.UpdateMoves(n, _loc);
+                _movesHandler = (_, n) =>
+                {
+                    View?.UpdateMoves(n, _loc);
+                    if (View?.UndoButton != null)
+                    {
+                        View.UndoButton.interactable = n > 0 && !_model.IsGameWon.Value;
+                    }
+                };
                 _model.MovesCount.OnChanged(_movesHandler);
                 View.UpdateMoves(_model.MovesCount.Value, _loc);
+
+                _isGameWonHandler = (_, won) =>
+                {
+                    if (View?.UndoButton != null) View.UndoButton.interactable = !won && _model.MovesCount.Value > 0;
+                    if (View?.RestartButton != null) View.RestartButton.interactable = !won;
+                    if (View?.HintButton != null) View.HintButton.interactable = !won;
+                };
+                _model.IsGameWon.OnChanged(_isGameWonHandler);
+
+                if (View.UndoButton != null) View.UndoButton.interactable = !_model.IsGameWon.Value && _model.MovesCount.Value > 0;
+                if (View.RestartButton != null) View.RestartButton.interactable = !_model.IsGameWon.Value;
+                if (View.HintButton != null) View.HintButton.interactable = !_model.IsGameWon.Value;
             }
             else
             {
@@ -84,8 +104,11 @@ namespace RingFlow.Gameplay.UI
             View.PauseButton?.onClick.RemoveAllListeners();
             View.HintButton?.onClick.RemoveAllListeners();
 
-            if (_model != null && _movesHandler != null)
-                _model.MovesCount.RemoveOnChanged(_movesHandler);
+            if (_model != null)
+            {
+                if (_movesHandler != null) _model.MovesCount.RemoveOnChanged(_movesHandler);
+                if (_isGameWonHandler != null) _model.IsGameWon.RemoveOnChanged(_isGameWonHandler);
+            }
             if (_progression != null && _levelHandler != null)
                 _progression.CurrentLevel.RemoveOnChanged(_levelHandler);
             if (_progress != null)
@@ -94,6 +117,7 @@ namespace RingFlow.Gameplay.UI
                 if (_diamondsHandler != null) _progress.Diamonds.RemoveOnChanged(_diamondsHandler);
             }
             _movesHandler = null;
+            _isGameWonHandler = null;
             _levelHandler = null;
             _coinsHandler = null;
             _diamondsHandler = null;

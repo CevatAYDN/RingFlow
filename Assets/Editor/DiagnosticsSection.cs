@@ -27,108 +27,94 @@ namespace RingFlow.Editor
             DrawFoldoutHeader();
             if (!IsFoldedOut) return;
 
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            RingFlowEditorUtils.BeginSectionBox("Sinyal & Hata İzleme Paneli", "Play Mode esnasında Nexus sinyallerini ve loglarını izleyin.");
+
+            var context = NexusRuntime.CurrentContext;
+            if (context == null)
             {
-                var context = NexusRuntime.CurrentContext;
-                if (context == null)
-                {
-                    EditorGUILayout.HelpBox("No active Nexus context. Enter Play Mode to trace logs.", MessageType.Info);
-                    return;
-                }
-
-                var diag = context.TryResolve<IGameDiagnostics>();
-                if (diag == null)
-                {
-                    EditorGUILayout.HelpBox("IGameDiagnostics not registered. Check GameplayLifecycle configuration.", MessageType.Error);
-                    return;
-                }
-
-                // Controls
-                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-                {
-                    diag.IsEnabled = EditorGUILayout.Toggle("Enabled", diag.IsEnabled);
-                    bool narrowControls = RingFlowEditorUtils.IsNarrowWidth(520f);
-                    if (narrowControls)
-                    {
-                        if (GUILayout.Button("Clear", GUILayout.MinWidth(60))) diag.Clear();
-                        if (GUILayout.Button("Export Report", GUILayout.MinWidth(100))) ExportReport(diag);
-                    }
-                    else
-                    {
-                        using (new EditorGUILayout.HorizontalScope())
-                        {
-                            if (GUILayout.Button("Clear", GUILayout.MinWidth(60))) diag.Clear();
-                            if (GUILayout.Button("Export Report", GUILayout.MinWidth(100))) ExportReport(diag);
-                        }
-                    }
-                }
-
-                EditorGUILayout.Space(4f);
-
-                // --- Data-Driven Denetimi ---
-                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-                {
-                    EditorGUILayout.LabelField("Data-Driven Denetimi", EditorStyles.boldLabel);
-                    EditorGUILayout.HelpBox("Tüm ScriptableObject konfigürasyon varlıklarının varlığını ve geçerliliğini denetler.", MessageType.Info);
-
-                    if (GUILayout.Button("Data-Driven Varlıkları Doğrula", GUILayout.Height(24)))
-                        RunDataDrivenValidation();
-                }
-
-                // Filter
-                bool narrow = EditorGUIUtility.currentViewWidth < 480f;
-                if (narrow)
-                {
-                    _filter = EditorGUILayout.TextField("Filter", _filter);
-                    _autoScroll = EditorGUILayout.Toggle("Auto-scroll", _autoScroll);
-                }
-                else
-                {
-                    using (new EditorGUILayout.HorizontalScope())
-                    {
-                        _filter = EditorGUILayout.TextField("Filter", _filter);
-                        _autoScroll = EditorGUILayout.Toggle("Auto-scroll", _autoScroll, GUILayout.Width(90f));
-                    }
-                }
-
-                // Entry list
-                _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos, GUILayout.Height(300));
-                
-                var entries = diag.Entries;
-                if (_autoScroll)
-                {
-                    _scrollPos = new Vector2(0, float.MaxValue);
-                }
-
-                // Reverse iteration without LINQ allocation
-                for (int ei = entries.Count - 1; ei >= 0; ei--)
-                {
-                    var entry = entries[ei];
-                    if (!string.IsNullOrEmpty(_filter) &&
-                        !entry.Category.Contains(_filter) &&
-                        !entry.Message.Contains(_filter))
-                        continue;
-
-                    var color = entry.Severity switch
-                    {
-                        DiagnosticSeverity.Critical => Color.red,
-                        DiagnosticSeverity.Error => EditorPaths.EditorColors.Error,
-                        DiagnosticSeverity.Warning => Color.yellow,
-                        DiagnosticSeverity.Info => Color.white,
-                        _ => Color.gray
-                    };
-
-                    GUI.color = color;
-                    EditorGUILayout.LabelField(entry.ToString(), EditorStyles.wordWrappedMiniLabel);
-                    GUI.color = Color.white;
-                }
-
-                EditorGUILayout.EndScrollView();
-
-                // Summary
-                EditorGUILayout.Space();
-                EditorGUILayout.LabelField($"Total entries: {entries.Count}", EditorStyles.miniBoldLabel);
+                EditorGUILayout.HelpBox("Aktif Nexus bağlamı yok. Logları izlemek için Play Mode'a girin.", MessageType.Info);
+                RingFlowEditorUtils.EndSectionBox();
+                return;
             }
+
+            var diag = context.TryResolve<IGameDiagnostics>();
+            if (diag == null)
+            {
+                EditorGUILayout.HelpBox("IGameDiagnostics kayıt edilmedi. GameplayLifecycle ayarlarını kontrol edin.", MessageType.Error);
+                RingFlowEditorUtils.EndSectionBox();
+                return;
+            }
+
+            // Controls
+            using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
+            {
+                diag.IsEnabled = EditorGUILayout.Toggle("İzleme Etkin", diag.IsEnabled);
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("Temizle", EditorStyles.miniButton, GUILayout.Width(60f))) diag.Clear();
+                if (GUILayout.Button("Raporu Dışa Aktar", EditorStyles.miniButton, GUILayout.Width(120f))) ExportReport(diag);
+            }
+            EditorGUILayout.Space(4f);
+
+            // --- Data-Driven Denetimi ---
+            RingFlowEditorUtils.BeginSectionBox("Data-Driven Denetimi", "Tüm ScriptableObject konfigürasyon varlıklarının varlığını ve geçerliliğini denetler.");
+            if (GUILayout.Button("Data-Driven Varlıkları Doğrula", GUILayout.Height(24)))
+                RunDataDrivenValidation();
+            RingFlowEditorUtils.EndSectionBox();
+
+            // Filter
+            bool narrow = EditorGUIUtility.currentViewWidth < 480f;
+            if (narrow)
+            {
+                _filter = EditorGUILayout.TextField("Filtrele", _filter);
+                _autoScroll = EditorGUILayout.Toggle("Otomatik Kaydır", _autoScroll);
+            }
+            else
+            {
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    _filter = EditorGUILayout.TextField("Filtrele", _filter);
+                    _autoScroll = EditorGUILayout.Toggle("Otomatik Kaydır", _autoScroll, GUILayout.Width(110f));
+                }
+            }
+
+            // Entry list
+            _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos, GUILayout.Height(300));
+            
+            var entries = diag.Entries;
+            if (_autoScroll)
+            {
+                _scrollPos = new Vector2(0, float.MaxValue);
+            }
+
+            for (int ei = entries.Count - 1; ei >= 0; ei--)
+            {
+                var entry = entries[ei];
+                if (!string.IsNullOrEmpty(_filter) &&
+                    !entry.Category.Contains(_filter) &&
+                    !entry.Message.Contains(_filter))
+                    continue;
+
+                var color = entry.Severity switch
+                {
+                    DiagnosticSeverity.Critical => Color.red,
+                    DiagnosticSeverity.Error => EditorPaths.EditorColors.Error,
+                    DiagnosticSeverity.Warning => Color.yellow,
+                    DiagnosticSeverity.Info => Color.white,
+                    _ => Color.gray
+                };
+
+                GUI.color = color;
+                EditorGUILayout.LabelField(entry.ToString(), EditorStyles.wordWrappedMiniLabel);
+                GUI.color = Color.white;
+            }
+
+            EditorGUILayout.EndScrollView();
+
+            // Summary
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField($"Toplam kayıt: {entries.Count}", EditorStyles.miniBoldLabel);
+            
+            RingFlowEditorUtils.EndSectionBox();
         }
 
         private void RunDataDrivenValidation()

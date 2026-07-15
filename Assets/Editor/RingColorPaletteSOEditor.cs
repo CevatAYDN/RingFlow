@@ -17,35 +17,35 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(4f);
 
             // ── Colorblind Mode Preview ──
-            RingFlowEditorUtils.SectionTitle("Accessibility Preview");
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-            {
-                _previewMode = (RingColorPaletteSO.ColorBlindMode)EditorGUILayout.EnumPopup("Preview Mode", _previewMode);
+            RingFlowEditorUtils.BeginSectionBox("Erişilebilirlik Önizleme Modu (Accessibility)", "Renk körlüğü modlarında halkaların nasıl görüneceğini test edin.");
+            
+            _previewMode = (RingColorPaletteSO.ColorBlindMode)EditorGUILayout.EnumPopup("Önizleme Modu", _previewMode);
 
-                bool narrow = RingFlowEditorUtils.IsNarrowWidth(520f);
-                if (narrow)
+            bool narrow = RingFlowEditorUtils.IsNarrowWidth(520f);
+            if (narrow)
+            {
+                if (GUILayout.Button("Kapalı")) _previewMode = RingColorPaletteSO.ColorBlindMode.Off;
+                if (GUILayout.Button("Protanopia")) _previewMode = RingColorPaletteSO.ColorBlindMode.Protanopia;
+                if (GUILayout.Button("Deuteranopia")) _previewMode = RingColorPaletteSO.ColorBlindMode.Deuteranopia;
+                if (GUILayout.Button("Tritanopia")) _previewMode = RingColorPaletteSO.ColorBlindMode.Tritanopia;
+            }
+            else
+            {
+                using (new EditorGUILayout.HorizontalScope())
                 {
-                    if (GUILayout.Button("Off")) _previewMode = RingColorPaletteSO.ColorBlindMode.Off;
+                    if (GUILayout.Button("Kapalı")) _previewMode = RingColorPaletteSO.ColorBlindMode.Off;
                     if (GUILayout.Button("Protanopia")) _previewMode = RingColorPaletteSO.ColorBlindMode.Protanopia;
                     if (GUILayout.Button("Deuteranopia")) _previewMode = RingColorPaletteSO.ColorBlindMode.Deuteranopia;
                     if (GUILayout.Button("Tritanopia")) _previewMode = RingColorPaletteSO.ColorBlindMode.Tritanopia;
                 }
-                else
-                {
-                    using (new EditorGUILayout.HorizontalScope())
-                    {
-                        if (GUILayout.Button("Off")) _previewMode = RingColorPaletteSO.ColorBlindMode.Off;
-                        if (GUILayout.Button("Protanopia")) _previewMode = RingColorPaletteSO.ColorBlindMode.Protanopia;
-                        if (GUILayout.Button("Deuteranopia")) _previewMode = RingColorPaletteSO.ColorBlindMode.Deuteranopia;
-                        if (GUILayout.Button("Tritanopia")) _previewMode = RingColorPaletteSO.ColorBlindMode.Tritanopia;
-                    }
-                }
             }
+            
+            RingFlowEditorUtils.EndSectionBox();
 
             EditorGUILayout.Space(8f);
 
             // ── Color Entries ──
-            RingFlowEditorUtils.SectionTitle("Color Entries");
+            EditorGUILayout.LabelField("Renk Tanımlamaları (Color Entries)", EditorStyles.boldLabel);
             EditorGUILayout.Space(2f);
 
             serializedObject.Update();
@@ -57,7 +57,7 @@ namespace RingFlow.Editor
                 using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
                 {
                     float labelWidth = RingFlowEditorUtils.GetResponsiveWidth(70f, 100f, 0.1f);
-                    EditorGUILayout.LabelField("Color", GUILayout.Width(labelWidth));
+                    EditorGUILayout.LabelField("Renk", GUILayout.Width(labelWidth));
                     EditorGUILayout.LabelField("Normal", GUILayout.Width(labelWidth * 0.8f));
                     EditorGUILayout.LabelField("Protanopia", GUILayout.Width(labelWidth * 0.8f));
                     EditorGUILayout.LabelField("Deuteranopia", GUILayout.Width(labelWidth * 0.9f));
@@ -106,11 +106,11 @@ namespace RingFlow.Editor
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    if (GUILayout.Button("+ Add Entry"))
+                    if (GUILayout.Button("+ Yeni Renk Ekle"))
                     {
                         entriesProp.InsertArrayElementAtIndex(entriesProp.arraySize);
                     }
-                    if (entriesProp.arraySize > 0 && GUILayout.Button("- Remove Last"))
+                    if (entriesProp.arraySize > 0 && GUILayout.Button("- Son Rengi Sil"))
                     {
                         entriesProp.DeleteArrayElementAtIndex(entriesProp.arraySize - 1);
                     }
@@ -120,30 +120,29 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(8f);
 
             // ── Quick Actions ──
-            RingFlowEditorUtils.SectionTitle("Quick Actions");
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            RingFlowEditorUtils.BeginSectionBox("Hızlı İşlemler (Quick Actions)", "Varsayılan renk paletini otomatik üretin veya renk körlüğü modlarını doldurun.");
+            
+            if (GUILayout.Button("Varsayılan Paleti Otomatik Üret", GUILayout.Height(30)))
             {
-                if (GUILayout.Button("Auto-Generate Default Palette", GUILayout.Height(30)))
+                if (EditorUtility.DisplayDialog("Otomatik Üret",
+                    "Bu işlem tüm renk girişlerini silerek varsayılan GDD renk paletini yükler. Devam etmek istiyor musunuz?",
+                    "Evet, Üret", "İptal"))
                 {
-                    if (EditorUtility.DisplayDialog("Auto-Generate",
-                        "This will replace all entries with default colors for all RingColor values. Continue?",
-                        "Generate", "Cancel"))
-                    {
-                        PopulateDefaultPalette(palette, entriesProp);
-                    }
-                }
-
-                if (GUILayout.Button("Fill Color-Blind Modes from Normal", GUILayout.Height(30)))
-                {
-                    if (EditorUtility.DisplayDialog("Fill Color-Blind",
-                        "This will copy ALL Normal colors into Protanopia, Deuteranopia, and Tritanopia fields. " +
-                        "Use this as a starting point before tuning. Continue?",
-                        "Fill", "Cancel"))
-                    {
-                        FillCbModesFromNormal(entriesProp);
-                    }
+                    PopulateDefaultPalette(palette, entriesProp);
                 }
             }
+
+            if (GUILayout.Button("Normal Renkleri Körlük Modlarına Kopyala", GUILayout.Height(30)))
+            {
+                if (EditorUtility.DisplayDialog("Renkleri Kopyala",
+                    "Bu işlem normal mod renklerini diğer tüm körlük modlarına kopyalar. Devam etmek istiyor musunuz?",
+                    "Evet, Kopyala", "İptal"))
+                {
+                    FillCbModesFromNormal(entriesProp);
+                }
+            }
+            
+            RingFlowEditorUtils.EndSectionBox();
 
             serializedObject.ApplyModifiedProperties();
         }

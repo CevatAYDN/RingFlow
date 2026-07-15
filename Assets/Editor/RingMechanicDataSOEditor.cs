@@ -32,64 +32,63 @@ namespace RingFlow.Editor
 
             if (mechanicsProp != null && mechanicsProp.isArray)
             {
-                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                RingFlowEditorUtils.BeginSectionBox("Mekanik Tipleri ve Özellikleri", "İsim ve kilit bilgileri tek kaynak kuralı gereği GameConfigDatabaseSO'dan dinamik olarak çekilir.");
+
+                for (int i = 0; i < mechanicsProp.arraySize; i++)
                 {
-                    EditorGUILayout.LabelField("Mekanik Tipleri ve Özellikleri", EditorStyles.boldLabel);
-                    EditorGUILayout.HelpBox("İsim ve kilit bilgileri tek kaynak kuralı gereği GameConfigDatabaseSO'dan dinamik olarak çekilir.", MessageType.Info);
-                    EditorGUILayout.Space(2f);
+                    var entry = mechanicsProp.GetArrayElementAtIndex(i);
+                    var typeProp = entry.FindPropertyRelative("Type");
+                    var iconProp = entry.FindPropertyRelative("Icon");
+                    var movementProp = entry.FindPropertyRelative("IsMovementRestricting");
+                    var affectedTypesProp = entry.FindPropertyRelative("AffectedRingTypes");
 
-                    for (int i = 0; i < mechanicsProp.arraySize; i++)
-                    {
-                        var entry = mechanicsProp.GetArrayElementAtIndex(i);
-                        var typeProp = entry.FindPropertyRelative("Type");
-                        var iconProp = entry.FindPropertyRelative("Icon");
-                        var movementProp = entry.FindPropertyRelative("IsMovementRestricting");
-                        var affectedTypesProp = entry.FindPropertyRelative("AffectedRingTypes");
+                    WorldMechanicType type = (WorldMechanicType)typeProp.enumValueIndex;
+                    string displayNameKey = data.GetDisplayNameKey(type, _cachedDb);
+                    int firstWorld = data.GetFirstAppearanceWorldIndex(type, _cachedDb);
 
-                        WorldMechanicType type = (WorldMechanicType)typeProp.enumValueIndex;
-                        string displayNameKey = data.GetDisplayNameKey(type, _cachedDb);
-                        int firstWorld = data.GetFirstAppearanceWorldIndex(type, _cachedDb);
-
-                        using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-                        {
-                            using (new EditorGUILayout.HorizontalScope())
-                            {
-                                // Draw icon preview
-                                var iconTex = iconProp.objectReferenceValue as Sprite;
-                                var prevBg = GUI.backgroundColor;
-                                GUILayout.Box(iconTex != null ? iconTex.texture : Texture2D.whiteTexture, GUILayout.Width(36f), GUILayout.Height(36f));
-
-                                using (new EditorGUILayout.VerticalScope())
-                                {
-                                    EditorGUILayout.LabelField($"{type} Mekaniği", EditorStyles.boldLabel);
-                                    using (new EditorGUILayout.HorizontalScope())
-                                    {
-                                        EditorGUILayout.LabelField($"Anahtar: {displayNameKey}", EditorStyles.miniLabel, GUILayout.Width(180f));
-                                        EditorGUILayout.LabelField($"İlk Dünya: Dünya {firstWorld + 1}", EditorStyles.miniLabel);
-                                    }
-                                }
-                            }
-
-                            EditorGUILayout.Space(2f);
-                            EditorGUILayout.PropertyField(iconProp, new GUIContent("Simge Varlığı (Icon Sprite)"));
-                            movementProp.boolValue = EditorGUILayout.Toggle("Hareketi Sınırlar mı", movementProp.boolValue);
-                            EditorGUILayout.PropertyField(affectedTypesProp, new GUIContent("Etkilenen Halka Tipleri"), true);
-                        }
-                        EditorGUILayout.Space(4f);
-                    }
+                    Rect rowRect = EditorGUILayout.BeginVertical();
+                    Color rowBg = i % 2 == 0 ? new Color(0.2f, 0.22f, 0.25f, 0.3f) : new Color(0.15f, 0.17f, 0.2f, 0.3f);
+                    EditorGUI.DrawRect(rowRect, rowBg);
 
                     using (new EditorGUILayout.HorizontalScope())
                     {
-                        if (GUILayout.Button("+ Yeni Mekanik Tanımı Ekle"))
+                        var iconTex = iconProp.objectReferenceValue as Sprite;
+                        GUILayout.Box(iconTex != null ? iconTex.texture : Texture2D.whiteTexture, GUILayout.Width(36f), GUILayout.Height(36f));
+
+                        using (new EditorGUILayout.VerticalScope())
                         {
-                            mechanicsProp.InsertArrayElementAtIndex(mechanicsProp.arraySize);
-                        }
-                        if (mechanicsProp.arraySize > 0 && GUILayout.Button("- Son Tanımı Sil"))
-                        {
-                            mechanicsProp.DeleteArrayElementAtIndex(mechanicsProp.arraySize - 1);
+                            EditorGUILayout.LabelField($"{type} Mekaniği", EditorStyles.boldLabel);
+                            using (new EditorGUILayout.HorizontalScope())
+                            {
+                                EditorGUILayout.LabelField($"Anahtar: {displayNameKey}", EditorStyles.miniLabel, GUILayout.Width(180f));
+                                EditorGUILayout.LabelField($"İlk Dünya: Dünya {firstWorld + 1}", EditorStyles.miniLabel);
+                            }
                         }
                     }
+
+                    EditorGUILayout.Space(2f);
+                    EditorGUILayout.PropertyField(typeProp, new GUIContent("Mekanik Tipi"));
+                    EditorGUILayout.PropertyField(iconProp, new GUIContent("Simge Varlığı (Icon Sprite)"));
+                    movementProp.boolValue = EditorGUILayout.Toggle("Hareketi Sınırlar mı", movementProp.boolValue);
+                    EditorGUILayout.PropertyField(affectedTypesProp, new GUIContent("Etkilenen Halka Tipleri"), true);
+
+                    EditorGUILayout.EndVertical();
+                    EditorGUILayout.Space(6f);
                 }
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("+ Yeni Mekanik Tanımı Ekle"))
+                    {
+                        mechanicsProp.InsertArrayElementAtIndex(mechanicsProp.arraySize);
+                    }
+                    if (mechanicsProp.arraySize > 0 && GUILayout.Button("- Son Tanımı Sil"))
+                    {
+                        mechanicsProp.DeleteArrayElementAtIndex(mechanicsProp.arraySize - 1);
+                    }
+                }
+
+                RingFlowEditorUtils.EndSectionBox();
             }
 
             serializedObject.ApplyModifiedProperties();

@@ -30,6 +30,7 @@ namespace RingFlow.Editor
         public const string LocalizationConfigPath = "Assets/Resources/" + GameplayAssetKeys.LocalizationConfig + ".asset";
         public const string RingMechanicDataPath = "Assets/Resources/" + GameplayAssetKeys.RingMechanicData + ".asset";
         public const string ThemeSkinDatabasePath = "Assets/Resources/" + GameplayAssetKeys.ThemeSkinDatabase + ".asset";
+        public const string ScreenRegistryPath = "Assets/Resources/" + GameplayAssetKeys.ScreenRegistry + ".asset";
         public const string TorusPrefabPath       = "Assets/Resources/Torus.obj";
         public const string LevelsFolder          = "Assets/Resources/Levels";
         public const string ResourcesFolder        = "Assets/Resources";
@@ -45,7 +46,9 @@ namespace RingFlow.Editor
         public const string LocalizationConfigKey = GameplayAssetKeys.LocalizationConfig;
         public const string RingMechanicDataKey = GameplayAssetKeys.RingMechanicData;
         public const string ThemeSkinDatabaseKey = GameplayAssetKeys.ThemeSkinDatabase;
+        public const string ScreenRegistryKey = GameplayAssetKeys.ScreenRegistry;
         public const string LocalizationKey = GameplayAssetKeys.Localization;
+
         public const string UiScreenPrefix        = GameplayAssetKeys.UiScreenPrefix;
 
         // ── Persistence keys (raw strings consolidated here) ──

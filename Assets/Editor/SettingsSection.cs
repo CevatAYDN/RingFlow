@@ -10,25 +10,17 @@ namespace RingFlow.Editor
 {
     public sealed class SettingsSection : EditorSection
     {
-        private static List<string> _languageOptions;
-
         private static List<string> GetLanguageOptions()
         {
-            if (_languageOptions == null)
+            var config = Resources.Load<LocalizationConfigSO>(EditorPaths.LocalizationConfigKey);
+            if (config != null && config.Languages != null && config.Languages.Count > 0)
             {
-                var config = Resources.Load<LocalizationConfigSO>(EditorPaths.LocalizationConfigKey);
-                if (config != null && config.Languages != null && config.Languages.Count > 0)
-                {
-                    _languageOptions = new List<string>(config.Languages.Count);
-                    for (int i = 0; i < config.Languages.Count; i++)
-                        _languageOptions.Add(config.Languages[i].Code);
-                }
-                else
-                {
-                    _languageOptions = new List<string> { "en", "tr", "id", "es", "fr", "de", "pt", "it", "ar", "hi", "ru", "ja", "zh", "ko", "vi" };
-                }
+                var options = new List<string>(config.Languages.Count);
+                for (int i = 0; i < config.Languages.Count; i++)
+                    options.Add(config.Languages[i].Code);
+                return options;
             }
-            return _languageOptions;
+            return new List<string> { "en", "tr", "id", "es", "fr", "de", "pt", "it", "ar", "hi", "ru", "ja", "zh", "ko", "vi" };
         }
 
         public override string DisplayName => "Accessibility & Localizer Settings";
@@ -39,48 +31,52 @@ namespace RingFlow.Editor
             DrawFoldoutHeader();
             if (!IsFoldedOut) return;
 
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            RingFlowEditorUtils.BeginSectionBox("Erişilebilirlik ve Yerelleştirme Ayarları", "Çalışma zamanında müzik, ses, haptik ve dil ayarlarını yönetin.");
+
+            if (!Application.isPlaying)
             {
-                if (!Application.isPlaying)
-                {
-                    EditorGUILayout.HelpBox(
-                        "Enter PlayMode to control settings reactively.",
-                        MessageType.Info);
-                    return;
-                }
-
-                var context = NexusRuntime.CurrentContext;
-                if (context == null)
-                {
-                    EditorGUILayout.HelpBox(
-                        "Nexus runtime context is not available yet.",
-                        MessageType.Warning);
-                    return;
-                }
-
-                var settings = context.TryResolve<SettingsModel>();
-                var localization = context.TryResolve<ILocalizationService>();
-
-                if (settings == null)
-                {
-                    EditorGUILayout.HelpBox(
-                        "SettingsModel is not resolved in current context.",
-                        MessageType.Warning);
-                    return;
-                }
-
-                ToggleRow("Music Enabled", settings.MusicEnabled);
-                ToggleRow("SFX Enabled",   settings.SfxEnabled);
-                ToggleRow("Haptic",        settings.HapticEnabled);
-                ToggleRow("Reduce Motion", settings.ReduceMotion);
-                ToggleRow("Big Buttons",   settings.BigButtons);
-
-                int blind = EditorGUILayout.IntSlider("Color Blind", settings.ColorBlindMode.Value, 0, 3);
-                if (blind != settings.ColorBlindMode.Value)
-                    settings.ColorBlindMode.Value = blind;
-
-                LanguageRow(settings, localization);
+                EditorGUILayout.HelpBox(
+                    "Ayarları canlı olarak değiştirmek için PlayMode'a girin.",
+                    MessageType.Info);
+                RingFlowEditorUtils.EndSectionBox();
+                return;
             }
+
+            var context = NexusRuntime.CurrentContext;
+            if (context == null)
+            {
+                EditorGUILayout.HelpBox(
+                    "Nexus çalışma zamanı bağlamı henüz mevcut değil.",
+                    MessageType.Warning);
+                RingFlowEditorUtils.EndSectionBox();
+                return;
+            }
+
+            var settings = context.TryResolve<SettingsModel>();
+            var localization = context.TryResolve<ILocalizationService>();
+
+            if (settings == null)
+            {
+                EditorGUILayout.HelpBox(
+                    "Mevcut bağlamda SettingsModel çözümlenemedi.",
+                    MessageType.Warning);
+                RingFlowEditorUtils.EndSectionBox();
+                return;
+            }
+
+            ToggleRow("Müzik Etkin", settings.MusicEnabled);
+            ToggleRow("Ses Efektleri Etkin (SFX)",   settings.SfxEnabled);
+            ToggleRow("Haptik Titreşim",        settings.HapticEnabled);
+            ToggleRow("Hareketi Azalt (Reduce Motion)", settings.ReduceMotion);
+            ToggleRow("Büyük Butonlar (Big Buttons)",   settings.BigButtons);
+
+            int blind = EditorGUILayout.IntSlider("Renk Körlüğü Modu", settings.ColorBlindMode.Value, 0, 3);
+            if (blind != settings.ColorBlindMode.Value)
+                settings.ColorBlindMode.Value = blind;
+
+            LanguageRow(settings, localization);
+            
+            RingFlowEditorUtils.EndSectionBox();
         }
 
         private static void ToggleRow(string label, ObservableProperty<bool> prop)

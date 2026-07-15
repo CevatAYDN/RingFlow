@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Nexus.Core;
 using Nexus.Core.FSM;
 using Nexus.Core.Services;
@@ -65,7 +66,7 @@ namespace RingFlow.Gameplay
             TryShowInterstitial(prevLevel);
             MaybeDropChests(prevLevel, prevMoves, stars);
 
-            _ = _fsm?.ChangeStateAsync<WinState>();
+            _ = DeferWinStateTransitionAsync();
         }
 
         private int ComputeStars(int moves, int target)
@@ -162,6 +163,15 @@ namespace RingFlow.Gameplay
 #endif
                 _ads.ShowInterstitial("LevelComplete");
                 _analyticsService?.InterstitialAd("LevelComplete");
+            }
+        }
+
+        private async Task DeferWinStateTransitionAsync()
+        {
+            await Task.Delay(500);
+            if (_fsm != null)
+            {
+                await _fsm.ChangeStateAsync<WinState>();
             }
         }
     }

@@ -31,119 +31,112 @@ namespace RingFlow.Editor
             DrawFoldoutHeader();
             if (!IsFoldedOut) return;
 
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            RingFlowEditorUtils.BeginSectionBox("Sahne Kurulum Kontrolleri", "Aktif veya üretilmiş seviyenin sahne tahtasını kurun ya da temizleyin.");
+
+            using (new EditorGUILayout.HorizontalScope())
             {
-                EditorGUILayout.HelpBox(
-                    "Aktif veya üretilmiş seviyenin sahne tahtasını kurun, temizleyin veya çözücü adımlarını önizleyin.",
-                    MessageType.Info);
+                if (GUILayout.Button("Sahneyi Kur (Build Board)", GUILayout.Height(32)))
+                    BuildInScene();
 
-                using (new EditorGUILayout.HorizontalScope())
+                if (GUILayout.Button("Sahneyi Temizle (Clear Board)", GUILayout.Height(32)))
                 {
-                    if (GUILayout.Button("Sahneyi Kur", GUILayout.Height(32)))
-                        BuildInScene();
-
-                    if (GUILayout.Button("Sahneyi Temizle", GUILayout.Height(32)))
-                    {
-                        ClearScene();
-                        _previewMoves.Clear();
-                        _currentPreviewIndex = -1;
-                        _solveStatusMsg = "";
-                    }
+                    ClearScene();
+                    _previewMoves.Clear();
+                    _currentPreviewIndex = -1;
+                    _solveStatusMsg = "";
                 }
             }
 
-            EditorGUILayout.Space(6f);
+            RingFlowEditorUtils.EndSectionBox();
 
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            RingFlowEditorUtils.BeginSectionBox("Çözücü Önizleme (AI Solver Preview)", "Sahnedeki güncel tahta durumuna göre yapay zeka hamle önizlemelerini takip edin.");
+
+            using (new EditorGUILayout.HorizontalScope())
             {
-                EditorGUILayout.LabelField("Çözücü Önizleme", EditorStyles.boldLabel);
-                EditorGUILayout.Space(2f);
-
-                using (new EditorGUILayout.HorizontalScope())
+                if (GUILayout.Button("Sahne Tahtasını Çöz", GUILayout.Height(26)))
                 {
-                    if (GUILayout.Button("Sahne Tahtasını Çöz", GUILayout.Height(26)))
+                    var board = ReadBoardFromScene(out var portalTargets);
+                    if (board.PoleCount == 0)
                     {
-                        var board = ReadBoardFromScene(out var portalTargets);
-                        if (board.PoleCount == 0)
+                        _solveStatusMsg = "Sahne üzerinde tahta bulunamadı. Önce sahneyi kurun.";
+                        _solvedSuccessfully = false;
+                    }
+                    else
+                    {
+                        var result = LevelSolver.Solve(board, board.MaxCapacity, portalTargets: portalTargets);
+                        _solvedSuccessfully = result.IsSolvable;
+                        if (result.IsSolvable && result.Moves != null && result.Moves.Count > 0)
                         {
-                            _solveStatusMsg = "Sahne üzerinde tahta bulunamadı. Önce sahneyi kurun.";
-                            _solvedSuccessfully = false;
+                            _initialPreviewBoard = board;
+                            _initialPreviewPortalTargets = portalTargets;
+                            _previewMoves = result.Moves;
+                            _currentPreviewIndex = -1;
+                            _solveStatusMsg = $"Çözülebilir! Hamle sayısı: {result.MoveCount}";
                         }
                         else
                         {
-                            var result = LevelSolver.Solve(board, board.MaxCapacity, portalTargets: portalTargets);
-                            _solvedSuccessfully = result.IsSolvable;
-                            if (result.IsSolvable && result.Moves != null && result.Moves.Count > 0)
-                            {
-                                _initialPreviewBoard = board;
-                                _initialPreviewPortalTargets = portalTargets;
-                                _previewMoves = result.Moves;
-                                _currentPreviewIndex = -1;
-                                _solveStatusMsg = $"Çözülebilir! Hamle sayısı: {result.MoveCount}";
-                            }
-                            else
-                            {
-                                _previewMoves.Clear();
-                                _currentPreviewIndex = -1;
-                                _solveStatusMsg = result.IsSolvable ? "Tahta zaten çözülmüş durumda!" : "Çözülemez tahta!";
-                            }
+                            _previewMoves.Clear();
+                            _currentPreviewIndex = -1;
+                            _solveStatusMsg = result.IsSolvable ? "Tahta zaten çözülmüş durumda!" : "Çözülemez tahta!";
                         }
-                    }
-                }
-
-                if (!string.IsNullOrEmpty(_solveStatusMsg))
-                {
-                    var style = new GUIStyle(EditorStyles.label)
-                    {
-                        normal = { textColor = _solvedSuccessfully ? EditorPaths.EditorColors.Success : EditorPaths.EditorColors.Error },
-                        fontStyle = FontStyle.Bold
-                    };
-                    EditorGUILayout.LabelField(_solveStatusMsg, style);
-                }
-
-                if (_previewMoves.Count > 0)
-                {
-                    EditorGUILayout.Space(4f);
-                    using (new EditorGUILayout.HorizontalScope())
-                    {
-                        using (new EditorGUI.DisabledScope(_currentPreviewIndex < 0))
-                        {
-                            if (GUILayout.Button("<< Önceki Hamle", GUILayout.Height(24)))
-                            {
-                                _currentPreviewIndex--;
-                                RebuildPreviewStep();
-                            }
-                        }
-
-                        EditorGUILayout.LabelField($"Adım: {_currentPreviewIndex + 1} / {_previewMoves.Count}", EditorStyles.centeredGreyMiniLabel, GUILayout.Width(100f));
-
-                        using (new EditorGUI.DisabledScope(_currentPreviewIndex >= _previewMoves.Count - 1))
-                        {
-                            if (GUILayout.Button("Sonraki Hamle >>", GUILayout.Height(24)))
-                            {
-                                _currentPreviewIndex++;
-                                RebuildPreviewStep();
-                            }
-                        }
-                    }
-
-                    if (_currentPreviewIndex >= 0 && _currentPreviewIndex < _previewMoves.Count)
-                    {
-                        var currentMove = _previewMoves[_currentPreviewIndex];
-                        EditorGUILayout.HelpBox($"Mevcut Adım: Direk {currentMove.FromPoleId}'den Direk {currentMove.ToPoleId}'ye taşı.", MessageType.Info);
-                    }
-                    else if (_currentPreviewIndex == -1)
-                    {
-                        EditorGUILayout.HelpBox("Başlangıç tahta durumu. Başlamak için 'Sonraki Hamle >>' butonuna tıklayın.", MessageType.None);
-                    }
-
-                    if (GUILayout.Button("Önizlemeyi Sıfırla", GUILayout.Height(20)))
-                    {
-                        _currentPreviewIndex = -1;
-                        RebuildPreviewStep();
                     }
                 }
             }
+
+            if (!string.IsNullOrEmpty(_solveStatusMsg))
+            {
+                var style = new GUIStyle(EditorStyles.label)
+                {
+                    normal = { textColor = _solvedSuccessfully ? EditorPaths.EditorColors.Success : EditorPaths.EditorColors.Error },
+                    fontStyle = FontStyle.Bold
+                };
+                EditorGUILayout.LabelField(_solveStatusMsg, style);
+            }
+
+            if (_previewMoves.Count > 0)
+            {
+                EditorGUILayout.Space(4f);
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    using (new EditorGUI.DisabledScope(_currentPreviewIndex < 0))
+                    {
+                        if (GUILayout.Button("<< Önceki Hamle", GUILayout.Height(24)))
+                        {
+                            _currentPreviewIndex--;
+                            RebuildPreviewStep();
+                        }
+                    }
+
+                    EditorGUILayout.LabelField($"Adım: {_currentPreviewIndex + 1} / {_previewMoves.Count}", EditorStyles.centeredGreyMiniLabel, GUILayout.Width(100f));
+
+                    using (new EditorGUI.DisabledScope(_currentPreviewIndex >= _previewMoves.Count - 1))
+                    {
+                        if (GUILayout.Button("Sonraki Hamle >>", GUILayout.Height(24)))
+                        {
+                            _currentPreviewIndex++;
+                            RebuildPreviewStep();
+                        }
+                    }
+                }
+
+                if (_currentPreviewIndex >= 0 && _currentPreviewIndex < _previewMoves.Count)
+                {
+                    var currentMove = _previewMoves[_currentPreviewIndex];
+                    EditorGUILayout.HelpBox($"Mevcut Adım: Direk {currentMove.FromPoleId}'den Direk {currentMove.ToPoleId}'ye taşı.", MessageType.Info);
+                }
+                else if (_currentPreviewIndex == -1)
+                {
+                    EditorGUILayout.HelpBox("Başlangıç tahta durumu. Başlamak için 'Sonraki Hamle >>' butonuna tıklayın.", MessageType.None);
+                }
+
+                if (GUILayout.Button("Önizlemeyi Sıfırla", GUILayout.Height(20)))
+                {
+                    _currentPreviewIndex = -1;
+                    RebuildPreviewStep();
+                }
+            }
+
+            RingFlowEditorUtils.EndSectionBox();
         }
 
         public void BuildFromDashboard()

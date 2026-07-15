@@ -60,6 +60,7 @@ namespace RingFlow.Editor
                 _cachedDatabase = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
             if (_cachedDatabase == null)
                 throw new System.InvalidOperationException("[GeneratorSection] GameConfigDatabaseSO is required.");
+
             using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
             {
                 EditorGUILayout.ObjectField("Zorluk Veritabanı (Database)", _cachedDatabase, typeof(GameConfigDatabaseSO), false);
@@ -68,78 +69,68 @@ namespace RingFlow.Editor
             }
             EditorGUILayout.Space(2f);
 
-            // Tüm parametreler DB'den — yerel olarak okunur, UI'da yalnızca görüntülenir
             int poleCount = _cachedDatabase.GetPoleCountForLevel(_levelIndex);
             int colorCount = _cachedDatabase.GetColorCountForLevel(_levelIndex);
             int maxCapacity = _cachedDatabase.GetMaxCapacityForLevel(_levelIndex);
             int minEmptyPoles = _cachedDatabase.GetMinEmptyPolesForLevel(_levelIndex);
 
+            RingFlowEditorUtils.BeginSectionBox("Seviye Parametreleri", "Bireysel seviye üretimi için indeks ve seed girin.");
+
+            EditorGUI.BeginChangeCheck();
+            _levelIndex = EditorGUILayout.IntSlider("Seviye Endeksi", _levelIndex, 1, _cachedDatabase.TotalLevels);
+            _seed = EditorGUILayout.IntField("Rastgele Tohum (Seed)", _seed);
+
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                EditorGUILayout.LabelField("Seviye Parametreleri", EditorStyles.boldLabel);
-
-                EditorGUI.BeginChangeCheck();
-                _levelIndex = EditorGUILayout.IntSlider("Seviye Endeksi", _levelIndex, 1, _cachedDatabase.TotalLevels);
-                _seed = EditorGUILayout.IntField("Rastgele Tohum (Seed)", _seed);
-
-                // GDD'den gelen parametreler — salt okunur, manuel tweak yok
-                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-                {
-                    if (s_gddTitleStyle == null)
-                        s_gddTitleStyle = new GUIStyle(EditorStyles.label)
-                            { fontStyle = FontStyle.Bold, normal = { textColor = EditorPaths.EditorColors.Info } };
-                    EditorGUILayout.LabelField("GDD Parametreleri:", s_gddTitleStyle);
-                    EditorGUILayout.LabelField($"• Direk Sayısı: {poleCount}");
-                    EditorGUILayout.LabelField($"• Renk Sayısı: {colorCount}");
-                    EditorGUILayout.LabelField($"• Maks. Kapasite: {maxCapacity}");
-                    EditorGUILayout.LabelField($"• Min. Boş Direk: {minEmptyPoles}");
-                }
-
-                DrawDifficultyPreview(_levelIndex);
-
-                if (EditorGUI.EndChangeCheck())
-                {
-                    EditorPrefs.SetInt(EditorPrefsKeys.LevelIndex, _levelIndex);
-                    EditorPrefs.SetInt(EditorPrefsKeys.Seed, _seed);
-                }
-
-                EditorGUILayout.Space(6f);
-
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    if (GUILayout.Button("Tek Seviye Üret", GUILayout.Height(30)))
-                        Generate();
-                }
-
-                _autoSave = EditorGUILayout.Toggle("Üretileni Otomatik Kaydet (Asset)", _autoSave);
+                if (s_gddTitleStyle == null)
+                    s_gddTitleStyle = new GUIStyle(EditorStyles.label)
+                        { fontStyle = FontStyle.Bold, normal = { textColor = EditorPaths.EditorColors.Info } };
+                EditorGUILayout.LabelField("GDD Parametreleri (Otomatik):", s_gddTitleStyle);
+                EditorGUILayout.LabelField($"• Direk Sayısı: {poleCount}");
+                EditorGUILayout.LabelField($"• Renk Sayısı: {colorCount}");
+                EditorGUILayout.LabelField($"• Maks. Kapasite: {maxCapacity}");
+                EditorGUILayout.LabelField($"• Min. Boş Direk: {minEmptyPoles}");
             }
+
+            DrawDifficultyPreview(_levelIndex);
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                EditorPrefs.SetInt(EditorPrefsKeys.LevelIndex, _levelIndex);
+                EditorPrefs.SetInt(EditorPrefsKeys.Seed, _seed);
+            }
+
+            EditorGUILayout.Space(4f);
+
+            if (GUILayout.Button("Tek Seviye Üret", GUILayout.Height(30)))
+                Generate();
+
+            _autoSave = EditorGUILayout.Toggle("Üretileni Otomatik Kaydet", _autoSave);
+
+            RingFlowEditorUtils.EndSectionBox();
 
             // Toplu Seviye Üretim Ayarları
-            EditorGUILayout.Space(10f);
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            RingFlowEditorUtils.BeginSectionBox("Toplu Seviye Üretim Paneli", "Seçilen seviye aralığındaki tüm bölümleri otomatik olarak GDD parametreleriyle üretir.");
+
+            using (new EditorGUILayout.HorizontalScope())
             {
-                EditorGUILayout.LabelField("Toplu Seviye Üretim Paneli", EditorStyles.boldLabel);
-                EditorGUILayout.HelpBox("Seçilen seviye aralığındaki tüm bölümleri otomatik olarak GDD parametreleriyle üretir ve kaydeder.", MessageType.Info);
+                _batchStartLevel = EditorGUILayout.IntField("Başlangıç Seviyesi", _batchStartLevel);
+                _batchEndLevel = EditorGUILayout.IntField("Bitiş Seviyesi", _batchEndLevel);
+            }
+            _batchStartLevel = Mathf.Clamp(_batchStartLevel, 1, _cachedDatabase.TotalLevels);
+            _batchEndLevel = Mathf.Clamp(_batchEndLevel, _batchStartLevel, _cachedDatabase.TotalLevels);
 
-                using (new EditorGUILayout.HorizontalScope())
+            int count = _batchEndLevel - _batchStartLevel + 1;
+            if (GUILayout.Button($"{_batchStartLevel} - {_batchEndLevel} Arası ({count} Seviye) Toplu Üret", GUILayout.Height(32)))
+            {
+                if (EditorUtility.DisplayDialog("Toplu Üretim",
+                    $"{_batchStartLevel} ile {_batchEndLevel} arasındaki {count} seviye GDD eğrilerine göre üretilecek. Mevcut seviyelerinizin üzerine yazılabilir. Emin misiniz?", "Evet, Üret", "İptal"))
                 {
-                    _batchStartLevel = EditorGUILayout.IntField("Başlangıç Seviyesi", _batchStartLevel);
-                    _batchEndLevel = EditorGUILayout.IntField("Bitiş Seviyesi", _batchEndLevel);
-                }
-                _batchStartLevel = Mathf.Clamp(_batchStartLevel, 1, _cachedDatabase.TotalLevels);
-                _batchEndLevel = Mathf.Clamp(_batchEndLevel, _batchStartLevel, _cachedDatabase.TotalLevels);
-
-                int count = _batchEndLevel - _batchStartLevel + 1;
-                if (GUILayout.Button($"{_batchStartLevel} - {_batchEndLevel} Arası ({count} Seviye) Toplu Üret", GUILayout.Height(32)))
-                {
-                    if (EditorUtility.DisplayDialog("Toplu Üretim",
-                        $"{_batchStartLevel} ile {_batchEndLevel} arasındaki {count} seviye GDD eğrilerine göre üretilecek. " +
-                        "Mevcut seviyelerinizin üzerine yazılabilir. Emin misiniz?", "Evet, Üret", "İptal"))
-                    {
-                        GenerateAllLevels();
-                    }
+                    GenerateAllLevels();
                 }
             }
+
+            RingFlowEditorUtils.EndSectionBox();
 
             if (_generateInProgress)
                 EditorGUILayout.HelpBox("Toplu seviye üretimi devam ediyor... Lütfen bekleyin.", MessageType.Info);
@@ -186,8 +177,8 @@ namespace RingFlow.Editor
         {
             if (_generatedLevel == null) return;
 
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Üretilen Seviye Bilgileri:", EditorStyles.boldLabel);
+            RingFlowEditorUtils.BeginSectionBox("Üretilen Seviye Bilgileri", "Yapay zeka tarafından doğrulanmış bölüm detayları.");
+
             var db = _cachedDatabase;
             int level = _generatedLevel.LevelIndex;
             var band = db.GetBandForLevel(level);
@@ -220,17 +211,21 @@ namespace RingFlow.Editor
                 }
             }
 
+            RingFlowEditorUtils.EndSectionBox();
+
             LevelVisualRenderer.Draw(_generatedLevel);
 
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Yapay Zeka Çözüm Yolu:", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField($"Durum: {_solveStatus}", EditorStyles.wordWrappedLabel);
+            RingFlowEditorUtils.BeginSectionBox("Yapay Zeka Çözüm Yolu", $"Durum: {_solveStatus}");
 
-            if (_solutionSteps.Count == 0) return;
-            _solutionScroll = EditorGUILayout.BeginScrollView(_solutionScroll, GUILayout.Height(120));
-            for (int i = 0; i < _solutionSteps.Count; i++)
-                EditorGUILayout.LabelField($"{i + 1}. {_solutionSteps[i]}");
-            EditorGUILayout.EndScrollView();
+            if (_solutionSteps.Count > 0)
+            {
+                _solutionScroll = EditorGUILayout.BeginScrollView(_solutionScroll, GUILayout.Height(120));
+                for (int i = 0; i < _solutionSteps.Count; i++)
+                    EditorGUILayout.LabelField($"{i + 1}. {_solutionSteps[i]}");
+                EditorGUILayout.EndScrollView();
+            }
+
+            RingFlowEditorUtils.EndSectionBox();
         }
 
         public void GenerateFromDashboard() { Generate(); }

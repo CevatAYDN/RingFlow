@@ -88,9 +88,10 @@ namespace RingFlow.Editor
             return EditorGUIUtility.currentViewWidth < threshold;
         }
 
-        public static int GetResponsiveColumns(float targetCellWidth, int minColumns = 1, int maxColumns = 6)
+        public static int GetResponsiveColumns(float targetCellWidth, int minColumns = 1, int maxColumns = 6, float availableWidth = -1f)
         {
-            float usableWidth = Mathf.Max(1f, EditorGUIUtility.currentViewWidth - 24f);
+            float w = availableWidth > 0f ? availableWidth : EditorGUIUtility.currentViewWidth;
+            float usableWidth = Mathf.Max(1f, w - 24f);
             int columns = Mathf.Max(minColumns, Mathf.FloorToInt(usableWidth / Mathf.Max(1f, targetCellWidth)));
             return Mathf.Clamp(columns, minColumns, maxColumns);
         }
@@ -161,9 +162,91 @@ namespace RingFlow.Editor
             }
         }
 
+        public static void BeginSectionBox(string title, string subtitle = null)
+        {
+            Rect rect = EditorGUILayout.BeginVertical(GUIStyle.none);
+            
+            if (Event.current.type == EventType.Repaint)
+            {
+                // Draw background and border
+                EditorGUI.DrawRect(rect, new Color(0.18f, 0.20f, 0.23f, 1f));
+                DrawRectBorder(rect, new Color(0.28f, 0.30f, 0.35f, 1f), 1);
+                
+                // Left blue vertical stripe
+                Rect stripeRect = new Rect(rect.x, rect.y, 4f, rect.height);
+                EditorGUI.DrawRect(stripeRect, EditorPaths.EditorColors.Info);
+            }
+            
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(12f);
+            GUILayout.BeginVertical();
+            GUILayout.Space(8f);
+            
+            if (!string.IsNullOrEmpty(title))
+            {
+                var titleStyle = new GUIStyle(EditorStyles.boldLabel) { fontSize = 10, normal = { textColor = Color.white } };
+                EditorGUILayout.LabelField(title.ToUpper(), titleStyle);
+                if (!string.IsNullOrEmpty(subtitle))
+                {
+                    var subStyle = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = EditorPaths.EditorColors.MutedText } };
+                    EditorGUILayout.LabelField(subtitle, subStyle);
+                }
+                EditorGUILayout.Space(4f);
+            }
+        }
+        
+        public static void EndSectionBox()
+        {
+            GUILayout.Space(8f);
+            GUILayout.EndVertical();
+            GUILayout.Space(12f);
+            GUILayout.EndHorizontal();
+            EditorGUILayout.EndVertical();
+            EditorGUILayout.Space(6f);
+        }
+
         // -----------------------------------------------------------------
         //  Foldout section (shared by dashboard + SO editors)
         // -----------------------------------------------------------------
+
+        public static bool DrawHeaderFoldout(string title, bool expanded)
+        {
+            Rect rect = GUILayoutUtility.GetRect(0f, 26f, GUILayout.ExpandWidth(true));
+            
+            bool isHover = rect.Contains(Event.current.mousePosition);
+            Color bgColor = expanded 
+                ? new Color(0.2f, 0.22f, 0.26f, 1f) 
+                : (isHover ? new Color(0.18f, 0.20f, 0.24f, 0.8f) : new Color(0.14f, 0.16f, 0.18f, 1f));
+            
+            if (Event.current.type == EventType.Repaint)
+            {
+                EditorGUI.DrawRect(rect, bgColor);
+                DrawRectBorder(rect, new Color(0.24f, 0.26f, 0.30f, 1f), 1);
+                
+                // Left indicator stripe
+                Rect stripeRect = new Rect(rect.x, rect.y, 4f, rect.height);
+                EditorGUI.DrawRect(stripeRect, expanded ? EditorPaths.EditorColors.Info : Color.gray);
+            }
+            
+            var style = new GUIStyle(EditorStyles.boldLabel)
+            {
+                alignment = TextAnchor.MiddleLeft,
+                fontSize = 11,
+                padding = new RectOffset(16, 4, 0, 0)
+            };
+            style.normal.textColor = expanded ? Color.white : EditorPaths.EditorColors.MutedText;
+            
+            GUI.Label(rect, (expanded ? "▼ " : "► ") + title.ToUpper(), style);
+            
+            if (Event.current.type == EventType.MouseDown && rect.Contains(Event.current.mousePosition))
+            {
+                expanded = !expanded;
+                GUI.FocusControl(null);
+                Event.current.Use();
+            }
+            
+            return expanded;
+        }
 
         /// <summary>
         /// Draws a persistent (EditorPrefs-backed) collapsible section. The
@@ -173,13 +256,19 @@ namespace RingFlow.Editor
         public static void FoldoutSection(string foldKey, string title, System.Action drawContent)
         {
             bool expanded = EditorPrefs.GetBool(foldKey, true);
-            var prevBg = GUI.backgroundColor;
-            GUI.backgroundColor = EditorPaths.EditorColors.HeaderAccent;
-            expanded = EditorGUILayout.Foldout(expanded, title, true, EditorStyles.foldoutHeader);
-            GUI.backgroundColor = prevBg;
+            expanded = DrawHeaderFoldout(title, expanded);
             EditorPrefs.SetBool(foldKey, expanded);
-            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionSpacing);
-            if (expanded) drawContent();
+            
+            if (expanded)
+            {
+                EditorGUILayout.Space(6f);
+                drawContent();
+                EditorGUILayout.Space(12f);
+            }
+            else
+            {
+                EditorGUILayout.Space(2f); // minimal spacing when collapsed so accordion headers align beautifully!
+            }
         }
 
         // -----------------------------------------------------------------

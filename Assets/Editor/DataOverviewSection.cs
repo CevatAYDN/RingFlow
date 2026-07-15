@@ -117,68 +117,67 @@ namespace RingFlow.Editor
                 RunComplianceAudit();
             }
 
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            RingFlowEditorUtils.BeginSectionBox("GDD Uyum ve Tek Kaynak Denetimi", "Tüm oyun sistemlerinin GDD (§3, §4, §5) kurallarına uyumunu denetleyin.");
+
+            using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
-                using (new EditorGUILayout.HorizontalScope())
+                var prevColor = GUI.color;
+
+                GUI.color = EditorPaths.EditorColors.Success;
+                EditorGUILayout.LabelField($"✔ GEÇTİ: {_auditPassCount}", EditorStyles.boldLabel, GUILayout.Width(100f));
+
+                GUI.color = EditorPaths.EditorColors.Warning;
+                EditorGUILayout.LabelField($"⚠ UYARI: {_auditWarnCount}", EditorStyles.boldLabel, GUILayout.Width(100f));
+
+                GUI.color = EditorPaths.EditorColors.Error;
+                EditorGUILayout.LabelField($"✘ HATA: {_auditFailCount}", EditorStyles.boldLabel, GUILayout.Width(100f));
+
+                GUI.color = prevColor;
+
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("Denetimi Yeniden Çalıştır", EditorStyles.miniButton, GUILayout.Width(160f)))
                 {
-                    EditorGUILayout.LabelField("GDD Uyum ve Tek Kaynak Denetimi", EditorStyles.boldLabel);
-                    GUILayout.FlexibleSpace();
-                    if (GUILayout.Button("Denetimi Yeniden Çalıştır", EditorStyles.miniButton, GUILayout.Width(160f)))
-                    {
-                        RunComplianceAudit();
-                    }
-                }
-
-                EditorGUILayout.Space(2f);
-
-                // Summary stats row
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    var prevColor = GUI.color;
-
-                    GUI.color = EditorPaths.EditorColors.Success;
-                    EditorGUILayout.LabelField($"✔ GEÇTİ: {_auditPassCount}", EditorStyles.boldLabel, GUILayout.Width(100f));
-
-                    GUI.color = EditorPaths.EditorColors.Warning;
-                    EditorGUILayout.LabelField($"⚠ UYARI: {_auditWarnCount}", EditorStyles.boldLabel, GUILayout.Width(100f));
-
-                    GUI.color = EditorPaths.EditorColors.Error;
-                    EditorGUILayout.LabelField($"✘ HATA: {_auditFailCount}", EditorStyles.boldLabel, GUILayout.Width(100f));
-
-                    GUI.color = prevColor;
-                }
-
-                EditorGUILayout.Space(4f);
-
-                // Draw audit items
-                foreach (var result in _auditResults)
-                {
-                    Color statusColor = result.Status switch
-                    {
-                        AuditStatus.Pass => EditorPaths.EditorColors.Success,
-                        AuditStatus.Warning => EditorPaths.EditorColors.Warning,
-                        _ => EditorPaths.EditorColors.Error
-                    };
-
-                    string prefix = result.Status switch
-                    {
-                        AuditStatus.Pass => "[GEÇTİ]",
-                        AuditStatus.Warning => "[UYARI]",
-                        _ => "[HATA]"
-                    };
-
-                    using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
-                    {
-                        var prevColor = GUI.color;
-                        GUI.color = statusColor;
-                        EditorGUILayout.LabelField(prefix, EditorStyles.boldLabel, GUILayout.Width(65f));
-                        GUI.color = prevColor;
-
-                        EditorGUILayout.LabelField(result.Title, EditorStyles.boldLabel, GUILayout.Width(180f));
-                        EditorGUILayout.LabelField(result.Message, EditorStyles.wordWrappedLabel);
-                    }
+                    RunComplianceAudit();
                 }
             }
+
+            EditorGUILayout.Space(4f);
+
+            for (int i = 0; i < _auditResults.Count; i++)
+            {
+                var result = _auditResults[i];
+                Color statusColor = result.Status switch
+                {
+                    AuditStatus.Pass => EditorPaths.EditorColors.Success,
+                    AuditStatus.Warning => EditorPaths.EditorColors.Warning,
+                    _ => EditorPaths.EditorColors.Error
+                };
+
+                string prefix = result.Status switch
+                {
+                    AuditStatus.Pass => "✔ GEÇTİ",
+                    AuditStatus.Warning => "⚠ UYARI",
+                    _ => "✘ HATA"
+                };
+
+                Rect rowRect = EditorGUILayout.BeginHorizontal(GUILayout.MinHeight(22f));
+                Color rowBg = i % 2 == 0 ? new Color(0.2f, 0.22f, 0.25f, 0.3f) : new Color(0.15f, 0.17f, 0.2f, 0.3f);
+                EditorGUI.DrawRect(rowRect, rowBg);
+
+                var statusStyle = new GUIStyle(EditorStyles.miniLabel)
+                {
+                    fontStyle = FontStyle.Bold,
+                    normal = { textColor = statusColor }
+                };
+                EditorGUILayout.LabelField(prefix, statusStyle, GUILayout.Width(70f));
+                EditorGUILayout.LabelField(result.Title, EditorStyles.boldLabel, GUILayout.Width(180f));
+                EditorGUILayout.LabelField(result.Message, EditorStyles.wordWrappedLabel);
+
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.Space(2f);
+            }
+
+            RingFlowEditorUtils.EndSectionBox();
         }
 
         private void RunComplianceAudit()

@@ -28,6 +28,8 @@ namespace RingFlow.Gameplay
         public const string LocalizationConfig = "Configs/LocalizationConfig";
         public const string RingMechanicData = "Configs/RingMechanicData";
         public const string ThemeSkinDatabase = "Configs/ThemeSkinDatabase";
+        public const string ScreenRegistry = "Configs/ScreenRegistry";
+
 
         public const string UiScreenPrefix = "UI/";
 

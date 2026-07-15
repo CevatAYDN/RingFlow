@@ -26,6 +26,11 @@ namespace RingFlow.Gameplay
 
         public void Execute(UndoRequestedSignal signal)
         {
+            if (_model.IsGameWon.Value)
+            {
+                return;
+            }
+
             if (_model.MoveHistory.Count == 0)
             {
                 NexusLog.Warn("UndoRequestedCommand", "Execute", "", "No moves to undo.");

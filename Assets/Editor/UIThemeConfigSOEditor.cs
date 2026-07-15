@@ -19,73 +19,50 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(4f);
 
             // ── Visual Palette Preview ──
-            bool narrowPreview = RingFlowEditorUtils.IsNarrowWidth(560f);
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            RingFlowEditorUtils.BeginSectionBox("Görsel Palet Önizleme", "Aktif renk paleti kartlarının canlı renk önizlemeleri.");
+            using (new EditorGUILayout.HorizontalScope())
             {
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    DrawColorBox(config.PrimaryColor, "Primary");
-                    DrawColorBox(config.AccentColor, "Accent");
-                    DrawColorBox(config.BgColor, "BG");
-                }
-                if (narrowPreview)
-                {
-                    using (new EditorGUILayout.HorizontalScope())
-                    {
-                        DrawColorBox(config.SurfaceColor, "Surface");
-                        DrawColorBox(config.PanelColor, "Panel");
-                        DrawColorBox(config.TextColor, "Text");
-                    }
-                }
-                else
-                {
-                    using (new EditorGUILayout.HorizontalScope())
-                    {
-                        DrawColorBox(config.SurfaceColor, "Surface");
-                        DrawColorBox(config.PanelColor, "Panel");
-                        DrawColorBox(config.TextColor, "Text");
-                    }
-                }
+                DrawColorBox(config.PrimaryColor, "Primary");
+                DrawColorBox(config.AccentColor, "Accent");
+                DrawColorBox(config.BgColor, "BG");
+                DrawColorBox(config.SurfaceColor, "Surface");
+                DrawColorBox(config.PanelColor, "Panel");
+                DrawColorBox(config.TextColor, "Text");
             }
+            RingFlowEditorUtils.EndSectionBox();
             EditorGUILayout.Space(4f);
 
             EditorGUI.BeginChangeCheck();
 
-            RingFlowEditorUtils.SectionTitle("Renkler");
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-            {
-                config.PrimaryColor = ColorField("Birincil Renk", config.PrimaryColor);
-                config.PrimaryPressed = ColorField("Birincil Basılı", config.PrimaryPressed);
-                config.AccentColor = ColorField("Vurgu Rengi", config.AccentColor);
-                config.BgColor = ColorField("Arka Plan Rengi", config.BgColor);
-                config.SurfaceColor = ColorField("Yüzey Rengi", config.SurfaceColor);
-                config.PanelColor = ColorField("Panel Rengi", config.PanelColor);
-                config.TextColor = ColorField("Metin Rengi", config.TextColor);
-                config.MutedText = ColorField("Sönük Metin", config.MutedText);
-                config.DangerColor = ColorField("Tehlike Rengi", config.DangerColor);
-                config.SuccessColor = ColorField("Başarı Rengi", config.SuccessColor);
-            }
+            RingFlowEditorUtils.BeginSectionBox("Renkler", "Arayüz genelinde kullanılacak temel renk kodları.");
+            config.PrimaryColor = ColorField("Birincil Renk", config.PrimaryColor);
+            config.PrimaryPressed = ColorField("Birincil Basılı", config.PrimaryPressed);
+            config.AccentColor = ColorField("Vurgu Rengi", config.AccentColor);
+            config.BgColor = ColorField("Arka Plan Rengi", config.BgColor);
+            config.SurfaceColor = ColorField("Yüzey Rengi", config.SurfaceColor);
+            config.PanelColor = ColorField("Panel Rengi", config.PanelColor);
+            config.TextColor = ColorField("Metin Rengi", config.TextColor);
+            config.MutedText = ColorField("Sönük Metin", config.MutedText);
+            config.DangerColor = ColorField("Tehlike Rengi", config.DangerColor);
+            config.SuccessColor = ColorField("Başarı Rengi", config.SuccessColor);
+            RingFlowEditorUtils.EndSectionBox();
             EditorGUILayout.Space(6f);
 
-            RingFlowEditorUtils.SectionTitle("Yerleşim Tokenları");
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-            {
-                config.PanelElevation = EditorGUILayout.FloatField("Panel Yükseltmesi", config.PanelElevation);
-                config.ButtonHeight = EditorGUILayout.FloatField("Buton Yüksekliği", config.ButtonHeight);
-                config.ButtonWidth = EditorGUILayout.FloatField("Buton Genişliği", config.ButtonWidth);
-                config.ButtonFontSize = EditorGUILayout.IntField("Buton Yazı Boyutu", config.ButtonFontSize);
-            }
+            RingFlowEditorUtils.BeginSectionBox("Yerleşim Tokenları", "Buton boyutları ve panel yükseltme değerleri.");
+            config.PanelElevation = EditorGUILayout.FloatField("Panel Yükseltmesi", config.PanelElevation);
+            config.ButtonHeight = EditorGUILayout.FloatField("Buton Yüksekliği", config.ButtonHeight);
+            config.ButtonWidth = EditorGUILayout.FloatField("Buton Genişliği", config.ButtonWidth);
+            config.ButtonFontSize = EditorGUILayout.IntField("Buton Yazı Boyutu", config.ButtonFontSize);
+            RingFlowEditorUtils.EndSectionBox();
             EditorGUILayout.Space(6f);
 
-            RingFlowEditorUtils.SectionTitle("Buton Renk Ön Ayarları");
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-            {
-                config.PrimaryButtonColors = DrawButtonColors("Birincil Buton", config.PrimaryButtonColors);
-                config.OutlineButtonColors = DrawButtonColors("Çerçeve Buton", config.OutlineButtonColors);
-                config.DangerButtonColors = DrawButtonColors("Tehlike Buton", config.DangerButtonColors);
-                config.TextButtonColors = DrawButtonColors("Metin Buton", config.TextButtonColors);
-                config.IconButtonColors = DrawButtonColors("Simge Buton", config.IconButtonColors);
-            }
+            RingFlowEditorUtils.BeginSectionBox("Buton Renk Ön Ayarları", "Buton durumlarına göre (normal, basılı, pasif) renk geçişleri.");
+            config.PrimaryButtonColors = DrawButtonColors("Birincil Buton", config.PrimaryButtonColors);
+            config.OutlineButtonColors = DrawButtonColors("Çerçeve Buton", config.OutlineButtonColors);
+            config.DangerButtonColors = DrawButtonColors("Tehlike Buton", config.DangerButtonColors);
+            config.TextButtonColors = DrawButtonColors("Metin Buton", config.TextButtonColors);
+            config.IconButtonColors = DrawButtonColors("Simge Buton", config.IconButtonColors);
+            RingFlowEditorUtils.EndSectionBox();
 
             if (EditorGUI.EndChangeCheck())
             {
@@ -100,16 +77,13 @@ namespace RingFlow.Editor
 
         private static ButtonColorConfig DrawButtonColors(string title, ButtonColorConfig button)
         {
-            RingFlowEditorUtils.SectionTitle(title);
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-            {
-                button.NormalColor = EditorGUILayout.ColorField("Normal", button.NormalColor);
-                button.HighlightedColor = EditorGUILayout.ColorField("Vurgulu", button.HighlightedColor);
-                button.PressedColor = EditorGUILayout.ColorField("Basılı", button.PressedColor);
-                button.SelectedColor = EditorGUILayout.ColorField("Seçili", button.SelectedColor);
-                button.DisabledColor = EditorGUILayout.ColorField("Pasif", button.DisabledColor);
-            }
-            EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+            button.NormalColor = EditorGUILayout.ColorField("  Normal", button.NormalColor);
+            button.HighlightedColor = EditorGUILayout.ColorField("  Vurgulu", button.HighlightedColor);
+            button.PressedColor = EditorGUILayout.ColorField("  Basılı", button.PressedColor);
+            button.SelectedColor = EditorGUILayout.ColorField("  Seçili", button.SelectedColor);
+            button.DisabledColor = EditorGUILayout.ColorField("  Pasif", button.DisabledColor);
+            EditorGUILayout.Space(6f);
             return button;
         }
 

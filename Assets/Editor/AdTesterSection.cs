@@ -22,89 +22,95 @@ namespace RingFlow.Editor
             DrawFoldoutHeader();
             if (!IsFoldedOut) return;
 
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            if (!_placementLoaded)
+            {
+                _placement = EditorPrefs.GetString(EditorPrefsKeys.AdPlacement, DefaultPlacement);
+                _placementLoaded = true;
+            }
+
+            RingFlowEditorUtils.BeginSectionBox("Reklam Test Cihazı (Editor Mock)", "Reklam yerleşimlerini mock reklam bağdaştırıcısıyla test edin.");
+
+            EditorGUI.BeginChangeCheck();
+            _placement = EditorGUILayout.TextField(
+                new GUIContent("Yerleşim Kimliği (Placement)", "AdMob/Unity Ads placement ID. Saved across domain reloads."), _placement);
+            if (EditorGUI.EndChangeCheck())
+                EditorPrefs.SetString(EditorPrefsKeys.AdPlacement, _placement);
+
+            if (!Application.isPlaying)
             {
                 EditorGUILayout.HelpBox(
-                    "Tests ad placements against the mock adapter. In production, replace the adapter with AdMob/Unity Ads.",
+                    "Reklam testleri için PlayMode gereklidir — Nexus, AdService'i başlatmalıdır.",
                     MessageType.Info);
+                RingFlowEditorUtils.EndSectionBox();
+                return;
+            }
 
-                EditorGUI.BeginChangeCheck();
-                _placement = EditorGUILayout.TextField(
-                    new GUIContent("Placement", "AdMob/Unity Ads placement ID. Saved across domain reloads."), _placement);
-                if (EditorGUI.EndChangeCheck())
-                    EditorPrefs.SetString(EditorPrefsKeys.AdPlacement, _placement);
+            var context = NexusRuntime.CurrentContext;
+            if (context == null)
+            {
+                EditorGUILayout.HelpBox("Nexus çalışma zamanı bağlamı henüz mevcut değil.", MessageType.Warning);
+                RingFlowEditorUtils.EndSectionBox();
+                return;
+            }
+            var ads = context.TryResolve<IAdService>();
+            if (ads == null)
+            {
+                EditorGUILayout.HelpBox("Mevcut bağlamda IAdService kayıt edilmemiş.", MessageType.Warning);
+                RingFlowEditorUtils.EndSectionBox();
+                return;
+            }
 
-                if (!Application.isPlaying)
+            bool narrow = RingFlowEditorUtils.IsNarrowWidth(520f);
+            if (narrow)
+            {
+                if (GUILayout.Button("Ödüllü Reklam Göster (Rewarded)", GUILayout.Height(ButtonHeight)))
                 {
-                    EditorGUILayout.HelpBox(
-                        "Ad tests require PlayMode — Nexus must initialize the AdService.",
-                        MessageType.Info);
-                    return;
+                    SafeInvoke(() => ads.ShowRewarded(_placement, success =>
+                    {
+                        _lastResult = $"Rewarded '{_placement}': success={success}";
+                    }));
                 }
-
-                var context = NexusRuntime.CurrentContext;
-                if (context == null)
+                if (GUILayout.Button("Geçiş Reklamı Göster (Interstitial)", GUILayout.Height(ButtonHeight)))
                 {
-                    EditorGUILayout.HelpBox("Nexus runtime context is not available yet.", MessageType.Warning);
-                    return;
+                    SafeInvoke(() => ads.ShowInterstitial(_placement, () =>
+                    {
+                        _lastResult = $"Interstitial '{_placement}' closed";
+                    }));
                 }
-                var ads = context.TryResolve<IAdService>();
-                if (ads == null)
+                if (GUILayout.Button("Banner Göster", GUILayout.Height(ButtonHeight)))  SafeInvoke(() => ads.ShowBanner(_placement, "bottom"));
+                if (GUILayout.Button("Banner Gizle", GUILayout.Height(ButtonHeight)))  SafeInvoke(() => ads.HideBanner());
+            }
+            else
+            {
+                using (new EditorGUILayout.HorizontalScope())
                 {
-                    EditorGUILayout.HelpBox("IAdService not registered in current context.", MessageType.Warning);
-                    return;
-                }
-
-                bool narrow = RingFlowEditorUtils.IsNarrowWidth(520f);
-                if (narrow)
-                {
-                    if (GUILayout.Button("Show Rewarded", GUILayout.Height(ButtonHeight)))
+                    if (GUILayout.Button("Ödüllü Reklam Göster (Rewarded)", GUILayout.Height(ButtonHeight)))
                     {
                         SafeInvoke(() => ads.ShowRewarded(_placement, success =>
                         {
                             _lastResult = $"Rewarded '{_placement}': success={success}";
                         }));
                     }
-                    if (GUILayout.Button("Show Interstitial", GUILayout.Height(ButtonHeight)))
+                    if (GUILayout.Button("Geçiş Reklamı Göster (Interstitial)", GUILayout.Height(ButtonHeight)))
                     {
                         SafeInvoke(() => ads.ShowInterstitial(_placement, () =>
                         {
                             _lastResult = $"Interstitial '{_placement}' closed";
                         }));
                     }
-                    if (GUILayout.Button("Show Banner", GUILayout.Height(ButtonHeight)))  SafeInvoke(() => ads.ShowBanner(_placement, "bottom"));
-                    if (GUILayout.Button("Hide Banner", GUILayout.Height(ButtonHeight)))  SafeInvoke(() => ads.HideBanner());
                 }
-                else
+                using (new EditorGUILayout.HorizontalScope())
                 {
-                    using (new EditorGUILayout.HorizontalScope())
-                    {
-                        if (GUILayout.Button("Show Rewarded", GUILayout.Height(ButtonHeight)))
-                        {
-                            SafeInvoke(() => ads.ShowRewarded(_placement, success =>
-                            {
-                                _lastResult = $"Rewarded '{_placement}': success={success}";
-                            }));
-                        }
-                        if (GUILayout.Button("Show Interstitial", GUILayout.Height(ButtonHeight)))
-                        {
-                            SafeInvoke(() => ads.ShowInterstitial(_placement, () =>
-                            {
-                                _lastResult = $"Interstitial '{_placement}' closed";
-                            }));
-                        }
-                    }
-                    using (new EditorGUILayout.HorizontalScope())
-                    {
-                        if (GUILayout.Button("Show Banner", GUILayout.Height(ButtonHeight)))  SafeInvoke(() => ads.ShowBanner(_placement, "bottom"));
-                        if (GUILayout.Button("Hide Banner", GUILayout.Height(ButtonHeight)))  SafeInvoke(() => ads.HideBanner());
-                    }
+                    if (GUILayout.Button("Banner Göster", GUILayout.Height(ButtonHeight)))  SafeInvoke(() => ads.ShowBanner(_placement, "bottom"));
+                    if (GUILayout.Button("Banner Gizle", GUILayout.Height(ButtonHeight)))  SafeInvoke(() => ads.HideBanner());
                 }
-
-                EditorGUILayout.Space();
-                EditorGUILayout.LabelField("Last result:", EditorStyles.boldLabel);
-                EditorGUILayout.LabelField(_lastResult);
             }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Son Sonuç:", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(_lastResult);
+            
+            RingFlowEditorUtils.EndSectionBox();
         }
 
         private static void SafeInvoke(System.Action action)

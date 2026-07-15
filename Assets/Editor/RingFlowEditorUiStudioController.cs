@@ -25,41 +25,52 @@ namespace RingFlow.Editor
 
         public void DrawTab()
         {
-            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
-            {
-                DrawInitControls();
-                EditorGUILayout.Space(EditorPaths.EditorSizes.SectionSpacing);
-                DrawQuickActions();
-                EditorGUILayout.Space(EditorPaths.EditorSizes.SectionSpacing);
-                DrawScreenTree();
-                EditorGUILayout.Space(EditorPaths.EditorSizes.SectionSpacing);
-                DrawSignalTester();
-                EditorGUILayout.Space(EditorPaths.EditorSizes.SectionSpacing);
-                DrawPersistence();
-            }
+            DrawInitControlsAndActions();
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionSpacing);
+            DrawScreenTree();
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionSpacing);
+            DrawSignalTester();
         }
 
-        // ── Init controls ──
-
-        private void DrawInitControls()
+        private void DrawInitControlsAndActions()
         {
             var uiRoot = EditorSceneContext.GetUIRoot();
+            string status = uiRoot switch
+            {
+                null => "EKSİK",
+                _ when uiRoot.Canvas != null => "Hazır",
+                _ => "Başlatma Bekliyor"
+            };
+
+            RingFlowEditorUtils.BeginSectionBox("Arayüz Yönetim Kontrolleri", $"UIRoot: {(uiRoot != null ? uiRoot.name : "—")}  [{status}]");
+
             using (new EditorGUILayout.HorizontalScope())
             {
-                string status = uiRoot switch
+                using (new EditorGUI.DisabledScope(uiRoot == null))
                 {
-                    null => "EKSİK",
-                    _ when uiRoot.Canvas != null => "Hazır",
-                    _ => "Başlatma Bekliyor"
-                };
+                    if (GUILayout.Button(new GUIContent("Tüm Ekranları Yenile", "UIRoot içindeki tüm prefab ekranlarını yeniden yükler."), GUILayout.Height(26)))
+                        ReloadPrefabScreens(uiRoot);
+                    if (GUILayout.Button(new GUIContent("Tuvali Sıfırla", "UIRoot üzerindeki tüm ekranları ve Canvas'ı temizler."), GUILayout.Height(26)))
+                        ResetUIRootCanvas(uiRoot);
+                }
 
-                EditorGUILayout.LabelField(
-                    $"UIRoot: {(uiRoot != null ? uiRoot.name : "—")}  [{status}]",
-                    EditorStyles.boldLabel,
-                    GUILayout.MinWidth(280f));
-                GUILayout.FlexibleSpace();
+                if (GUILayout.Button(new GUIContent("Eksik Ekranları Oluştur", "Eksik UI prefablarını oluşturur."), GUILayout.Height(26)))
+                    RingFlowEditorUiStudio.CreateMissingUIScreenPrefabs();
 
-                if (GUILayout.Button("Yenile", GUILayout.Width(70f), GUILayout.Height(22)))
+                if (GUILayout.Button(new GUIContent("JSON Dışa Aktar", "UI ağacını JSON olarak kaydeder."), GUILayout.Height(26)))
+                    ExportUIHierarchyAsJson();
+            }
+
+            EditorGUILayout.Space(4f);
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("Sahneyi Kaydet", GUILayout.Height(24)))
+                {
+                    UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
+                    NexusLog.Info("RingFlowEditorUiStudioController", "DrawInitControlsAndActions", "SaveScene", "[RingFlow] Sahne mevcut durumla kaydedildi.");
+                }
+                if (GUILayout.Button("Yenile", GUILayout.Width(80f), GUILayout.Height(24)))
                 {
                     var window = EditorWindow.HasOpenInstances<RingFlowEditorWindow>()
                         ? EditorWindow.GetWindow<RingFlowEditorWindow>()
@@ -67,30 +78,8 @@ namespace RingFlow.Editor
                     window?.Repaint();
                 }
             }
-        }
 
-        // ── Quick actions ──
-
-        private void DrawQuickActions()
-        {
-            var uiRoot = EditorSceneContext.GetUIRoot();
-
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                using (new EditorGUI.DisabledScope(uiRoot == null))
-                {
-                    if (GUILayout.Button(new GUIContent("Tüm Ekranları Yenile", "UIRoot içindeki tüm prefab ekranlarını yeniden yükler."), GUILayout.Height(22)))
-                        ReloadPrefabScreens(uiRoot);
-                    if (GUILayout.Button(new GUIContent("Tuvali Sıfırla", "UIRoot üzerindeki tüm ekranları ve Canvas'ı temizler."), GUILayout.Height(22)))
-                        ResetUIRootCanvas(uiRoot);
-                }
-
-                if (GUILayout.Button(new GUIContent("Eksik Ekranları Oluştur", "Eksik UI prefablarını oluşturur."), GUILayout.Height(22)))
-                    RingFlowEditorUiStudio.CreateMissingUIScreenPrefabs();
-
-                if (GUILayout.Button(new GUIContent("JSON Dışa Aktar", "UI ağacını JSON olarak kaydeder."), GUILayout.Height(22)))
-                    ExportUIHierarchyAsJson();
-            }
+            RingFlowEditorUtils.EndSectionBox();
         }
 
         // ── Screen tree ──
@@ -114,109 +103,82 @@ namespace RingFlow.Editor
             int subs = uiRoot.Subscriptions?.Count ?? 0;
             string playSuffix = Application.isPlaying ? "" : " (PlayMode değil — sinyaller çalışmaz)";
 
-            using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
-            {
-                EditorGUILayout.LabelField(
-                    $"Aktif: {activeName}   Popuplar: {popups}   Abonelik: {subs}{playSuffix}",
-                    EditorStyles.miniLabel);
-                GUILayout.FlexibleSpace();
-                if (GUILayout.Button("Tümünü Yenile", GUILayout.Width(96f), GUILayout.Height(20f)))
-                    ReloadPrefabScreens(uiRoot);
-            }
+            RingFlowEditorUtils.BeginSectionBox("UIRoot Ekran Ağacı (Screen Tree)", $"Aktif: {activeName}   Popuplar: {popups}   Abonelik: {subs}{playSuffix}");
 
             if (screens.Count == 0)
             {
                 EditorGUILayout.HelpBox("Kayıtlı ekran bulunamadı.", MessageType.Info);
+                RingFlowEditorUtils.EndSectionBox();
                 return;
             }
 
             _uiScroll = EditorGUILayout.BeginScrollView(_uiScroll, GUILayout.Height(ScreenTreeHeight));
+            int rowIndex = 0;
             foreach (var pair in screens)
             {
                 ScreenType screen = pair.Key;
                 var go = pair.Value as GameObject;
-                DrawScreenRow(screen, go, uiRoot);
+                DrawScreenRow(screen, go, uiRoot, rowIndex++);
             }
             EditorGUILayout.EndScrollView();
+
+            RingFlowEditorUtils.EndSectionBox();
         }
 
-        private void DrawScreenRow(ScreenType screen, GameObject go, UIRoot uiRoot)
+        private void DrawScreenRow(ScreenType screen, GameObject go, UIRoot uiRoot, int rowIndex)
         {
             bool isActiveScreen = uiRoot.ActiveExclusiveScreen.Equals(screen);
             int btnCount = CountButtons(go);
 
-            using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
-            {
-                string marker = isActiveScreen ? ">>" : "  ";
-                string state = go == null ? "YOK" : (go.activeSelf ? "Açık" : "Gizli");
-                var style = new GUIStyle(EditorStyles.label)
-                {
-                    fontStyle = isActiveScreen ? FontStyle.Bold : FontStyle.Normal
-                };
-                EditorGUILayout.LabelField($"{marker} {screen,-14} [{state}] {btnCount} Buton", style,
-                    GUILayout.MinWidth(240f));
+            Rect rowRect = EditorGUILayout.BeginHorizontal(GUILayout.Height(22f));
+            Color rowBg = rowIndex % 2 == 0 ? new Color(0.2f, 0.22f, 0.25f, 0.3f) : new Color(0.15f, 0.17f, 0.2f, 0.3f);
+            EditorGUI.DrawRect(rowRect, rowBg);
 
-                using (new EditorGUI.DisabledScope(go == null))
-                {
-                    if (GUILayout.Button(new GUIContent("Göster", "Ekranı aktif yapar."), GUILayout.Width(48f)))
-                        ManualSetScreenActive(uiRoot, screen, true);
-                    if (GUILayout.Button(new GUIContent("Gizle", "Ekranı devre dışı bırakır."), GUILayout.Width(48f)))
-                        ManualSetScreenActive(uiRoot, screen, false);
-                    if (GUILayout.Button(new GUIContent("Sinyal", "ShowScreenSignal fırlatır (PlayMode gerekir)."), GUILayout.Width(56f)))
-                        FireShowScreen(screen);
-                    if (GUILayout.Button(new GUIContent("Aç", "Prefab kaynağını seçer."), GUILayout.Width(48f)))
-                        OpenPrefabSourceForScreen(screen, go);
-                }
+            string marker = isActiveScreen ? ">>" : "  ";
+            string state = go == null ? "YOK" : (go.activeSelf ? "Açık" : "Gizli");
+            var style = new GUIStyle(EditorStyles.label)
+            {
+                fontStyle = isActiveScreen ? FontStyle.Bold : FontStyle.Normal
+            };
+            if (isActiveScreen)
+                style.normal.textColor = EditorPaths.EditorColors.Info;
+
+            EditorGUILayout.LabelField($"{marker} {screen,-14} [{state}] {btnCount} Buton", style,
+                GUILayout.MinWidth(240f));
+
+            using (new EditorGUI.DisabledScope(go == null))
+            {
+                if (GUILayout.Button(new GUIContent("Göster", "Ekranı aktif yapar."), GUILayout.Width(48f), GUILayout.Height(16f)))
+                    ManualSetScreenActive(uiRoot, screen, true);
+                if (GUILayout.Button(new GUIContent("Gizle", "Ekranı devre dışı bırakır."), GUILayout.Width(48f), GUILayout.Height(16f)))
+                    ManualSetScreenActive(uiRoot, screen, false);
+                if (GUILayout.Button(new GUIContent("Sinyal", "ShowScreenSignal fırlatır (PlayMode gerekir)."), GUILayout.Width(56f), GUILayout.Height(16f)))
+                    FireShowScreen(screen);
+                if (GUILayout.Button(new GUIContent("Aç", "Prefab kaynağını seçer."), GUILayout.Width(48f), GUILayout.Height(16f)))
+                    OpenPrefabSourceForScreen(screen, go);
             }
+
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.Space(2f);
         }
 
         // ── Signal tester ──
 
         private void DrawSignalTester()
         {
+            RingFlowEditorUtils.BeginSectionBox("Sinyal Test Cihazı (Signal Tester)", "Play Mode sırasında ekran geçiş sinyallerini manuel olarak fırlatın.");
+
             using (new EditorGUILayout.HorizontalScope())
             {
-                EditorGUILayout.LabelField("Sinyal Test Edici (PlayMode gerekir)",
-                    EditorStyles.miniBoldLabel, GUILayout.Width(220f));
-                _selectedScreen = (ScreenType)EditorGUILayout.EnumPopup(_selectedScreen, GUILayout.Width(140f));
-                if (GUILayout.Button(new GUIContent("Göster Sinyali",
-                        "ShowScreenSignal fırlatır."), GUILayout.Height(22)))
+                _selectedScreen = (ScreenType)EditorGUILayout.EnumPopup("Hedef Ekran", _selectedScreen, GUILayout.Width(280f));
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button(new GUIContent("Göster Sinyali Fırlat", "ShowScreenSignal fırlatır."), GUILayout.Height(22)))
                     FireShowScreen(_selectedScreen);
-                if (GUILayout.Button(new GUIContent("Gizle Sinyali",
-                        "HideScreenSignal fırlatır."), GUILayout.Height(22)))
+                if (GUILayout.Button(new GUIContent("Gizle Sinyali Fırlat", "HideScreenSignal fırlatır."), GUILayout.Height(22)))
                     FireHideScreen(_selectedScreen);
             }
-        }
 
-        // ── Persistence ──
-
-        private void DrawPersistence()
-        {
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                if (GUILayout.Button("Sahneyi Kaydet", GUILayout.Height(24)))
-                {
-                    UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
-                    NexusLog.Info("RingFlowEditorUiStudioController", "DrawPersistence", "SaveScene", "[RingFlow] Sahne mevcut durumla kaydedildi.");
-                }
-                if (GUILayout.Button("Prefab Ekranlarını Yenile", GUILayout.Height(24)))
-                {
-                    try
-                    {
-                        var uiRoot = EditorSceneContext.GetUIRoot();
-                        if (uiRoot != null) ReloadPrefabScreens(uiRoot);
-                    }
-                    catch (System.Exception ex)
-                    {
-                        NexusLog.Error("RingFlowEditorUiStudioController", "DrawPersistence", "RefreshPrefabScreens", ex.ToString());
-                        EditorUtility.DisplayDialog("Prefab Ekranlarını Yenile", ex.Message, "Tamam");
-                    }
-                }
-                if (GUILayout.Button("Eksik Ekranları Oluştur", GUILayout.Height(24)))
-                    RingFlowEditorUiStudio.CreateMissingUIScreenPrefabs();
-                if (GUILayout.Button("UI Yapısını Dışa Aktar (JSON)", GUILayout.Height(24)))
-                    ExportUIHierarchyAsJson();
-            }
+            RingFlowEditorUtils.EndSectionBox();
         }
 
         // ── Public actions ──

@@ -288,6 +288,37 @@ namespace RingFlow.Gameplay.UI
             ScreenType.ParentalGate,
         };
 
+    private string GetScreenPrefabKey(ScreenType screen)
+    {
+        var registry = Resources.Load<ScreenRegistrySO>(GameplayAssetKeys.ScreenRegistry);
+        if (registry != null && registry.TryGetMapping(screen, out var mapping))
+        {
+            if (!string.IsNullOrEmpty(mapping.PrefabPath))
+            {
+                return mapping.PrefabPath;
+            }
+        }
+        return $"{GameplayAssetKeys.UiScreenPrefix}{screen}";
+    }
+
+    private List<ScreenType> GetScreensToLoad()
+    {
+        var list = new List<ScreenType>();
+        var registry = Resources.Load<ScreenRegistrySO>(GameplayAssetKeys.ScreenRegistry);
+        if (registry != null && registry.Mappings.Count > 0)
+        {
+            for (int i = 0; i < registry.Mappings.Count; i++)
+            {
+                list.Add(registry.Mappings[i].Screen);
+            }
+        }
+        else
+        {
+            list.AddRange(s_allScreens);
+        }
+        return list;
+    }
+
     public void LoadPrefabScreensFromResources()
     {
         EnsureCanvasExists();
@@ -298,8 +329,9 @@ namespace RingFlow.Gameplay.UI
         }
 
         var missingScreens = new List<ScreenType>();
+        var screensToLoad = GetScreensToLoad();
 
-        foreach (var screen in s_allScreens)
+        foreach (var screen in screensToLoad)
         {
             if (_screens.TryGetValue(screen, out var existing) && existing != null)
             {
@@ -311,7 +343,7 @@ namespace RingFlow.Gameplay.UI
             {
                 missingScreens.Add(screen);
                 NexusLog.Warn("UIRoot", nameof(LoadPrefabScreensFromResources), "",
-                    $"Missing UI prefab for {screen}. Expected Assets/Resources/UI/{screen}.prefab");
+                    $"Missing UI prefab for {screen}. Expected: {GetScreenPrefabKey(screen)}");
                 continue;
             }
 
@@ -352,8 +384,9 @@ namespace RingFlow.Gameplay.UI
 
         var assets = ResolveAssetService();
         var missingScreens = new List<ScreenType>();
+        var screensToLoad = GetScreensToLoad();
 
-        foreach (var screen in s_allScreens)
+        foreach (var screen in screensToLoad)
         {
             if (ct.IsCancellationRequested) return;
 
@@ -363,11 +396,12 @@ namespace RingFlow.Gameplay.UI
             }
 
             GameObject loaded = null;
+            string prefabKey = GetScreenPrefabKey(screen);
             if (assets != null)
             {
                 try
                 {
-                    loaded = await assets.LoadAssetAsync<GameObject>($"{GameplayAssetKeys.UiScreenPrefix}{screen}").ConfigureAwait(true);
+                    loaded = await assets.LoadAssetAsync<GameObject>(prefabKey).ConfigureAwait(true);
                 }
                 catch (System.Exception ex)
                 {
@@ -383,7 +417,7 @@ namespace RingFlow.Gameplay.UI
             {
                 missingScreens.Add(screen);
                 NexusLog.Warn("UIRoot", nameof(LoadPrefabScreensAsync), "",
-                    $"Missing UI prefab for {screen}. Expected Assets/Resources/UI/{screen}.prefab");
+                    $"Missing UI prefab for {screen}. Expected: {prefabKey}");
                 continue;
             }
 
@@ -474,16 +508,17 @@ namespace RingFlow.Gameplay.UI
 
         private GameObject LoadScreenPrefab(ScreenType screen)
         {
+            string prefabKey = GetScreenPrefabKey(screen);
             if (_root != null && _root.Context != null)
             {
                 var asset = _root.Context.TryResolve<Services.IAssetService>();
                 if (asset != null)
                 {
-                    var task = asset.LoadAsync<GameObject>($"{GameplayAssetKeys.UiScreenPrefix}{screen}");
+                    var task = asset.LoadAsync<GameObject>(prefabKey);
                     return task.GetAwaiter().GetResult();
                 }
             }
-            return Resources.Load<GameObject>($"{GameplayAssetKeys.UiScreenPrefix}{screen}");
+            return Resources.Load<GameObject>(prefabKey);
         }
 
         private void DestroyScreenInstance(GameObject go)
