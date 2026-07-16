@@ -1,6 +1,7 @@
 using System;
 using UnityEngine.Scripting;
 using RingFlow.Gameplay;
+using RingFlow.Gameplay.Rules;
 using RingFlow.Gameplay.Strategies;
 
 
@@ -87,12 +88,26 @@ namespace RingFlow.Gameplay.AOT
             typeof(PaintRingStrategy).ToString();
             typeof(RainbowRingStrategy).ToString();
             typeof(StandardRingStrategy).ToString();
+            // FIX-OPEN3: New move strategies added in recent ring mechanic work
+            typeof(BombMoveStrategy).ToString();
+            typeof(ChainMoveStrategy).ToString();
+            typeof(FrozenMoveStrategy).ToString();
+            typeof(GhostMoveStrategy).ToString();
+            typeof(GlassMoveStrategy).ToString();
 
             // Ring validation strategies
             typeof(StandardRingValidationStrategy).ToString();
             typeof(KeyRingValidationStrategy).ToString();
             typeof(StoneRingValidationStrategy).ToString();
             typeof(FrozenRingValidationStrategy).ToString();
+            // FIX-OPEN3: New validation strategies added in recent ring mechanic work
+            typeof(BombValidationStrategy).ToString();
+            typeof(ChainValidationStrategy).ToString();
+            typeof(GhostValidationStrategy).ToString();
+            typeof(GlassValidationStrategy).ToString();
+            typeof(MagnetValidationStrategy).ToString();
+            typeof(RainbowValidationStrategy).ToString();
+            typeof(PaintValidationStrategy).ToString();
 
             // Strategy managers
             typeof(RingMoveStrategyManager).ToString();
@@ -146,6 +161,13 @@ namespace RingFlow.Gameplay.AOT
             typeof(ChestClaimAllSignal).ToString();
             typeof(OpenChestPopupSignal).ToString();
             typeof(CloseChestPopupSignal).ToString();
+            // FIX-OPEN3: New signals added in recent ring mechanic / ghost / portal work
+            typeof(LevelLostSignal).ToString();
+            typeof(GhostRevealedSignal).ToString();
+            typeof(GhostRestoredSignal).ToString();
+            typeof(PortalTeleportSignal).ToString();
+            typeof(BombCounterRestoredSignal).ToString();
+            typeof(BombTickSignal).ToString();
         }
 
         /// <summary>

@@ -81,7 +81,16 @@ namespace RingFlow.Editor
             if (_cachedDatabase == null)
                 _cachedDatabase = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
             if (_cachedDatabase == null)
-                throw new System.InvalidOperationException("[GeneratorSection] GameConfigDatabaseSO is required.");
+            {
+                // FIX-E1: throw in OnGUI() crashes the entire editor window and prevents
+                // the user from fixing the problem. Use DisplayDialog so the window stays
+                // open and the user can assign the database asset.
+                EditorUtility.DisplayDialog("Veritabanı Bulunamadı",
+                    $"GameConfigDatabaseSO '{EditorPaths.GameConfigDatabaseKey}' path'inde bulunamadı.\n" +
+                    "Lütfen Resources/Configs/ klasöründe 'GameConfigDatabase' asset'inin mevcut olduğunu doğrulayın.",
+                    "Tamam");
+                return;
+            }
 
             using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
             {
@@ -311,12 +320,21 @@ namespace RingFlow.Editor
         private void Generate()
         {
             var db = _cachedDatabase;
+            // FIX-E1: Replace throw with DisplayDialog — throwing inside an editor method
+            // crashes the window and prevents the user from correcting the problem.
             if (db == null)
-                throw new System.InvalidOperationException("[GeneratorSection.Generate] GameConfigDatabaseSO is required.");
+            {
+                EditorUtility.DisplayDialog("Veritabanı Eksik",
+                    "[GeneratorSection.Generate] GameConfigDatabaseSO is required.", "Tamam");
+                return;
+            }
             if (_levelIndex < 1 || _levelIndex > db.TotalLevels)
-                throw new System.ArgumentOutOfRangeException(nameof(_levelIndex),
+            {
+                EditorUtility.DisplayDialog("Geçersiz Seviye İndeksi",
                     $"Level index {_levelIndex} is out of range [1, {db.TotalLevels}]. " +
-                    "Update DB TotalLevels or enter a valid index.");
+                    "Update DB TotalLevels or enter a valid index.", "Tamam");
+                return;
+            }
 
             int poleCount = db.GetPoleCountForLevel(_levelIndex);
             int colorCount = db.GetColorCountForLevel(_levelIndex);
@@ -324,8 +342,12 @@ namespace RingFlow.Editor
             int minEmptyPoles = db.GetMinEmptyPolesForLevel(_levelIndex);
 
             if (poleCount > db.LevelGen.PoleCountClamp)
-                throw new System.InvalidOperationException(
-                    $"Pole count {poleCount} exceeds PoleCountClamp {db.LevelGen.PoleCountClamp} for level {_levelIndex}. Update DB PoleCountClamp or adjust the level config.");
+            {
+                EditorUtility.DisplayDialog("Direk Sayısı Sınırı Aşıldı",
+                    $"Pole count {poleCount} exceeds PoleCountClamp {db.LevelGen.PoleCountClamp} for level {_levelIndex}. " +
+                    "Update DB PoleCountClamp or adjust the level config.", "Tamam");
+                return;
+            }
 
             NexusLog.Info("RingFlowEditor", nameof(Generate), _levelIndex.ToString(),
                 $"Seviye {_levelIndex} üretiliyor: Seed={_seed}, Direkler={poleCount}, Renkler={colorCount}, Kapasite={maxCapacity}, BoşDirek={minEmptyPoles}");

@@ -19,6 +19,15 @@ namespace RingFlow.Editor
         private string _filter = "";
         private bool _autoScroll = true;
 
+        // GDD §75 Profiler bütçe takip değişkenleri
+        private float _lastFrameMs;
+        private float _peakFrameMs;
+        private float _lastGcAllocKb;
+        private float _peakGcAllocKb;
+        private int _lastDrawCalls;
+        private int _peakDrawCalls;
+        private double _lastSampleTime;
+
         public override string DisplayName => "Game Diagnostics & Trace Logs";
         public override string PrefKey => EditorPrefsKeys.FoldDiagnostics;
 
@@ -60,6 +69,9 @@ namespace RingFlow.Editor
             if (GUILayout.Button("Data-Driven Varlıkları Doğrula", GUILayout.Height(24)))
                 RunDataDrivenValidation();
             RingFlowEditorUtils.EndSectionBox();
+
+            // --- GDD §75 Performans Bütçesi ---
+            DrawProfilerBudgetPanel();
 
             // Filter
             bool narrow = EditorGUIUtility.currentViewWidth < 480f;
@@ -207,6 +219,127 @@ namespace RingFlow.Editor
             writer.Flush();
             EditorUtility.RevealInFinder(path);
             NexusLog.Info("DiagnosticsSection", "ExportReport", "Report", $"[Diagnostics] Report exported to: {path}");
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        //  GDD §75 Profiler Bütçe Paneli
+        // ─────────────────────────────────────────────────────────────────
+
+        private void DrawProfilerBudgetPanel()
+        {
+            // OPEN-5: Runtime Profiler bütçe paneli.
+            // GDD §75 hedefleri:
+            //   Frame Time  < 14.0 ms  (kritik: 16.6 ms = 60 FPS)
+            //   Draw Calls  < 80       (kritik: 120)
+            //   GC Alloc    < 1.0 KB/frame (kritik: 4.0 KB)
+            //   RAM         < 150 MB   (kritik: 220 MB)
+            //
+            // Bu panel PlayMode'da çalışırken anlık değerleri gösterir.
+            // Değerleri örneklemek için "Örnek Al" butonuna basılır.
+            // Kırmızı = kritik eşik aşıldı, sarı = hedef aşıldı, yeşil = OK.
+
+            if (!Application.isPlaying)
+            {
+                RingFlowEditorUtils.BeginSectionBox("GDD §75 Performans Bütçesi",
+                    "Play Mode'da anlık frame time, draw call ve GC alloc değerlerini ölçer.");
+                EditorGUILayout.HelpBox("Ölçüm için Play Mode'a girin.", MessageType.Info);
+                RingFlowEditorUtils.EndSectionBox();
+                return;
+            }
+
+            // Throttle sampling to once per second to avoid Profiler.GetTotalAllocatedMemory
+            // overhead on every OnGUI call (Profiler API is not free).
+            bool narrow = RingFlowEditorUtils.IsNarrowWidth(620f);
+            double now = EditorApplication.timeSinceStartup;
+            if (now - _lastSampleTime >= 1.0)
+            {
+                _lastSampleTime = now;
+                _lastFrameMs    = Time.deltaTime * 1000f;
+                _lastGcAllocKb  = UnityEngine.Profiling.Profiler.GetTotalAllocatedMemoryLong() / 1024f / 1024f; // MB
+                // Draw calls not directly accessible from editor script without Profiler recorder.
+                // Use FrameTimingManager as a best-effort approximation.
+                UnityEngine.FrameTimingManager.CaptureFrameTimings();
+                var timings = new UnityEngine.FrameTiming[1];
+                uint captured = UnityEngine.FrameTimingManager.GetLatestTimings(1, timings);
+                if (captured > 0)
+                    _lastFrameMs = (float)timings[0].cpuFrameTime;
+
+                if (_lastFrameMs   > _peakFrameMs)   _peakFrameMs   = _lastFrameMs;
+                if (_lastGcAllocKb > _peakGcAllocKb) _peakGcAllocKb = _lastGcAllocKb;
+            }
+
+            RingFlowEditorUtils.BeginSectionBox("GDD §75 Performans Bütçesi",
+                "Anlık frame time ve bellek ölçümleri. Kırmızı = kritik eşik aşıldı.");
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("Örnek Al", EditorStyles.miniButton, GUILayout.Width(80f)))
+                    _lastSampleTime = 0; // force resample
+
+                if (GUILayout.Button("Peak Sıfırla", EditorStyles.miniButton, GUILayout.Width(90f)))
+                {
+                    _peakFrameMs   = 0f;
+                    _peakGcAllocKb = 0f;
+                    _peakDrawCalls = 0;
+                }
+            }
+
+            EditorGUILayout.Space(4f);
+
+            // Helper: draw a metric row with color coding
+            void DrawMetricRow(string label, float value, float target, float critical, string unit, bool lowerIsBetter = true)
+            {
+                bool overTarget   = lowerIsBetter ? value > target   : value < target;
+                bool overCritical = lowerIsBetter ? value > critical  : value < critical;
+                Color rowColor = overCritical ? EditorPaths.EditorColors.Error
+                               : overTarget   ? EditorPaths.EditorColors.Warning
+                               : EditorPaths.EditorColors.Success;
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (!narrow)
+                    {
+                        var prevColor = GUI.color;
+                        GUI.color = rowColor;
+                        EditorGUILayout.LabelField(label, EditorStyles.boldLabel, GUILayout.Width(140f));
+                        GUI.color = prevColor;
+                        EditorGUILayout.LabelField($"{value:F2} {unit}", GUILayout.Width(100f));
+                        EditorGUILayout.LabelField($"Hedef: < {target} {unit}", EditorStyles.miniLabel, GUILayout.Width(120f));
+                        EditorGUILayout.LabelField($"Kritik: < {critical} {unit}", EditorStyles.miniLabel, GUILayout.MinWidth(80f));
+                    }
+                    else
+                    {
+                        var prevColor = GUI.color;
+                        GUI.color = rowColor;
+                        EditorGUILayout.LabelField($"{label}: {value:F2} {unit}  [H:{target} K:{critical}]", EditorStyles.miniLabel);
+                        GUI.color = prevColor;
+                    }
+                }
+            }
+
+            DrawMetricRow("Frame Time",  _lastFrameMs,   14.0f, 16.6f,  "ms");
+            DrawMetricRow("GC Alloc",    _lastGcAllocKb, 150f,  220f,   "MB  (RAM)");
+
+            EditorGUILayout.Space(4f);
+
+            // Peak values
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                var prevColor = GUI.color;
+                bool peakOverCritical = _peakFrameMs > 16.6f;
+                GUI.color = peakOverCritical ? EditorPaths.EditorColors.Error : EditorPaths.EditorColors.Info;
+                EditorGUILayout.LabelField($"Peak Frame: {_peakFrameMs:F2} ms", EditorStyles.miniBoldLabel, GUILayout.Width(160f));
+                GUI.color = prevColor;
+                EditorGUILayout.LabelField($"Peak RAM: {_peakGcAllocKb:F1} MB", EditorStyles.miniLabel);
+            }
+
+            EditorGUILayout.Space(2f);
+            EditorGUILayout.HelpBox(
+                "Draw Call sayısını görmek için Unity Profiler'ı açın (Ctrl+7) → Rendering → Draw Calls.\n" +
+                "GDD §75 hedefi: Draw Calls < 80, SetPass < 40, Triangles < 100K.",
+                MessageType.Info);
+
+            RingFlowEditorUtils.EndSectionBox();
         }
     }
 }

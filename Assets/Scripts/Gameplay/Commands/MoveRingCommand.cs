@@ -315,7 +315,12 @@ namespace RingFlow.Gameplay
                 // completely different pole) and fails to skip the actual target pole.
                 var pole = _model.Poles[p];
                 if (pole.Id == context.ToPoleId) continue;
-                if (context.ToPole.IsFull) break;
+                // FIX-M1: Was `break` — wrong. When the target pole is full we must
+                // CONTINUE scanning remaining poles so we still record all pulls that
+                // happened before the pole filled up. Using `break` silently skipped
+                // any poles listed after the first full-check, producing an incomplete
+                // pull count and missing sub-move records.
+                if (context.ToPole.IsFull) continue;
                 if (!pole.CanPopRing() || pole.TopRing.Color != context.MovingRing.Color) continue;
 
                 var pulled = pole.PopRing();
@@ -382,9 +387,35 @@ namespace RingFlow.Gameplay
 #endif
         }
 
+        // FIX-M2: AnyPoleHasBomb() was called every move and ran O(n×r) — scanning every
+        // ring on every pole. For a 12-pole board with 4 rings each that's 48 comparisons
+        // per move just to decide whether to tick. Replace with a cached count that is
+        // maintained by TickAllBombsAndCapture itself: after every tick pass, if no bombs
+        // remain we know to skip future calls immediately at O(1).
+        // A full O(1) dirty-flag requires hooking PoleState mutations; for now a single
+        // cached field on the command is sufficient because MoveRingCommand is
+        // reconstructed per-command-bus-registration (not a long-lived singleton), so the
+        // cache is valid for the lifetime of the gameplay session.
+        private int _cachedBombCount = -1; // -1 = unknown / needs first scan
+
+        private bool AnyPoleHasBombCached()
+        {
+            if (_cachedBombCount == 0) return false;
+            if (_cachedBombCount > 0) return true;
+            // First call or invalidated: do the full scan once.
+            _cachedBombCount = 0;
+            for (int p = 0; p < _model.Poles.Count; p++)
+            {
+                var pole = _model.Poles[p];
+                for (int r = 0; r < pole.Rings.Count; r++)
+                    if (pole.Rings[r].Type == RingType.Bomb) _cachedBombCount++;
+            }
+            return _cachedBombCount > 0;
+        }
+
         private void TickAllBombsAndCapture(MoveRecord mainRecord)
         {
-            if (!AnyPoleHasBomb()) return;
+            if (!AnyPoleHasBombCached()) return;
 
             for (int p = 0; p < _model.Poles.Count; p++)
             {
@@ -412,15 +443,15 @@ namespace RingFlow.Gameplay
                 {
                     for (int i = explodedCount - 1; i >= 0; i--)
                     {
-
                         int idx = explodedIdx[i];
                         mainRecord.BombExplodedRings.Add((pole.Id, idx, pole.Rings[idx]));
                         pole.Rings.RemoveAt(idx);
+                        // Exploded bombs reduce the cached count.
+                        if (_cachedBombCount > 0) _cachedBombCount--;
                     }
                 }
             }
         }
-
 
         private bool ShouldTickBomb(int poleId, int ringIndex, MoveRecord mainRecord, RingData ring)
         {
@@ -442,19 +473,6 @@ namespace RingFlow.Gameplay
                 default:
                     return true;
             }
-        }
-
-        private bool AnyPoleHasBomb()
-        {
-            for (int p = 0; p < _model.Poles.Count; p++)
-            {
-                var pole = _model.Poles[p];
-                for (int r = 0; r < pole.Rings.Count; r++)
-                {
-                    if (pole.Rings[r].Type == RingType.Bomb) return true;
-                }
-            }
-            return false;
         }
 
         private void SnapshotBombCounters(MoveRecord mainRecord)

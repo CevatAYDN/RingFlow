@@ -186,6 +186,13 @@ namespace RingFlow.Gameplay
         [Tooltip("Camera micro-shake duration on pole complete.")]
         public float CompleteShakeDuration = 0.15f;
 
+        [Header("Win State Transition")]
+        [Tooltip("Delay in milliseconds before transitioning to WinState after level is completed. " +
+                 "Allows the completion animation to play before the screen changes.")]
+        public int WinStateDelayMs = 500;
+        [Tooltip("Delay in milliseconds for the retry attempt when WinState transition fails.")]
+        public int WinStateRetryDelayMs = 1000;
+
         [Header("Pool Sizes")]
         public int RingPoolSize = 100;
         public int RingPopPoolSize = 50;

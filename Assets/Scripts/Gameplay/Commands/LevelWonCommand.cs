@@ -15,6 +15,7 @@ namespace RingFlow.Gameplay
         [Inject] private IAdService _ads;
         [Inject] private GameConfigDatabaseSO _dbConfig;
         [Inject] private IAnalyticsService _analyticsService;
+        [Inject] private GameFeelConfigSO _feelConfig;
 
         private GameBalanceConfig Cfg
         {
@@ -168,9 +169,15 @@ namespace RingFlow.Gameplay
 
         private async Task DeferWinStateTransitionAsync()
         {
+            // FIX-A5: Hardcoded 500ms delay replaced with GameFeelConfigSO.WinStateDelayMs
+            // so designers can tune the win-screen transition timing without a code change.
+            // Falls back to 500ms if _feelConfig is not injected (e.g. in unit tests).
+            int delayMs      = _feelConfig != null ? _feelConfig.WinStateDelayMs      : 500;
+            int retryDelayMs = _feelConfig != null ? _feelConfig.WinStateRetryDelayMs : 1000;
+
             try
             {
-                await Task.Delay(500);
+                await Task.Delay(delayMs);
                 if (_fsm != null)
                 {
                     await _fsm.ChangeStateAsync<WinState>();
@@ -185,7 +192,7 @@ namespace RingFlow.Gameplay
                 try
                 {
                     // Recovery attempt: try again after a brief delay
-                    await Task.Delay(1000);
+                    await Task.Delay(retryDelayMs);
                     if (_fsm != null)
                     {
                         await _fsm.ChangeStateAsync<WinState>();

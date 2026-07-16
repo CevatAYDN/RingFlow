@@ -674,7 +674,16 @@ namespace RingFlow.Gameplay
         public void ClearBoard()
         {
             HideTutorialArrow();
+
+            // FIX-V3: Destroy cached materials before clearing to prevent GPU leak.
+            // ClearBoard() is called every time BuildBoard() is called (level reload,
+            // undo rebuild). Without Destroy(), each rebuild leaks the previous material set.
+            foreach (var mat in _ringMaterialCache.Values)
+            {
+                if (mat != null) Destroy(mat);
+            }
             _ringMaterialCache.Clear();
+
             foreach (var pole in _spawnedPoles)
                 if (pole != null) RecyclePole(pole.gameObject);
             _spawnedPoles.Clear();
@@ -869,7 +878,29 @@ namespace RingFlow.Gameplay
                 Destroy(_proceduralTorusMesh);
                 _proceduralTorusMesh = null;
             }
+
+            // FIX-V3: _ringMaterialCache previously called Clear() without destroying
+            // the cached Material objects. Unity materials are unmanaged GPU resources —
+            // Clear() drops the C# reference but does NOT release the GPU allocation,
+            // causing a memory leak every time the board is rebuilt (ClearBoard calls
+            // _ringMaterialCache.Clear()) and on scene unload.
+            // Fix: Destroy every cached material before clearing the dictionary.
+            foreach (var mat in _ringMaterialCache.Values)
+            {
+                if (mat != null) Destroy(mat);
+            }
             _ringMaterialCache.Clear();
+
+            // Also clean up the shared pole materials (static fields, destroyed here
+            // because BoardView owns their lifecycle in the scene).
+            if (_openPoleMaterial != null)   { Destroy(_openPoleMaterial);   _openPoleMaterial   = null; }
+            if (_lockedPoleMaterial != null) { Destroy(_lockedPoleMaterial); _lockedPoleMaterial = null; }
+
+            if (_bloomPulseController != null)
+            {
+                Destroy(_bloomPulseController.gameObject);
+                _bloomPulseController = null;
+            }
         }
 
         private static Shader GetDefaultShader()
@@ -1206,12 +1237,27 @@ namespace RingFlow.Gameplay
             textMesh.anchor = TextAnchor.MiddleCenter;
             textMesh.alignment = TextAlignment.Center;
             textMesh.fontStyle = FontStyle.Bold;
-            textMesh.font = GetBuiltinLabelFont();
+
+            var font = GetBuiltinLabelFont();
+            textMesh.font = font;
+
+            // OPEN-4: Draw call reduction — all TextMesh overlays share the same
+            // font material instance so Unity can batch them into a single draw call.
+            // Each TextMesh.font has a .material property; assigning sharedMaterial
+            // prevents per-instance material copies (which Unity creates by default
+            // when you access .material, not .sharedMaterial).
+            // Production upgrade path: replace TextMesh with a sprite quad that reads
+            // from a RingIconConfig ScriptableObject (sprite atlas per ring type).
+            // That will reduce this to 1 draw call regardless of ring count via
+            // SpriteAtlas batching.
             var mr = overlayGo.GetComponent<MeshRenderer>();
             if (mr != null)
             {
                 mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 mr.receiveShadows = false;
+                // Share the font's material across all overlays so they batch.
+                if (font != null && font.material != null)
+                    mr.sharedMaterial = font.material;
             }
         }
 
@@ -1364,68 +1410,6 @@ namespace RingFlow.Gameplay
         }
     }
 
-    // FIX-V2: Two issues in the original RainbowCycle:
-    //
-    // 1. _propBlock allocated in Start() — Start() may not run before the first
-    //    Update() when the component is added via AddComponent at runtime (the frame
-    //    boundary is not guaranteed). If Update fires first, _propBlock is null and
-    //    GetPropertyBlock throws NullReferenceException. Fix: lazy-init in Update().
-    //
-    // 2. Renderer cached in Start() via GetComponentInParent — but Initialize() is
-    //    called before Start() runs, so any early Update() also misses the renderer.
-    //    Fix: cache renderer eagerly in Initialize() and in Awake() as a second pass.
-    //
-    // 3. No cleanup on pool-return: when RecycleRing destroys the RainbowCycle child
-    //    OR the ring is returned to pool, the MaterialPropertyBlock color persists on
-    //    the renderer, visually tainting the next ring that uses it.
-    //    Fix: clear the property block in OnDisable().
-    public class RainbowCycle : MonoBehaviour
-    {
-        private Renderer _renderer;
-        private MaterialPropertyBlock _propBlock;
-        private GameFeelConfigSO _feel;
-
-        public void Initialize(GameFeelConfigSO feel)
-        {
-            _feel = feel;
-            // Cache renderer eagerly so Update() works even before Start() fires.
-            if (_renderer == null)
-                _renderer = GetComponentInParent<Renderer>();
-        }
-
-        private void Awake()
-        {
-            // Second-pass cache in case Initialize() hasn't been called yet.
-            if (_renderer == null)
-                _renderer = GetComponentInParent<Renderer>();
-        }
-
-        private void Update()
-        {
-            if (_renderer == null || _feel == null) return;
-
-            // FIX-V2: Lazy-init avoids the Start()-before-Update() race.
-            // MaterialPropertyBlock is a value-type wrapper — one allocation total.
-            if (_propBlock == null) _propBlock = new MaterialPropertyBlock();
-
-            float hue = (Time.time * _feel.RainbowHueSpeed) % 1f;
-            Color color = Color.HSVToRGB(hue, _feel.RainbowSaturation, _feel.RainbowValue);
-            // GetPropertyBlock reads existing state into _propBlock (no allocation).
-            _renderer.GetPropertyBlock(_propBlock);
-            _propBlock.SetColor("_Color", color);
-            _propBlock.SetColor("_BaseColor", color);
-            _propBlock.SetColor("_EmissionColor", color * 0.3f);
-            _renderer.SetPropertyBlock(_propBlock);
-        }
-
-        private void OnDisable()
-        {
-            // FIX-V2: Clear rainbow color when returned to pool / disabled.
-            if (_renderer != null && _propBlock != null)
-            {
-                _propBlock.Clear();
-                _renderer.SetPropertyBlock(_propBlock);
-            }
-        }
-    }
+    // ARCH-1: RainbowCycle extracted to Assets/Scripts/Gameplay/Views/RainbowCycle.cs
+    // for independent compilation and reduced BoardView line count.
 }
