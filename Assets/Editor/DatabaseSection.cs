@@ -27,6 +27,7 @@ namespace RingFlow.Editor
         private Vector2 _scrollPos;
         private int _valStartLevel = 1;
         private int _valEndLevel = 50;
+        private bool _fixTargetsEnabled;
         private List<BatchValidationResult> _validationResults = new();
 
         public override void OnGUI()
@@ -329,6 +330,8 @@ namespace RingFlow.Editor
                 _valEndLevel = EditorGUILayout.IntField("Bitiş Seviyesi", _valEndLevel, GUILayout.Width(180f));
             }
 
+            _fixTargetsEnabled = EditorGUILayout.ToggleLeft("TargetMoves'u kaydet", _fixTargetsEnabled);
+
             if (GUILayout.Button("Toplu Doğrulamayı Başlat", GUILayout.Height(30)))
                 RunBatchValidation();
 
@@ -370,6 +373,7 @@ namespace RingFlow.Editor
             _validationResults.Clear();
 
             int solvedCount = 0;
+            int fixedCount = 0;
             float totalTime = 0;
             int totalMoves = 0;
 
@@ -453,6 +457,19 @@ namespace RingFlow.Editor
                         solvedCount++;
                         totalTime += timeMs;
                         totalMoves += res.MoveCount;
+
+                        if (_fixTargetsEnabled)
+                        {
+                            var assetPath = $"Assets/Resources/Levels/Level_{i}.asset";
+                            var levelSO = AssetDatabase.LoadAssetAtPath<LevelDataSO>(assetPath);
+                            if (levelSO != null)
+                            {
+                                Undo.RecordObject(levelSO, "TargetMoves Düzelt");
+                                levelSO.Data.TargetMoves = solveResult.MoveCount;
+                                EditorUtility.SetDirty(levelSO);
+                                fixedCount++;
+                            }
+                        }
                     }
                     else
                     {
@@ -470,6 +487,7 @@ namespace RingFlow.Editor
 
             string summaryMsg = $"Doğrulanan Seviye: {_validationResults.Count}\n" +
                                 $"Başarılı: {solvedCount} / {_validationResults.Count}\n" +
+                                $"Düzeltilecek TargetMoves: {fixedCount}\n" +
                                 $"Ort. Süre: {(solvedCount > 0 ? (totalTime / solvedCount) : 0):F1}ms\n" +
                                 $"Ort. Hamle: {(solvedCount > 0 ? (totalMoves / (float)solvedCount) : 0):F1}";
             EditorUtility.DisplayDialog("Doğrulama Tamamlandı", summaryMsg, "Tamam");

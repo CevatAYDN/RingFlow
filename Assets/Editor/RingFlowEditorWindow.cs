@@ -1,6 +1,7 @@
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using RingFlow.Gameplay;
 using RingFlow.Gameplay.UI;
 
 namespace RingFlow.Editor
@@ -25,6 +26,7 @@ namespace RingFlow.Editor
         private LevelBrowserSection _levelBrowser;
         private DataOverviewSection _dataOverview;
         private RingFlowEditorUiStudioController _uiStudio;
+        private UnityEditor.Editor _cachedActiveLevelEditor;
 
         private Vector2 _scroll;
         private int _selectedTab;
@@ -56,6 +58,8 @@ namespace RingFlow.Editor
         private bool _cachedHasRoot;
         private bool _cachedHasUIRoot;
         private bool _cachedHasEventSystem;
+        private float _cachedWindowWidth;
+        private bool _cachedCompactLayout;
 
         [MenuItem("Ring Flow/Dashboard &G", false, 0)]
         public static void ShowWindow()
@@ -191,6 +195,14 @@ namespace RingFlow.Editor
                 DestroyImmediate(_cachedAssetEditor);
                 _cachedAssetEditor = null;
             }
+
+            if (_cachedActiveLevelEditor != null)
+            {
+                DestroyImmediate(_cachedActiveLevelEditor);
+                _cachedActiveLevelEditor = null;
+            }
+
+            _uiStudio?.Cleanup();
         }
 
         private void RefreshValidationCache()
@@ -213,8 +225,14 @@ namespace RingFlow.Editor
         {
             RefreshValidationCache();
 
-            float windowWidth = position.width;
-            bool compactLayout = windowWidth < 980f;
+            if (Event.current.type == EventType.Layout)
+            {
+                _cachedWindowWidth = position.width;
+                _cachedCompactLayout = _cachedWindowWidth < 980f;
+            }
+
+            float windowWidth = _cachedWindowWidth;
+            bool compactLayout = _cachedCompactLayout;
             float sidebarWidth = compactLayout ? windowWidth : Mathf.Clamp(windowWidth * 0.22f, 190f, 260f);
 
             if (compactLayout)
@@ -612,11 +630,14 @@ namespace RingFlow.Editor
                         if (cards[index]())
                         {
                             // handle click actions
-                            if (index == 0) _selectedTab = 1;
-                            else if (index == 1) _selectedTab = 2;
-                            else if (index == 2) _selectedTab = 4; // Tools tab is 4
-                            else if (index == 3) _generator.GenerateFromDashboard();
-                            else if (index == 4) _visualBuilder.BuildFromDashboard();
+                            if (Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseUp || Event.current.type == EventType.Used)
+                            {
+                                if (index == 0) _selectedTab = 1;
+                                else if (index == 1) _selectedTab = 2;
+                                else if (index == 2) _selectedTab = 4; // Tools tab is 4
+                                else if (index == 3) _generator.GenerateFromDashboard();
+                                else if (index == 4) _visualBuilder.BuildFromDashboard();
+                            }
 
                             if (index < 3 && _cachedAssetEditor != null)
                             {
@@ -678,9 +699,15 @@ namespace RingFlow.Editor
 
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("Üret", EditorStyles.miniButton, GUILayout.Width(80f)))
-                    _generator.GenerateFromDashboard();
+                {
+                    if (Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseUp || Event.current.type == EventType.Used)
+                        _generator.GenerateFromDashboard();
+                }
                 if (GUILayout.Button("Toplu Üret", EditorStyles.miniButton, GUILayout.Width(110f)))
-                    _generator.GenerateFromDashboardAll();
+                {
+                    if (Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseUp || Event.current.type == EventType.Used)
+                        _generator.GenerateFromDashboardAll();
+                }
             }
 
             EditorGUILayout.HelpBox("İpucu: Seçili seviye üzerinde çalışın, sonra toplu üretimle aynı kuralları tüm aralığa uygulayın.", MessageType.Info);
@@ -694,12 +721,79 @@ namespace RingFlow.Editor
 
         private void DrawLevelsTab()
         {
-                RingFlowEditorUtils.FoldoutSection(EditorPrefsKeys.FoldGenerator, "Seviye Üretici & Çözücü Ayarları", _generator.OnGUI);
+            RingFlowEditorUtils.FoldoutSection(EditorPrefsKeys.FoldGenerator, "Seviye Üretici & Çözücü Ayarları", _generator.OnGUI);
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionBreak);
             RingFlowEditorUtils.FoldoutSection(EditorPrefsKeys.FoldDatabase, "Seviye Denetleyici", _databaseSection.OnGUI);
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionBreak);
             RingFlowEditorUtils.FoldoutSection(EditorPrefsKeys.FoldLevelBrowser, "Seviye Tarayıcı (Level Browser)", _levelBrowser.OnGUI);
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionBreak);
+
+            var activeLevel = Selection.activeObject as LevelDataSO;
+            if (activeLevel != null)
+            {
+                RingFlowEditorUtils.FoldoutSection(EditorPrefsKeys.FoldActiveLevelEditor, $"Aktif Seviye Düzenleyici (Seviye {activeLevel.Data.LevelIndex})", () =>
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
+                        int maxLevels = db != null ? db.TotalLevels : 2000;
+
+                        using (new EditorGUI.DisabledScope(activeLevel.Data.LevelIndex <= 1))
+                        {
+                            if (GUILayout.Button("◀ Önceki Seviye", GUILayout.Height(24)))
+                            {
+                                int prevIdx = activeLevel.Data.LevelIndex - 1;
+                                string path = $"{EditorPaths.LevelsFolder}/Level_{prevIdx}.asset";
+                                var prevAsset = AssetDatabase.LoadAssetAtPath<LevelDataSO>(path);
+                                if (prevAsset != null)
+                                {
+                                    Selection.activeObject = prevAsset;
+                                    EditorGUIUtility.PingObject(prevAsset);
+                                }
+                            }
+                        }
+
+                        var prevColor = GUI.backgroundColor;
+                        GUI.backgroundColor = EditorPaths.EditorColors.Success;
+                        if (GUILayout.Button("▶ Oyunu Başlat & Oyna (Play)", GUILayout.Height(24)))
+                        {
+                            EditorPlayFromLevel.Play(activeLevel.Data.LevelIndex);
+                        }
+                        GUI.backgroundColor = prevColor;
+
+                        using (new EditorGUI.DisabledScope(activeLevel.Data.LevelIndex >= maxLevels))
+                        {
+                            if (GUILayout.Button("Sonraki Seviye ▶", GUILayout.Height(24)))
+                            {
+                                int nextIdx = activeLevel.Data.LevelIndex + 1;
+                                string path = $"{EditorPaths.LevelsFolder}/Level_{nextIdx}.asset";
+                                var nextAsset = AssetDatabase.LoadAssetAtPath<LevelDataSO>(path);
+                                if (nextAsset != null)
+                                {
+                                    Selection.activeObject = nextAsset;
+                                    EditorGUIUtility.PingObject(nextAsset);
+                                }
+                            }
+                        }
+                    }
+
+                    EditorGUILayout.Space(4f);
+
+                    if (_cachedActiveLevelEditor == null || _cachedActiveLevelEditor.target != activeLevel)
+                    {
+                        if (_cachedActiveLevelEditor != null)
+                            DestroyImmediate(_cachedActiveLevelEditor);
+                        _cachedActiveLevelEditor = UnityEditor.Editor.CreateEditor(activeLevel);
+                    }
+
+                    if (_cachedActiveLevelEditor != null)
+                    {
+                        _cachedActiveLevelEditor.OnInspectorGUI();
+                    }
+                });
+                EditorGUILayout.Space(EditorPaths.EditorSizes.SectionBreak);
+            }
+
             RingFlowEditorUtils.FoldoutSection(EditorPrefsKeys.FoldBuilder, "Sahne Tahtası Oluşturucu", _visualBuilder.OnGUI);
         }
 

@@ -23,6 +23,10 @@ namespace RingFlow.Editor
         private Vector2 _uiScroll;
         private ScreenType _selectedScreen = ScreenType.Splash;
 
+        private UnityEditor.Editor _cachedThemeEditor;
+        private UnityEditor.Editor _cachedRegistryEditor;
+        private UnityEditor.Editor _cachedLocEditor;
+
         public void DrawTab()
         {
             DrawInitControlsAndActions();
@@ -30,6 +34,8 @@ namespace RingFlow.Editor
             DrawScreenTree();
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionSpacing);
             DrawSignalTester();
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionSpacing);
+            DrawUiConfigAssetsInline();
         }
 
         private void DrawInitControlsAndActions()
@@ -379,6 +385,79 @@ namespace RingFlow.Editor
             var items = new List<string>();
             foreach (var item in stack) items.Add(item?.ToString() ?? "null");
             return string.Join(" → ", items);
+        }
+
+        private void DrawUiConfigAssetsInline()
+        {
+            RingFlowEditorUtils.BeginSectionBox("Arayüz Konfigürasyon Dosyaları", "Arayüz teması, ekran kayıtları ve yerelleştirme ayarlarını doğrudan buradan düzenleyin.");
+
+            // 1. Theme Config
+            DrawInlineAssetFoldout(ref _cachedThemeEditor, EditorPaths.UIThemeConfigKey, "Arayüz Teması (UIThemeConfig)", "RingFlow.Foldout.UiThemeInline");
+            
+            EditorGUILayout.Space(4f);
+            
+            // 2. Screen Registry
+            DrawInlineAssetFoldout(ref _cachedRegistryEditor, EditorPaths.ScreenRegistryKey, "Ekran Kayıt Defteri (Screen Registry)", "RingFlow.Foldout.ScreenRegistryInline");
+            
+            EditorGUILayout.Space(4f);
+            
+            // 3. Localization Config
+            DrawInlineAssetFoldout(ref _cachedLocEditor, EditorPaths.LocalizationConfigKey, "Yerelleştirme Ayarları (LocalizationConfig)", "RingFlow.Foldout.LocInline");
+
+            RingFlowEditorUtils.EndSectionBox();
+        }
+
+        private void DrawInlineAssetFoldout(ref UnityEditor.Editor cachedEditor, string key, string title, string foldoutPrefKey)
+        {
+            bool isFolded = EditorPrefs.GetBool(foldoutPrefKey, false);
+            bool newFolded = EditorGUILayout.Foldout(isFolded, title, true, EditorStyles.foldoutHeader);
+            if (newFolded != isFolded)
+            {
+                EditorPrefs.SetBool(foldoutPrefKey, newFolded);
+            }
+
+            if (newFolded)
+            {
+                if (cachedEditor == null || cachedEditor.target == null)
+                {
+                    var asset = Resources.Load<ScriptableObject>(key);
+                    if (asset != null)
+                    {
+                        cachedEditor = UnityEditor.Editor.CreateEditor(asset);
+                    }
+                }
+
+                if (cachedEditor != null)
+                {
+                    using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                    {
+                        cachedEditor.OnInspectorGUI();
+                    }
+                }
+                else
+                {
+                    EditorGUILayout.HelpBox($"{title} bulunamadı! Key: {key}", MessageType.Warning);
+                }
+            }
+        }
+
+        public void Cleanup()
+        {
+            if (_cachedThemeEditor != null)
+            {
+                Object.DestroyImmediate(_cachedThemeEditor);
+                _cachedThemeEditor = null;
+            }
+            if (_cachedRegistryEditor != null)
+            {
+                Object.DestroyImmediate(_cachedRegistryEditor);
+                _cachedRegistryEditor = null;
+            }
+            if (_cachedLocEditor != null)
+            {
+                Object.DestroyImmediate(_cachedLocEditor);
+                _cachedLocEditor = null;
+            }
         }
 
     }

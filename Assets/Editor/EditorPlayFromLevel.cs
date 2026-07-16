@@ -16,14 +16,34 @@ namespace RingFlow.Editor
     internal static class EditorPlayFromLevel
     {
         private static int s_pendingLevel = -1;
+        private static bool s_isStartingPlayMode = false;
 
         public static void Play(int level)
         {
             if (level < 1) return;
 
+            // PLAYMODE-BLOCK FIX: Unity's IMGUI fires OnGUI multiple times per frame
+            // (Layout → Repaint → input). When the editor enters PlayMode, a layout-phase
+            // event can re-trigger this pathway through cached button state and cause
+            // sequential level jumps (40 → 41 → 42 ...). Only accept genuine user
+            // clicks (MouseDown/MouseUp/Used) as a "Play this level" trigger. Layout
+            // and Repaint events are ignored so they cannot chain transitions.
+            if (Event.current != null)
+            {
+                EventType t = Event.current.type;
+                if (t != EventType.MouseDown && t != EventType.MouseUp && t != EventType.Used)
+                    return;
+            }
+
             if (EditorApplication.isPlaying)
             {
                 TransitionToLevel(level);
+                return;
+            }
+
+            if (s_isStartingPlayMode)
+            {
+                s_pendingLevel = level;
                 return;
             }
 
@@ -40,7 +60,9 @@ namespace RingFlow.Editor
                 EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
             }
 
+            s_isStartingPlayMode = true;
             s_pendingLevel = level;
+            EditorApplication.playModeStateChanged -= OnPlayModeChanged;
             EditorApplication.playModeStateChanged += OnPlayModeChanged;
             EditorApplication.EnterPlaymode();
         }
@@ -49,10 +71,13 @@ namespace RingFlow.Editor
         {
             if (change == PlayModeStateChange.EnteredPlayMode)
             {
+                s_isStartingPlayMode = false;
+                EditorApplication.update -= Poll;
                 EditorApplication.update += Poll;
             }
-            else if (change == PlayModeStateChange.ExitingPlayMode)
+            else if (change == PlayModeStateChange.ExitingPlayMode || change == PlayModeStateChange.EnteredEditMode)
             {
+                s_isStartingPlayMode = false;
                 Reset();
             }
         }
@@ -84,11 +109,23 @@ namespace RingFlow.Editor
             if (state is BootState || state is SplashState || state is LoadingState)
                 return; // still booting — keep polling
 
+            // PLAYMODE-BLOCK FIX: After PlayMode is entered, multiple Poll() ticks
+            // can fire before the FSM fully settles in MainMenuState. Each tick would
+            // otherwise call TransitionToLevel(s_pendingLevel) repeatedly. The
+            // s_pendingLevel consumer pattern below ensures the transition fires
+            // only once: once consumed (set to -1 here), subsequent ticks short-circuit.
+            int pending = s_pendingLevel;
+            if (pending < 1)
+            {
+                Reset();
+                return;
+            }
+
             // FIX-E2: Transition with PlayingStateArgs instead of bare int.
             // PlayingState.OnEnterAsync handles both `int` and `PlayingStateArgs`,
             // but using PlayingStateArgs makes the intent explicit and avoids any
             // future boxing/unboxing ambiguity in the FSM dispatch chain.
-            TransitionToLevel(s_pendingLevel);
+            TransitionToLevel(pending);
             Reset();
         }
 
@@ -111,7 +148,7 @@ namespace RingFlow.Editor
             }
 
             NexusLog.Info("EditorPlayFromLevel", nameof(TransitionToLevel), level.ToString(),
-                $"[Editor] Jumping to level {level} via PlayingState FSM transition (PlayingStateArgs).");
+                $"[Editor] Jumping to level {level} via PlayingState FSM transition (PlayingStateArgs). StackTrace:\n{System.Environment.StackTrace}");
 
             // FIX-E2/E3: Use PlayingStateArgs instead of bare int to be explicit about
             // level index vs resume semantics. PlayingState.OnEnterAsync checks for both,

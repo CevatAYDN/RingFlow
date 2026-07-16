@@ -13,6 +13,24 @@ namespace RingFlow.Editor
         private int _lastValidatedHash;
         private string[] _cachedWarnings = System.Array.Empty<string>();
 
+        // LAYOUT-CACHE: Unity IMGUI fires OnGUI multiple times per frame (Layout →
+        // Repaint → input). Width-derived layout values must be computed exactly
+        // once per Layout event and reused on later Repaint/Used events so grid
+        // geometry, pole widths, and button rects stay consistent. Without this
+        // cache, Layout computes one width and Repaint sees another, causing the
+        // "PlayMode sequential level jump" bug because a cached controlID matches
+        // the wrong rect on the input phase.
+        private float _cachedViewWidth;
+        private bool _viewWidthCached;
+
+        // STEP-SOLVE: adım adım çözüm önizleme durumu. VerifyAndSolve'nin aksine
+        // TargetMoves'u hemen yazmaz; çözümü bir liste olarak saklar ve kullanıcı
+        // ← / → butonlarıyla adım adım inceler. Kaydetmek için ayrı bir buton vardır.
+        private System.Collections.Generic.List<MoveRecord> _stepMoves;
+        private int _stepIndex = -1;
+        private string _stepStatus = string.Empty;
+        private Vector2 _stepScroll;
+
         private static RingColor s_brushColor = RingColor.Red;
         private static RingType s_brushType = RingType.Standard;
         private static bool s_eraserMode;
@@ -97,6 +115,14 @@ namespace RingFlow.Editor
 
         public override void OnInspectorGUI()
         {
+            // LAYOUT-CACHE: refresh cached width strictly on Layout event so
+            // Repaint/Used events reuse the same geometry computed earlier.
+            if (Event.current.type == EventType.Layout)
+            {
+                _cachedViewWidth = EditorGUIUtility.currentViewWidth;
+                _viewWidthCached = true;
+            }
+
             var levelSO = (LevelDataSO)target;
             if (levelSO == null || levelSO.Data == null)
             {
@@ -107,6 +133,20 @@ namespace RingFlow.Editor
             serializedObject.Update();
 
             DrawHeader($"SEVİYE {levelSO.Data.LevelIndex} YAPILANDIRMASI");
+
+            // --- BÜYÜK OYNA BUTONU ---
+            // EVENT-GUARD: accept only genuine user clicks. Without this guard,
+            // Layout/Repaint events were occasionally firing Play(), causing the
+            // sequential-level-jump bug when entering PlayMode from a level asset.
+            var prevColor = GUI.backgroundColor;
+            GUI.backgroundColor = EditorPaths.EditorColors.Success;
+            if (GUILayout.Button("▶ OYUNU BAŞLAT VE SEVİYEYİ OYNA (PLAY LEVEL)", GUILayout.Height(36)))
+            {
+                if (Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseUp || Event.current.type == EventType.Used)
+                    EditorPlayFromLevel.Play(levelSO.Data.LevelIndex);
+            }
+            GUI.backgroundColor = prevColor;
+            EditorGUILayout.Space(4f);
 
             int currentHash = ComputeValidationHash(levelSO.Data);
             if (currentHash != _lastValidatedHash)
@@ -126,9 +166,9 @@ namespace RingFlow.Editor
 
             RingFlowEditorUtils.BeginSectionBox("Seviye Ayarları (Level Settings)", "Seviyenin endeksi, tohumu ve hedeflenen hamle limiti.");
             EditorGUI.BeginChangeCheck();
-            levelSO.Data.LevelIndex = EditorGUILayout.IntField("Seviye Endeksi", levelSO.Data.LevelIndex);
-            levelSO.Data.Seed = EditorGUILayout.IntField("Rastgele Tohum (Seed)", levelSO.Data.Seed);
-            levelSO.Data.TargetMoves = EditorGUILayout.IntField("Hedef Hamle", levelSO.Data.TargetMoves);
+            levelSO.Data.LevelIndex = EditorGUILayout.IntField(new GUIContent("Seviye Endeksi", "Bu seviyenin oyundaki sıra numarası."), levelSO.Data.LevelIndex);
+            levelSO.Data.Seed = EditorGUILayout.IntField(new GUIContent("Rastgele Tohum (Seed)", "Seviyenin üretilmesinde kullanılan rastgelelik tohumu. Aynı tohum değeri her zaman aynı seviyeyi oluşturur."), levelSO.Data.Seed);
+            levelSO.Data.TargetMoves = EditorGUILayout.IntField(new GUIContent("Hedef Hamle", "Oyuncunun bu seviyeyi tamamlaması için hedeflenen hamle sayısı. Yapay zeka çözücüsü çalıştırıldığında bu değer otomatik olarak en kısa çözüm yoluyla güncellenir."), levelSO.Data.TargetMoves);
             if (EditorGUI.EndChangeCheck())
                 EditorUtility.SetDirty(levelSO);
             RingFlowEditorUtils.EndSectionBox();
@@ -150,6 +190,77 @@ namespace RingFlow.Editor
                     if (GUILayout.Button("Seviyeyi Doğrula & Çöz", GUILayout.Height(30)))
                         VerifyAndSolve(levelSO);
 
+                    var prevBg = GUI.backgroundColor;
+                    GUI.backgroundColor = EditorPaths.EditorColors.Info;
+                    if (GUILayout.Button("Adım Adım Çöz (Önizle)", GUILayout.Height(30)) && IsUserEvent())
+                        RunStepSolver(levelSO);
+                    GUI.backgroundColor = prevBg;
+                }
+
+                if (_stepMoves != null && _stepMoves.Count > 0)
+                {
+                    EditorGUILayout.Space(2f);
+                    using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                    {
+                        EditorGUILayout.LabelField($"Adım Adım Çözüm Önizlemesi — Toplam {_stepMoves.Count} Hamle", EditorStyles.boldLabel);
+                        EditorGUILayout.LabelField(_stepStatus, EditorStyles.miniLabel);
+
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            if (GUILayout.Button("<< Önceki", GUILayout.Width(90f), GUILayout.Height(22f)) && IsUserEvent())
+                                _stepIndex--;
+
+                            EditorGUILayout.LabelField(
+                                _stepIndex < 0 ? "Başlangıç" : $"Adım {_stepIndex + 1} / {_stepMoves.Count}",
+                                EditorStyles.centeredGreyMiniLabel, GUILayout.Width(140f));
+
+                            if (GUILayout.Button("Sonraki >>", GUILayout.Width(90f), GUILayout.Height(22f)) && IsUserEvent())
+                                _stepIndex++;
+                        }
+
+                        if (_stepIndex >= 0 && _stepIndex < _stepMoves.Count)
+                        {
+                            var mv = _stepMoves[_stepIndex];
+                            EditorGUILayout.HelpBox(
+                                $"Hamle {_stepIndex + 1}: Direk {mv.FromPoleId}'den Direk {mv.ToPoleId}'ye halka taşı (halka: renk={mv.Ring.Color}, tip={mv.Ring.Type}).",
+                                MessageType.Info);
+                        }
+                        else if (_stepIndex == -1)
+                        {
+                            EditorGUILayout.HelpBox("Başlangıç durumu. 'Sonraki >>' ile ilk hamleyi görebilirsiniz.", MessageType.None);
+                        }
+
+                        EditorGUILayout.Space(2f);
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            if (GUILayout.Button("Hamleler Listesini Gizle", GUILayout.Width(160f), GUILayout.Height(20f)) && IsUserEvent())
+                            {
+                                _stepMoves = null;
+                                _stepIndex = -1;
+                                _stepStatus = string.Empty;
+                            }
+
+                            var prevBg2 = GUI.backgroundColor;
+                            GUI.backgroundColor = EditorPaths.EditorColors.Success;
+                            if (GUILayout.Button("✓ Hedef Hamleyi Yaz ve Kaydet", GUILayout.Height(20f)) && IsUserEvent())
+                            {
+                                Undo.RecordObject(levelSO, "Adım Çözücü: Hedef Hamle Yaz");
+                                levelSO.Data.TargetMoves = _stepMoves.Count;
+                                EditorUtility.SetDirty(levelSO);
+                                AssetDatabase.SaveAssets();
+                                EditorUtility.DisplayDialog("Hedef Hamle Güncellendi",
+                                    $"Seviye {levelSO.Data.LevelIndex} için Hedef Hamle = {_stepMoves.Count} olarak kaydedildi.",
+                                    "Tamam");
+                            }
+                            GUI.backgroundColor = prevBg2;
+                        }
+                    }
+                }
+
+                EditorGUILayout.Space(2f);
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
                     if (GUILayout.Button("Seviyeyi Yeniden Karıştır", GUILayout.Height(30)))
                         ReScramble(levelSO);
                 }
@@ -221,6 +332,46 @@ namespace RingFlow.Editor
             EditorUtility.SetDirty(levelSO);
         }
 
+        /// <summary>
+        /// Adım Adım Çöz butonu için metod. VerifyAndSolve'nin aksine TargetMoves'u
+        /// hemen YAZMAZ; çözüm hamle listesini _stepMoves içine kopyalar ve kullanıcı
+        /// bir "✓ Hedef Hamleyi Yaz ve Kaydet" butonuna basana kadar asset'i değiştirmez.
+        /// Bu sayede tasarımcı çözümü önizleyip iptal edebilir.
+        /// </summary>
+        private static bool IsUserEvent()
+        {
+            return Event.current.type == EventType.MouseDown
+                || Event.current.type == EventType.MouseUp
+                || Event.current.type == EventType.Used;
+        }
+
+        private void RunStepSolver(LevelDataSO levelSO)
+        {
+            var database = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
+            if (database == null)
+                throw new System.InvalidOperationException("GameConfigDatabase not found!");
+
+            var board = BuildBoardStateFromLevelData(levelSO.Data, database, out int maxCapacity, out int[] portalTargets);
+
+            var solveResult = LevelSolver.Solve(board, maxCapacity, portalTargets: portalTargets);
+
+            if (solveResult.IsSolvable && solveResult.Moves != null && solveResult.Moves.Count > 0)
+            {
+                _stepMoves = solveResult.Moves;
+                _stepIndex = -1;
+                _stepStatus = $"Çözülebilir: {solveResult.MoveCount} hamle. 'Sonraki >>' ile adım adım inceleyin.";
+            }
+            else
+            {
+                _stepMoves = null;
+                _stepIndex = -1;
+                _stepStatus = solveResult.IsSolvable
+                    ? "Tahta zaten çözülmüş durumda — hamle yok."
+                    : "Çözülemez yapılandırma! Lütfen direk/halka düzenini kontrol edin.";
+                EditorUtility.DisplayDialog("Adım Adım Çözücü",
+                    _stepStatus, "Tamam");
+            }
+        }
 
         private static BoardState BuildBoardStateFromLevelData(LevelData levelData, GameConfigDatabaseSO database, out int maxCapacity, out int[] portalTargets)
         {
@@ -475,7 +626,11 @@ namespace RingFlow.Editor
 
             RingFlowEditorUtils.BeginSectionBox("Görsel Seviye Tasarımcısı (Interactive Board Designer)", "Boyamak veya silmek istediğiniz halka kutusuna tıklayın.");
 
-            float poleWidth = Mathf.Clamp((EditorGUIUtility.currentViewWidth - 48f) / Mathf.Max(1, levelData.Poles.Count), 56f, 96f);
+            // LAYOUT-CACHE: use cached view width so Layout/Repaint phases agree on
+            // pole width. Without it, Layout computes width A, Repaint sees width B,
+            // and button hit-rects drift — which contributed to the PlayMode bug.
+            float viewWidth = _viewWidthCached ? _cachedViewWidth : EditorGUIUtility.currentViewWidth;
+            float poleWidth = Mathf.Clamp((viewWidth - 48f) / Mathf.Max(1, levelData.Poles.Count), 56f, 96f);
             float ringHeight = Mathf.Clamp(poleWidth * 0.28f, 18f, 24f);
             float poleGap = 8f;
             var palette = GetCachedPalette();

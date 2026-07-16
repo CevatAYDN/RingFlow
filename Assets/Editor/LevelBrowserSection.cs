@@ -24,6 +24,9 @@ namespace RingFlow.Editor
         private GameConfigDatabaseSO _cachedDatabase;
         private int _cachedTotalLevels = -1;
         private bool[] _cachedExistsFlags;
+        private float _cachedAvailableWidth;
+        private int _cachedCols;
+        private bool _cachedNarrow;
 
         private static GUIStyle s_levelButtonStyle;
         private static GUIStyle LevelButtonStyle
@@ -63,7 +66,10 @@ namespace RingFlow.Editor
                 return;
             }
 
-            bool narrow = RingFlowEditorUtils.IsNarrowWidth(620f);
+            if (Event.current.type == EventType.Layout)
+                _cachedNarrow = RingFlowEditorUtils.IsNarrowWidth(620f);
+
+            bool narrow = _cachedNarrow;
 
             RingFlowEditorUtils.BeginSectionBox("Seviye Arama & Hızlı Atlama", "Seviye numarasına göre hızlı arama ve doğrudan düzenleme yapın.");
 
@@ -73,14 +79,14 @@ namespace RingFlow.Editor
                 _jumpToLevel = Mathf.Clamp(EditorGUILayout.IntField("Seviye #", _jumpToLevel), 1, _cachedTotalLevels);
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    if (GUILayout.Button("Aç"))
+                    if (GUILayout.Button("Aç") && IsUserEvent())
                         OpenLevel(_jumpToLevel);
-                    if (GUILayout.Button("Sonraki"))
+                    if (GUILayout.Button("Sonraki") && IsUserEvent())
                     {
                         _jumpToLevel = Mathf.Clamp(_jumpToLevel + 1, 1, _cachedTotalLevels);
                         OpenLevel(_jumpToLevel);
                     }
-                    if (GUILayout.Button("▶ Oyna"))
+                    if (GUILayout.Button("▶ Oyna") && IsUserEvent())
                         EditorPlayFromLevel.Play(_jumpToLevel);
                 }
             }
@@ -97,14 +103,23 @@ namespace RingFlow.Editor
                         EditorGUILayout.IntField("Seviye #", _jumpToLevel, GUILayout.Width(160f)),
                         1, _cachedTotalLevels);
                     if (GUILayout.Button("Aç", GUILayout.Width(80f)))
-                        OpenLevel(_jumpToLevel);
+                    {
+                        if (Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseUp || Event.current.type == EventType.Used)
+                            OpenLevel(_jumpToLevel);
+                    }
                     if (GUILayout.Button("Sonraki", GUILayout.Width(80f)))
                     {
-                        _jumpToLevel = Mathf.Clamp(_jumpToLevel + 1, 1, _cachedTotalLevels);
-                        OpenLevel(_jumpToLevel);
+                        if (Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseUp || Event.current.type == EventType.Used)
+                        {
+                            _jumpToLevel = Mathf.Clamp(_jumpToLevel + 1, 1, _cachedTotalLevels);
+                            OpenLevel(_jumpToLevel);
+                        }
                     }
                     if (GUILayout.Button("▶ Oyna", GUILayout.Width(80f)))
-                        EditorPlayFromLevel.Play(_jumpToLevel);
+                    {
+                        if (Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseUp || Event.current.type == EventType.Used)
+                            EditorPlayFromLevel.Play(_jumpToLevel);
+                    }
                 }
             }
 
@@ -142,6 +157,13 @@ namespace RingFlow.Editor
         public void InvalidateExistenceCache()
         {
             _cachedExistsFlags = null;
+        }
+
+        private static bool IsUserEvent()
+        {
+            return Event.current.type == EventType.MouseDown
+                || Event.current.type == EventType.MouseUp
+                || Event.current.type == EventType.Used;
         }
 
         private void RefreshExistenceCache()
@@ -189,41 +211,61 @@ namespace RingFlow.Editor
         {
             const float visibleHeight = 220f;
 
-            float availableWidth = EditorGUIUtility.currentViewWidth;
-            if (availableWidth >= 980f)
+            if (Event.current.type == EventType.Layout)
             {
-                float sidebarWidth = Mathf.Clamp(availableWidth * 0.22f, 190f, 260f);
-                availableWidth -= (sidebarWidth + 40f);
-            }
-            else
-            {
-                availableWidth -= 32f;
+                _cachedAvailableWidth = EditorGUIUtility.currentViewWidth;
+                if (_cachedAvailableWidth >= 980f)
+                {
+                    float sidebarWidth = Mathf.Clamp(_cachedAvailableWidth * 0.22f, 190f, 260f);
+                    _cachedAvailableWidth -= (sidebarWidth + 40f);
+                }
+                else
+                {
+                    _cachedAvailableWidth -= 32f;
+                }
+
+                _cachedCols = RingFlowEditorUtils.GetResponsiveColumns(GridButtonWidth + 6f, 2, 12, _cachedAvailableWidth);
             }
 
-            int cols = RingFlowEditorUtils.GetResponsiveColumns(GridButtonWidth + 6f, 2, 12, availableWidth);
+            float availableWidth = _cachedAvailableWidth;
+            int cols = Mathf.Max(1, _cachedCols);
             float gridButtonWidth = Mathf.Clamp((availableWidth - 24f) / cols, 32f, 54f);
 
             RingFlowEditorUtils.BeginSectionBox("Seviye Grid Görünümü", "Seviye durumlarını yeşil (üretilmiş) ve gri (boş) olarak gösterir.");
 
             _scroll = EditorGUILayout.BeginScrollView(_scroll, GUILayout.Height(visibleHeight));
-            int row = 0;
+
             bool hasFilter = !string.IsNullOrEmpty(_searchFilter);
+            int filteredCount = ComputeFilteredTill();
+            
+            // Calculate absolute layout height
+            int rows = (int)System.Math.Ceiling((double)filteredCount / cols);
+            float rowHeight = GridButtonHeight + RowSpacing;
+            float totalHeight = rows * rowHeight;
+
+            // Reserve single layout rect
+            Rect gridRect = GUILayoutUtility.GetRect(availableWidth, totalHeight);
+
+            int drawIndex = 0;
             for (int level = 1; level <= _cachedTotalLevels; level++)
             {
                 if (hasFilter && !level.ToString().Contains(_searchFilter))
                     continue;
 
-                int col = (row % cols);
-                if (col == 0)
-                    EditorGUILayout.BeginHorizontal();
-                DrawLevelButton(level, gridButtonWidth);
-                if (col == cols - 1 || level == _cachedTotalLevels)
-                {
-                    GUILayout.FlexibleSpace();
-                    EditorGUILayout.EndHorizontal();
-                }
-                row++;
+                int r = drawIndex / cols;
+                int c = drawIndex % cols;
+
+                Rect buttonRect = new Rect(
+                    gridRect.x + c * (gridButtonWidth + 4f),
+                    gridRect.y + r * rowHeight,
+                    gridButtonWidth,
+                    GridButtonHeight
+                );
+
+                DrawLevelButton(level, buttonRect);
+                drawIndex++;
             }
+
             EditorGUILayout.EndScrollView();
 
             RingFlowEditorUtils.EndSectionBox();
@@ -234,7 +276,7 @@ namespace RingFlow.Editor
                 MessageType.Info);
         }
 
-        private void DrawLevelButton(int level, float width)
+        private void DrawLevelButton(int level, Rect rect)
         {
             if (_cachedExistsFlags == null || level - 1 < 0 || level - 1 >= _cachedExistsFlags.Length)
                 return;
@@ -245,10 +287,18 @@ namespace RingFlow.Editor
 
             LevelButtonStyle.normal.textColor = exists ? Color.white : EditorPaths.EditorColors.MutedText;
 
-            if (GUILayout.Button(level.ToString(), LevelButtonStyle, GUILayout.Width(width), GUILayout.Height(GridButtonHeight)))
+            var content = new GUIContent(level.ToString(), "Sol Tık: Seviyeyi Seç ve Düzenle\nSağ Tık: Oyunu Başlat ve Doğrudan Oyna");
+
+            // Handle right-click BEFORE GUI.Button draws
+            if (Event.current.type == EventType.MouseDown && Event.current.button == 1 && rect.Contains(Event.current.mousePosition))
             {
-                // FIX-E3: Single click opens the asset AND syncs _jumpToLevel so the
-                // "▶ Oyna" button in the search bar instantly plays the clicked level.
+                _jumpToLevel = level;
+                OpenLevel(level);
+                EditorPlayFromLevel.Play(level);
+                Event.current.Use();
+            }
+            else if (GUI.Button(rect, content, LevelButtonStyle))
+            {
                 _jumpToLevel = level;
                 OpenLevel(level);
             }

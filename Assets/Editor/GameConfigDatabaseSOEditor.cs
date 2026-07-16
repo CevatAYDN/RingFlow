@@ -57,8 +57,15 @@ namespace RingFlow.Editor
             {
                 RingFlowEditorUtils.BeginSectionBox("Genel Seviye Ayarları", "Oyun genelindeki seviye miktarları ve temel kurallar.");
 
+                EditorGUILayout.HelpBox(
+                    "Bu bölüm oyun genelindeki seviye limitlerini ve temel kuralları tanımlar.\n" +
+                    "• Toplam Seviye Sayısı: Oyunda bulunacak toplam bölüm adedi.\n" +
+                    "• Tema Adımı: Kaç seviyede bir arka plan veya görsel tema stilinin değişeceği.\n" +
+                    "• Minimum Boş Direk: Bulmaca oluşturulurken her seviyede bulunması gereken en az boş direk adedi (Tasarımcının serbestçe halka taşıyabilmesi için gereklidir).",
+                    MessageType.Info);
+
                 EditorGUI.BeginChangeCheck();
-                int newTotalLevels = EditorGUILayout.IntField("Toplam Seviye Sayısı", db.TotalLevels);
+                int newTotalLevels = EditorGUILayout.IntField(new GUIContent("Toplam Seviye Sayısı", "Oyundaki toplam seviye adedi. Değiştiğinde tüm zorluk ve dünyalar yeniden ölçeklenebilir."), db.TotalLevels);
                 if (EditorGUI.EndChangeCheck() && newTotalLevels != db.TotalLevels && newTotalLevels > 0)
                 {
                     db.TotalLevels = newTotalLevels;
@@ -75,8 +82,8 @@ namespace RingFlow.Editor
                     EditorUtility.SetDirty(db);
                 }
 
-                db.LevelsPerThemeStep = EditorGUILayout.IntField("Tema Başına Seviye Adımı", db.LevelsPerThemeStep);
-                db.MinimumEmptyPoles = EditorGUILayout.IntField("Minimum Boş Direk Sayısı", db.MinimumEmptyPoles);
+                db.LevelsPerThemeStep = EditorGUILayout.IntField(new GUIContent("Tema Başına Seviye Adımı", "Görsel veya mekanik temaların kaç seviyede bir güncelleneceğini belirler."), db.LevelsPerThemeStep);
+                db.MinimumEmptyPoles = EditorGUILayout.IntField(new GUIContent("Minimum Boş Direk Sayısı", "Bulmacaların çözülebilir olması için seviyelerde bulunacak en az boş direk sayısı."), db.MinimumEmptyPoles);
 
                 // Hızlı ön ayar butonları — hardcode değil, InitializeDefaults kullanır
                 EditorGUILayout.Space(6f);
@@ -116,6 +123,14 @@ namespace RingFlow.Editor
             {
                 if (db.DifficultyBands == null) db.DifficultyBands = new System.Collections.Generic.List<DifficultyBandData>();
 
+                EditorGUILayout.HelpBox(
+                    "Difficulty Bands (Zorluk Dereceleri), oyunun bölümlerini kolaydan zora (Easy, Medium, Hard, Master, vb.) sınıflandırır.\n" +
+                    "• Maks. Seviye: Bu zorluk grubunun geçerli olacağı en yüksek seviye numarası.\n" +
+                    "• Min. Boş Direk: Bulmaca üretilirken bu band için hedeflenen minimum boş direk sayısı.\n" +
+                    "• Maks. Kapasite: Her bir direğin tutabileceği maksimum halka sayısı (Genelde 4 halkadır).\n" +
+                    "• İzin Verilen Mekanikler: Bu zorluk derecesinde karşılaşılabilecek özel halka tipleri (Mystery, Frozen, Locked, vb.).",
+                    MessageType.Info);
+
                 for (int i = 0; i < db.DifficultyBands.Count; i++)
                 {
                     var band = db.DifficultyBands[i];
@@ -123,9 +138,9 @@ namespace RingFlow.Editor
 
                     using (new EditorGUILayout.HorizontalScope())
                     {
-                        band.MaxLevel = EditorGUILayout.IntField("Maks. Seviye", band.MaxLevel, GUILayout.Width(RingFlowEditorUtils.GetResponsiveWidth(110f, 160f, 0.14f)));
-                        band.MinEmptyPoles = EditorGUILayout.IntField("Min. Boş Direk", band.MinEmptyPoles, GUILayout.Width(RingFlowEditorUtils.GetResponsiveWidth(100f, 150f, 0.13f)));
-                        band.MaxCapacity = EditorGUILayout.IntField("Maks. Kapasite", band.MaxCapacity, GUILayout.Width(RingFlowEditorUtils.GetResponsiveWidth(100f, 150f, 0.13f)));
+                        band.MaxLevel = EditorGUILayout.IntField(new GUIContent("Maks. Seviye", "Bu zorluk grubunun geçerli olacağı son seviye."), band.MaxLevel, GUILayout.Width(RingFlowEditorUtils.GetResponsiveWidth(110f, 160f, 0.14f)));
+                        band.MinEmptyPoles = EditorGUILayout.IntField(new GUIContent("Min. Boş Direk", "Bu gruptaki seviyelerde bulunacak en az boş direk adedi."), band.MinEmptyPoles, GUILayout.Width(RingFlowEditorUtils.GetResponsiveWidth(100f, 150f, 0.13f)));
+                        band.MaxCapacity = EditorGUILayout.IntField(new GUIContent("Maks. Kapasite", "Direklerin halka kapasitesi (Varsayılan: 4)."), band.MaxCapacity, GUILayout.Width(RingFlowEditorUtils.GetResponsiveWidth(100f, 150f, 0.13f)));
                     }
 
                     EditorGUILayout.Space(2f);
@@ -180,6 +195,12 @@ namespace RingFlow.Editor
                     db.ColorCurve = new System.Collections.Generic.List<ColorCurvePoint>();
 
                 RingFlowEditorUtils.BeginSectionBox("Renk Eşik Eğrisi", "Seviye ilerledikçe havuzdaki maksimum aktif renk miktarını kontrol eden eğri basamakları.");
+
+                EditorGUILayout.HelpBox(
+                    "Renk İlerleme Eğrisi, hangi seviyeden itibaren oyuna kaç farklı renk dahil edileceğini (ve dolayısıyla zorluğun nasıl artacağını) belirler.\n" +
+                    "• Seviye ≥: Bu kuralın geçerli olacağı en düşük seviye eşiği.\n" +
+                    "• Renkler: O seviyeden itibaren kullanılacak toplam renk çeşidi sayısı (En az 2, en fazla 10 renk).",
+                    MessageType.Info);
 
                 for (int i = 0; i < db.ColorCurve.Count; i++)
                 {
@@ -281,14 +302,22 @@ namespace RingFlow.Editor
 
                     RingFlowEditorUtils.BeginSectionBox($"Dünya {_selectedWorldIndex + 1} Detayları: {w.Theme}", $"Seviye Aralığı: {startLevel} – {endLevel}");
 
+                    EditorGUILayout.HelpBox(
+                        "Dünya Ayarları, oyundaki bölge bazlı temaları ve özel mekanikleri yapılandırır.\n" +
+                        "• Dünya Tema Adı: Dünyanın görsel arka planı/teması (örneğin Forest, Space, Desert).\n" +
+                        "• Kilit Açma Dünya Endeksi: Bu dünyaya geçebilmek için tamamlanması gereken önceki dünya numarası (0-indexed).\n" +
+                        "• Boss (Etkinlik) Dünyası: Özel zaman kısıtlamalı veya zorlu bir etkinlik alanı olup olmadığı.\n" +
+                        "• Özel Mekanik: Bu dünyadaki seviyelerde üretilecek baskın özel halka mekaniği (Örn: Frozen, Magnet, Paint).",
+                        MessageType.Info);
+
                     var band = db.GetBandForLevel(startLevel);
                     int intensity = db.GetMechanicIntensityForLevel(startLevel);
                     EditorGUILayout.LabelField($"Zorluk Bandı: {band} | Yoğunluk: {intensity}", EditorStyles.miniLabel);
 
-                    w.Theme = EditorGUILayout.TextField("Dünya Tema Adı", w.Theme);
-                    w.UnlockedByWorldIndex = EditorGUILayout.IntField("Kilit Açma Dünya Endeksi", w.UnlockedByWorldIndex);
-                    w.IsEventWorld = EditorGUILayout.Toggle("Boss (Etkinlik) Dünyası mı", w.IsEventWorld);
-                    w.MechanicType = (WorldMechanicType)EditorGUILayout.EnumPopup("Özel Mekanik", w.MechanicType);
+                    w.Theme = EditorGUILayout.TextField(new GUIContent("Dünya Tema Adı", "Dünyanın tematik ismi."), w.Theme);
+                    w.UnlockedByWorldIndex = EditorGUILayout.IntField(new GUIContent("Kilit Açma Dünya Endeksi", "Bu dünyayı açmak için tamamlanması gereken dünya index'i."), w.UnlockedByWorldIndex);
+                    w.IsEventWorld = EditorGUILayout.Toggle(new GUIContent("Boss (Etkinlik) Dünyası mı", "Eğer boss dünyası ise zorlu kurallar geçerli olur."), w.IsEventWorld);
+                    w.MechanicType = (WorldMechanicType)EditorGUILayout.EnumPopup(new GUIContent("Özel Mekanik", "Bu dünyadaki seviyelerde ağırlıklı olarak kullanılacak mekanik türü."), w.MechanicType);
 
                     var allowed = db.GetAllowedMechanicsForLevel(startLevel);
                     if (w.MechanicType != WorldMechanicType.None &&
@@ -315,10 +344,17 @@ namespace RingFlow.Editor
             {
                 RingFlowEditorUtils.BeginSectionBox("Denge ve Ödül Ayarları", "Altın, XP ödülleri, yıldız eşikleri, günlük ödüller ve reklam sıklığı.");
 
+                EditorGUILayout.HelpBox(
+                    "Denge ve Ödül Ayarları, oyun ekonomisini, oyuncunun seviye atlama hızını ve reklam sıklığını düzenler.\n" +
+                    "• Geri Alma & İpucu Bedelleri: Hamleyi geri almak (Undo) veya ipucu (Hint) istemek için harcanacak altın bedeli.\n" +
+                    "• Seviye Ödülleri: Normal ve Boss seviyelerini geçince verilecek altın ve XP (Tecrübe Puanı) değerleri.\n" +
+                    "• Yıldız Limitleri (%): Oyuncunun 3 veya 2 yıldız kazanabilmesi için çözücü hedefine göre yapabileceği maksimum hamle tolerans oranı (Örn: %120 yaparsanız, 10 hamlelik bölüme 12 hamleye kadar 3 yıldız verilir).",
+                    MessageType.Info);
+
                 EditorGUILayout.LabelField("Geri Alma (Undo) & İpucu (Hint)", EditorStyles.miniBoldLabel);
-                db.BalanceConfig.FreeUndosPerSession = EditorGUILayout.IntField("Ücretsiz Hak (Oturum)", db.BalanceConfig.FreeUndosPerSession);
-                db.BalanceConfig.UndoCoinCost = EditorGUILayout.IntField("Geri Alma Altın Bedeli", db.BalanceConfig.UndoCoinCost);
-                db.BalanceConfig.HintCoinCost = EditorGUILayout.IntField("İpucu Altın Bedeli", db.BalanceConfig.HintCoinCost);
+                db.BalanceConfig.FreeUndosPerSession = EditorGUILayout.IntField(new GUIContent("Ücretsiz Hak (Oturum)", "Her oyun oturumunda oyuncuya verilecek ücretsiz geri alma hakkı."), db.BalanceConfig.FreeUndosPerSession);
+                db.BalanceConfig.UndoCoinCost = EditorGUILayout.IntField(new GUIContent("Geri Alma Altın Bedeli", "Geri alma hakkı tükendiğinde bir geri alma işleminin altın maliyeti."), db.BalanceConfig.UndoCoinCost);
+                db.BalanceConfig.HintCoinCost = EditorGUILayout.IntField(new GUIContent("İpucu Altın Bedeli", "Bir seviyede ipucu istemenin altın maliyeti."), db.BalanceConfig.HintCoinCost);
 
                 EditorGUILayout.Space(4f);
                 EditorGUILayout.LabelField("Seviye Tamamlama Ödülleri", EditorStyles.miniBoldLabel);
@@ -397,10 +433,17 @@ namespace RingFlow.Editor
 
                 RingFlowEditorUtils.BeginSectionBox("Seviye Üretim Parametreleri", "Algoritma karıştırma sıklığı, çözücü durum sınırları ve mekanik öncelikleri.");
 
+                EditorGUILayout.HelpBox(
+                    "Seviye Üretim Ayarları, bölümler otomatik üretilirken (Generator) arka planda çalışan yapay zekanın (Solver) sınırlarını belirler.\n" +
+                    "• Maks. Karıştırma Denemesi: Bir seviyeyi çözülebilir kılana kadar algoritmanın deneyeceği maksimum karıştırma (Scramble) sayısı.\n" +
+                    "• Maks. Çözücü Durum Sınırı: Çözücünün Unity editörünü dondurmaması için arama yapabileceği maksimum durum sayısı (Search Space limit).\n" +
+                    "• Min Çözücü Hamlesi: Otomatik üretilen bir seviyenin kabul edilmesi için gereken en az optimal hamle limiti (Çok basit seviyeleri filtrelemek için kullanılır).",
+                    MessageType.Info);
+
                 EditorGUILayout.LabelField("Üretim / Karıştırma", EditorStyles.miniBoldLabel);
-                db.LevelGen.MaxScrambleAttempts = EditorGUILayout.IntField("Maks. Karıştırma Denemesi", db.LevelGen.MaxScrambleAttempts);
-                db.LevelGen.ScrambleTargetBase = EditorGUILayout.IntField("Karıştırma Hedef Tabanı", db.LevelGen.ScrambleTargetBase);
-                db.LevelGen.ScrambleTargetRandomRange = EditorGUILayout.IntField("Karıştırma Rastgele Aralık", db.LevelGen.ScrambleTargetRandomRange);
+                db.LevelGen.MaxScrambleAttempts = EditorGUILayout.IntField(new GUIContent("Maks. Karıştırma Denemesi", "Algoritmanın çözülebilir seviye üretmek için yapacağı maksimum deneme adedi."), db.LevelGen.MaxScrambleAttempts);
+                db.LevelGen.ScrambleTargetBase = EditorGUILayout.IntField(new GUIContent("Karıştırma Hedef Tabanı", "Halkaların karıştırılma yoğunluğu taban değeri."), db.LevelGen.ScrambleTargetBase);
+                db.LevelGen.ScrambleTargetRandomRange = EditorGUILayout.IntField(new GUIContent("Karıştırma Rastgele Aralık", "Karıştırma yoğunluğuna eklenecek rastgele dalgalanma aralığı."), db.LevelGen.ScrambleTargetRandomRange);
                 db.LevelGen.MaxGenerationSeeds = EditorGUILayout.IntField("Maks. Üretim Seed", db.LevelGen.MaxGenerationSeeds);
                 db.LevelGen.MaxCandidates = EditorGUILayout.IntField("Maks. Aday", db.LevelGen.MaxCandidates);
                 db.LevelGen.BaseGenerationSeedMultiplier = EditorGUILayout.IntField("Seed Çarpanı", db.LevelGen.BaseGenerationSeedMultiplier);

@@ -17,6 +17,7 @@ namespace RingFlow.Editor
         public const string FoldGameFeel     = "RingFlow.Foldout.GameFeel";
         public const string FoldConfigAssets = "RingFlow.Foldout.ConfigAssets";
         public const string FoldLevelBrowser = "RingFlow.Foldout.LevelBrowser";
+        public const string FoldActiveLevelEditor = "RingFlow.Foldout.ActiveLevelEditor";
 
         // ── Birleşik Veri Ekranı (Veri sekmesi) foldout state ──
         public const string FoldDataOverview  = "RingFlow.Foldout.DataOverview";
@@ -48,6 +49,10 @@ namespace RingFlow.Editor
         public const string BatchEndLevel    = "RingFlow.BatchEndLevel";
         public const string AutoSave         = "RingFlow.AutoSave";
         public const string MaxEmptyPoles    = "RingFlow.MaxEmptyPoles";
+
+        // ── Bulk difficulty/solver fixer state (DatabaseSection batch corrector) ──
+        public const string FixStartLevel    = "RingFlow.FixStartLevel";
+        public const string FixEndLevel      = "RingFlow.FixEndLevel";
 
         // ── Window state ──
         public const string SelectedTab      = "RingFlow.SelectedTab";
