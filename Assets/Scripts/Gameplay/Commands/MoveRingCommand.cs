@@ -126,12 +126,23 @@ namespace RingFlow.Gameplay
 
             if (toPole.Rings.Count >= 2)
             {
-                var targetType = toPole.Rings[toPole.Rings.Count - 2].Type;
-                if (targetType == RingType.Paint || targetType == RingType.Rainbow)
+                var ringBelowType = toPole.Rings[toPole.Rings.Count - 2].Type;
+
+                // FIX-RC1: Paint on top of existing Paint — do NOT chain paint twice.
+                // The moving ring already ran PostMoveExecution above (for Paint itself).
+                // Only trigger the below-ring's strategy when the MOVING ring is NOT Paint,
+                // to avoid double-consuming a paint ring that was placed on another Paint.
+                if (ringBelowType == RingType.Paint && ring.Type != RingType.Paint)
                 {
-                    _strategyManager.ExecutePostMoveExecution(targetType, ref context);
+                    _strategyManager.ExecutePostMoveExecution(RingType.Paint, ref context);
                 }
-                else if (targetType == RingType.Ghost)
+                // FIX-R1 (RainbowRingStrategy Case 2): another ring landed on a Rainbow
+                // that was previously placed on an empty pole — trigger delayed conversion.
+                else if (ringBelowType == RingType.Rainbow)
+                {
+                    _strategyManager.ExecutePostMoveExecution(RingType.Rainbow, ref context);
+                }
+                else if (ringBelowType == RingType.Ghost)
                 {
                     // GDD §40: a Ghost ring becomes visible when another ring lands on it.
                     // Reveal is visual only — no gameplay state mutation, so no undo handling needed.

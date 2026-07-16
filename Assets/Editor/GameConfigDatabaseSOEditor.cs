@@ -20,18 +20,32 @@ namespace RingFlow.Editor
             EditorGUILayout.LabelField("RingFlow Veritabanı Editörü (Database)", RingFlowEditorUtils.HeaderStyle);
             EditorGUILayout.Space(4f);
 
-            // ── GDD Consistency Checks ──
-            if (db.TotalLevels != 2000 || db.Worlds.Count != 40 || db.LevelsPerWorld != 50)
+            // ── Tutarlılık Kontrolü — data-driven, hardcode 2000/40/50 yok ──
+            // Kural: TotalLevels == TotalWorlds * LevelsPerWorld ve Worlds.Count == TotalWorlds
+            // GDD §51 hedefi 2000 level ama MVP (100 level, 2 dünya) da geçerlidir.
             {
-                RingFlowEditorUtils.BeginSectionBox("⚠ GDD Tutarsızlığı Saptandı", "Veritabanı parametreleri GDD'deki 2000 seviye ve 40 dünya hedefiyle eşleşmiyor.");
-                if (db.TotalLevels != 2000)
-                    EditorGUILayout.LabelField($"• Toplam Seviye {db.TotalLevels} ayarlanmış (GDD beklentisi: 2000).", EditorStyles.miniLabel);
-                if (db.Worlds.Count != 40)
-                    EditorGUILayout.LabelField($"• Dünya Sayısı {db.Worlds.Count} ayarlanmış (GDD beklentisi: 40).", EditorStyles.miniLabel);
-                if (db.LevelsPerWorld != 50)
-                    EditorGUILayout.LabelField($"• Dünya Başına Seviye {db.LevelsPerWorld} ayarlanmış (GDD beklentisi: 50).", EditorStyles.miniLabel);
-                RingFlowEditorUtils.EndSectionBox();
-                EditorGUILayout.Space(4f);
+                int expectedTotal = db.TotalWorlds * db.LevelsPerWorld;
+                bool totalMismatch = db.TotalLevels != expectedTotal && expectedTotal > 0;
+                bool worldCountMismatch = db.Worlds.Count != db.TotalWorlds;
+
+                if (totalMismatch || worldCountMismatch)
+                {
+                    RingFlowEditorUtils.BeginSectionBox("⚠ Veritabanı Tutarsızlığı",
+                        "TotalLevels, TotalWorlds ve LevelsPerWorld değerleri birbiriyle uyuşmuyor.");
+                    if (totalMismatch)
+                        EditorGUILayout.LabelField(
+                            $"• TotalLevels={db.TotalLevels} ≠ TotalWorlds({db.TotalWorlds}) × LevelsPerWorld({db.LevelsPerWorld}) = {expectedTotal}.",
+                            EditorStyles.miniLabel);
+                    if (worldCountMismatch)
+                        EditorGUILayout.LabelField(
+                            $"• Worlds.Count={db.Worlds.Count} ≠ TotalWorlds={db.TotalWorlds}.",
+                            EditorStyles.miniLabel);
+                    EditorGUILayout.HelpBox(
+                        "'Varsayılan GDD Ayarlarına Sıfırla' butonu ile tutarlı bir başlangıç yapılandırması oluşturabilirsiniz.",
+                        MessageType.Info);
+                    RingFlowEditorUtils.EndSectionBox();
+                    EditorGUILayout.Space(4f);
+                }
             }
 
             _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
@@ -42,9 +56,56 @@ namespace RingFlow.Editor
             RingFlowEditorUtils.FoldoutSection(EditorPrefsKeys.FoldDbGeneral, "Genel Seviye Ayarları", () =>
             {
                 RingFlowEditorUtils.BeginSectionBox("Genel Seviye Ayarları", "Oyun genelindeki seviye miktarları ve temel kurallar.");
-                db.TotalLevels = EditorGUILayout.IntField("Toplam Seviye Sayısı", db.TotalLevels);
+
+                EditorGUI.BeginChangeCheck();
+                int newTotalLevels = EditorGUILayout.IntField("Toplam Seviye Sayısı", db.TotalLevels);
+                if (EditorGUI.EndChangeCheck() && newTotalLevels != db.TotalLevels && newTotalLevels > 0)
+                {
+                    db.TotalLevels = newTotalLevels;
+                    // Otomatik ölçekleme: TotalLevels değişince kullanıcıya tek tıkla
+                    // tüm eğrileri yeniden oluşturma seçeneği sun.
+                    if (EditorUtility.DisplayDialog("Seviye Sayısı Değişti",
+                        $"TotalLevels {newTotalLevels} olarak ayarlandı.\n\n" +
+                        "DifficultyBands, ColorCurve ve Worlds listeleri yeni değere göre otomatik ölçeklensin mi?\n\n" +
+                        "(Evet = InitializeDefaults ile yeniden oluştur, Hayır = mevcut listeyi koru)",
+                        "Evet, Otomatik Ölçekle", "Hayır, Sadece Değeri Kaydet"))
+                    {
+                        db.InitializeDefaults();
+                    }
+                    EditorUtility.SetDirty(db);
+                }
+
                 db.LevelsPerThemeStep = EditorGUILayout.IntField("Tema Başına Seviye Adımı", db.LevelsPerThemeStep);
                 db.MinimumEmptyPoles = EditorGUILayout.IntField("Minimum Boş Direk Sayısı", db.MinimumEmptyPoles);
+
+                // Hızlı ön ayar butonları — hardcode değil, InitializeDefaults kullanır
+                EditorGUILayout.Space(6f);
+                EditorGUILayout.LabelField("Hızlı Ön Ayar", EditorStyles.miniBoldLabel);
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("100 Level (MVP)", EditorStyles.miniButton))
+                    {
+                        Undo.RecordObject(db, "Preset 100 Level");
+                        db.TotalLevels = 100;
+                        db.InitializeDefaults();
+                        EditorUtility.SetDirty(db);
+                    }
+                    if (GUILayout.Button("500 Level", EditorStyles.miniButton))
+                    {
+                        Undo.RecordObject(db, "Preset 500 Level");
+                        db.TotalLevels = 500;
+                        db.InitializeDefaults();
+                        EditorUtility.SetDirty(db);
+                    }
+                    if (GUILayout.Button("2000 Level (GDD Tam)", EditorStyles.miniButton))
+                    {
+                        Undo.RecordObject(db, "Preset 2000 Level");
+                        db.TotalLevels = 2000;
+                        db.InitializeDefaults();
+                        EditorUtility.SetDirty(db);
+                    }
+                }
+
                 RingFlowEditorUtils.EndSectionBox();
             });
 
@@ -156,8 +217,10 @@ namespace RingFlow.Editor
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
+                    // FIX-E1: Default threshold = TotalLevels (not hardcode 2000)
+                    int newThreshold = db.TotalLevels > 0 ? db.TotalLevels : 100;
                     if (GUILayout.Button("+ Yeni Nokta Ekle"))
-                        db.ColorCurve.Add(new ColorCurvePoint { LevelThreshold = 2000, ColorCount = 10 });
+                        db.ColorCurve.Add(new ColorCurvePoint { LevelThreshold = newThreshold, ColorCount = 10 });
                     if (db.ColorCurve.Count > 1 && GUILayout.Button("- Son Noktayı Sil"))
                         db.ColorCurve.RemoveAt(db.ColorCurve.Count - 1);
                 }

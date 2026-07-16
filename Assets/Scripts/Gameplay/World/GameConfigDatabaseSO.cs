@@ -762,6 +762,104 @@ namespace RingFlow.Gameplay
             return Worlds[worldIndex].MechanicType;
         }
 
+        #region DB Validation Helpers
+
+        /// <summary>
+        /// Validates that DifficultyBands are ordered correctly (no overlap, no gap,
+        /// last band covers TotalLevels) and returns a list of violation messages.
+        /// Returns an empty list when the configuration is consistent.
+        ///
+        /// Called by the DatabaseSection editor and by unit tests (DataDrivenConfigTests).
+        /// Never throws — accumulates all issues so the caller can display them together.
+        /// </summary>
+        public List<string> ValidateDifficultyBands()
+        {
+            var issues = new List<string>();
+
+            if (DifficultyBands == null || DifficultyBands.Count == 0)
+            {
+                issues.Add("DifficultyBands list is empty — call InitializeDefaults() first.");
+                return issues;
+            }
+
+            int prev = 0;
+            for (int i = 0; i < DifficultyBands.Count; i++)
+            {
+                var band = DifficultyBands[i];
+
+                // Each band's MaxLevel must be strictly greater than the previous band's MaxLevel.
+                if (band.MaxLevel <= prev)
+                    issues.Add($"DifficultyBands[{i}] ({band.Band}): MaxLevel={band.MaxLevel} " +
+                               $"is not strictly greater than previous MaxLevel={prev}. " +
+                               "Bands must not overlap or have zero-width ranges.");
+
+                // MaxCapacity sanity
+                if (band.MaxCapacity < 1)
+                    issues.Add($"DifficultyBands[{i}] ({band.Band}): MaxCapacity={band.MaxCapacity} < 1.");
+
+                // MinEmptyPoles sanity
+                if (band.MinEmptyPoles < 0)
+                    issues.Add($"DifficultyBands[{i}] ({band.Band}): MinEmptyPoles={band.MinEmptyPoles} < 0.");
+
+                // MechanicIntensity sanity
+                if (band.MechanicIntensity < 1)
+                    issues.Add($"DifficultyBands[{i}] ({band.Band}): MechanicIntensity={band.MechanicIntensity} < 1.");
+
+                prev = band.MaxLevel;
+            }
+
+            // Last band must cover TotalLevels
+            int lastMax = DifficultyBands[^1].MaxLevel;
+            if (TotalLevels > 0 && lastMax < TotalLevels)
+                issues.Add($"Last DifficultyBand ({DifficultyBands[^1].Band}) MaxLevel={lastMax} " +
+                           $"< TotalLevels={TotalLevels}. Levels {lastMax + 1}–{TotalLevels} have no band.");
+
+            return issues;
+        }
+
+        /// <summary>
+        /// Validates that ColorCurve thresholds are strictly monotonically increasing
+        /// and that color counts do not decrease (enforcing the GDD "never fewer colors"
+        /// guarantee). Returns a list of violation messages; empty = OK.
+        /// </summary>
+        public List<string> ValidateColorCurve()
+        {
+            var issues = new List<string>();
+
+            if (ColorCurve == null || ColorCurve.Count == 0)
+            {
+                issues.Add("ColorCurve list is empty — call InitializeDefaults() first.");
+                return issues;
+            }
+
+            for (int i = 1; i < ColorCurve.Count; i++)
+            {
+                var prev = ColorCurve[i - 1];
+                var curr = ColorCurve[i];
+
+                // Thresholds must be strictly ascending
+                if (curr.LevelThreshold <= prev.LevelThreshold)
+                    issues.Add($"ColorCurve[{i}]: LevelThreshold={curr.LevelThreshold} " +
+                               $"is not strictly greater than ColorCurve[{i - 1}].LevelThreshold={prev.LevelThreshold}. " +
+                               "Thresholds must be in ascending order.");
+
+                // Color count must not decrease (GDD §54 — progressive difficulty)
+                if (curr.ColorCount < prev.ColorCount)
+                    issues.Add($"ColorCurve[{i}]: ColorCount={curr.ColorCount} < " +
+                               $"ColorCurve[{i - 1}].ColorCount={prev.ColorCount}. " +
+                               "Color count must be non-decreasing (GDD §54).");
+            }
+
+            // First threshold must be 1 (covers level 1)
+            if (ColorCurve[0].LevelThreshold != 1)
+                issues.Add($"ColorCurve[0].LevelThreshold={ColorCurve[0].LevelThreshold} should be 1 " +
+                           "so level 1 always has a defined color count.");
+
+            return issues;
+        }
+
+        #endregion
+
         #region Static Progression Helpers (shared)
         public static int ToAbsoluteLevel(int worldIndex, int levelInWorld, GameConfigDatabaseSO dbConfig)
         {

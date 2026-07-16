@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Nexus.Core.Services;
 
 namespace RingFlow.Gameplay.Strategies
 {
@@ -42,6 +43,11 @@ namespace RingFlow.Gameplay.Strategies
             _defaultStrategy = _strategies.TryGetValue(RingType.Standard, out var std)
                 ? std
                 : new StandardRingStrategy();
+
+#if DEVELOPMENT_BUILD
+            NexusLog.Info("RingMoveStrategyManager", ".ctor", "init",
+                $"Initialized with {_strategies.Count} ring-type strategy mappings.");
+#endif
         }
 
         /// <summary>
@@ -72,6 +78,12 @@ namespace RingFlow.Gameplay.Strategies
             {
                 return strategy;
             }
+
+#if DEVELOPMENT_BUILD
+            NexusLog.Warn("RingMoveStrategyManager", nameof(GetStrategy), ringType.ToString(),
+                $"No move strategy registered for RingType.{ringType} — falling back to Standard. " +
+                "Register a dedicated IRingMoveStrategy to suppress this warning.");
+#endif
             return _defaultStrategy;
         }
 
@@ -81,7 +93,18 @@ namespace RingFlow.Gameplay.Strategies
         public bool ExecutePreMoveValidation(RingType ringType, ref MoveContext context)
         {
             var strategy = GetStrategy(ringType);
-            return strategy.PreMoveValidation(ref context);
+            bool result = strategy.PreMoveValidation(ref context);
+
+#if DEVELOPMENT_BUILD
+            if (!result)
+            {
+                NexusLog.Info("RingMoveStrategyManager", nameof(ExecutePreMoveValidation),
+                    $"{context.FromPoleId}->{context.ToPoleId}",
+                    $"PreMoveValidation blocked move for RingType.{ringType} " +
+                    $"(strategy={strategy.GetType().Name}).");
+            }
+#endif
+            return result;
         }
 
         /// <summary>

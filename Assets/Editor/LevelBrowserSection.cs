@@ -1,5 +1,6 @@
 using UnityEditor;
 using UnityEngine;
+using Nexus.Core.Services;
 using RingFlow.Gameplay;
 
 namespace RingFlow.Editor
@@ -245,7 +246,12 @@ namespace RingFlow.Editor
             LevelButtonStyle.normal.textColor = exists ? Color.white : EditorPaths.EditorColors.MutedText;
 
             if (GUILayout.Button(level.ToString(), LevelButtonStyle, GUILayout.Width(width), GUILayout.Height(GridButtonHeight)))
+            {
+                // FIX-E3: Single click opens the asset AND syncs _jumpToLevel so the
+                // "▶ Oyna" button in the search bar instantly plays the clicked level.
+                _jumpToLevel = level;
                 OpenLevel(level);
+            }
 
             GUI.backgroundColor = prev;
         }
@@ -258,12 +264,16 @@ namespace RingFlow.Editor
             {
                 Selection.activeObject = asset;
                 EditorGUIUtility.PingObject(asset);
+                NexusLog.Info("LevelBrowserSection", nameof(OpenLevel), level.ToString(),
+                    $"[Editor] Level {level} açıldı: {path}");
             }
             else
             {
                 EditorUtility.DisplayDialog("Seviye Bulunamadı",
-                    $"Seviye {level} henüz üretilmemiş.\nÖnce 'Seviye Üretici' sekmesinden üretin " +
-                    "(Başlangıç/Bitiş aralığına " + level + " değerini ekleyin).", "Tamam");
+                    $"Seviye {level} henüz üretilmemiş.\n" +
+                    $"Seviye Üretici sekmesinden tek veya toplu üretim yapabilirsiniz.\n" +
+                    $"(Batch aralığını {level}–{level} olarak ayarlayıp 'Toplu Üret'e tıklayın.)",
+                    "Tamam");
             }
         }
     }

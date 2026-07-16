@@ -69,3 +69,7 @@ MonoBehaviour:
       Rings: []
       IsLocked: 0
       PortalTargetId: -1
+    - RingCapacity: 4
+      Rings: []
+      IsLocked: 0
+      PortalTargetId: -1

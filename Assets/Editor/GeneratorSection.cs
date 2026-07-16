@@ -45,7 +45,22 @@ namespace RingFlow.Editor
             _levelIndex = EditorPrefs.GetInt(EditorPrefsKeys.LevelIndex, 1);
             _seed = EditorPrefs.GetInt(EditorPrefsKeys.Seed, 100);
             _batchStartLevel = EditorPrefs.GetInt(EditorPrefsKeys.BatchStartLevel, 1);
-            _batchEndLevel = EditorPrefs.GetInt(EditorPrefsKeys.BatchEndLevel, 50);
+
+            // FIX-E4: Default batchEndLevel from EditorPrefs; if never saved before,
+            // use DB's TotalLevels so "batch end" matches the project's actual scope
+            // instead of the hardcoded 50 that made batch generation silently stop early.
+            int savedBatchEnd = EditorPrefs.GetInt(EditorPrefsKeys.BatchEndLevel, -1);
+            if (savedBatchEnd > 0)
+            {
+                _batchEndLevel = savedBatchEnd;
+            }
+            else
+            {
+                // First launch: default to TotalLevels from DB, fallback 100 if DB not loaded yet.
+                var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
+                _batchEndLevel = db != null && db.TotalLevels > 0 ? db.TotalLevels : 100;
+            }
+
             _autoSave = EditorPrefs.GetBool(EditorPrefsKeys.AutoSave, true);
         }
 

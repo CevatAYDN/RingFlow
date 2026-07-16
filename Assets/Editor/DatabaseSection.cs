@@ -61,9 +61,52 @@ namespace RingFlow.Editor
             // RESP-1: Responsive split — compact (narrow) vs side-by-side (wide)
             bool narrow = RingFlowEditorUtils.IsNarrowWidth(680f);
 
+            // Hızlı ön ayar butonları — tek tıkla tüm eğriler ölçeklenir
+            EditorGUILayout.LabelField("Hızlı Kapsam Seçimi", EditorStyles.miniBoldLabel);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("100 Level\n(MVP)", GUILayout.Height(36)))
+                {
+                    if (EditorUtility.DisplayDialog("Hızlı Ön Ayar — 100 Level",
+                        "TotalLevels=100 olarak ayarlanıp tüm eğriler otomatik ölçeklenecek.\n(DifficultyBands, ColorCurve, Worlds yeniden oluşturulacak)", "Uygula", "İptal"))
+                    {
+                        Undo.RecordObject(_database, "Preset 100 Level");
+                        _database.TotalLevels = 100;
+                        _database.InitializeDefaults();
+                        EditorUtility.SetDirty(_database);
+                        AssetDatabase.SaveAssets();
+                    }
+                }
+                if (GUILayout.Button("500 Level\n(Beta)", GUILayout.Height(36)))
+                {
+                    if (EditorUtility.DisplayDialog("Hızlı Ön Ayar — 500 Level",
+                        "TotalLevels=500 olarak ayarlanıp tüm eğriler otomatik ölçeklenecek.", "Uygula", "İptal"))
+                    {
+                        Undo.RecordObject(_database, "Preset 500 Level");
+                        _database.TotalLevels = 500;
+                        _database.InitializeDefaults();
+                        EditorUtility.SetDirty(_database);
+                        AssetDatabase.SaveAssets();
+                    }
+                }
+                if (GUILayout.Button("2000 Level\n(GDD Tam)", GUILayout.Height(36)))
+                {
+                    if (EditorUtility.DisplayDialog("Hızlı Ön Ayar — 2000 Level (GDD)",
+                        "TotalLevels=2000 olarak ayarlanıp tüm eğriler GDD tam kapsamına göre ölçeklenecek.", "Uygula", "İptal"))
+                    {
+                        Undo.RecordObject(_database, "Preset 2000 Level");
+                        _database.TotalLevels = 2000;
+                        _database.InitializeDefaults();
+                        EditorUtility.SetDirty(_database);
+                        AssetDatabase.SaveAssets();
+                    }
+                }
+            }
+            EditorGUILayout.Space(6f);
+
             if (narrow)
             {
-                _database.TotalLevels      = EditorGUILayout.IntField("Toplam Seviye Sayısı", _database.TotalLevels);
+                _database.TotalLevels        = EditorGUILayout.IntField("Toplam Seviye Sayısı", _database.TotalLevels);
                 _database.LevelsPerThemeStep = EditorGUILayout.IntField("Tema Başına Seviye Adımı", _database.LevelsPerThemeStep);
                 _database.MinimumEmptyPoles  = EditorGUILayout.IntField("Minimum Boş Direk Sayısı", _database.MinimumEmptyPoles);
             }
@@ -71,7 +114,7 @@ namespace RingFlow.Editor
             {
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    _database.TotalLevels      = EditorGUILayout.IntField("Toplam Seviye", _database.TotalLevels, GUILayout.Width(260f));
+                    _database.TotalLevels        = EditorGUILayout.IntField("Toplam Seviye", _database.TotalLevels, GUILayout.Width(260f));
                     _database.LevelsPerThemeStep = EditorGUILayout.IntField("Tema Adımı", _database.LevelsPerThemeStep, GUILayout.Width(200f));
                     _database.MinimumEmptyPoles  = EditorGUILayout.IntField("Min Boş Direk", _database.MinimumEmptyPoles, GUILayout.Width(180f));
                 }
@@ -83,7 +126,25 @@ namespace RingFlow.Editor
             {
                 EditorGUILayout.HelpBox(
                     $"TotalLevels ({_database.TotalLevels}) ≠ TotalWorlds ({_database.TotalWorlds}) × LevelsPerWorld ({_database.LevelsPerWorld}) = {computedTotal}. " +
-                    "InitializeDefaults'u çalıştırarak senkronize edebilirsiniz.",
+                    "'Hızlı Ön Ayar' butonlarından birini kullanarak senkronize edebilirsiniz.",
+                    MessageType.Warning);
+            }
+
+            // DifficultyBands overlap / gap validation (FIX-DB1)
+            var bandIssues = _database.ValidateDifficultyBands();
+            if (bandIssues.Count > 0)
+            {
+                EditorGUILayout.HelpBox(
+                    "⚠ DifficultyBands tutarsızlığı:\n" + string.Join("\n", bandIssues),
+                    MessageType.Warning);
+            }
+
+            // ColorCurve monotonicity validation (FIX-DB2)
+            var curveIssues = _database.ValidateColorCurve();
+            if (curveIssues.Count > 0)
+            {
+                EditorGUILayout.HelpBox(
+                    "⚠ ColorCurve tutarsızlığı:\n" + string.Join("\n", curveIssues),
                     MessageType.Warning);
             }
 

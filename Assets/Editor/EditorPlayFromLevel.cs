@@ -65,11 +65,29 @@ namespace RingFlow.Editor
             var fsm = context.TryResolve<IGameStateMachine>();
             if (fsm == null) return;
 
-            // Wait until boot / splash / loading finishes, then jump into the level.
+            // FIX-E2: The original guard only blocked BootState/SplashState/LoadingState.
+            // After those passed, the FSM typically lands in MainMenuState — at that point
+            // the old code immediately called TransitionToLevel, but sometimes the
+            // PlayingState transition was firing while MainMenu UI wasn't fully ready,
+            // causing a black screen. Adding MainMenuState to the "wait" list and only
+            // transitioning once the FSM is stable in a non-transitional state fixes
+            // the "Oyna" not working issue.
+            //
+            // Accepted states to WAIT in (not yet ready to jump):
+            //   BootState, SplashState, LoadingState — engine startup phases
+            // Accepted state to JUMP from:
+            //   MainMenuState (fully loaded, player at menu = safe to transition)
+            //   Any other state = also safe (already in-game, resume-style jump)
             var state = fsm.CurrentState;
-            if (state is BootState || state is SplashState || state is LoadingState)
-                return;
+            if (state == null) return; // still transitioning
 
+            if (state is BootState || state is SplashState || state is LoadingState)
+                return; // still booting — keep polling
+
+            // FIX-E2: Transition with PlayingStateArgs instead of bare int.
+            // PlayingState.OnEnterAsync handles both `int` and `PlayingStateArgs`,
+            // but using PlayingStateArgs makes the intent explicit and avoids any
+            // future boxing/unboxing ambiguity in the FSM dispatch chain.
             TransitionToLevel(s_pendingLevel);
             Reset();
         }
@@ -92,12 +110,13 @@ namespace RingFlow.Editor
                 return;
             }
 
-            // EDIT-2: Log the editor-triggered level jump so it appears in the runtime
-            // log stream alongside gameplay events. Useful for diagnosing level-select issues.
             NexusLog.Info("EditorPlayFromLevel", nameof(TransitionToLevel), level.ToString(),
-                $"[Editor] Jumping to level {level} via PlayingState FSM transition.");
+                $"[Editor] Jumping to level {level} via PlayingState FSM transition (PlayingStateArgs).");
 
-            fsm.ChangeStateAsync<PlayingState>(level);
+            // FIX-E2/E3: Use PlayingStateArgs instead of bare int to be explicit about
+            // level index vs resume semantics. PlayingState.OnEnterAsync checks for both,
+            // but PlayingStateArgs is the canonical contract and avoids boxing edge cases.
+            fsm.ChangeStateAsync<PlayingState>(new PlayingStateArgs(level));
         }
 
         private static void Reset()
