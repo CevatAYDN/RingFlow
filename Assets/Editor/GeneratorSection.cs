@@ -28,6 +28,13 @@ namespace RingFlow.Editor
         private GameConfigDatabaseSO _cachedDatabase;
         private static GUIStyle s_gddTitleStyle;
 
+        /// <summary>
+        /// Optional callback fired after any level asset is written to disk
+        /// (single-level save or batch generation complete).
+        /// Wire this in RingFlowEditorWindow to invalidate the LevelBrowser cache.
+        /// </summary>
+        public System.Action OnLevelAssetsChanged;
+
         public LevelData GeneratedLevel => _generatedLevel;
 
         public override string DisplayName => "Seviye Üretici & Yapay Zeka Çözücü";
@@ -74,22 +81,61 @@ namespace RingFlow.Editor
             int maxCapacity = _cachedDatabase.GetMaxCapacityForLevel(_levelIndex);
             int minEmptyPoles = _cachedDatabase.GetMinEmptyPolesForLevel(_levelIndex);
 
-            RingFlowEditorUtils.BeginSectionBox("Seviye Parametreleri", "Bireysel seviye üretimi için indeks ve seed girin.");
+            RingFlowEditorUtils.BeginSectionBox("Seviye Parametreleri", "Bireysel seviye üretimi için indeks ve seed girin. Diğer parametreler DB'den otomatik gelir.");
+
+            bool narrow = RingFlowEditorUtils.IsNarrowWidth(680f);
 
             EditorGUI.BeginChangeCheck();
             _levelIndex = EditorGUILayout.IntSlider("Seviye Endeksi", _levelIndex, 1, _cachedDatabase.TotalLevels);
-            _seed = EditorGUILayout.IntField("Rastgele Tohum (Seed)", _seed);
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                _seed = EditorGUILayout.IntField("Seed", _seed, GUILayout.MinWidth(100f));
+                // DATA-3: "Deterministik Seed Kullan" butonu — GetDeterministicSeed() DB kuralından gelir
+                if (GUILayout.Button("DB Seed", EditorStyles.miniButton, GUILayout.Width(80f)))
+                {
+                    _seed = LevelGenerator.GetDeterministicSeed(_levelIndex);
+                    EditorPrefs.SetInt(EditorPrefsKeys.Seed, _seed);
+                    GUI.FocusControl(null);
+                }
+                if (GUILayout.Button("Rastgele", EditorStyles.miniButton, GUILayout.Width(70f)))
+                {
+                    _seed = UnityEngine.Random.Range(1, 999999);
+                    EditorPrefs.SetInt(EditorPrefsKeys.Seed, _seed);
+                    GUI.FocusControl(null);
+                }
+            }
+
+            // RESP-2 + DATA-3: DB parametreleri responsive grid olarak gösterilir — hardcode değer yok
+            if (s_gddTitleStyle == null)
+                s_gddTitleStyle = new GUIStyle(EditorStyles.label)
+                    { fontStyle = FontStyle.Bold, normal = { textColor = EditorPaths.EditorColors.Info } };
 
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                if (s_gddTitleStyle == null)
-                    s_gddTitleStyle = new GUIStyle(EditorStyles.label)
-                        { fontStyle = FontStyle.Bold, normal = { textColor = EditorPaths.EditorColors.Info } };
-                EditorGUILayout.LabelField("GDD Parametreleri (Otomatik):", s_gddTitleStyle);
-                EditorGUILayout.LabelField($"• Direk Sayısı: {poleCount}");
-                EditorGUILayout.LabelField($"• Renk Sayısı: {colorCount}");
-                EditorGUILayout.LabelField($"• Maks. Kapasite: {maxCapacity}");
-                EditorGUILayout.LabelField($"• Min. Boş Direk: {minEmptyPoles}");
+                EditorGUILayout.LabelField("DB Parametreleri (Data-Driven, Salt Okunur):", s_gddTitleStyle);
+                if (narrow)
+                {
+                    EditorGUILayout.LabelField($"Direkler: {poleCount}  |  Renkler: {colorCount}  |  Kapasite: {maxCapacity}  |  Min Boş: {minEmptyPoles}");
+                }
+                else
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        EditorGUILayout.LabelField($"Direk: {poleCount}", GUILayout.Width(90f));
+                        EditorGUILayout.LabelField($"Renk: {colorCount}", GUILayout.Width(80f));
+                        EditorGUILayout.LabelField($"Kapasite: {maxCapacity}", GUILayout.Width(100f));
+                        EditorGUILayout.LabelField($"Min Boş: {minEmptyPoles}", GUILayout.Width(100f));
+                        // Live pole-count consistency check (data-driven)
+                        if (poleCount > _cachedDatabase.LevelGen.PoleCountClamp)
+                        {
+                            var prevCol = GUI.color;
+                            GUI.color = EditorPaths.EditorColors.Warning;
+                            EditorGUILayout.LabelField($"⚠ >{_cachedDatabase.LevelGen.PoleCountClamp} clamp!", EditorStyles.miniBoldLabel);
+                            GUI.color = prevCol;
+                        }
+                    }
+                }
             }
 
             DrawDifficultyPreview(_levelIndex);
@@ -102,8 +148,23 @@ namespace RingFlow.Editor
 
             EditorGUILayout.Space(4f);
 
-            if (GUILayout.Button("Tek Seviye Üret", GUILayout.Height(30)))
-                Generate();
+            // RESP-2: Action row — responsive
+            if (narrow)
+            {
+                if (GUILayout.Button("Tek Seviye Üret", GUILayout.Height(30))) Generate();
+            }
+            else
+            {
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("Tek Seviye Üret", GUILayout.Height(30), GUILayout.ExpandWidth(true))) Generate();
+                    if (GUILayout.Button("DB Seed ile Üret", GUILayout.Height(30), GUILayout.Width(140f)))
+                    {
+                        _seed = LevelGenerator.GetDeterministicSeed(_levelIndex);
+                        Generate();
+                    }
+                }
+            }
 
             _autoSave = EditorGUILayout.Toggle("Üretileni Otomatik Kaydet", _autoSave);
 
@@ -357,6 +418,9 @@ namespace RingFlow.Editor
 
             _generateInProgress = false;
 
+            // Notify LevelBrowser that disk state changed after batch generation.
+            OnLevelAssetsChanged?.Invoke();
+
             EditorUtility.DisplayDialog("Toplu Üretim Tamamlandı",
                 $"{okCount}/{total} seviye şuraya kaydedildi: {folderPath}\n{failed} başarısız.", "Tamam");
         }
@@ -410,6 +474,9 @@ namespace RingFlow.Editor
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
+
+            // Notify LevelBrowser and any other listeners that disk state changed.
+            OnLevelAssetsChanged?.Invoke();
 
             EditorUtility.DisplayDialog("Başarılı",
                 $"Seviye kaydedildi: {assetPath}\nBu seviye artık runtime'da otomatik olarak yüklenecektir!", "Tamam");

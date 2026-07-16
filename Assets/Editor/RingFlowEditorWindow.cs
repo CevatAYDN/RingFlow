@@ -139,6 +139,12 @@ namespace RingFlow.Editor
                 { _generator, _visualBuilder, _runtime, _settings, _adTester, _diagnostics, _databaseSection, _gameFeel, _configSection, _levelBrowser, _dataOverview })
                 s.HideHeader = true;
 
+            // Wire generator → level browser cache invalidation.
+            // When a level asset is saved (single or batch), the LevelBrowser
+            // must re-scan the filesystem so newly created levels appear green
+            // and deleted/missing levels appear grey immediately.
+            _generator.OnLevelAssetsChanged += _levelBrowser.InvalidateExistenceCache;
+
             _generator.OnEnable();
             _selectedTab = Mathf.Clamp(EditorPrefs.GetInt(EditorPrefsKeys.SelectedTab, 0), 0, _tabs.Length - 1);
 
@@ -169,6 +175,11 @@ namespace RingFlow.Editor
 
         private void OnDisable()
         {
+            // Unsubscribe callback before clearing references to prevent leaks
+            // if the window is re-opened (OnEnable re-subscribes fresh).
+            if (_generator != null && _levelBrowser != null)
+                _generator.OnLevelAssetsChanged -= _levelBrowser.InvalidateExistenceCache;
+
             _generator?.OnDisable();
             EditorPrefs.SetInt(EditorPrefsKeys.SelectedTab, _selectedTab);
             EditorSceneManager.sceneOpened -= OnAnySceneChanged;

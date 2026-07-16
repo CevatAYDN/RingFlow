@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using Nexus.Core;
+using Nexus.Core.Services;
 using UnityEngine;
 
 namespace RingFlow.Gameplay
@@ -57,20 +59,34 @@ namespace RingFlow.Gameplay
 
             int maxPoleCount = GameplayAssetKeys.Tuning.MaxPoleCount;
             int limit = poleCount < maxPoleCount ? poleCount : maxPoleCount;
+            int portalPairCount = 0;
+
             for (int i = 0; i < limit; i++)
             {
                 var pole = poles[i];
                 if (pole == null) continue;
 
                 if (pole.Id < 0 || pole.Id >= poleCount)
+                {
+                    // LOG-4: Out-of-range pole ID is a data error — surface it.
+                    NexusLog.Warn("GameplayHelpers", nameof(BuildPortalTargets), pole.Id.ToString(),
+                        $"Pole at list index {i} has Id={pole.Id} which is out of range [0,{poleCount}). Skipped.");
                     continue;
+                }
 
                 int partnerId = pole.PortalPartnerId;
                 if (partnerId < 0 || partnerId >= poleCount || partnerId == pole.Id)
                     continue;
 
                 portalTargets[pole.Id] = partnerId;
+                portalPairCount++;
             }
+
+#if DEVELOPMENT_BUILD
+            if (portalPairCount > 0)
+                NexusLog.Info("GameplayHelpers", nameof(BuildPortalTargets), "",
+                    $"Built portal targets for {poleCount} poles: {portalPairCount} portal links registered.");
+#endif
 
             return portalTargets;
         }

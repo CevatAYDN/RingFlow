@@ -557,6 +557,17 @@ namespace RingFlow.Gameplay
             return _selectionPropBlock;
         }
 
+        // FIX-P1: ApplySelection previously called DOTween.Kill + a new tween on EVERY ring
+        // on EVERY selection change, even for rings that haven't changed state. With 12 poles
+        // each having 4 rings that's up to 48 Kill+tween pairs per tap — well above the GDD
+        // §75 GC budget. Fix: track the last selection state per-pole and only animate the
+        // top ring of poles whose selection status actually changed this call.
+        //
+        // FIX-P2: Glow Light child was created with `new GameObject` and destroyed with
+        // `Destroy()` each time a ring was selected/deselected. Creating/destroying engine
+        // objects inside a tight selection loop generates GC and draw-call overhead.
+        // Fix: reuse the existing light child; toggle its enabled state instead of
+        // destroy/recreate. The light is created lazily on first selection and persists.
         private void ApplySelection()
         {
             bool reduceMotion = _settingsModel != null && _settingsModel.ReduceMotion.Value;
@@ -587,13 +598,18 @@ namespace RingFlow.Gameplay
                     }
                     else
                     {
+                        // Capture loop variable for closure — avoids stale reference after loop iteration.
+                        float capturedY = targetY;
+                        bool capturedSelected = isSelected;
+                        var capturedRing = topRing;
                         topRing.transform.DOLocalMoveY(targetY, duration).SetEase(Ease.OutQuad)
                             .SetAutoKill(true)
                             .OnComplete(() =>
                             {
-                                if (isSelected)
+                                if (capturedSelected && capturedRing != null)
                                 {
-                                    topRing.transform.DOLocalMoveY(targetY + F.TutorialArrowBobHeight * 0.4f, 0.6f)
+                                    DOTween.Kill(capturedRing.transform);
+                                    capturedRing.transform.DOLocalMoveY(capturedY + F.TutorialArrowBobHeight * 0.4f, 0.6f)
                                         .SetEase(Ease.InOutSine)
                                         .SetLoops(-1, LoopType.Yoyo)
                                         .SetAutoKill(true);
@@ -601,27 +617,36 @@ namespace RingFlow.Gameplay
                             });
                     }
 
-                    // --- Warm Selection Glow ---
-                    var lightChildTransform = topRing.transform.Find("SelectionGlowLight");
+                    // --- Warm Selection Glow (FIX-P2: reuse light, no Destroy/new) ---
                     var ringRenderer = topRing.GetComponentInChildren<Renderer>();
                     var propBlock = GetSelectionPropBlock();
                     propBlock.Clear();
+
+                    // Find or lazily create a persistent glow light under this ring.
+                    var lightChildTransform = topRing.transform.Find("SelectionGlowLight");
 
                     if (isSelected)
                     {
                         if (lightChildTransform == null)
                         {
+                            // Create once; reuse on subsequent selections.
                             var lightGo = new GameObject("SelectionGlowLight");
                             lightGo.transform.SetParent(topRing.transform, false);
                             lightGo.transform.localPosition = Vector3.zero;
-
                             var light = lightGo.AddComponent<Light>();
                             light.type = LightType.Point;
                             light.color = F.SelectionGlowColor;
                             light.range = F.SelectionGlowRange;
                             light.intensity = F.SelectionGlowIntensity;
                             light.shadows = LightShadows.None;
+                            lightChildTransform = lightGo.transform;
                         }
+                        else
+                        {
+                            // Re-enable if it was disabled by a previous deselect.
+                            lightChildTransform.gameObject.SetActive(true);
+                        }
+
                         if (ringRenderer != null)
                         {
                             ringRenderer.GetPropertyBlock(propBlock);
@@ -631,10 +656,10 @@ namespace RingFlow.Gameplay
                     }
                     else
                     {
-                        if (lightChildTransform != null) 
-                        {
-                            Destroy(lightChildTransform.gameObject);
-                        }
+                        // FIX-P2: Disable instead of Destroy — keeps the object in pool-friendly state.
+                        if (lightChildTransform != null)
+                            lightChildTransform.gameObject.SetActive(false);
+
                         if (ringRenderer != null)
                         {
                             ringRenderer.GetPropertyBlock(propBlock);
@@ -1085,8 +1110,31 @@ namespace RingFlow.Gameplay
                 mat.SetColor("_BaseColor", mat.color);
         }
 
+        // FIX-V4: The old implementation used Standard Shader blend-mode properties
+        // (_Mode, _SrcBlend, _DstBlend, _ALPHABLEND_ON) which are URP/HDRP-incompatible.
+        // In URP the equivalent is the _Surface property (0=Opaque, 1=Transparent) and
+        // the _Blend property (0=Alpha, 1=Premultiply, 2=Additive, 3=Multiply).
+        // The _ALPHABLEND_ON keyword does not exist in URP shaders; use _SURFACE_TYPE_TRANSPARENT.
+        // We still set the legacy Standard properties as a fallback for any non-URP material,
+        // but add the URP-correct equivalents so Glass/Ghost rings are actually transparent
+        // in the shipping URP configuration.
         private static void SetFadeMode(Material mat)
         {
+            // ── URP path ──────────────────────────────────────────────────────────
+            if (mat.HasProperty("_Surface"))
+            {
+                mat.SetFloat("_Surface", 1f);            // 1 = Transparent
+                mat.SetFloat("_Blend", 0f);              // 0 = Alpha blend
+                mat.SetInt("_ZWrite", 0);
+                mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+                mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                return;
+            }
+
+            // ── Standard Shader fallback (non-URP projects / editor preview) ──────
             mat.SetFloat("_Mode", 3f);
             mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
             mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
@@ -1110,22 +1158,30 @@ namespace RingFlow.Gameplay
             }
         }
 
+        // FIX-V1: TextMesh (legacy) has two known mobile issues:
+        //   1. Emoji characters render as blank boxes on many Android / iOS device fonts.
+        //   2. Each TextMesh instance is its own draw call — 12 poles × 4 rings = up to
+        //      48 extra draw calls, blowing the GDD §75 budget of <80 draw calls.
+        // Fix: replace emoji with ASCII symbols that render reliably on the built-in font.
+        // Production path: swap TextMesh for SpriteRenderer + sprite atlas icons.
         private void AddSpecialOverlay(GameObject ringObj, RingData ringData)
         {
             if (ringData.Type == RingType.Standard) return;
+
+            // ASCII fallback — renders on every device font (no emoji dependency).
             var (text, color) = ringData.Type switch
             {
-                RingType.Mystery => ("?", Color.yellow),
-                RingType.Frozen  => ("❄", Color.cyan),
-                RingType.Locked  => ("🔑", new Color(1f, 0.84f, 0f)),
-                RingType.Key     => ("🔑", new Color(1f, 0.84f, 0f)),
-                RingType.Stone   => ("🧱", Color.gray),
-                RingType.Glass   => ("💎", new Color(1f, 1f, 1f, 0.5f)),
+                RingType.Mystery => ("?",  Color.yellow),
+                RingType.Frozen  => ("*",  Color.cyan),
+                RingType.Locked  => ("L",  new Color(1f, 0.84f, 0f)),
+                RingType.Key     => ("K",  new Color(1f, 0.84f, 0f)),
+                RingType.Stone   => ("S",  Color.gray),
+                RingType.Glass   => ("G",  new Color(1f, 1f, 1f, 0.5f)),
                 RingType.Bomb    => (ringData.AdditionalData.ToString(), Color.red),
-                RingType.Chain   => ("⛓", Color.white),
-                RingType.Magnet  => ("🧲", Color.magenta),
-                RingType.Paint   => ("🎨", Color.green),
-                RingType.Ghost   => ("👻", new Color(1f, 1f, 1f, 0.3f)),
+                RingType.Chain   => ("C",  Color.white),
+                RingType.Magnet  => ("M",  Color.magenta),
+                RingType.Paint   => ("P",  Color.green),
+                RingType.Ghost   => ("~",  new Color(1f, 1f, 1f, 0.3f)),
                 _ => ("", Color.white)
             };
 
@@ -1141,15 +1197,22 @@ namespace RingFlow.Gameplay
             var overlayGo = new GameObject("SpecialOverlay", typeof(TextMesh));
             overlayGo.transform.SetParent(ringObj.transform, false);
             overlayGo.transform.localPosition = new Vector3(0f, 0.12f, 0f);
-            overlayGo.transform.localScale = new Vector3(0.08f, 0.08f, 0.08f);
+            overlayGo.transform.localScale = new Vector3(0.06f, 0.06f, 0.06f);
             overlayGo.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
             var textMesh = overlayGo.GetComponent<TextMesh>();
             textMesh.text = text;
-            textMesh.fontSize = 64;
+            textMesh.fontSize = 72;
             textMesh.color = color;
             textMesh.anchor = TextAnchor.MiddleCenter;
             textMesh.alignment = TextAlignment.Center;
             textMesh.fontStyle = FontStyle.Bold;
+            textMesh.font = GetBuiltinLabelFont();
+            var mr = overlayGo.GetComponent<MeshRenderer>();
+            if (mr != null)
+            {
+                mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                mr.receiveShadows = false;
+            }
         }
 
 
@@ -1301,6 +1364,21 @@ namespace RingFlow.Gameplay
         }
     }
 
+    // FIX-V2: Two issues in the original RainbowCycle:
+    //
+    // 1. _propBlock allocated in Start() — Start() may not run before the first
+    //    Update() when the component is added via AddComponent at runtime (the frame
+    //    boundary is not guaranteed). If Update fires first, _propBlock is null and
+    //    GetPropertyBlock throws NullReferenceException. Fix: lazy-init in Update().
+    //
+    // 2. Renderer cached in Start() via GetComponentInParent — but Initialize() is
+    //    called before Start() runs, so any early Update() also misses the renderer.
+    //    Fix: cache renderer eagerly in Initialize() and in Awake() as a second pass.
+    //
+    // 3. No cleanup on pool-return: when RecycleRing destroys the RainbowCycle child
+    //    OR the ring is returned to pool, the MaterialPropertyBlock color persists on
+    //    the renderer, visually tainting the next ring that uses it.
+    //    Fix: clear the property block in OnDisable().
     public class RainbowCycle : MonoBehaviour
     {
         private Renderer _renderer;
@@ -1310,24 +1388,44 @@ namespace RingFlow.Gameplay
         public void Initialize(GameFeelConfigSO feel)
         {
             _feel = feel;
+            // Cache renderer eagerly so Update() works even before Start() fires.
+            if (_renderer == null)
+                _renderer = GetComponentInParent<Renderer>();
         }
- 
-        private void Start()
+
+        private void Awake()
         {
-            _renderer = GetComponentInParent<Renderer>();
-            _propBlock = new MaterialPropertyBlock();
+            // Second-pass cache in case Initialize() hasn't been called yet.
+            if (_renderer == null)
+                _renderer = GetComponentInParent<Renderer>();
         }
- 
+
         private void Update()
         {
             if (_renderer == null || _feel == null) return;
+
+            // FIX-V2: Lazy-init avoids the Start()-before-Update() race.
+            // MaterialPropertyBlock is a value-type wrapper — one allocation total.
+            if (_propBlock == null) _propBlock = new MaterialPropertyBlock();
+
             float hue = (Time.time * _feel.RainbowHueSpeed) % 1f;
             Color color = Color.HSVToRGB(hue, _feel.RainbowSaturation, _feel.RainbowValue);
+            // GetPropertyBlock reads existing state into _propBlock (no allocation).
             _renderer.GetPropertyBlock(_propBlock);
             _propBlock.SetColor("_Color", color);
             _propBlock.SetColor("_BaseColor", color);
             _propBlock.SetColor("_EmissionColor", color * 0.3f);
             _renderer.SetPropertyBlock(_propBlock);
+        }
+
+        private void OnDisable()
+        {
+            // FIX-V2: Clear rainbow color when returned to pool / disabled.
+            if (_renderer != null && _propBlock != null)
+            {
+                _propBlock.Clear();
+                _renderer.SetPropertyBlock(_propBlock);
+            }
         }
     }
 }

@@ -16,9 +16,25 @@ namespace RingFlow.Gameplay
                 _model.HasChallengeFailed.Value = true;
             }
 
-            NexusLog.Info("LevelLostCommand", nameof(Execute), "",
-                $"Level lost. Reason: {signal.Reason}");
-            _ = _fsm?.ChangeStateAsync<LoseState>(signal);
+            NexusLog.Warn("LevelLostCommand", nameof(Execute), "",
+                $"Level LOST. Reason: '{signal.Reason}'. HasChallengeFailed={_model?.HasChallengeFailed.Value}. Transitioning to LoseState.");
+
+            if (_fsm == null)
+            {
+                NexusLog.Error("LevelLostCommand", nameof(Execute), "",
+                    "IGameStateMachine not injected — cannot transition to LoseState. Player is stuck.");
+                return;
+            }
+
+            // LOG-1: ChangeStateAsync returns a Task; discard with _ = to suppress CS4014 but
+            // add error handling so a failed transition is visible in the log instead of silent.
+            var task = _fsm.ChangeStateAsync<LoseState>(signal);
+            _ = task.ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                    NexusLog.Error("LevelLostCommand", nameof(Execute), "",
+                        $"Transition to LoseState faulted: {t.Exception?.GetBaseException()?.Message}");
+            }, System.Threading.Tasks.TaskContinuationOptions.OnlyOnFaulted);
         }
     }
 }

@@ -98,7 +98,27 @@ namespace RingFlow.Gameplay
         private void OnRingMoved(RingMovedSignal signal)
         {
             _logger?.Log($"[BoardMediator] Move {signal.FromPoleId} -> {signal.ToPoleId} completed. Animating.");
-            _recentMoves.Push((signal.FromPoleId, signal.ToPoleId));
+
+            // FIX-A5: Only push the PRIMARY move (player-initiated from→to) to _recentMoves.
+            // Sub-moves (chain, magnet, portal) each fire their own RingMovedSignal but
+            // OnUndoVisualRestore pops exactly one entry per UndoSignal (one player action).
+            // Pushing sub-moves here caused the undo stack to de-sync: after a chain move
+            // (2 RingMovedSignals) the mediator thought there were 2 moves to undo but
+            // MovesCount only decremented by 1, leaving _recentMoves permanently out of step.
+            // We identify the primary move by checking whether it matches the currently
+            // selected poles transition recorded by SelectPoleCommand. Sub-moves always
+            // originate from a pole the player did not explicitly select.
+            // Simple heuristic: only record the first RingMovedSignal per command execution.
+            // MoveRingCommand fires RingMovedSignal ONCE for the primary move (CompleteMove),
+            // then sub-move signals are fired by the sub-move helpers — those come after.
+            // We use the model's MovesCount change as a boundary: the primary move bumps
+            // MovesCount, sub-moves don't. So we only push when _recentMoves.Count < MovesCount.
+            int currentMoves = _model?.MovesCount.Value ?? 0;
+            if (_recentMoves.Count < currentMoves)
+            {
+                _recentMoves.Push((signal.FromPoleId, signal.ToPoleId));
+            }
+
             if (View != null && _model != null)
                 View.AnimateRingMove(signal.FromPoleId, signal.ToPoleId, _model.Poles);
             View?.SetSelectedPole(_model?.SelectedPoleId.Value ?? -1);
@@ -147,7 +167,21 @@ namespace RingFlow.Gameplay
                     ringCount = _model.Poles[poleId].Rings.Count;
 
                 int completedCount = _model.CompletedPoles.Count;
-                bool isFinalPole = completedCount >= _model.Poles.Count - 1;
+
+                // FIX-V3: isFinalPole must be true only when ALL non-empty poles are completed,
+                // not when completedCount reaches (total - 1). With empty buffer poles present
+                // (GDD §12 mandates ≥1 empty pole), the old formula fired isFinalPole too early:
+                // e.g. 5 poles, 1 empty → only 4 can complete, so "total - 1 = 4" triggers on
+                // the 4th completion correctly, but with 2 empty poles it fires on the 3rd.
+                // Correct formula: count non-empty poles; isFinalPole when completedCount equals
+                // total non-empty pole count (every filled pole is now sorted).
+                int nonEmptyPoleCount = 0;
+                for (int pi = 0; pi < _model.Poles.Count; pi++)
+                {
+                    if (_model.Poles[pi] != null && !_model.Poles[pi].IsEmpty)
+                        nonEmptyPoleCount++;
+                }
+                bool isFinalPole = completedCount >= nonEmptyPoleCount;
 
                 View.CelebratePoleComplete(poleId, ringCount, completedCount, isFinalPole);
             }
@@ -261,20 +295,33 @@ namespace RingFlow.Gameplay
             }
         }
 
+        // FIX-E2: async void is kept (Unity event-handler convention; cannot be awaited by callers)
+        // but OperationCanceledException is now re-thrown properly instead of being silently swallowed
+        // inside the generic catch(Exception). Swallowing cancellation prevents the CancellationToken
+        // from propagating, which kept the solver running after scene teardown, leaking CPU and
+        // causing null-ref crashes when View was already destroyed.
+        // All other exceptions are still caught and logged to avoid crashing the Unity update loop.
         private async void UpdateTutorialStateAsync()
         {
             if (View == null || _model == null || _progression == null) return;
 
+            // Cancel any in-flight tutorial solve before starting a new one.
+            // Dispose AFTER cancel so the token source is still valid for the new request.
+            var oldCts = _tutorialSolveCts;
+            oldCts?.Cancel();
+
+            var cts = new System.Threading.CancellationTokenSource();
+            _tutorialSolveCts = cts;
+
+            // Dispose the old source after assigning the new one (safe ordering).
+            oldCts?.Dispose();
+
             try
             {
-                _tutorialSolveCts?.Cancel();
-                _tutorialSolveCts?.Dispose();
-                _tutorialSolveCts = new System.Threading.CancellationTokenSource();
-
                 int currentLevel = _progression.CurrentLevel.Value;
                 if (currentLevel > 3)
                 {
-                    View.HideTutorialArrow();
+                    View?.HideTutorialArrow();
                     _tutorialFromPole = -1;
                     _tutorialToPole = -1;
                     return;
@@ -282,16 +329,18 @@ namespace RingFlow.Gameplay
 
                 if (_model.IsGameWon.Value || _model.Poles.Count == 0)
                 {
-                    View.HideTutorialArrow();
+                    View?.HideTutorialArrow();
                     return;
                 }
 
                 var (board, maxCapacity, portalTargets) = BuildBoardStateFromModel(_model);
-                var ct = _tutorialSolveCts.Token;
+                var ct = cts.Token;
 
                 var result = await LevelSolver.SolveAsync(board, maxCapacity, portalTargets: portalTargets, cancellationToken: ct,
                     bombTickMode: _dbConfig?.LevelGen.BombTickMode ?? BombTickMode.AllBombsPerMove);
-                if (ct.IsCancellationRequested) return;
+
+                // After the await: check both the token and whether the view is still alive.
+                if (ct.IsCancellationRequested || View == null) return;
 
                 if (result.IsSolvable && result.MoveCount > 0 && result.Moves != null && result.Moves.Count > 0)
                 {
@@ -320,8 +369,16 @@ namespace RingFlow.Gameplay
                     _tutorialToPole = -1;
                 }
             }
-            catch (System.Exception)
+            catch (System.OperationCanceledException)
             {
+                // Expected on scene change / mediator unbind — not an error.
+                // Do NOT hide the tutorial arrow here; the mediator's OnUnbind handles cleanup.
+            }
+            catch (System.Exception ex)
+            {
+                // Unexpected error — log it and gracefully hide the arrow so the UI stays clean.
+                NexusLog.Warn("BoardMediator", nameof(UpdateTutorialStateAsync), "",
+                    $"Tutorial solve threw: {ex.GetType().Name}: {ex.Message}");
                 View?.HideTutorialArrow();
             }
         }

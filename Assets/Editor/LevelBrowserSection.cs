@@ -129,8 +129,18 @@ namespace RingFlow.Editor
             if (_cachedDatabase.TotalLevels != _cachedTotalLevels)
             {
                 _cachedTotalLevels = _cachedDatabase.TotalLevels;
+                // Invalidate existence cache whenever TotalLevels changes (DB edited).
                 _cachedExistsFlags = null;
             }
+        }
+
+        /// <summary>
+        /// Forces the file-existence cache to refresh on the next OnGUI call.
+        /// Call this after batch generation or any operation that creates/deletes level assets.
+        /// </summary>
+        public void InvalidateExistenceCache()
+        {
+            _cachedExistsFlags = null;
         }
 
         private void RefreshExistenceCache()
@@ -139,12 +149,23 @@ namespace RingFlow.Editor
                 return;
             _cachedExistsFlags = new bool[_cachedTotalLevels];
 
-            // Use AssetDatabase-level existence check (metadata only, no deserialization)
+            // BUG FIX: AssetDatabase.GUIDFromAssetPath returns "00000000000000000000000000000000"
+            // (all-zero GUID) for paths that do NOT exist — NOT an empty string.
+            // Calling !string.IsNullOrEmpty(guid.ToString()) on this always returns true,
+            // making every level appear as "generated" even when no .asset file exists.
+            //
+            // Correct check: AssetDatabase.AssetPathToGUID returns "" for missing paths
+            // (legacy API), OR use System.IO.File.Exists for a direct filesystem check.
+            // We use File.Exists because it is the most reliable: it checks the actual
+            // .asset file on disk, independent of AssetDatabase refresh state.
             for (int i = 0; i < _cachedTotalLevels; i++)
             {
-                string path = $"{EditorPaths.LevelsFolder}/Level_{i + 1}.asset";
-                var guid = AssetDatabase.GUIDFromAssetPath(path);
-                _cachedExistsFlags[i] = guid != null && !string.IsNullOrEmpty(guid.ToString());
+                string assetPath = $"{EditorPaths.LevelsFolder}/Level_{i + 1}.asset";
+                // Convert from project-relative (Assets/...) to full filesystem path.
+                string fullPath = System.IO.Path.Combine(
+                    System.IO.Path.GetDirectoryName(UnityEngine.Application.dataPath),
+                    assetPath.Replace('/', System.IO.Path.DirectorySeparatorChar));
+                _cachedExistsFlags[i] = System.IO.File.Exists(fullPath);
             }
         }
 

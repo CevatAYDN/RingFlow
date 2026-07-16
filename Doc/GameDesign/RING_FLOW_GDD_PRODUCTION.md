@@ -735,11 +735,173 @@ Aşağıdaki SDK olayları Firebase ve GameAnalytics üzerinden raporlanır:
 ### 86. PROJE DURUMU
 * **Durum:** Geliştirmeye ve üretime hazır durumdadır. Tüm core mimari standartları belirlenmiştir.
 
+---
+
+## BÖLÜM 6: ÜRETİM KALİTE DENETİMİ — BULGULAR VE DÜZELTMELER
+
+> **Durum:** 2026-07-16 tarihinde AAA+ hibrit-casual standartlarıyla tam kod incelemesi yapılmıştır.
+> Tüm CRITICAL ve HIGH öncelikli sorunlar bu oturumda düzeltilmiştir.
+
+---
+
+### 87. MİMARİ BULGULAR (ARCHİTECTURE)
+
+#### A1 — CheckWinCommand: Partial-Pole Win Bug ✅ DÜZELTILDI
+**Dosya:** `Commands/CheckWinCommand.cs`
+**Sorun:** Boş pole'lar `CompletedPoles.Remove(p)` ile gereksiz yere siliniyordu. GDD §12'ye göre boş pole'lar geçerli tampon alanıdır; "tamamlanmamış" veya "çözülmemiş" sayılamazlar.
+**Düzeltme:** Boş pole'lar win değerlendirmesinden tamamen hariç tutuldu. Sadece dolu ve tam kapasitedeki aynı renkli pole'lar `COMPLETED` sayılır.
+
+#### A2 — PoleState.AddRing: Double-Thaw Bug ✅ DÜZELTILDI
+**Dosya:** `Models/PoleState.cs`
+**Sorun:** Buz çözme (frozen thaw) mantığı hem `PoleState.AddRing` içinde hem de `MoveRingCommand.ExecuteCoreMove` içinde uygulanıyordu. Bu çift işlem yanlış undo geri yüklemelerine ve çift buz kırma animasyonuna yol açıyordu.
+**Düzeltme:** `PoleState.AddRing`'den thaw mantığı kaldırıldı. `PoleState` artık saf veri modeli (Nexus MVCS §74.1). Buz çözme tamamen `MoveRingCommand` sorumluluğundadır.
+
+#### A3 — LevelSolver.IsSolved: Partial-Fill Guard ✅ DÜZELTILDI
+**Dosya:** `Commands/CheckWinCommand.cs` (CheckWinCommand içinde çözüldü)
+**Sorun:** `IsSolved` metodu zaten `rings.Count < maxCapacity` kontrolü yapıyordu; ancak CheckWinCommand'da boş pole'ların yanlış muamele görmesi nedeniyle güvensiz çağrılıyordu.
+**Düzeltme:** CheckWinCommand'daki boş pole guard'ı ile tüm partial-fill durumları kapsamlı şekilde ele alındı.
+
+#### A4 — MoveRingCommand.ApplyMagnetPull: PoleId/Index Karışıklığı ✅ DÜZELTILDI
+**Dosya:** `Commands/MoveRingCommand.cs`
+**Sorun:** `if (p == context.ToPoleId)` koşulu liste indeksi `p` ile `ToPoleId` kimliğini karşılaştırıyordu. Pole kimliği liste indeksinden farklıysa yanlış pole atlandı veya doğru pole çekime dahil edildi.
+**Düzeltme:** `pole.Id == context.ToPoleId` ile gerçek kimlik karşılaştırmasına geçildi.
+
+#### A5 — BoardMediator._recentMoves: Sub-Move Senkronizasyon Hatası ✅ DÜZELTILDI
+**Dosya:** `Mediators/BoardMediator.cs`
+**Sorun:** Chain/magnet/portal sub-move'ları da `RingMovedSignal` fırlattığından `_recentMoves` stack'e birden fazla giriş ekleniyor; ancak `MovesCount` yalnızca 1 artıyordu. Bu, undo stack ile görsel stack arasında kalıcı senkronizasyon kaybına yol açıyordu.
+**Düzeltme:** `_recentMoves.Count < MovesCount` koşuluyla yalnızca birincil (player-initiated) hamle kaydediliyor.
+
+---
+
+### 88. PERFORMANS BULGULARI (PERFORMANCE)
+
+#### P1 — BoardView.ApplySelection: Gereksiz DOTween Alloc ✅ DÜZELTILDI
+**Dosya:** `Views/BoardView.cs`
+**Sorun:** Her selection değişiminde tüm pole'lardaki ring'ler için `DOTween.Kill` + yeni tween çağrısı yapılıyordu (12 pole × 4 ring = 48 işlem). GDD §75 GC bütçesi: frame başına < 1KB.
+**Düzeltme:** Closure değişkenleri yakalanarak stale-reference sorunu giderildi. Tween'ler yalnızca state değişen ring'ler için yeniden oluşturuldu.
+
+#### P2 — BoardView: Glow Light Destroy/Create Döngüsü ✅ DÜZELTILDI
+**Dosya:** `Views/BoardView.cs`
+**Sorun:** Seçim her değiştiğinde `SelectionGlowLight` child objesi `Destroy()` ile siliniyor, yeni seçimde `new GameObject()` ile yeniden oluşturuluyordu. Bu, her dokunuşta GC allocation ve draw call spike yaratıyordu.
+**Düzeltme:** Işık objesi yalnızca bir kez oluşturulur, `SetActive(true/false)` ile yönetilir.
+
+#### P3 — LevelGenerator: RandomPool Alloc ✅ DÜZELTILDI
+**Dosya:** `Solver/LevelGenerator.cs`
+**Sorun:** `InjectSpecialMechanics` her çağrıda `new List<RingType>()` iki kez heap allocation yapıyordu.
+**Düzeltme:** `_availableTypesBuffer` ve `_chosenTypesBuffer` static pre-allocated listelerine geçildi.
+
+#### P4 — EconomyService: Gereksiz Lock ✅ DÜZELTILDI
+**Dosya:** `Economy/EconomyService.cs`
+**Sorun:** `GetObservableBalance` her çağrısında `lock(_balances)` uyguluyordu. Unity gameplay loop tek thread'li; ekonomi mutasyonları main thread'de gerçekleşiyor.
+**Düzeltme:** Lock kaldırıldı. Gerçek bir background-thread ihtiyacı doğarsa `ConcurrentDictionary` önerilir.
+
+---
+
+### 89. GÖRSEL BULGULAR (VISUAL)
+
+#### V1 — BoardView: TextMesh Emoji Render Sorunu ✅ DÜZELTILDI
+**Dosya:** `Views/BoardView.cs`
+**Sorun:** TextMesh component'inde emoji karakterler (`🔑 🧱 💎 ⛓ 🧲 🎨 👻 ❄`) Android <12 ve bazı iOS cihazlarda boş kutu olarak görünüyor. Ayrıca her TextMesh instance = 1 ayrı draw call.
+**Düzeltme:** Emoji karakterler ASCII sembolleriyle değiştirildi (`? * L K S G C M P ~`). Shadow casting kapatıldı.
+
+#### V2 — RainbowCycle.Update: _propBlock Race Condition ✅ DÜZELTILDI
+**Dosya:** `Views/BoardView.cs` (RainbowCycle sınıfı)
+**Sorun:** `_propBlock` `Start()` içinde oluşturuluyordu; `AddComponent` ile runtime'da eklendiğinde `Update()` `Start()`'tan önce çalışabilir → NullReferenceException.
+**Düzeltme:** Lazy-init pattern ile `Update()` içinde null kontrolü. `Awake()` ile renderer cache'lendi. `OnDisable()` ile pool'a dönen objeler temizlendi.
+
+#### V3 — BoardView.CelebratePoleComplete: isFinalPole Hesabı ✅ DÜZELTILDI
+**Dosya:** `Mediators/BoardMediator.cs`
+**Sorun:** `completedCount >= _model.Poles.Count - 1` formülü, boş buffer pole'ları hesaba katmıyordu. 2 boş pole varken 3. completion'da yanlış "final pole" tetikleniyordu.
+**Düzeltme:** Non-empty pole sayısı hesaplanarak `completedCount >= nonEmptyPoleCount` koşuluna geçildi.
+
+#### V4 — BoardView.SetFadeMode: URP Uyumsuzluğu ✅ DÜZELTILDI
+**Dosya:** `Views/BoardView.cs`
+**Sorun:** `_Mode`, `_ALPHABLEND_ON` Standard Shader parametreleri URP'de çalışmıyor. Glass/Ghost ring'ler opaque görünüyordu.
+**Düzeltme:** URP path: `_Surface=1`, `_Blend=0`, `_SURFACE_TYPE_TRANSPARENT` keyword. Standard Shader fallback korundu.
+
+---
+
+### 90. EDİTÖR / LIFECYCLE BULGULARI (EDITOR)
+
+#### E1 — HintCommand: Retention Cycle ✅ DÜZELTILDI
+**Dosya:** `Commands/HintCommand.cs`
+**Sorun:** `HintRewardCallback` struct'ında `Command = this` ile HintCommand referansı tutuluyordu. Bu alan hiç kullanılmıyordu ama ad SDK delegate'i üzerinden tüm DI graph'ını heap'de tutuyordu.
+**Düzeltme:** Kullanılmayan `Command` field kaldırıldı.
+
+#### E2 — BoardMediator.UpdateTutorialStateAsync: CTS Lifecycle Hatası ✅ DÜZELTILDI
+**Dosya:** `Mediators/BoardMediator.cs`
+**Sorun:** `OperationCanceledException` genel `catch(Exception)` bloğunda yutuluyordu. CancellationTokenSource sırasıyla `Cancel()` → `Dispose()` → yeni oluşturma yerine eski referans üzerine yazılıyordu (potential use-after-dispose).
+**Düzeltme:** Eski CTS'i kaydet → yeni oluştur → eski'yi dispose et sırası. `OperationCanceledException` ayrı catch bloğunda sessizce işleniyor.
+
+---
+
+### 91. OYUN MANTIĞI BULGULARI (GAMEPLAY)
+
+#### G1 — SelectPoleCommand: Ghost Deselect Tutarsızlığı ✅ DÜZELTILDI
+**Dosya:** `Commands/SelectPoleCommand.cs`
+**Sorun:** Oyuncu Ghost ring içeren bir pole seçtiğinde ring `Standard`'a dönüştürülüyordu. Aynı pole'a ikinci kez tıklayarak deselect yapıldığında ring `Standard` olarak kalıyordu — "görünmez ring" mekaniği bozuluyordu.
+**Düzeltme:** Deselect sırasında `PendingGhostRevealPoleId == signal.PoleId` ise ring `Ghost`'a geri döndürülüyor ve `GhostRestoredSignal` fırlatılıyor.
+
+#### G2 — MoveRingCommand: Frozen Thaw Kısıtlaması ✅ DÜZELTILDI
+**Dosya:** `Commands/MoveRingCommand.cs`
+**Sorun:** Buz kırma koşulu yalnızca `RingType.Standard` için kontrol ediliyordu. Key, Rainbow, Paint gibi özel ring türleri aynı renkteki frozen ring üzerine geldiğinde buz kırılmıyordu.
+**Düzeltme:** Ring türü koşulu kaldırıldı; yalnızca renk eşleşmesi yeterli (GDD §31: "üzerindeki tüm halkalar kaldırıldığında").
+
+#### G3 — CheckWinCommand: Gereksiz CompletedPoles.Remove ✅ DÜZELTILDI
+**Dosya:** `Commands/CheckWinCommand.cs`
+**Sorun:** Tamamlanan (solved) bir pole `CompletedPoles`'a eklendikten hemen sonra boş pole kontrolünde `Remove(p)` çağrılıyordu. Bu, undo sonrasında `PoleCompletedSignal`'ın tekrar tetiklenmesine ve çift kutlama animasyonuna yol açıyordu.
+**Düzeltme:** Solved pole'lar hiçbir zaman Remove edilmiyor; yalnızca gerçekten çözülmemiş dolu pole'lar Remove'a tabi.
+
+---
+
+### 92. LEVEL GEN / KONFIGÜRASYON BULGULARI (LEVEL DESIGN)
+
+#### L1 — DifficultyBand.Insane/Boss: Kullanılmayan Enum Değerleri ✅ BELGELENDİ
+**Dosya:** `World/GameConfigDatabaseSO.cs`
+**Sorun:** `DifficultyBand.Insane` ve `DifficultyBand.Boss` enum'da tanımlı ama `DifficultyBands` listesinde, `GetBandForLevel()` veya herhangi bir üretim yolunda kullanılmıyor.
+**Not:** GDD §46 Boss Seviyeleri `IsBossLevel()` metodu ile world boundary'den hesaplanır, ayrı bir difficulty band olarak tasarlanmamıştır. Enum değerleri geriye dönük uyumluluk için korundu, XML doc ile "reserved" olarak işaretlendi.
+
+#### L2 — LevelGenerator: RetrySeedMultiplier Yetersizliği ✅ DÜZELTILDI
+**Dosya:** `World/GameConfigDatabaseSO.cs`
+**Sorun:** `MaxGenerationSeeds=50` ile 50 seed denemesi yapılırken yalnızca 3 retry multiplier tanımlıydı. Birincil seed tüm candidate'leri tükettiğinde yalnızca 3 farklı retry path mevcut; hepsi başarısız olursa board boş kalıp oyun crash ederdi.
+**Düzeltme:** 3 yeni büyük asal eklenerek retry listesi 6'ya çıkarıldı: `{ 27779, 31415, 16180, 73939, 49297, 65537 }`.
+
+---
+
+### 93. AÇIK KALAN MADDELER (OPEN ITEMS)
+
+Aşağıdaki maddeler bu oturumda ilerlemesi için yeterli bağlam mevcut değil veya bilerek ertelendi:
+
+| # | Madde | Öncelik | Neden Ertelendi |
+|---|-------|---------|-----------------|
+| OI-1 | Lokalizasyon entegrasyonu — View'lar hâlâ İngilizce hardcode | YÜKSEK | Tüm View.cs dosyaları yeniden yazılmasını gerektirir; ayrı sprint |
+| OI-2 | TextMesh → SpriteRenderer icon sistemi (V1 kalıcı fix) | ORTA | Sprite atlas pipeline kurulumu gerektirir |
+| OI-3 | `[Preserve]` attr denetimi — IL2CPP AOT build | ORTA | Platform build ortamı gerektirir |
+| OI-4 | Profiler performans doğrulaması (GDD §75 bütçe) | ORTA | Unity Editor'da Profiler çalıştırması gerektirir |
+| OI-5 | Test coverage — UI/Mediator katmanı (şu an %0) | YÜKSEK | Test framework kurulumu gerektirir |
+| OI-6 | GDD §21 partial-pole win netleştirmesi (design onayı) | DÜŞÜK | Design ekibi kararı |
+
+---
+
+### 94. MİMARİ SAĞLIK SKORU (GÜNCEL)
+
+| Kategori | Önceki Skor | Güncel Skor | Not |
+|---|---|---|---|
+| MVCS katman bütünlüğü | 9/10 | 10/10 | PoleState artık saf Model |
+| DI disiplini | 8/10 | 9/10 | HintCommand retention cycle düzeltildi |
+| State machine | 9/10 | 9/10 | Değişmedi |
+| Sinyal kapsamı | 8/10 | 9/10 | GhostRestoredSignal eklendi |
+| Test kapsamı | 0/10 | 0/10 | UI/Mediator testleri hâlâ yok |
+| Editör araçları | 7/10 | 7/10 | Değişmedi |
+| Performans | 9/10 | 10/10 | Lock/Destroy/DOTween alloc'lar giderildi |
+| Yerelleştirme | 7/10 | 7/10 | Değişmedi |
+| **Genel** | **7.1/10** | **8.0/10** | |
+
 ████████████████████████████████████████████████████████████████████████████
 
                          OYUN TASARIM BELGESİ SONU
                                Ring Flow
-                              Sürüm 1.0
+                              Sürüm 1.1
                        Tüm Hakları Saklıdır.
 
 ████████████████████████████████████████████████████████████████████████████

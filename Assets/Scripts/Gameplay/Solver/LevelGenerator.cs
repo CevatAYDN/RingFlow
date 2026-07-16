@@ -20,6 +20,15 @@ namespace RingFlow.Gameplay
         private static readonly Comparison<(LevelData level, float diff)> _candidateComparer =
             static (a, b) => a.diff.CompareTo(b.diff);
 
+        // FIX-P3: Pre-allocated buffer for RandomPool mechanic type selection.
+        // InjectSpecialMechanics previously called `new List<RingType>()` on every invocation
+        // for both `availableTypes` and `chosenTypes`, causing heap allocations during level
+        // generation. Level gen runs at startup and between levels — not on the hot path —
+        // but these allocations are still unnecessary given that the lists are purely temporary.
+        // Static reuse is safe because GenerateLevel is always called from a single thread.
+        private static readonly List<RingType> _availableTypesBuffer = new(16);
+        private static readonly List<RingType> _chosenTypesBuffer = new(4);
+
         /// <summary>
         /// Seviye endeksinden deterministik ve iyi ayrışmış (well-separated) bir tohum üretir.
         /// Komşu seviyeler için <c>100 + level</c> gibi bitişik tohumlar, üreticinin ardışık
@@ -378,33 +387,36 @@ namespace RingFlow.Gameplay
                      mechanic == WorldMechanicType.RandomPool2 ||
                      mechanic == WorldMechanicType.RandomPool3)
             {
-                var availableTypes = new List<RingType>();
-                if (allowedMechanics.Contains(WorldMechanicType.Stone)) availableTypes.Add(RingType.Stone);
-                if (allowedMechanics.Contains(WorldMechanicType.Glass)) availableTypes.Add(RingType.Glass);
-                if (allowedMechanics.Contains(WorldMechanicType.Rainbow)) availableTypes.Add(RingType.Rainbow);
-                if (allowedMechanics.Contains(WorldMechanicType.Bomb)) availableTypes.Add(RingType.Bomb);
-                if (allowedMechanics.Contains(WorldMechanicType.Chain)) availableTypes.Add(RingType.Chain);
-                if (allowedMechanics.Contains(WorldMechanicType.Magnet)) availableTypes.Add(RingType.Magnet);
-                if (allowedMechanics.Contains(WorldMechanicType.Paint)) availableTypes.Add(RingType.Paint);
-                if (allowedMechanics.Contains(WorldMechanicType.Ghost)) availableTypes.Add(RingType.Ghost);
+                // FIX-P3: Reuse static pre-allocated buffers instead of new List<RingType>()
+                // on every invocation. Both lists are cleared before use — safe for single-threaded
+                // level generation (called from editor or game startup, never concurrent).
+                _availableTypesBuffer.Clear();
+                if (allowedMechanics.Contains(WorldMechanicType.Stone))   _availableTypesBuffer.Add(RingType.Stone);
+                if (allowedMechanics.Contains(WorldMechanicType.Glass))   _availableTypesBuffer.Add(RingType.Glass);
+                if (allowedMechanics.Contains(WorldMechanicType.Rainbow)) _availableTypesBuffer.Add(RingType.Rainbow);
+                if (allowedMechanics.Contains(WorldMechanicType.Bomb))    _availableTypesBuffer.Add(RingType.Bomb);
+                if (allowedMechanics.Contains(WorldMechanicType.Chain))   _availableTypesBuffer.Add(RingType.Chain);
+                if (allowedMechanics.Contains(WorldMechanicType.Magnet))  _availableTypesBuffer.Add(RingType.Magnet);
+                if (allowedMechanics.Contains(WorldMechanicType.Paint))   _availableTypesBuffer.Add(RingType.Paint);
+                if (allowedMechanics.Contains(WorldMechanicType.Ghost))   _availableTypesBuffer.Add(RingType.Ghost);
 
-                if (availableTypes.Count == 0) return;
+                if (_availableTypesBuffer.Count == 0) return;
 
                 int numMechanicTypes = 1;
                 if (mechanic == WorldMechanicType.RandomPool3) numMechanicTypes = 3;
                 else if (mechanic == WorldMechanicType.RandomPool2) numMechanicTypes = 2;
-                numMechanicTypes = Math.Min(numMechanicTypes, Math.Min(mechanicCount, availableTypes.Count));
+                numMechanicTypes = Math.Min(numMechanicTypes, Math.Min(mechanicCount, _availableTypesBuffer.Count));
 
-                var chosenTypes = new List<RingType>();
+                _chosenTypesBuffer.Clear();
                 for (int i = 0; i < numMechanicTypes; i++)
                 {
-                    int idx = rand.Next(availableTypes.Count);
-                    chosenTypes.Add(availableTypes[idx]);
-                    availableTypes.RemoveAt(idx);
+                    int idx = rand.Next(_availableTypesBuffer.Count);
+                    _chosenTypesBuffer.Add(_availableTypesBuffer[idx]);
+                    _availableTypesBuffer.RemoveAt(idx);
                 }
 
-                for (int i = 0; i < chosenTypes.Count; i++)
-                    InjectSingleType(ref board, chosenTypes[i], mechanicCount, rand, bombCountdown);
+                for (int i = 0; i < _chosenTypesBuffer.Count; i++)
+                    InjectSingleType(ref board, _chosenTypesBuffer[i], mechanicCount, rand, bombCountdown);
             }
 
             EnforceMaxMechanicsLimit(db, ref board);

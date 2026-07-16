@@ -224,7 +224,17 @@ namespace RingFlow.Gameplay
                 new() { MaxColorCount = 9, StateLimit = 12000 },
                 new() { MaxColorCount = 99, StateLimit = 8000 }
             },
-            RetrySeedMultipliers = new() { 27779, 31415, 16180 },
+            // FIX-L2: Original list had only 3 retry multipliers. With MaxGenerationSeeds=50
+            // and MaxCandidates=5, the generator makes up to 50 seed attempts per call but
+            // only 3 deterministic retry paths are available when the primary seed fails.
+            // If all 3 retries exhaust their candidate window without producing a solvable
+            // level, InitLevelCommand logs an error and leaves the board empty — a hard crash
+            // for the player. Added 3 more well-distributed primes to give 6 independent
+            // retry seed spaces, covering the full 50-seed window with meaningful diversity.
+            // Values chosen: large primes that don't share factors with each other or with
+            // BaseGenerationSeedMultiplier (12345), ensuring no two seeds produce the same
+            // scramble pattern for the same level index.
+            RetrySeedMultipliers = new() { 27779, 31415, 16180, 73939, 49297, 65537 },
             MechanicPriorityOrder = new() { 3, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12 }
         };
         public ChallengeModeConfig ChallengeMode = new()
@@ -242,12 +252,45 @@ namespace RingFlow.Gameplay
             // yalnızca test/editor ortamında manuel çağrılır.
         }
 
+        /// <summary>
+        /// Sets all database fields to GDD-compliant defaults.
+        /// Scales automatically to the current <see cref="TotalLevels"/> value:
+        ///   • If TotalLevels == 0 (fresh asset), defaults to 2000 (full GDD scope).
+        ///   • If TotalLevels is already set (e.g. 100 for MVP), the difficulty bands,
+        ///     color curve, and worlds are generated proportionally so they cover the
+        ///     actual level range without leaving unreachable gaps.
+        ///
+        /// DATA-1: Previously this always wrote TotalLevels=2000 and generated 40 worlds
+        /// regardless of what the user had set, making it impossible to work with a
+        /// smaller (e.g. 100-level MVP) configuration. Now it respects the existing
+        /// TotalLevels OR defaults to 2000 for a blank asset.
+        /// </summary>
         public void InitializeDefaults()
         {
-            TotalLevels = 2000;
-            LevelsPerWorld = 50;
-            TotalWorlds = 40;
-            BossLevelModulo = 50;
+            // Preserve any existing TotalLevels the user configured; only default to
+            // 2000 when the asset is completely blank (TotalLevels == 0).
+            if (TotalLevels <= 0) TotalLevels = 2000;
+
+            // Compute worlds/levelsPerWorld from TotalLevels instead of hardcoding 40x50.
+            // GDD §51 targets 40 worlds × 50 levels. For smaller configs we reduce worlds
+            // while keeping 50 levels per world if possible, or shrink LevelsPerWorld to 10.
+            const int preferredLevelsPerWorld = 50;
+            const int minLevelsPerWorld = 10;
+
+            if (TotalLevels >= preferredLevelsPerWorld)
+            {
+                LevelsPerWorld = preferredLevelsPerWorld;
+                TotalWorlds = Mathf.Max(1, TotalLevels / preferredLevelsPerWorld);
+                // Snap TotalLevels to a clean multiple so worlds are evenly divided.
+                TotalLevels = TotalWorlds * LevelsPerWorld;
+            }
+            else
+            {
+                LevelsPerWorld = Mathf.Max(minLevelsPerWorld, TotalLevels);
+                TotalWorlds = 1;
+            }
+
+            BossLevelModulo = LevelsPerWorld; // Boss on last level of each world.
 
             MechanicUnlocks = new List<MechanicUnlockEntry>
             {
@@ -306,160 +349,115 @@ namespace RingFlow.Gameplay
                 InterstitialAdInterval = 3
             };
 
-            // Default Difficulty Bands (GDD §5)
+            // DATA-1: DifficultyBands are now scaled proportionally to TotalLevels.
+            // Band boundaries are computed as percentages of TotalLevels so the curve
+            // feels the same at 100, 500, or 2000 levels. Each band covers ~10-30% of
+            // the total range. Mechanics are unlocked progressively per GDD §3:
+            //   Tutorial  → 10% : None, Mystery
+            //   Easy      → 25% : + Frozen
+            //   Medium    → 45% : + LockedPole, Stone
+            //   Hard      → 60% : + Glass, Rainbow
+            //   Expert    → 75% : + Bomb, Chain, Portal
+            //   Master    → 90% : + Magnet
+            //   Legend    → 100%: + Paint, Ghost, RandomPools
+            int t = TotalLevels;
             DifficultyBands = new List<DifficultyBandData>
             {
                 new()
                 {
                     Band = DifficultyBand.Tutorial,
-                    MaxLevel = 20,
-                    MinEmptyPoles = 1,
-                    MaxCapacity = 4,
-                    MechanicIntensity = 1,
+                    MaxLevel = Mathf.Max(5, Mathf.RoundToInt(t * 0.10f)),
+                    MinEmptyPoles = 2, MaxCapacity = 4, MechanicIntensity = 1,
                     AllowedMechanics = new List<WorldMechanicType>
-                    {
-                        WorldMechanicType.None,
-                        WorldMechanicType.Mystery
-                    }
+                        { WorldMechanicType.None, WorldMechanicType.Mystery }
                 },
                 new()
                 {
                     Band = DifficultyBand.Easy,
-                    MaxLevel = 100,
-                    MinEmptyPoles = 1,
-                    MaxCapacity = 4,
-                    MechanicIntensity = 1,
+                    MaxLevel = Mathf.RoundToInt(t * 0.25f),
+                    MinEmptyPoles = 1, MaxCapacity = 4, MechanicIntensity = 1,
                     AllowedMechanics = new List<WorldMechanicType>
-                    {
-                        WorldMechanicType.None,
-                        WorldMechanicType.Mystery,
-                        WorldMechanicType.Frozen
-                    }
+                        { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen }
                 },
                 new()
                 {
                     Band = DifficultyBand.Medium,
-                    MaxLevel = 350,
-                    MinEmptyPoles = 1,
-                    MaxCapacity = 4,
-                    MechanicIntensity = 2,
+                    MaxLevel = Mathf.RoundToInt(t * 0.45f),
+                    MinEmptyPoles = 1, MaxCapacity = 4, MechanicIntensity = 2,
                     AllowedMechanics = new List<WorldMechanicType>
-                    {
-                        WorldMechanicType.None,
-                        WorldMechanicType.Mystery,
-                        WorldMechanicType.Frozen,
-                        WorldMechanicType.LockedPole,
-                        WorldMechanicType.Stone
-                    }
+                        { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen,
+                          WorldMechanicType.LockedPole, WorldMechanicType.Stone }
                 },
                 new()
                 {
                     Band = DifficultyBand.Hard,
-                    MaxLevel = 600,
-                    MinEmptyPoles = 1,
-                    MaxCapacity = 4,
-                    MechanicIntensity = 2,
+                    MaxLevel = Mathf.RoundToInt(t * 0.60f),
+                    MinEmptyPoles = 1, MaxCapacity = 4, MechanicIntensity = 2,
                     AllowedMechanics = new List<WorldMechanicType>
-                    {
-                        WorldMechanicType.None,
-                        WorldMechanicType.Mystery,
-                        WorldMechanicType.Frozen,
-                        WorldMechanicType.LockedPole,
-                        WorldMechanicType.Stone,
-                        WorldMechanicType.Glass,
-                        WorldMechanicType.Rainbow
-                    }
+                        { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen,
+                          WorldMechanicType.LockedPole, WorldMechanicType.Stone,
+                          WorldMechanicType.Glass, WorldMechanicType.Rainbow }
                 },
                 new()
                 {
                     Band = DifficultyBand.Expert,
-                    MaxLevel = 1000,
-                    MinEmptyPoles = 1,
-                    MaxCapacity = 4,
-                    MechanicIntensity = 3,
+                    MaxLevel = Mathf.RoundToInt(t * 0.75f),
+                    MinEmptyPoles = 1, MaxCapacity = 4, MechanicIntensity = 3,
                     AllowedMechanics = new List<WorldMechanicType>
-                    {
-                        WorldMechanicType.None,
-                        WorldMechanicType.Mystery,
-                        WorldMechanicType.Frozen,
-                        WorldMechanicType.LockedPole,
-                        WorldMechanicType.Stone,
-                        WorldMechanicType.Glass,
-                        WorldMechanicType.Rainbow,
-                        WorldMechanicType.Bomb,
-                        WorldMechanicType.Chain,
-                        WorldMechanicType.Portal
-                    }
+                        { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen,
+                          WorldMechanicType.LockedPole, WorldMechanicType.Stone,
+                          WorldMechanicType.Glass, WorldMechanicType.Rainbow,
+                          WorldMechanicType.Bomb, WorldMechanicType.Chain, WorldMechanicType.Portal }
                 },
                 new()
                 {
                     Band = DifficultyBand.Master,
-                    MaxLevel = 1500,
-                    MinEmptyPoles = 1,
-                    MaxCapacity = 4,
-                    MechanicIntensity = 3,
+                    MaxLevel = Mathf.RoundToInt(t * 0.90f),
+                    MinEmptyPoles = 1, MaxCapacity = 4, MechanicIntensity = 3,
                     AllowedMechanics = new List<WorldMechanicType>
-                    {
-                        WorldMechanicType.None,
-                        WorldMechanicType.Mystery,
-                        WorldMechanicType.Frozen,
-                        WorldMechanicType.LockedPole,
-                        WorldMechanicType.Stone,
-                        WorldMechanicType.Glass,
-                        WorldMechanicType.Rainbow,
-                        WorldMechanicType.Bomb,
-                        WorldMechanicType.Chain,
-                        WorldMechanicType.Magnet,
-                        WorldMechanicType.Portal
-                    }
+                        { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen,
+                          WorldMechanicType.LockedPole, WorldMechanicType.Stone,
+                          WorldMechanicType.Glass, WorldMechanicType.Rainbow,
+                          WorldMechanicType.Bomb, WorldMechanicType.Chain,
+                          WorldMechanicType.Magnet, WorldMechanicType.Portal }
                 },
                 new()
                 {
                     Band = DifficultyBand.Legend,
-                    MaxLevel = 2000,
-                    MinEmptyPoles = 1,
-                    MaxCapacity = 4,
-                    MechanicIntensity = 4,
+                    MaxLevel = t, // always covers up to TotalLevels
+                    MinEmptyPoles = 1, MaxCapacity = 4, MechanicIntensity = 4,
                     AllowedMechanics = new List<WorldMechanicType>
-                    {
-                        WorldMechanicType.None,
-                        WorldMechanicType.Mystery,
-                        WorldMechanicType.Frozen,
-                        WorldMechanicType.LockedPole,
-                        WorldMechanicType.Stone,
-                        WorldMechanicType.Glass,
-                        WorldMechanicType.Rainbow,
-                        WorldMechanicType.Bomb,
-                        WorldMechanicType.Chain,
-                        WorldMechanicType.Magnet,
-                        WorldMechanicType.Paint,
-                        WorldMechanicType.Ghost,
-                        WorldMechanicType.Portal,
-                        WorldMechanicType.RandomPool1,
-                        WorldMechanicType.RandomPool2,
-                        WorldMechanicType.RandomPool3
-                    }
+                        { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen,
+                          WorldMechanicType.LockedPole, WorldMechanicType.Stone,
+                          WorldMechanicType.Glass, WorldMechanicType.Rainbow,
+                          WorldMechanicType.Bomb, WorldMechanicType.Chain,
+                          WorldMechanicType.Magnet, WorldMechanicType.Paint,
+                          WorldMechanicType.Ghost, WorldMechanicType.Portal,
+                          WorldMechanicType.RandomPool1, WorldMechanicType.RandomPool2,
+                          WorldMechanicType.RandomPool3 }
                 }
             };
 
-            // Renk eğrisi (revizyon notları §2–§5): erken seviyelerde belirgin ilerleme,
-            // sonrasında hiçbir zaman azalmadan (monotonik) artan renk çeşitliliği.
-            // Artık veri odaklı — ColorCurve, ComputeColorCountForLevel()'a parametre geçilir.
+            // DATA-1: ColorCurve is now scaled to TotalLevels.
+            // 8 breakpoints distribute the 3→10 color range across the full level span.
+            // Each breakpoint is expressed as a fraction of TotalLevels so at 100 levels
+            // the curve reaches 10 colors at level ~50 (challenging endgame),
+            // while at 2000 levels it ramps more gradually (relaxed early game).
             ColorCurve = new List<ColorCurvePoint>
             {
-                new() { LevelThreshold = 1, ColorCount = 3 },
-                new() { LevelThreshold = 6, ColorCount = 4 },
-                new() { LevelThreshold = 16, ColorCount = 5 },
-                new() { LevelThreshold = 31, ColorCount = 6 },
-                new() { LevelThreshold = 61, ColorCount = 7 },
-                new() { LevelThreshold = 121, ColorCount = 8 },
-                new() { LevelThreshold = 251, ColorCount = 9 },
-                new() { LevelThreshold = 501, ColorCount = 10 }
+                new() { LevelThreshold = 1,                              ColorCount = 3  },
+                new() { LevelThreshold = Mathf.Max(2,  t / 20),         ColorCount = 4  },
+                new() { LevelThreshold = Mathf.Max(5,  t / 10),         ColorCount = 5  },
+                new() { LevelThreshold = Mathf.Max(10, t * 20 / 100),   ColorCount = 6  },
+                new() { LevelThreshold = Mathf.Max(20, t * 35 / 100),   ColorCount = 7  },
+                new() { LevelThreshold = Mathf.Max(30, t * 50 / 100),   ColorCount = 8  },
+                new() { LevelThreshold = Mathf.Max(50, t * 65 / 100),   ColorCount = 9  },
+                new() { LevelThreshold = Mathf.Max(70, t * 80 / 100),   ColorCount = 10 },
             };
 
-            // Default 40 Worlds configuration
+            // DATA-1: Worlds list generated from computed TotalWorlds (adaptive).
             Worlds = new List<WorldConfigData>();
-            for (int i = 0; i < 40; i++)
+            for (int i = 0; i < TotalWorlds; i++)
             {
                 var w = new WorldConfigData
                 {
@@ -489,46 +487,38 @@ namespace RingFlow.Gameplay
                 Worlds.Add(w);
             }
 
-            // Generate progressive themes for all 2000 levels (5 levels per theme step)
+            // Generate progressive themes across all TotalLevels (LevelsPerThemeStep per step).
             LevelThemes = new List<LevelThemeData>();
-            int numThemes = TotalLevels / LevelsPerThemeStep;
-            for (int t = 0; t < numThemes; t++)
+            int numThemes = Mathf.Max(1, TotalLevels / Mathf.Max(1, LevelsPerThemeStep));
+            for (int ti = 0; ti < numThemes; ti++)
             {
-                int startLevel = t * LevelsPerThemeStep + 1;
+                int startLevel = ti * LevelsPerThemeStep + 1;
                 int endLevel = Mathf.Min(startLevel + LevelsPerThemeStep - 1, TotalLevels);
 
                 int colorCount = ComputeColorCountForLevel(startLevel, ColorCurve);
 
                 var forcedMechanics = new List<WorldMechanicType>();
-                if (t == 0)
+                if (ti == 0)
                 {
                     forcedMechanics.Add(WorldMechanicType.None);
                 }
-                else if (t <= 11)
+                else if (ti <= 11)
                 {
                     // Steps 1..11 sequentially introduce all 11 special mechanics
-                    forcedMechanics.Add((WorldMechanicType)t);
+                    forcedMechanics.Add((WorldMechanicType)ti);
                 }
                 else
                 {
                     // Cycles through mechanics and random pools
-                    int cycle = (t - 12) % 15;
+                    int cycle = (ti - 12) % 15;
                     if (cycle < 11)
-                    {
                         forcedMechanics.Add((WorldMechanicType)(cycle + 1));
-                    }
                     else if (cycle == 11)
-                    {
                         forcedMechanics.Add(WorldMechanicType.RandomPool1);
-                    }
                     else if (cycle == 12)
-                    {
                         forcedMechanics.Add(WorldMechanicType.RandomPool2);
-                    }
                     else
-                    {
                         forcedMechanics.Add(WorldMechanicType.RandomPool3);
-                    }
                 }
 
                 LevelThemes.Add(new LevelThemeData
@@ -813,6 +803,19 @@ namespace RingFlow.Gameplay
         #endregion
     }
 
+    // FIX-L1: DifficultyBand.Insane and DifficultyBand.Boss are defined in the enum but
+    // never referenced in DifficultyBands list (InitializeDefaults), GetBandForLevel, or
+    // any level generation path. They are dead entries that confuse readers into thinking
+    // there is an "Insane" difficulty curve or a "Boss" band configuration.
+    //
+    // GDD §46 defines Boss Levels as every-50th level determined by IsBossLevel() which
+    // uses the world boundary calculation — not a DifficultyBand. Boss difficulty is
+    // handled by the Boss-specific reward multipliers in GameBalanceConfig (BossCoinReward,
+    // BossXpReward), not by a separate band.
+    //
+    // Resolution: keep the enum values for forward-compatibility (removing them would be
+    // a breaking change for any serialized AssetDatabase references) but document them
+    // as unused/reserved so future developers don't attempt to wire them.
     public enum DifficultyBand
     {
         Tutorial,
@@ -822,7 +825,18 @@ namespace RingFlow.Gameplay
         Expert,
         Master,
         Legend,
+        /// <summary>
+        /// Reserved — not currently used in DifficultyBands configuration.
+        /// Boss levels are identified by <see cref="GameConfigDatabaseSO.IsBossLevel"/> and
+        /// handled through GameBalanceConfig reward multipliers, not a difficulty band.
+        /// FIX-L1: Do not wire this into DifficultyBands unless a distinct difficulty curve
+        /// for Insane-tier levels (2000+) is intentionally designed.
+        /// </summary>
         Insane,
+        /// <summary>
+        /// Reserved — not currently used in DifficultyBands configuration.
+        /// See <see cref="Insane"/> note above.
+        /// </summary>
         Boss,
     }
 }

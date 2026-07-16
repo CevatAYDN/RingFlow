@@ -38,6 +38,30 @@ namespace RingFlow.Gameplay
                 if (currentSelected == signal.PoleId)
                 {
                     NexusLog.Info("SelectPoleCommand", "Execute", signal.PoleId.ToString(), "Deselecting same pole.");
+
+                    // FIX-G1: If a Ghost ring was revealed when this pole was first selected
+                    // (Ghost→Standard mutation in TryRevealGhost), we must revert it to Ghost
+                    // when the player deselects the same pole WITHOUT making a move.
+                    // Without this revert the ring stays visually Standard but logically Ghost,
+                    // breaking the "can't see hidden ring" mechanic until the next rebuild.
+                    if (_model.PendingGhostRevealPoleId == signal.PoleId)
+                    {
+                        var pole = _model.Poles.GetPoleById(signal.PoleId);
+                        if (pole != null && pole.Rings.Count > 0)
+                        {
+                            var top = pole.TopRing;
+                            // Restore Ghost only if the ring is currently Standard
+                            // (guard against concurrent reveal from a different path).
+                            if (top.Type == RingType.Standard)
+                            {
+                                pole.Rings[pole.Rings.Count - 1] = new RingData(top.Color, RingType.Ghost);
+                                _signalBus?.Fire(new GhostRestoredSignal(signal.PoleId));
+                                NexusLog.Info("SelectPoleCommand", "Execute", signal.PoleId.ToString(),
+                                    "Ghost ring reverted to hidden on deselect (no move was made).");
+                            }
+                        }
+                    }
+
                     _model.SelectedPoleId.Value = -1;
                     _model.PendingGhostRevealPoleId = -1;
                 }

@@ -197,25 +197,26 @@ namespace RingFlow.Editor
                 return;
             }
 
-            // 1. Total Levels & World Counts Consistency (GDD §3 & §4)
-            // GDD states: 40 Worlds x 50 Levels = 2000 levels.
-            if (db.TotalLevels == 2000 && db.Worlds.Count == 40 && db.LevelsPerWorld == 50)
+            // DATA-2: Seviye/Dünya tutarlılığı artık hardcode 2000/40/50 beklemez.
+            // Kural: TotalLevels == TotalWorlds * LevelsPerWorld (tam bölünürlük).
+            // GDD §51 tam kapasiteyi 40x50=2000 olarak tanımlar ama MVP (100 level) de geçerlidir.
+            int computedExpected = db.TotalWorlds * db.LevelsPerWorld;
+            if (db.TotalLevels == computedExpected && db.Worlds.Count == db.TotalWorlds)
             {
-                AddAuditResult("Seviye ve Dünya Sayısı", "GDD uyumlu: 40 Dünya x 50 Seviye = 2000 Toplam Seviye.", AuditStatus.Pass);
+                string scope = db.TotalLevels == 2000
+                    ? "GDD tam kapsam (2000 seviye)"
+                    : $"MVP kapsam ({db.TotalLevels} seviye)";
+                AddAuditResult("Seviye ve Dünya Sayısı",
+                    $"{scope}: {db.TotalWorlds} Dünya x {db.LevelsPerWorld} Seviye = {db.TotalLevels} Toplam Seviye.",
+                    AuditStatus.Pass);
             }
             else
             {
-                string msg = $"Mevcut: {db.Worlds.Count} Dünya x {db.LevelsPerWorld} Seviye = {db.TotalLevels} Toplam. " +
-                             $"GDD beklentisi: 40 Dünya x 50 Seviye = 2000 Seviye.";
-                if (db.TotalLevels == 2000 && db.Worlds.Count == 40 && db.LevelsPerWorld == 25)
-                {
-                    // Existing state where it had 25 levels per world.
-                    AddAuditResult("Seviye ve Dünya Sayısı", msg + " (Dünya başına 25 seviye ayarlanmış, bu durum GDD §3 ve §4 ile çelişmektedir. Seviye Üretici ve Veritabanı ayarlarından LevelsPerWorld 50 olarak güncellenmelidir.)", AuditStatus.Warning);
-                }
-                else
-                {
-                    AddAuditResult("Seviye ve Dünya Sayısı", msg, AuditStatus.Fail);
-                }
+                string msg = $"Mevcut: Worlds.Count={db.Worlds.Count}, TotalWorlds={db.TotalWorlds}, " +
+                             $"LevelsPerWorld={db.LevelsPerWorld}, TotalLevels={db.TotalLevels}. " +
+                             $"Beklenti: Worlds.Count==TotalWorlds ve TotalLevels==TotalWorlds*LevelsPerWorld={computedExpected}.";
+                AddAuditResult("Seviye ve Dünya Sayısı", msg,
+                    db.TotalLevels == computedExpected ? AuditStatus.Warning : AuditStatus.Fail);
             }
 
             // 2. Single Source of Truth check (GDD §2)
@@ -283,43 +284,45 @@ namespace RingFlow.Editor
             }
 
             // 3. Localization Config Completeness (GDD §13 & §5)
-            // GDD specifies 15 languages.
+            // DATA-2: GDD §66 hedefi 15 dil; bu sayı hardcode yerine LocalizationConfigSO'dan okunur.
+            // MVP aşamasında daha az dil kabul edilebilir (Warning), eksik SO ise Fail.
             var loc = Resources.Load<LocalizationConfigSO>(EditorPaths.LocalizationConfigKey);
+            const int gddTargetLanguages = 15; // GDD §66 targets 15 languages — single definition
             if (loc != null)
             {
-                if (loc.Languages.Count == 15)
-                {
-                    AddAuditResult("Dil Desteği (Yerelleştirme)", "GDD uyumlu: 15 dil tanımlı ve RTL bayrakları ayarlı.", AuditStatus.Pass);
-                }
+                int langCount = loc.Languages?.Count ?? 0;
+                if (langCount >= gddTargetLanguages)
+                    AddAuditResult("Dil Desteği (Yerelleştirme)",
+                        $"GDD uyumlu: {langCount} dil tanımlı (hedef: {gddTargetLanguages}).", AuditStatus.Pass);
+                else if (langCount > 0)
+                    AddAuditResult("Dil Desteği (Yerelleştirme)",
+                        $"MVP kısmi: {langCount}/{gddTargetLanguages} dil tanımlı. Tam lansmanöncesi kalan {gddTargetLanguages - langCount} dil eklenmeli.", AuditStatus.Warning);
                 else
-                {
-                    AddAuditResult("Dil Desteği (Yerelleştirme)", $"GDD uyumsuz: GDD 15 dil gerektiriyor ancak veritabanında {loc.Languages.Count} dil tanımlı.", AuditStatus.Fail);
-                }
+                    AddAuditResult("Dil Desteği (Yerelleştirme)",
+                        "LocalizationConfigSO mevcut ama dil listesi boş!", AuditStatus.Fail);
             }
             else
             {
                 AddAuditResult("Dil Desteği (Yerelleştirme)", "LocalizationConfigSO bulunamadı.", AuditStatus.Fail);
             }
 
-            // 4. Pole Capacity check (GDD §2 & §4)
-            // GDD states capacity is 4.
-            var feel = Resources.Load<GameFeelConfigSO>(EditorPaths.GameFeelConfigKey);
-            if (feel != null)
-            {
-                int defaultCap = GameplayAssetKeys.Tuning.MaxCapacity;
-                if (defaultCap == 4)
-                {
-                    AddAuditResult("Halka Kapasitesi", "GDD uyumlu: Varsayılan direk halka kapasitesi 4 olarak ayarlanmış.", AuditStatus.Pass);
-                }
-                else
-                {
-                    AddAuditResult("Halka Kapasitesi", $"GDD uyumsuz: GDD 4 halka kapasitesi gerektirir, ancak GameplayAssetKeys {defaultCap} tanımlıyor.", AuditStatus.Fail);
-                }
-            }
+            // 4. Pole Capacity check (GDD §21 & §50)
+            // DATA-2: MaxCapacity DB'den okunur — hardcode 4 karşılaştırması kaldırıldı.
+            // DifficultyBands verisi yoksa yalnızca GameplayAssetKeys.Tuning.MaxCapacity fallback'e bakılır.
+            int runtimeCap = GameplayAssetKeys.Tuning.MaxCapacity;
+            int dbCap = (db.DifficultyBands != null && db.DifficultyBands.Count > 0)
+                ? db.DifficultyBands[0].MaxCapacity
+                : runtimeCap;
+
+            if (runtimeCap == dbCap)
+                AddAuditResult("Halka Kapasitesi",
+                    $"Kapasite tutarlı: GameplayAssetKeys.Tuning.MaxCapacity={runtimeCap}, DB.DifficultyBands[0].MaxCapacity={dbCap}.",
+                    AuditStatus.Pass);
             else
-            {
-                AddAuditResult("Halka Kapasitesi", "GameFeelConfigSO yüklenemedi.", AuditStatus.Fail);
-            }
+                AddAuditResult("Halka Kapasitesi",
+                    $"Kapasite uyuşmazlığı: Runtime={runtimeCap}, DB ilk band={dbCap}. " +
+                    "GameplayAssetKeys.Tuning.MaxCapacity ile DifficultyBands MaxCapacity eşleşmeli.",
+                    AuditStatus.Warning);
 
             // 5. Config Asset Existence
             bool allExists = true;

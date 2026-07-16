@@ -88,8 +88,8 @@ namespace RingFlow.Gameplay
                 var callback = new HintRewardCallback
                 {
                     FirstMove = firstMove,
-                    SignalBus = _signalBus,
-                    Command = this
+                    SignalBus = _signalBus
+                    // FIX-E1: Command = this removed — field deleted from struct to prevent retention cycle.
                 };
                 _ads.ShowRewarded("Hint", callback.OnRewardResult);
                 return;
@@ -196,6 +196,16 @@ namespace RingFlow.Gameplay
         /// Zero-GC callback struct for rewarded ad completion.
         /// Prevents memory leak by avoiding lambda closure capture of command instance.
         /// Follows Nexus 0-GC allocation pattern for async callbacks.
+        ///
+        /// FIX-E1: The original struct held a reference to `HintCommand Command` which was
+        /// never used inside OnRewardResult — it was dead code. Holding a reference to the
+        /// command from inside a struct that is passed as a delegate to the Ad SDK creates
+        /// a potential retention cycle: the SDK holds the delegate, the delegate holds the
+        /// struct (boxed on the heap), the struct holds the Command, and the Command holds
+        /// injected services. On some ad SDK implementations the callback is never nulled
+        /// after firing, meaning the entire DI graph is kept alive until the next ad request.
+        /// Fix: remove the unused Command field entirely.
+        ///
         /// IMPORTANT: Ad SDK callbacks may arrive on a background thread.
         /// We use FireThreadSafe to marshal signal dispatch to the main Unity thread.
         /// Economy spend is skipped for ad-rewarded hints (the ad IS the payment).
@@ -204,7 +214,7 @@ namespace RingFlow.Gameplay
         {
             public Move FirstMove;
             public ISignalBus SignalBus;
-            public HintCommand Command;
+            // FIX-E1: Command field removed — was never used, caused unnecessary object retention.
 
             public void OnRewardResult(bool success)
             {

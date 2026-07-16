@@ -7,6 +7,7 @@ using RingFlow.Gameplay.Diagnostics;
 using Nexus.Core;
 using Nexus.Core.FSM;
 using Nexus.Core.Services;
+// NexusLog is in Nexus.Core.Services (already imported above)
 
 namespace RingFlow.Editor
 {
@@ -218,6 +219,11 @@ namespace RingFlow.Editor
                 int worldCount = progress.UnlockedWorlds?.Count ?? 0;
                 for (int i = 0; i < worldCount; i++)
                     progress.UnlockedWorlds[i] = true;
+
+                // LOG-3: Surface the editor action in the Nexus log so it's visible in
+                // the runtime log stream alongside gameplay events (not just Console).
+                NexusLog.Info("RuntimeSection", "DrawEconomyRow", "UnlockAll",
+                    $"[Editor] Unlock All Levels triggered. MaxUnlockedLevel={totalLevels}, Worlds unlocked={worldCount}.");
             }
         }
 

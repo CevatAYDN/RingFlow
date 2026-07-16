@@ -95,9 +95,14 @@ namespace RingFlow.Gameplay
                     $"Locked pole {context.ToPoleId} unlocked with Key ring.");
             }
 
+            // FIX-G2: Ice-breaking must trigger for ANY ring type that shares the frozen
+            // ring's color, not just Standard. GDD §31 says "üzerindeki tüm halkalar
+            // kaldırıldığında" (all rings above are removed) — no restriction on the
+            // ring type that lands on top. Key, Rainbow, and Paint rings can all break
+            // ice when color-matched. The previous Standard-only guard silently dropped
+            // ice-break VFX and undo records when a non-standard ring completed the thaw.
             int frozenBelowIndex = toPole.Rings.Count - 1;
-            bool breaksIce = ring.Type == RingType.Standard &&
-                             frozenBelowIndex >= 0 &&
+            bool breaksIce = frozenBelowIndex >= 0 &&
                              toPole.Rings[frozenBelowIndex].Type == RingType.Frozen &&
                              toPole.Rings[frozenBelowIndex].Color == ring.Color;
 
@@ -105,6 +110,14 @@ namespace RingFlow.Gameplay
 
             if (breaksIce)
             {
+                // Thaw the frozen ring in the model (now the ring below the newly added one).
+                // PoleState.AddRing no longer does this (FIX-A2), so it must be done here.
+                int thawIndex = toPole.Rings.Count - 2;
+                if (thawIndex >= 0 && toPole.Rings[thawIndex].Type == RingType.Frozen)
+                {
+                    var frozen = toPole.Rings[thawIndex];
+                    toPole.Rings[thawIndex] = new RingData(frozen.Color, RingType.Standard, frozen.AdditionalData);
+                }
                 context.WasIceBroken = true;
                 _signalBus.Fire(new BreakIceSignal(context.ToPoleId));
             }
@@ -284,9 +297,14 @@ namespace RingFlow.Gameplay
             int pullCount = 0;
             for (int p = 0; p < _model.Poles.Count; p++)
             {
-                if (p == context.ToPoleId) continue;
-                if (context.ToPole.IsFull) break;
+                // FIX-A4: Compare against the TARGET POLE'S ID, not its list index p.
+                // _model.Poles[p].Id may differ from p when poles are reordered or
+                // when the list has gaps. Using p == context.ToPoleId incorrectly
+                // skips the pole at list-index equal to ToPoleId (which may be a
+                // completely different pole) and fails to skip the actual target pole.
                 var pole = _model.Poles[p];
+                if (pole.Id == context.ToPoleId) continue;
+                if (context.ToPole.IsFull) break;
                 if (!pole.CanPopRing() || pole.TopRing.Color != context.MovingRing.Color) continue;
 
                 var pulled = pole.PopRing();
@@ -298,7 +316,7 @@ namespace RingFlow.Gameplay
                 context.ToPole.AddRing(pulled);
 
                 var subRecord = MoveRecordPool.Rent();
-                subRecord.FromPoleId = p;
+                subRecord.FromPoleId = pole.Id;
                 subRecord.ToPoleId = context.ToPoleId;
                 subRecord.Ring = pulled;
                 mainRecord.SubMoves.Add(subRecord);

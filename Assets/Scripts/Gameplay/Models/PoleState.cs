@@ -73,19 +73,16 @@ namespace RingFlow.Gameplay
                 return;
             }
 
-            int frozenBelowIndex = Rings.Count - 1;
-            bool breaksIce = ring.Type == RingType.Standard &&
-                             frozenBelowIndex >= 0 &&
-                             Rings[frozenBelowIndex].Type == RingType.Frozen &&
-                             Rings[frozenBelowIndex].Color == ring.Color;
-
+            // FIX-A2: Ice-breaking side-effect REMOVED from AddRing.
+            // MoveRingCommand.ExecuteCoreMove owns the ice-break contract:
+            //   1. Checks frozen condition BEFORE calling AddRing.
+            //   2. Calls AddRing (pure data append, no side-effects).
+            //   3. Fires BreakIceSignal and records WasIceBroken for undo.
+            // Duplicating thaw logic here caused double-thaw: ring thawed by
+            // AddRing AND signal fired again by the command, producing wrong
+            // undo restores and duplicate ice-break VFX.
+            // PoleState is a pure Model (Nexus MVCS §74.1) — no rule side-effects.
             Rings.Add(ring);
-
-            if (breaksIce)
-            {
-                var frozen = Rings[frozenBelowIndex];
-                Rings[frozenBelowIndex] = new RingData(frozen.Color, RingType.Standard, frozen.AdditionalData);
-            }
         }
 
         public RingData PopRingRaw()

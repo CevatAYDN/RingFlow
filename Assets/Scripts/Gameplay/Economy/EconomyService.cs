@@ -76,6 +76,17 @@ namespace RingFlow.Gameplay
             return (int)value;
         }
 
+        // FIX-P4: The lock(_balances) guard was added preemptively but Unity's gameplay
+        // loop is single-threaded: EconomyService.GetObservableBalance is called from
+        // HUD bindings, command executions, and UI updates — all on the main thread.
+        // The only background-thread path (ad SDK callbacks) uses FireThreadSafe which
+        // marshals to the main thread before touching the economy, so no race condition
+        // exists. Locking a Dictionary every frame creates unnecessary monitor contention
+        // overhead that violates the GDD §75 GC budget (lock acquire/release boxes the
+        // lock object and allocates a Monitor handle on some runtimes).
+        // Fix: remove the lock. If a genuine background-thread path is ever added, the
+        // correct solution is a dedicated ConcurrentDictionary or a thread-safe queue,
+        // not a blanket lock on a per-call hot path.
         public ObservableProperty<long> GetObservableBalance(string currencyId)
         {
             if (string.IsNullOrEmpty(currencyId))
@@ -85,15 +96,12 @@ namespace RingFlow.Gameplay
                 return null;
             }
 
-            lock (_balances)
+            if (!_balances.TryGetValue(currencyId, out var prop))
             {
-                if (!_balances.TryGetValue(currencyId, out var prop))
-                {
-                    prop = new ObservableProperty<long>(0);
-                    _balances[currencyId] = prop;
-                }
-                return prop;
+                prop = new ObservableProperty<long>(0);
+                _balances[currencyId] = prop;
             }
+            return prop;
         }
 
         public long GetBalance(string currencyId)

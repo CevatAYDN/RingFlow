@@ -3,6 +3,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using Nexus.Core;
 using Nexus.Core.FSM;
+using Nexus.Core.Services;
 using RingFlow.Gameplay;
 
 namespace RingFlow.Editor
@@ -76,10 +77,25 @@ namespace RingFlow.Editor
         private static void TransitionToLevel(int level)
         {
             var context = NexusRuntime.CurrentContext;
-            if (context == null) return;
+            if (context == null)
+            {
+                NexusLog.Warn("EditorPlayFromLevel", nameof(TransitionToLevel), level.ToString(),
+                    "[Editor] NexusRuntime.CurrentContext is null — cannot transition to PlayingState. Is the scene bootstrapped?");
+                return;
+            }
 
             var fsm = context.TryResolve<IGameStateMachine>();
-            if (fsm == null) return;
+            if (fsm == null)
+            {
+                NexusLog.Error("EditorPlayFromLevel", nameof(TransitionToLevel), level.ToString(),
+                    "[Editor] IGameStateMachine not resolved — FSM unavailable. Check GameplayLifecycle registration.");
+                return;
+            }
+
+            // EDIT-2: Log the editor-triggered level jump so it appears in the runtime
+            // log stream alongside gameplay events. Useful for diagnosing level-select issues.
+            NexusLog.Info("EditorPlayFromLevel", nameof(TransitionToLevel), level.ToString(),
+                $"[Editor] Jumping to level {level} via PlayingState FSM transition.");
 
             fsm.ChangeStateAsync<PlayingState>(level);
         }
