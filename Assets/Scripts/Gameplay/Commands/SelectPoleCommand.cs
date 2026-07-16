@@ -8,7 +8,6 @@ namespace RingFlow.Gameplay
     {
         [Inject] private GameplayModel _model;
         [Inject] private ISignalBus _signalBus;
-        [Inject] private IProgressionService _progression;
         [Inject] private RingValidationStrategyManager _validationManager;
 
         public void Execute(SelectPoleSignal signal)

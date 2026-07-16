@@ -5,9 +5,39 @@ using Nexus.Core;
 using Nexus.Core.Services;
 using UnityEngine;
 using UnityEngine.Scripting;
+using UnityEngine.Profiling;
 
 namespace RingFlow.Gameplay.Diagnostics
 {
+    /// <summary>
+    /// GDD §75 performance snapshot captured once per budget measurement.
+    /// All values are read-only after capture.
+    /// </summary>
+    public struct PerformanceBudgetSnapshot
+    {
+        /// <summary>CPU frame time in milliseconds (FrameTimingManager).</summary>
+        public float FrameTimeMs;
+        /// <summary>Total allocated Unity heap in megabytes (Profiler API).</summary>
+        public float AllocatedRamMb;
+        /// <summary>Reserved Unity heap in megabytes.</summary>
+        public float ReservedRamMb;
+        /// <summary>Unity frame count when this snapshot was taken.</summary>
+        public int FrameCount;
+        /// <summary>Whether any GDD §75 target threshold was exceeded.</summary>
+        public bool AnyTargetExceeded;
+        /// <summary>Whether any GDD §75 critical threshold was exceeded.</summary>
+        public bool AnyCriticalExceeded;
+
+        // GDD §75 thresholds (targets / criticals)
+        public const float FrameTimeTarget   = 14.0f;   // ms
+        public const float FrameTimeCritical = 16.6f;   // ms  (60 FPS floor)
+        public const float RamTargetMb       = 150f;
+        public const float RamCriticalMb     = 220f;
+
+        public override string ToString()
+            => $"[Frame {FrameCount}] CPU={FrameTimeMs:F2}ms  RAM={AllocatedRamMb:F1}MB";
+    }
+
     [Preserve]
     public interface IGameDiagnostics : INexusService
     {
@@ -20,6 +50,17 @@ namespace RingFlow.Gameplay.Diagnostics
         void Checkpoint(string name);  // Timing checkpoint
         TimeSpan GetElapsedSinceCheckpoint(string name);
         void Clear();
+
+        /// <summary>
+        /// Captures a GDD §75 performance budget snapshot using FrameTimingManager and Profiler API.
+        /// Call this after a significant game event (level load, win screen, etc.) to record
+        /// whether the frame stayed within target/critical thresholds.
+        /// Safe to call every frame — internally throttled to once per second.
+        /// </summary>
+        PerformanceBudgetSnapshot CapturePerformanceSnapshot();
+
+        /// <summary>Last snapshot taken, or default if none yet.</summary>
+        PerformanceBudgetSnapshot LastSnapshot { get; }
     }
 
     public enum DiagnosticSeverity { Trace, Info, Warning, Error, Critical }
@@ -50,6 +91,14 @@ namespace RingFlow.Gameplay.Diagnostics
         public bool IsEnabled { get; set; } = true;
         public IReadOnlyList<DiagnosticEntry> Entries => _entries;
         public event Action<DiagnosticEntry> OnEntryAdded;
+
+        // FIX-PERF: GDD §75 performance budget tracking fields
+        private PerformanceBudgetSnapshot _lastSnapshot;
+        private float _lastSnapshotRealtime = -999f;
+        private const float SnapshotThrottleSeconds = 1.0f;
+        private static readonly UnityEngine.FrameTiming[] _frameTimings = new UnityEngine.FrameTiming[1];
+
+        public PerformanceBudgetSnapshot LastSnapshot => _lastSnapshot;
 
         private ILoggerService _nexusLogger;
 
@@ -138,6 +187,53 @@ namespace RingFlow.Gameplay.Diagnostics
         {
             lock (_entries) _entries.Clear();
             _checkpoints.Clear();
+        }
+
+        /// <inheritdoc/>
+        public PerformanceBudgetSnapshot CapturePerformanceSnapshot()
+        {
+            // Throttle to once per second — Profiler.GetTotalAllocatedMemoryLong() and
+            // FrameTimingManager.CaptureFrameTimings() are not free operations.
+            float now = Time.realtimeSinceStartup;
+            if (now - _lastSnapshotRealtime < SnapshotThrottleSeconds)
+                return _lastSnapshot;
+            _lastSnapshotRealtime = now;
+
+            // Capture CPU frame time via FrameTimingManager (Unity 2021.2+, works on all platforms).
+            UnityEngine.FrameTimingManager.CaptureFrameTimings();
+            uint captured = UnityEngine.FrameTimingManager.GetLatestTimings(1, _frameTimings);
+            float frameMs = captured > 0 ? (float)_frameTimings[0].cpuFrameTime : Time.deltaTime * 1000f;
+
+            // RAM via Profiler (works in Development and Release builds on mobile).
+            float allocMb  = Profiler.GetTotalAllocatedMemoryLong() / (1024f * 1024f);
+            float resvMb   = Profiler.GetTotalReservedMemoryLong()  / (1024f * 1024f);
+
+            bool anyTarget   = frameMs > PerformanceBudgetSnapshot.FrameTimeTarget   || allocMb > PerformanceBudgetSnapshot.RamTargetMb;
+            bool anyCritical = frameMs > PerformanceBudgetSnapshot.FrameTimeCritical || allocMb > PerformanceBudgetSnapshot.RamCriticalMb;
+
+            _lastSnapshot = new PerformanceBudgetSnapshot
+            {
+                FrameTimeMs       = frameMs,
+                AllocatedRamMb    = allocMb,
+                ReservedRamMb     = resvMb,
+                FrameCount        = Time.frameCount,
+                AnyTargetExceeded   = anyTarget,
+                AnyCriticalExceeded = anyCritical,
+            };
+
+            if (IsEnabled)
+            {
+                if (anyCritical)
+                    Log("Perf", $"GDD §75 CRITICAL exceeded: {_lastSnapshot}", DiagnosticSeverity.Critical);
+                else if (anyTarget)
+                    Log("Perf", $"GDD §75 target exceeded: {_lastSnapshot}", DiagnosticSeverity.Warning);
+#if DEVELOPMENT_BUILD
+                else
+                    Log("Perf", $"GDD §75 OK: {_lastSnapshot}", DiagnosticSeverity.Trace);
+#endif
+            }
+
+            return _lastSnapshot;
         }
 
         public void OnDispose()

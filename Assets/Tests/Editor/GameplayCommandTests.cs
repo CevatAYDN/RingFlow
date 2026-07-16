@@ -43,9 +43,9 @@ namespace RingFlow.Tests
                 _progressModel.UnlockedWorlds.Add(i == 0);
             }
 
-            var levelWonCommand = new LevelWonCommand();
-            InjectDependencies(levelWonCommand);
-            _signalBus.RegisterHandler<LevelWonSignal>(levelWonCommand.Execute);
+            // LevelWonCommand is IAsyncCommand — no synchronous Execute() exists.
+            // The Setup handler registration is removed; individual tests that need
+            // LevelWonCommand behaviour call ExecuteAsync directly (see below).
         }
 
         private void InjectDependencies(object target)
@@ -345,7 +345,9 @@ namespace RingFlow.Tests
             var command = new LevelLostCommand();
             InjectDependencies(command);
 
-            command.Execute(new LevelLostSignal("test"));
+            // LevelLostCommand is IAsyncCommand — must call ExecuteAsync and block synchronously.
+            command.ExecuteAsync(new LevelLostSignal("test"), System.Threading.CancellationToken.None)
+                   .AsTask().GetAwaiter().GetResult();
 
             Assert.IsTrue(_gameplayModel.HasChallengeFailed.Value);
             Assert.AreEqual(typeof(LoseState), _fsm.RequestedStateType);
@@ -523,7 +525,9 @@ namespace RingFlow.Tests
             _progressModel.Coins.Value = 100;
             _economyService.CoinsBalance = 100;
 
-            command.Execute(new CheckWinSignal());
+            // CheckWinCommand is IAsyncCommand — must call ExecuteAsync and block synchronously.
+            command.ExecuteAsync(new CheckWinSignal(), System.Threading.CancellationToken.None)
+                   .AsTask().GetAwaiter().GetResult();
 
             // Check Win
             Assert.IsTrue(_gameplayModel.IsGameWon.Value);
@@ -575,7 +579,9 @@ namespace RingFlow.Tests
             _progressModel.Coins.Value = 100;
             _economyService.CoinsBalance = 100;
 
-            command.Execute(new CheckWinSignal());
+            // CheckWinCommand is IAsyncCommand — must call ExecuteAsync and block synchronously.
+            command.ExecuteAsync(new CheckWinSignal(), System.Threading.CancellationToken.None)
+                   .AsTask().GetAwaiter().GetResult();
 
             Assert.IsTrue(_gameplayModel.IsGameWon.Value);
             Assert.AreEqual(3, _progressModel.PlayerLevel.Value);
@@ -1146,6 +1152,11 @@ namespace RingFlow.Tests
 
     // --- Minimal Mocks for Unit Testing ---
 
+    // TEST CONTRACT: FireAsync and FireAsyncAndForget are intentional no-ops in MockSignalBus.
+    // Unit tests verify command logic in isolation — they do NOT exercise the full async signal
+    // chain (e.g. CheckWinCommand → await FireAsync(LevelWonSignal) → LevelWonCommand → WinState).
+    // Full async chain integration is the responsibility of PlayMode integration tests that use
+    // a real SignalBus wired to real command handlers via GameplayLifecycle.
     public class MockSignalBus : ISignalBus
     {
         public bool HasFiredUndo { get; private set; }

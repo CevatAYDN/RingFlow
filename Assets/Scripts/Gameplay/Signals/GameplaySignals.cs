@@ -1,3 +1,20 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// ASYNC/SYNC CONTRACT — READ BEFORE ADDING NEW SIGNALS
+// ─────────────────────────────────────────────────────────────────────────────
+// Nexus enforces a strict rule: if a signal has an IAsyncCommand handler bound
+// via BindAsyncCommand<>, it CANNOT be fired with the synchronous Fire() method.
+// Fire() will throw NexusSyncAsyncMismatchException at runtime.
+//
+// RULE: Any signal marked [ASYNC HANDLER] below must be fired with:
+//   • await _signalBus.FireAsync(signal)          — when caller is already async
+//   • _signalBus.FireAsyncAndForget(signal, err)  — when caller is sync (OnTick, ICommand.Execute)
+//
+// Signals NOT marked [ASYNC HANDLER] use standard Fire() — no constraints.
+//
+// When you add a new signal + BindAsyncCommand pair, add the [ASYNC HANDLER] marker
+// here so future callers know which fire method to use.
+// ─────────────────────────────────────────────────────────────────────────────
+
 namespace RingFlow.Gameplay
 {
     // ── Level Lifecycle ───────────────────────────────────
@@ -13,6 +30,8 @@ namespace RingFlow.Gameplay
         public LevelLoadedSignal(int levelIndex) => LevelIndex = levelIndex;
     }
 
+    // [ASYNC HANDLER] — LevelWonCommand is IAsyncCommand.
+    // Fire with: await FireAsync / FireAsyncAndForget. Never Fire().
     public readonly struct LevelWonSignal {}
 
     // ── Core Gameplay ─────────────────────────────────────
@@ -44,6 +63,8 @@ namespace RingFlow.Gameplay
         }
     }
 
+    // [ASYNC HANDLER] — CheckWinCommand is IAsyncCommand (awaits FireAsync(LevelWonSignal) internally).
+    // Fire with: await FireAsync / FireAsyncAndForget. Never Fire().
     public readonly struct CheckWinSignal {}
 
     public readonly struct PoleCompletedSignal
@@ -166,6 +187,8 @@ namespace RingFlow.Gameplay
     }
 
     // ── Hint & Undo ───────────────────────────────────────
+    // [ASYNC HANDLER] — HintCommand is IAsyncCommand (runs solver off main thread).
+    // Fire with: await FireAsync / FireAsyncAndForget. Never Fire().
     public readonly struct HintRequestedSignal {}
     public readonly struct HintResolvedSignal
     {
@@ -191,6 +214,8 @@ namespace RingFlow.Gameplay
     /// Fired when the player loses the current level (e.g. bomb exploded, out of moves).
     /// Triggers transition to LoseState per GDD state machine.
     /// </summary>
+    // [ASYNC HANDLER] — LevelLostCommand is IAsyncCommand.
+    // Fire with: await FireAsync / FireAsyncAndForget. Never Fire().
     public readonly struct LevelLostSignal
     {
         public readonly string Reason;

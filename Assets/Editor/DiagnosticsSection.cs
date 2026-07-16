@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System.Linq;
+using Unity.Profiling;
 using Nexus.Core;
 using Nexus.Core.Services;
 using RingFlow.Gameplay;
@@ -27,6 +28,10 @@ namespace RingFlow.Editor
         private int _lastDrawCalls;
         private int _peakDrawCalls;
         private double _lastSampleTime;
+
+        // ProfilerRecorder for draw calls — must be created/disposed alongside OnGUI lifecycle.
+        // Using SetPass Calls as the draw call proxy (reliable across render pipelines).
+        private ProfilerRecorder _drawCallRecorder;
 
         public override string DisplayName => "Game Diagnostics & Trace Logs";
         public override string PrefKey => EditorPrefsKeys.FoldDiagnostics;
@@ -240,12 +245,20 @@ namespace RingFlow.Editor
 
             if (!Application.isPlaying)
             {
+                // Dispose recorder when leaving play mode to avoid resource leak.
+                if (_drawCallRecorder.Valid)
+                    _drawCallRecorder.Dispose();
+
                 RingFlowEditorUtils.BeginSectionBox("GDD §75 Performans Bütçesi",
                     "Play Mode'da anlık frame time, draw call ve GC alloc değerlerini ölçer.");
                 EditorGUILayout.HelpBox("Ölçüm için Play Mode'a girin.", MessageType.Info);
                 RingFlowEditorUtils.EndSectionBox();
                 return;
             }
+
+            // Ensure recorder is running while in play mode.
+            if (!_drawCallRecorder.Valid)
+                _drawCallRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Draw Calls Count");
 
             // Throttle sampling to once per second to avoid Profiler.GetTotalAllocatedMemory
             // overhead on every OnGUI call (Profiler API is not free).
@@ -256,16 +269,21 @@ namespace RingFlow.Editor
                 _lastSampleTime = now;
                 _lastFrameMs    = Time.deltaTime * 1000f;
                 _lastGcAllocKb  = UnityEngine.Profiling.Profiler.GetTotalAllocatedMemoryLong() / 1024f / 1024f; // MB
-                // Draw calls not directly accessible from editor script without Profiler recorder.
-                // Use FrameTimingManager as a best-effort approximation.
+
+                // Use FrameTimingManager for more accurate CPU frame time.
                 UnityEngine.FrameTimingManager.CaptureFrameTimings();
                 var timings = new UnityEngine.FrameTiming[1];
                 uint captured = UnityEngine.FrameTimingManager.GetLatestTimings(1, timings);
                 if (captured > 0)
                     _lastFrameMs = (float)timings[0].cpuFrameTime;
 
+                // Read draw call count from ProfilerRecorder.
+                if (_drawCallRecorder.Valid && _drawCallRecorder.Count > 0)
+                    _lastDrawCalls = (int)_drawCallRecorder.LastValue;
+
                 if (_lastFrameMs   > _peakFrameMs)   _peakFrameMs   = _lastFrameMs;
                 if (_lastGcAllocKb > _peakGcAllocKb) _peakGcAllocKb = _lastGcAllocKb;
+                if (_lastDrawCalls > _peakDrawCalls)  _peakDrawCalls  = _lastDrawCalls;
             }
 
             RingFlowEditorUtils.BeginSectionBox("GDD §75 Performans Bütçesi",
@@ -317,8 +335,9 @@ namespace RingFlow.Editor
                 }
             }
 
-            DrawMetricRow("Frame Time",  _lastFrameMs,   14.0f, 16.6f,  "ms");
-            DrawMetricRow("GC Alloc",    _lastGcAllocKb, 150f,  220f,   "MB  (RAM)");
+            DrawMetricRow("Frame Time",  _lastFrameMs,   14.0f,  16.6f, "ms");
+            DrawMetricRow("Draw Calls",  _lastDrawCalls, 80f,    120f,  "calls");
+            DrawMetricRow("GC Alloc",    _lastGcAllocKb, 150f,   220f,  "MB  (RAM)");
 
             EditorGUILayout.Space(4f);
 
@@ -330,13 +349,17 @@ namespace RingFlow.Editor
                 GUI.color = peakOverCritical ? EditorPaths.EditorColors.Error : EditorPaths.EditorColors.Info;
                 EditorGUILayout.LabelField($"Peak Frame: {_peakFrameMs:F2} ms", EditorStyles.miniBoldLabel, GUILayout.Width(160f));
                 GUI.color = prevColor;
+                bool dcOverCritical = _peakDrawCalls > 120;
+                GUI.color = dcOverCritical ? EditorPaths.EditorColors.Error : EditorPaths.EditorColors.Info;
+                EditorGUILayout.LabelField($"Peak DC: {_peakDrawCalls}", EditorStyles.miniLabel, GUILayout.Width(100f));
+                GUI.color = prevColor;
                 EditorGUILayout.LabelField($"Peak RAM: {_peakGcAllocKb:F1} MB", EditorStyles.miniLabel);
             }
 
             EditorGUILayout.Space(2f);
             EditorGUILayout.HelpBox(
-                "Draw Call sayısını görmek için Unity Profiler'ı açın (Ctrl+7) → Rendering → Draw Calls.\n" +
-                "GDD §75 hedefi: Draw Calls < 80, SetPass < 40, Triangles < 100K.",
+                "Draw Call değeri Unity Profiler Recorder (\"Draw Calls Count\") kullanılarak ölçülür.\n" +
+                "GDD §75 hedefi: Draw Calls < 80 (kritik: 120), SetPass < 40, Triangles < 100K.",
                 MessageType.Info);
 
             RingFlowEditorUtils.EndSectionBox();

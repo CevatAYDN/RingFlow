@@ -32,14 +32,25 @@ namespace RingFlow.Gameplay.UI
 
             if (_model != null)
             {
-                _wonHandler = (_, won) => Refresh(won);
+                _wonHandler   = (_, won)    => Refresh(won);
                 _rewardHandler = (_, reward) => RefreshReward(reward);
                 _model.IsGameWon.OnChanged(_wonHandler);
                 _model.LastReward.OnChanged(_rewardHandler);
-                Refresh(_model.IsGameWon.Value);
+
+                // FIX-WIN (secondary): The Win screen is only instantiated AFTER WinState
+                // fires ShowScreenSignal, meaning OnBind always runs AFTER LevelWonCommand
+                // has already set LastReward and IsGameWon. The OnChanged callbacks will
+                // never fire for those values because they were set before we subscribed.
+                // Solution: eagerly show the current snapshot on bind.
                 if (_model.LastReward.Value.Stars > 0)
                 {
+                    // LastReward is the authoritative data — prefer it.
                     RefreshReward(_model.LastReward.Value);
+                }
+                else if (_model.IsGameWon.Value)
+                {
+                    // Fallback: no reward data yet, show placeholder from model state.
+                    Refresh(true);
                 }
             }
             else

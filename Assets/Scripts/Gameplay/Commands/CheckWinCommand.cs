@@ -1,18 +1,28 @@
+using System.Threading;
+using System.Threading.Tasks;
 using Nexus.Core;
 using Nexus.Core.Services;
 
 namespace RingFlow.Gameplay
 {
-    public class CheckWinCommand : ICommand<CheckWinSignal>
+    // ASYNC CONTRACT: CheckWinSignal has an async command handler.
+    // Always fire via: await _signalBus.FireAsync(new CheckWinSignal())
+    //              or: _signalBus.FireAsyncAndForget(new CheckWinSignal(), onError)
+    // Never use: _signalBus.Fire(new CheckWinSignal()) — framework throws at runtime.
+    //
+    // Reason: this command fires LevelWonSignal which has an IAsyncCommand handler
+    // (LevelWonCommand). The framework enforces that async handler chains must be
+    // fully awaited to preserve sequential ordering and prevent FSM race conditions.
+    public class CheckWinCommand : IAsyncCommand<CheckWinSignal>
     {
         [Inject] private GameplayModel _model;
         [Inject] private ISignalBus _signalBus;
 
-        public void Execute(CheckWinSignal signal)
+        public async ValueTask ExecuteAsync(CheckWinSignal signal, CancellationToken ct)
         {
             if (_model == null || _model.Poles == null || _model.Poles.Count == 0)
             {
-                NexusLog.Warn("CheckWinCommand", "Execute", "",
+                NexusLog.Warn("CheckWinCommand", "ExecuteAsync", "",
                     "Model or poles empty — cannot evaluate win.");
                 return;
             }
@@ -68,7 +78,10 @@ namespace RingFlow.Gameplay
             if (won)
             {
                 _model.IsGameWon.Value = true;
-                _signalBus.Fire(new LevelWonSignal());
+                if (ct.IsCancellationRequested) return;
+                // Fully await the async LevelWonCommand chain so FSM transitions
+                // happen in order. FireAsync preserves sequential execution guarantees.
+                await _signalBus.FireAsync(new LevelWonSignal());
             }
         }
     }

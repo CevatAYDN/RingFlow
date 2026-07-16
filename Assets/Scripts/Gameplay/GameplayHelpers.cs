@@ -7,20 +7,6 @@ namespace RingFlow.Gameplay
 {
     public static class GameplayHelpers
     {
-        public static GameObject FindRootGameObject(string name)
-        {
-            var activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
-            var rootObjects = activeScene.GetRootGameObjects();
-            for (int i = 0; i < rootObjects.Length; i++)
-            {
-                if (rootObjects[i] != null && rootObjects[i].name == name)
-                {
-                    return rootObjects[i];
-                }
-            }
-            return null;
-        }
-
         public static PoleState GetPoleById(this List<PoleState> poles, int id)
         {
             if (poles == null) return null;

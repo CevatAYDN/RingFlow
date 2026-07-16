@@ -315,10 +315,26 @@ namespace RingFlow.Gameplay
                 if (topRing != null)
                 {
                     oldRingWorldPos = topRing.transform.position;
-                    if (toPoleId < poles.Count && poles[toPoleId].Rings.Count > 0)
-                        movedColor = poles[toPoleId].Rings[^1].Color;
+                    // Color is read from the pre-rebuild visual list (toPole still has ring).
+                    // poles[] is the already-reverted model, so toPole may be empty — use
+                    // the captured visual ring color to avoid an index-out-of-range.
+                    var topRingRenderer = topRing.GetComponentInChildren<Renderer>();
+                    movedColor = (topRingRenderer != null && _colorPalette != null)
+                        ? RingColor.None // color captured below via material cache is sufficient for VFX
+                        : RingColor.None;
+                    // Best-effort: find the ring color from the model snapshot on fromPole
+                    // (the ring is now on fromPole after board revert).
+                    if (fromPoleId < poles.Count && poles[fromPoleId].Rings.Count > 0)
+                        movedColor = poles[fromPoleId].TopRing.Color;
                 }
             }
+
+            // FIX: Set _animatingTargetPoleId BEFORE BuildBoard so that ApplySelection
+            // (called inside BuildBoard) correctly skips the undo-animating pole.
+            // Previously this was set AFTER BuildBoard, causing ApplySelection to
+            // launch a DOLocalMoveY tween on fromPole's top ring before the undo
+            // jump tween started — producing a visible stutter on all other poles.
+            _animatingTargetPoleId = fromPoleId;
 
             // Rebuild board to match reverted model state (ring now on fromPole).
             BuildBoard(poles);
@@ -328,7 +344,11 @@ namespace RingFlow.Gameplay
             if (fromPoleId < _spawnedRings.Count && _spawnedRings[fromPoleId].Count > 0)
             {
                 var movedRing = _spawnedRings[fromPoleId][^1];
-                if (movedRing == null) return;
+                if (movedRing == null)
+                {
+                    _animatingTargetPoleId = -1;
+                    return;
+                }
 
                 DOTween.Kill(movedRing.transform);
                 movedRing.transform.position = oldRingWorldPos;
@@ -336,7 +356,7 @@ namespace RingFlow.Gameplay
                 int ringIndex = _spawnedRings[fromPoleId].Count - 1;
                 var targetLocal = new Vector3(0f, F.RingBaseYOffset + (ringIndex * F.RingStackSpacing), 0f);
 
-                _animatingTargetPoleId = fromPoleId;
+                // _animatingTargetPoleId already set above — no reassignment needed here.
 
                 if (reduceMotion)
                 {

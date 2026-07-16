@@ -93,7 +93,12 @@ namespace RingFlow.Gameplay
             if (elapsedSeconds >= timeLimitSeconds)
             {
                 _model.HasChallengeFailed.Value = true;
-                _signalBus.Fire(new LevelLostSignal($"Time limit reached ({elapsedSeconds:0.0}s/{timeLimitSeconds}s)"));
+                // LevelLostCommand is IAsyncCommand — Fire() throws at runtime for async handlers.
+                // OnTick is a sync method; FireAsyncAndForget dispatches without blocking the frame.
+                _signalBus.FireAsyncAndForget(
+                    new LevelLostSignal($"Time limit reached ({elapsedSeconds:0.0}s/{timeLimitSeconds}s)"),
+                    ex => NexusLog.Error("PlayingState", "OnTick", "",
+                        $"LevelLostSignal (time limit) handler threw: {ex?.GetType().Name}: {ex?.Message}"));
             }
         }
     }

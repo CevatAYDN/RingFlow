@@ -14,15 +14,17 @@ namespace RingFlow.Gameplay
     {
         public int Id { get; set; }
         public List<RingData> Rings { get; } = new(4);
-        private int _maxCapacity = 4;
+
+        private int _capacity = 4;
         public int MaxCapacity
         {
-            get => _maxCapacity;
-            set
-            {
-                _maxCapacity = value;
-                _ringCapacity = value;
-            }
+            get => _capacity;
+            set => _capacity = value;
+        }
+        public int RingCapacity
+        {
+            get => _capacity;
+            set => _capacity = value;
         }
         public bool IsLocked { get; set; }
 
@@ -31,17 +33,6 @@ namespace RingFlow.Gameplay
         /// When a ring is placed on a portal pole, it immediately teleports to the linked partner pole.
         /// </summary>
         public int PortalPartnerId { get; set; } = -1;
-
-        private int _ringCapacity = 4;
-        public int RingCapacity
-        {
-            get => _ringCapacity;
-            set
-            {
-                _ringCapacity = value;
-                _maxCapacity = value;
-            }
-        }
 
         public bool IsFull => Rings.Count >= RingCapacity;
         public bool IsEmpty => Rings.Count == 0;

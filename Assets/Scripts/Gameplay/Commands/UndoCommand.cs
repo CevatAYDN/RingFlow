@@ -7,8 +7,6 @@ namespace RingFlow.Gameplay
     {
         [Inject] private GameplayModel _model;
         [Inject] private ISignalBus _signalBus;
-        [Inject] private IEconomyService _economyService;
-        [Inject] private IProgressionService _progressionService;
 
         public void Execute(UndoSignal signal)
         {
@@ -121,7 +119,10 @@ namespace RingFlow.Gameplay
 #endif
 
             MoveRecordPool.Return(lastMove);
-            _signalBus.Fire(new CheckWinSignal());
+            // CheckWinCommand is IAsyncCommand — Fire() throws at runtime for async handlers.
+            _signalBus.FireAsyncAndForget(new CheckWinSignal(),
+                ex => NexusLog.Error("UndoCommand", "FinishUndo", "",
+                    $"CheckWinSignal handler threw: {ex?.GetType().Name}: {ex?.Message}"));
         }
 
 

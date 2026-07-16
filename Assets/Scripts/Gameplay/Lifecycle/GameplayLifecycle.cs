@@ -167,9 +167,13 @@ namespace RingFlow.Gameplay
             builder.BindCommand<MoveRingSignal, MoveRingCommand>();
             builder.BindCommand<UndoSignal, UndoCommand>();
             builder.BindCommand<UndoRequestedSignal, UndoRequestedCommand>();
-            builder.BindCommand<CheckWinSignal, CheckWinCommand>();
-            builder.BindCommand<LevelWonSignal, LevelWonCommand>();
-            builder.BindCommand<LevelLostSignal, LevelLostCommand>();
+            // CheckWinCommand is IAsyncCommand — it awaits FireAsync(LevelWonSignal) internally.
+            // BindAsyncCommand ensures the pool keeps the instance alive until ExecuteAsync completes.
+            builder.BindAsyncCommand<CheckWinSignal, CheckWinCommand>();
+            // PERMANENT FIX: IAsyncCommand — pool Return() deferred until ExecuteAsync completes,
+            // so [Inject] fields (_fsm etc.) remain valid through the await Task.Delay chain.
+            builder.BindAsyncCommand<LevelWonSignal, LevelWonCommand>();
+            builder.BindAsyncCommand<LevelLostSignal, LevelLostCommand>();
             // HintCommand runs solver off-thread via LevelSolver.SolveAsync, hence async binding.
             builder.BindAsyncCommand<HintRequestedSignal, HintCommand>();
             builder.BindCommand<ChestClaimAllSignal, ChestClaimCommand>();
@@ -178,7 +182,7 @@ namespace RingFlow.Gameplay
 
         public async ValueTask OnInitializeAsync(CancellationToken ct)
         {
-            var visualBoard = GameplayHelpers.FindRootGameObject("RingFlow_VisualBoard");
+            var visualBoard = GameObject.Find("RingFlow_VisualBoard");
             if (visualBoard != null)
             {
                 UnityEngine.Object.Destroy(visualBoard);

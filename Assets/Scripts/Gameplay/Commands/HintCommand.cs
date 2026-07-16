@@ -15,12 +15,16 @@ namespace RingFlow.Gameplay
         [Inject] private IProgressionService _progressionService;
         [Inject] private IAnalyticsService _analyticsService;
 
+        // Fires HintResolvedSignal.Empty on every early-exit path.
+        // HintResolvedSignal has only Subscribe handlers (no BindCommand) — Fire() is correct here.
+        private void FireEmpty() => _signalBus?.Fire(HintResolvedSignal.Empty);
+
         public async ValueTask ExecuteAsync(HintRequestedSignal signal, CancellationToken ct)
         {
             if (_model == null)
             {
                 NexusLog.Warn("HintCommand", nameof(ExecuteAsync), "", "Model not bound; hint request ignored.");
-                _signalBus?.Fire(HintResolvedSignal.Empty);
+                FireEmpty();
                 return;
             }
 
@@ -33,7 +37,7 @@ namespace RingFlow.Gameplay
             {
                 NexusLog.Warn("HintCommand", nameof(ExecuteAsync), _model.MovesCount.Value.ToString(),
                     "Pole list empty; level not loaded yet.");
-                _signalBus?.Fire(HintResolvedSignal.Empty);
+                FireEmpty();
                 return;
             }
 
@@ -51,7 +55,7 @@ namespace RingFlow.Gameplay
             {
                 NexusLog.Info("HintCommand", nameof(ExecuteAsync), "",
                     "Hint solver cancelled (likely scene change). Dropping to Empty.");
-                _signalBus?.Fire(HintResolvedSignal.Empty);
+                FireEmpty();
                 return;
             }
 
@@ -59,7 +63,7 @@ namespace RingFlow.Gameplay
             {
                 NexusLog.Warn("HintCommand", nameof(ExecuteAsync), _model.MovesCount.Value.ToString(),
                     "Solver could not find a first move — level may be unsolvable from current state. Hint request denied before any payment.");
-                _signalBus?.Fire(HintResolvedSignal.Empty);
+                FireEmpty();
                 return;
             }
 
@@ -97,7 +101,7 @@ namespace RingFlow.Gameplay
 
             NexusLog.Info("HintCommand", nameof(ExecuteAsync), "",
                 "No usable payment channel (Hint, Coins, Ad) — dropping to Empty.");
-            _signalBus?.Fire(HintResolvedSignal.Empty);
+            FireEmpty();
         }
 
         private void ResolveAndFire(Move firstMove, bool useHintCurrency)
@@ -110,7 +114,7 @@ namespace RingFlow.Gameplay
                 {
                     NexusLog.Warn("HintCommand", nameof(ResolveAndFire), "",
                         "Hint currency spend failed (race with another consumer?).");
-                    _signalBus?.Fire(HintResolvedSignal.Empty);
+                    FireEmpty();
                     return;
                 }
             }
@@ -121,7 +125,7 @@ namespace RingFlow.Gameplay
                 {
                     NexusLog.Warn("HintCommand", nameof(ResolveAndFire), "",
                         "Coins spend failed (insufficient balance or economy unbound).");
-                    _signalBus?.Fire(HintResolvedSignal.Empty);
+                    FireEmpty();
                     return;
                 }
             }

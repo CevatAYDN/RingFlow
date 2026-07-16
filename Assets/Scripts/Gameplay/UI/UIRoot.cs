@@ -179,7 +179,12 @@ namespace RingFlow.Gameplay.UI
                 _subscriptions.Add(sb.Subscribe<LevelSelectedSignal>(s => fsm.ChangeStateAsync<PlayingState>(new PlayingStateArgs(s.LevelIndex))));
                 _subscriptions.Add(sb.Subscribe<PauseRequestedSignal>(_ => fsm.ChangeStateAsync<PausedState>()));
                 _subscriptions.Add(sb.Subscribe<ResumeRequestedSignal>(_ => fsm.ChangeStateAsync<PlayingState>(PlayingStateArgs.Resume)));
-                _subscriptions.Add(sb.Subscribe<LevelLostSignal>(s => fsm.ChangeStateAsync<LoseState>(s)));
+                // NOTE: LevelLostSignal → LoseState transition is handled exclusively by
+                // LevelLostCommand.TransitionToLoseStateAsync() (MVCS pattern).
+                // UIRoot must NOT drive this FSM transition — doing so causes a double
+                // transition race: LevelLostCommand fires async void AND UIRoot fires
+                // ChangeStateAsync on the same signal, resulting in two simultaneous
+                // state changes. Removed per MVCS: Commands own FSM, UIRoot owns screen routing.
 
                 _subscriptions.Add(sb.Subscribe<NextLevelRequestedSignal>(_ =>
                 {

@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Threading.Tasks;
 using Nexus.Core;
 using Nexus.Core.FSM;
@@ -5,17 +6,23 @@ using Nexus.Core.Services;
 
 namespace RingFlow.Gameplay
 {
-    public class LevelWonCommand : ICommand<LevelWonSignal>
+    // PERMANENT FIX: IAsyncCommand<T> instead of ICommand<T>.
+    // With ICommand<T>, Execute() returns immediately and the CommandPool clears all
+    // [Inject] fields right away. Any async void helper called from Execute() will have
+    // its captured [Inject] references null'd before the first await resumes.
+    // With IAsyncCommand<T>, the pool only calls Return() after ExecuteAsync() fully
+    // completes — so _fsm and all other injected refs remain valid throughout the delay.
+    public class LevelWonCommand : IAsyncCommand<LevelWonSignal>
     {
         [Inject] private GameplayModel _model;
         [Inject] private IProgressionService _progressionService;
         [Inject] private IEconomyService _economyService;
         [Inject] private PlayerProgressModel _progress;
         [Inject] private IGameStateMachine _fsm;
-        [Inject] private IAdService _ads;
         [Inject] private GameConfigDatabaseSO _dbConfig;
         [Inject] private IAnalyticsService _analyticsService;
-        [Inject] private GameFeelConfigSO _feelConfig;
+        // _ads removed: TryShowInterstitial moved to WinState.OnEnterAsync (ad SDK race fix).
+        // _feelConfig removed: WinStateDelayMs moved to WinState.OnEnterAsync (timing is State concern).
 
         private GameBalanceConfig Cfg
         {
@@ -26,21 +33,21 @@ namespace RingFlow.Gameplay
             }
         }
 
-        public void Execute(LevelWonSignal signal)
+        public async ValueTask ExecuteAsync(LevelWonSignal signal, CancellationToken ct)
         {
             if (_progressionService == null)
             {
-                NexusLog.Error("LevelWonCommand", "Execute", "",
+                NexusLog.Error("LevelWonCommand", "ExecuteAsync", "",
                     "IProgressionService unbound; cannot advance level even though board was solved.");
             }
             if (_economyService == null)
             {
-                NexusLog.Error("LevelWonCommand", "Execute", "",
+                NexusLog.Error("LevelWonCommand", "ExecuteAsync", "",
                     "IEconomyService unbound; coin/xp reward dropped.");
             }
             if (_progress == null)
             {
-                NexusLog.Error("LevelWonCommand", "Execute", "",
+                NexusLog.Error("LevelWonCommand", "ExecuteAsync", "",
                     "PlayerProgressModel unbound; xp/world unlock dropped.");
             }
 
@@ -57,17 +64,33 @@ namespace RingFlow.Gameplay
             _model.LastReward.Value = WinReward.From(prevMoves, prevTarget, coinReward, xpEarned, stars, prevLevel);
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            NexusLog.Info("LevelWonCommand", "Execute", "",
+            NexusLog.Info("LevelWonCommand", "ExecuteAsync", "",
                 $"Level {prevLevel} WON! Moves={prevMoves}, Target={prevTarget}, Stars={stars}, Coins+={coinReward}, XP+={xpEarned}");
 #endif
 
             _analyticsService?.LevelComplete(prevLevel, prevMoves, stars);
 
             UnlockWorldIfNeeded(newLevel);
-            TryShowInterstitial(prevLevel);
+            // TryShowInterstitial moved to WinState.OnEnterAsync — ad is shown inside the
+            // state transition so the FSM is fully settled before the ad callback fires.
             MaybeDropChests(prevLevel, prevMoves, stars);
 
-            _ = DeferWinStateTransitionAsync();
+            // Delay responsibility moved to WinState.OnEnterAsync (GameFeelConfigSO.WinStateDelayMs).
+            // Commands must not contain timing/animation delays — that is View/State concern.
+            // Keeping delay here would block the SignalBus async chain for 500ms.
+            if (ct.IsCancellationRequested) return;
+
+            if (_fsm == null)
+            {
+                NexusLog.Error("LevelWonCommand", "ExecuteAsync", "",
+                    "IGameStateMachine is NULL — Win screen cannot be shown.");
+                return;
+            }
+
+            NexusLog.Info("LevelWonCommand", "ExecuteAsync", "",
+                "Transitioning to WinState.");
+
+            await _fsm.ChangeStateAsync<WinState>();
         }
 
         private int ComputeStars(int moves, int target)
@@ -117,8 +140,6 @@ namespace RingFlow.Gameplay
         {
             if (_progress == null) return;
 
-            // Chest drops are deterministic for replay compatibility.
-            // Seed = (levelIndex * 1000 + actualMoves) — unique per level+performance.
             var rng = new System.Random(prevLevel * 1000 + prevMoves);
             _progress.ChestBronze.Value++;
             if (rng.NextDouble() < Cfg.SilverChestChance)                  _progress.ChestSilver.Value++;
@@ -148,62 +169,5 @@ namespace RingFlow.Gameplay
             }
         }
 
-        private void TryShowInterstitial(int prevLevel)
-        {
-            if (_progress == null || _ads == null || _progress.RemoveAds.Value) return;
-
-            _progress.LevelsSinceLastInterstitial++;
-            if (_progress.LevelsSinceLastInterstitial < Cfg.InterstitialAdInterval) return;
-
-            _progress.LevelsSinceLastInterstitial = 0;
-            if (_ads.IsInterstitialAvailable("LevelComplete"))
-            {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                NexusLog.Info("LevelWonCommand", "TryShowInterstitial", "",
-                    $"Showing interstitial (interval={Cfg.InterstitialAdInterval}).");
-#endif
-                _ads.ShowInterstitial("LevelComplete");
-                _analyticsService?.InterstitialAd("LevelComplete");
-            }
-        }
-
-        private async Task DeferWinStateTransitionAsync()
-        {
-            // FIX-A5: Hardcoded 500ms delay replaced with GameFeelConfigSO.WinStateDelayMs
-            // so designers can tune the win-screen transition timing without a code change.
-            // Falls back to 500ms if _feelConfig is not injected (e.g. in unit tests).
-            int delayMs      = _feelConfig != null ? _feelConfig.WinStateDelayMs      : 500;
-            int retryDelayMs = _feelConfig != null ? _feelConfig.WinStateRetryDelayMs : 1000;
-
-            try
-            {
-                await Task.Delay(delayMs);
-                if (_fsm != null)
-                {
-                    await _fsm.ChangeStateAsync<WinState>();
-                }
-            }
-            catch (System.Exception ex)
-            {
-                // Prevent silent failure — if WinState transition fails,
-                // the player would be stuck on the gameplay screen forever.
-                NexusLog.Error("LevelWonCommand", "DeferWinStateTransitionAsync", "",
-                    $"Win state transition failed: {ex.Message}. Attempting recovery.");
-                try
-                {
-                    // Recovery attempt: try again after a brief delay
-                    await Task.Delay(retryDelayMs);
-                    if (_fsm != null)
-                    {
-                        await _fsm.ChangeStateAsync<WinState>();
-                    }
-                }
-                catch (System.Exception retryEx)
-                {
-                    NexusLog.Error("LevelWonCommand", "DeferWinStateTransitionAsync", "",
-                        $"Recovery also failed: {retryEx.Message}. Player may be stuck.");
-                }
-            }
-        }
     }
 }

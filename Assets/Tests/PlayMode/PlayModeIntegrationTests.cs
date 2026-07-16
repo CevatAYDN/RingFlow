@@ -82,10 +82,12 @@ namespace RingFlow.Tests
             Assert.That(moveCount, Is.GreaterThanOrEqualTo(0));
 
             // Act: simulate win
+            // LevelWonCommand is IAsyncCommand — ExecuteAsync must be called and blocked synchronously.
             _gameplayModel.IsGameWon.Value = true;
             var levelWonCmd = new LevelWonCommand();
             InjectFields(levelWonCmd);
-            levelWonCmd.Execute(new LevelWonSignal());
+            levelWonCmd.ExecuteAsync(new LevelWonSignal(), System.Threading.CancellationToken.None)
+                       .AsTask().GetAwaiter().GetResult();
 
             // Assert: progression updated
             Assert.That(_progressModel.CurrentLevel.Value, Is.EqualTo(2),
@@ -107,7 +109,9 @@ namespace RingFlow.Tests
             InjectField(cmd, "_signalBus", _signalBus);
 
             // Act: empty poles should not be a win
-            cmd.Execute(new CheckWinSignal());
+            // CheckWinCommand is IAsyncCommand — block synchronously in tests.
+            cmd.ExecuteAsync(new CheckWinSignal(), System.Threading.CancellationToken.None)
+               .AsTask().GetAwaiter().GetResult();
 
             // Assert
             Assert.That(_signalBus.FiredLevelWon, Is.False,
@@ -461,7 +465,8 @@ namespace RingFlow.Tests
             var cmd = new CheckWinCommand();
             InjectFields(cmd);
             InjectField(cmd, "_signalBus", _signalBus);
-            cmd.Execute(new CheckWinSignal());
+            cmd.ExecuteAsync(new CheckWinSignal(), System.Threading.CancellationToken.None)
+               .AsTask().GetAwaiter().GetResult();
 
             Assert.That(_signalBus.FiredLevelWon, Is.False,
                 "Partial-fill pole (2/4 same color) must not trigger win.");
@@ -484,7 +489,8 @@ namespace RingFlow.Tests
             var cmd = new CheckWinCommand();
             InjectFields(cmd);
             InjectField(cmd, "_signalBus", _signalBus);
-            cmd.Execute(new CheckWinSignal());
+            cmd.ExecuteAsync(new CheckWinSignal(), System.Threading.CancellationToken.None)
+               .AsTask().GetAwaiter().GetResult();
 
             Assert.That(_signalBus.FiredLevelWon, Is.True,
                 "Full same-color pole + empty buffer pole must trigger win.");
@@ -689,7 +695,8 @@ namespace RingFlow.Tests
             var cmd = new CheckWinCommand();
             InjectFields(cmd);
             InjectField(cmd, "_signalBus", _signalBus);
-            cmd.Execute(new CheckWinSignal());
+            cmd.ExecuteAsync(new CheckWinSignal(), System.Threading.CancellationToken.None)
+               .AsTask().GetAwaiter().GetResult();
 
             Assert.That(_signalBus.FiredLevelWon, Is.False,
                 "A full pole with mixed colors must NOT trigger LevelWon (GDD §21).");
@@ -731,6 +738,96 @@ namespace RingFlow.Tests
             // Assert
             Assert.That(clampedLow,  Is.EqualTo(1),          "Level 0 must clamp to 1.");
             Assert.That(clampedHigh, Is.EqualTo(totalLevels), $"Level {totalLevels + 1} must clamp to {totalLevels}.");
+        }
+
+        // ---------------------------------------------------------------
+        //  Async Chain Integration Tests
+        // ---------------------------------------------------------------
+
+        /// <summary>
+        /// Verifies that CheckWinCommand → FireAsync(LevelWonSignal) → LevelWonCommand →
+        /// ChangeStateAsync&lt;WinState&gt; chain executes fully and in order.
+        ///
+        /// Uses AsyncChainRoutingBus which actually routes FireAsync calls to registered
+        /// async handlers — unlike LoggingSignalBus (no-op for async).
+        /// This test fills the gap identified in BORÇ 3: MockSignalBus does not exercise
+        /// the async signal chain, so bugs in LevelWonCommand or its FSM transition
+        /// would be invisible to unit tests.
+        /// </summary>
+        [Test]
+        public void AsyncChain_CheckWin_TriggersLevelWonCommand_AndRequestsWinState()
+        {
+            // Arrange: routing bus wires CheckWinSignal → CheckWinCommand and
+            // LevelWonSignal → LevelWonCommand so FireAsync actually dispatches.
+            var routingBus = new AsyncChainRoutingBus();
+            var trackingFsm = new MockGameStateMachine();
+
+            // Set up a solved board: one full same-color pole + one empty buffer pole.
+            var solvedPole = new PoleState { Id = 0, MaxCapacity = 4 };
+            for (int i = 0; i < 4; i++)
+                solvedPole.AddRing(new RingData(RingColor.Red, RingType.Standard));
+            var emptyPole = new PoleState { Id = 1, MaxCapacity = 4 };
+            _gameplayModel.Poles.Add(solvedPole);
+            _gameplayModel.Poles.Add(emptyPole);
+            _gameplayModel.IsGameWon.Value = false;
+
+            // Wire LevelWonCommand into the routing bus.
+            var levelWonCmd = new LevelWonCommand();
+            InjectFields(levelWonCmd);
+            InjectField(levelWonCmd, "_signalBus", routingBus);
+            InjectField(levelWonCmd, "_fsm", trackingFsm);
+            routingBus.RegisterAsyncHandler<LevelWonSignal>((sig, ct) =>
+                levelWonCmd.ExecuteAsync(sig, ct));
+
+            // Wire CheckWinCommand into the routing bus.
+            var checkWinCmd = new CheckWinCommand();
+            InjectFields(checkWinCmd);
+            InjectField(checkWinCmd, "_signalBus", routingBus);
+
+            // Act: execute CheckWinCommand — it should detect the win, fire LevelWonSignal,
+            // which routes to LevelWonCommand, which calls ChangeStateAsync<WinState>.
+            checkWinCmd.ExecuteAsync(new CheckWinSignal(), System.Threading.CancellationToken.None)
+                       .AsTask().GetAwaiter().GetResult();
+
+            // Assert: full chain executed
+            Assert.That(_gameplayModel.IsGameWon.Value, Is.True,
+                "CheckWinCommand must set IsGameWon=true when board is solved.");
+            Assert.That(routingBus.FiredLevelWon, Is.True,
+                "CheckWinCommand must fire LevelWonSignal when board is solved.");
+            Assert.That(trackingFsm.LastRequestedStateType, Is.EqualTo(typeof(WinState)),
+                "LevelWonCommand must request ChangeStateAsync<WinState> after level is won.");
+        }
+
+        /// <summary>
+        /// Verifies that LevelLostSignal → LevelLostCommand → ChangeStateAsync&lt;LoseState&gt;
+        /// chain executes fully. Exercises the async lose path that PlayingState.OnTick
+        /// and MoveRingCommand fire via FireAsyncAndForget.
+        /// </summary>
+        [Test]
+        public void AsyncChain_LevelLost_TriggersLevelLostCommand_AndRequestsLoseState()
+        {
+            // Arrange
+            var routingBus = new AsyncChainRoutingBus();
+            var trackingFsm = new MockGameStateMachine();
+            _gameplayModel.HasChallengeFailed.Value = false;
+
+            var levelLostCmd = new LevelLostCommand();
+            InjectField(levelLostCmd, "_fsm", trackingFsm);
+            InjectField(levelLostCmd, "_model", _gameplayModel);
+            routingBus.RegisterAsyncHandler<LevelLostSignal>((sig, ct) =>
+                levelLostCmd.ExecuteAsync(sig, ct));
+
+            // Act: fire LevelLostSignal through the routing bus
+            routingBus.FireAsync(new LevelLostSignal("test reason"))
+                      .AsTask().GetAwaiter().GetResult();
+
+            // Assert
+            Assert.That(routingBus.FiredLevelLost, Is.True,
+                "LevelLostSignal must be tracked by the routing bus.");
+            Assert.That(_gameplayModel.HasChallengeFailed.Value, Is.True,
+                "LevelLostCommand must set HasChallengeFailed=true.");
+            Assert.That(trackingFsm.LastRequestedStateType, Is.EqualTo(typeof(LoseState)),
+                "LevelLostCommand must request ChangeStateAsync<LoseState>.");
         }
 
         // ---------------------------------------------------------------
@@ -857,14 +954,82 @@ namespace RingFlow.Tests
     public class MockGameStateMachine : IGameStateMachine
     {
         public IGameState CurrentState { get; private set; }
+        public Type LastRequestedStateType { get; private set; }
 
         public void RegisterState<TState>(TState state) where TState : class, IGameState { }
         public Task ChangeStateAsync<TState>(object args = null) where TState : class, IGameState
-        { CurrentState = null; return Task.CompletedTask; }
+        {
+            CurrentState = null;
+            LastRequestedStateType = typeof(TState);
+            return Task.CompletedTask;
+        }
         public Task ChangeStateAsync(Type stateType, object args = null)
-        { return Task.CompletedTask; }
+        {
+            LastRequestedStateType = stateType;
+            return Task.CompletedTask;
+        }
         public Task ChangeStateAsync(Type stateType, CancellationToken ct, object args = null)
-        { return Task.CompletedTask; }
+        {
+            LastRequestedStateType = stateType;
+            return Task.CompletedTask;
+        }
+    }
+
+    /// <summary>
+    /// Minimal routing signal bus for async chain integration tests.
+    /// Supports registering async command handlers so FireAsync() actually dispatches
+    /// through the registered handler — unlike LoggingSignalBus which is no-op for async.
+    ///
+    /// TEST CONTRACT: Only supports one async handler per signal type. Sufficient for
+    /// testing CheckWinSignal → LevelWonSignal → LevelWonCommand chains in isolation.
+    /// </summary>
+    public class AsyncChainRoutingBus : ISignalBus
+    {
+        public bool FiredLevelWon { get; private set; }
+        public bool FiredLevelLost { get; private set; }
+
+        private readonly System.Collections.Generic.Dictionary<System.Type,
+            System.Func<object, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask>> _asyncHandlers = new();
+
+        public IReadOnlyDictionary<System.Type, IReadOnlyList<CommandHandlerInfo>> RegisteredHandlers { get; } =
+            new Dictionary<System.Type, IReadOnlyList<CommandHandlerInfo>>();
+
+        /// <summary>
+        /// Registers an async command handler for a signal type.
+        /// The handler receives the boxed signal as first argument.
+        /// </summary>
+        public void RegisterAsyncHandler<TSignal>(
+            System.Func<TSignal, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask> handler)
+            where TSignal : struct
+        {
+            _asyncHandlers[typeof(TSignal)] = async (boxed, ct) => await handler((TSignal)boxed, ct);
+        }
+
+        public void Fire<T>(T signal) where T : struct
+        {
+            if (signal is LevelWonSignal)  FiredLevelWon  = true;
+            if (signal is LevelLostSignal) FiredLevelLost = true;
+        }
+
+        public async ValueTask FireAsync<T>(T signal) where T : struct
+        {
+            if (signal is LevelWonSignal)  FiredLevelWon  = true;
+            if (signal is LevelLostSignal) FiredLevelLost = true;
+
+            if (_asyncHandlers.TryGetValue(typeof(T), out var handler))
+                await handler(signal, System.Threading.CancellationToken.None);
+        }
+
+        public ValueTask FireAsyncAndForget<T>(T signal, Action<Exception> onError = null) where T : struct
+            => FireAsync(signal);
+
+        public ValueTask FireAsyncWithTimeout<T>(T signal, int timeoutMilliseconds) where T : struct
+            => FireAsync(signal);
+
+        public void FireThreadSafe<T>(T signal) where T : struct { }
+        public void FireNextFrame<T>(T signal) where T : struct { }
+        public ISignalSubscription Subscribe<T>(Action<T> handler) where T : struct => null;
+        public ISignalSubscription SubscribeAsync<T>(Func<T, CancellationToken, ValueTask> handler) where T : struct => null;
     }
 
     public class InMemoryPlayerPrefs : IPlayerPrefsService

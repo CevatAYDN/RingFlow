@@ -48,6 +48,12 @@ namespace RingFlow.Gameplay.Strategies
         public IEconomyService Economy;
         public IProgressionService Progression;
 
+        // The main MoveRecord for this move — set by MoveRingCommand before calling
+        // ExecuteSubMoves so that sub-move strategies can append to SubMoves and
+        // read/write move metadata without referencing the command directly.
+        // Strategies must null-check before accessing (null = context was created without record).
+        public MoveRecord MainRecord;
+
         // Strategy-specific state
         public bool WasMysteryRevealed;
         public bool WasPaintApplied;

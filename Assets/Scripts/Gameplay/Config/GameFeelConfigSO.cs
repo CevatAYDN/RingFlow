@@ -186,6 +186,13 @@ namespace RingFlow.Gameplay
         [Tooltip("Camera micro-shake duration on pole complete.")]
         public float CompleteShakeDuration = 0.15f;
 
+        [Header("Bomb Tick Behaviour")]
+        [Tooltip("Controls which bombs are ticked per move.\n" +
+                 "AllBombsPerMove: every bomb on the board ticks each move (GDD §36 default).\n" +
+                 "SourceAndTargetPolesOnly: only bombs on the source or target pole tick.\n" +
+                 "MovedBombOnly: only the bomb that was physically moved ticks.")]
+        public BombTickMode BombTickMode = BombTickMode.AllBombsPerMove;
+
         [Header("Win State Transition")]
         [Tooltip("Delay in milliseconds before transitioning to WinState after level is completed. " +
                  "Allows the completion animation to play before the screen changes.")]

@@ -1,22 +1,22 @@
 using System;
 using Nexus.Core;
-using Nexus.Core.FSM;
 using Nexus.Core.Services;
 using RingFlow.Gameplay.Strategies;
 
 namespace RingFlow.Gameplay
 {
-    public class MoveRingCommand : ICommand<MoveRingSignal>
-    {
-        [Inject] private GameplayModel _model;
-        [Inject] private ISignalBus _signalBus;
-        [Inject] private IGameStateMachine _fsm;
-        [Inject] private RingMoveStrategyManager _strategyManager;
-        [Inject] private IProgressionService _progression;
-        [Inject] private IEconomyService _economyService;
-        [Inject] private IAdService _adService;
-        [Inject] private RingValidationStrategyManager _validationManager;
-        [Inject] private GameConfigDatabaseSO _dbConfig;
+    public class MoveRingCommand : ICommand<MoveRingSignal>, IResettable
+        {
+            [Inject] private GameplayModel _model;
+            [Inject] private ISignalBus _signalBus;
+            [Inject] private RingMoveStrategyManager _strategyManager;
+            [Inject] private IProgressionService _progression;
+            [Inject] private RingValidationStrategyManager _validationManager;
+            [Inject] private GameFeelConfigSO _feelConfig;
+
+        // IResettable: called by CommandPool before returning this instance to the pool.
+        // Clears the bomb-count cache so the next Execute() starts with a fresh scan.
+        public void Reset() => _cachedBombCount = BombCountUnknown;
 
         public void Execute(MoveRingSignal signal)
         {
@@ -25,6 +25,12 @@ namespace RingFlow.Gameplay
 
             var mainRecord = MoveRecordPool.Rent();
             CaptureBoardSnapshot(mainRecord);
+
+            // Set MainRecord on context BEFORE ExecuteCoreMove so that Chain and Magnet
+            // strategies (called via PostMoveExecution inside ExecuteCoreMove) can append
+            // their sub-move records directly. Without this, MainRecord would be null
+            // when strategies run and sub-moves would not be recorded for Undo.
+            context.MainRecord = mainRecord;
 
             ExecuteCoreMove(ref context);
             PopulateMoveRecord(context, mainRecord);
@@ -159,8 +165,12 @@ namespace RingFlow.Gameplay
         private void ExecuteSubMoves(ref MoveContext context, MoveRecord mainRecord)
         {
             context.PlayerRingIndex = context.ToPole.Rings.Count - 1;
-            ApplyChainSubMove(ref context, mainRecord);
-            ApplyMagnetPull(ref context, mainRecord);
+            // context.MainRecord is already set in Execute() before ExecuteCoreMove runs,
+            // so Chain/Magnet strategies already appended their sub-moves during PostMoveExecution.
+            // No additional strategy calls needed here.
+
+            // Portal teleport remains here: it is a POLE mechanic (PortalPartnerId on PoleState),
+            // not a ring-type mechanic. A ring strategy cannot own pole configuration.
             ApplyPortalTeleport(ref context, mainRecord);
         }
 
@@ -189,17 +199,27 @@ namespace RingFlow.Gameplay
                     $"Bomb exploded on pole {explodedPoleId}. Level failed per GDD §36.");
 #endif
                 _signalBus.Fire(new BombExplodedSignal(explodedPoleId));
-                _signalBus.Fire(new LevelLostSignal($"Bomb exploded on pole {explodedPoleId}"));
+                // LevelLostCommand is IAsyncCommand — must not use Fire() here.
+                // FireAsyncAndForget dispatches the async chain without blocking Execute().
+                _signalBus.FireAsyncAndForget(new LevelLostSignal($"Bomb exploded on pole {explodedPoleId}"),
+                    ex => NexusLog.Error("MoveRingCommand", "CompleteMove", "",
+                        $"LevelLostSignal (bomb) handler threw: {ex?.GetType().Name}: {ex?.Message}"));
             }
             else
             {
-                _signalBus.Fire(new CheckWinSignal());
+                // CheckWinCommand is IAsyncCommand — must not use Fire() here.
+                _signalBus.FireAsyncAndForget(new CheckWinSignal(),
+                    ex => NexusLog.Error("MoveRingCommand", "CompleteMove", "",
+                        $"CheckWinSignal handler threw: {ex?.GetType().Name}: {ex?.Message}"));
                 if (_model.IsChallengeMode.Value
                     && _model.ChallengeMoveLimit.Value > 0
                     && _model.MovesCount.Value >= _model.ChallengeMoveLimit.Value
                     && !_model.IsGameWon.Value)
                 {
-                    _signalBus.Fire(new LevelLostSignal($"Move limit reached ({_model.MovesCount.Value}/{_model.ChallengeMoveLimit.Value})"));
+                    // LevelLostCommand is IAsyncCommand — must not use Fire() here.
+                    _signalBus.FireAsyncAndForget(new LevelLostSignal($"Move limit reached ({_model.MovesCount.Value}/{_model.ChallengeMoveLimit.Value})"),
+                        ex => NexusLog.Error("MoveRingCommand", "CompleteMove", "",
+                            $"LevelLostSignal (move limit) handler threw: {ex?.GetType().Name}: {ex?.Message}"));
                 }
             }
         }
@@ -267,87 +287,6 @@ namespace RingFlow.Gameplay
             return true;
         }
 
-        private void ApplyChainSubMove(ref MoveContext context, MoveRecord mainRecord)
-        {
-            if (context.MovingRing.Type != RingType.Chain) return;
-
-            // Use for-index to avoid enumerator allocation (ObservableList may allocate on foreach)
-            for (int i = 0; i < _model.Poles.Count; i++)
-            {
-                var pole = _model.Poles[i];
-                if (pole.Id == context.FromPole.Id) continue;
-                var topR = pole.TopRing;
-                if (topR.Type != RingType.Chain || topR.AdditionalData != context.MovingRing.AdditionalData) continue;
-
-                pole.PopRing();
-                if (!context.ToPole.CanAddRing(topR))
-                {
-                    pole.AddRing(topR);
-                    return;
-                }
-                context.ToPole.AddRing(topR);
-
-                var subRecord = MoveRecordPool.Rent();
-                subRecord.FromPoleId = pole.Id;
-                subRecord.ToPoleId = context.ToPoleId;
-                subRecord.Ring = topR;
-                mainRecord.SubMoves.Add(subRecord);
-
-#if DEVELOPMENT_BUILD
-                NexusLog.Info("MoveRingCommand", "ApplyChainSubMove", context.ToPoleId.ToString(),
-                    $"Chain sub-move: partner from pole {pole.Id} → {context.ToPoleId}, color={topR.Color}.");
-#endif
-                return;
-            }
-        }
-
-        private void ApplyMagnetPull(ref MoveContext context, MoveRecord mainRecord)
-        {
-            if (context.MovingRing.Type != RingType.Magnet) return;
-
-            int pullCount = 0;
-            for (int p = 0; p < _model.Poles.Count; p++)
-            {
-                // FIX-A4: Compare against the TARGET POLE'S ID, not its list index p.
-                // _model.Poles[p].Id may differ from p when poles are reordered or
-                // when the list has gaps. Using p == context.ToPoleId incorrectly
-                // skips the pole at list-index equal to ToPoleId (which may be a
-                // completely different pole) and fails to skip the actual target pole.
-                var pole = _model.Poles[p];
-                if (pole.Id == context.ToPoleId) continue;
-                // FIX-M1: Was `break` — wrong. When the target pole is full we must
-                // CONTINUE scanning remaining poles so we still record all pulls that
-                // happened before the pole filled up. Using `break` silently skipped
-                // any poles listed after the first full-check, producing an incomplete
-                // pull count and missing sub-move records.
-                if (context.ToPole.IsFull) continue;
-                if (!pole.CanPopRing() || pole.TopRing.Color != context.MovingRing.Color) continue;
-
-                var pulled = pole.PopRing();
-                if (!context.ToPole.CanAddRing(pulled))
-                {
-                    pole.AddRing(pulled);
-                    continue;
-                }
-                context.ToPole.AddRing(pulled);
-
-                var subRecord = MoveRecordPool.Rent();
-                subRecord.FromPoleId = pole.Id;
-                subRecord.ToPoleId = context.ToPoleId;
-                subRecord.Ring = pulled;
-                mainRecord.SubMoves.Add(subRecord);
-                pullCount++;
-            }
-
-            if (pullCount > 0)
-            {
-#if DEVELOPMENT_BUILD
-                NexusLog.Info("MoveRingCommand", "ApplyMagnetPull", context.ToPoleId.ToString(),
-                    $"Magnet pulled {pullCount} matching ring(s) from all poles to pole {context.ToPoleId}, color={context.MovingRing.Color}.");
-#endif
-            }
-        }
-
         private void ApplyPortalTeleport(ref MoveContext context, MoveRecord mainRecord)
         {
             int portalPartnerId = context.ToPole.PortalPartnerId;
@@ -396,13 +335,18 @@ namespace RingFlow.Gameplay
         // cached field on the command is sufficient because MoveRingCommand is
         // reconstructed per-command-bus-registration (not a long-lived singleton), so the
         // cache is valid for the lifetime of the gameplay session.
-        private int _cachedBombCount = -1; // -1 = unknown / needs first scan
+        //
+        // BombCountUnknown (-1): sentinel meaning "cache is stale, full scan needed".
+        //              0: scanned and confirmed no bombs on board — skip all tick logic.
+        //             >0: known live bomb count — tick logic runs, count decrements on explosion.
+        private const int BombCountUnknown = -1;
+        private int _cachedBombCount = BombCountUnknown;
 
         private bool AnyPoleHasBombCached()
         {
             if (_cachedBombCount == 0) return false;
             if (_cachedBombCount > 0) return true;
-            // First call or invalidated: do the full scan once.
+            // BombCountUnknown: cache invalidated by IResettable.Reset() or first call. Full scan.
             _cachedBombCount = 0;
             for (int p = 0; p < _model.Poles.Count; p++)
             {
@@ -455,7 +399,9 @@ namespace RingFlow.Gameplay
 
         private bool ShouldTickBomb(int poleId, int ringIndex, MoveRecord mainRecord, RingData ring)
         {
-            var mode = _dbConfig != null ? _dbConfig.LevelGen.BombTickMode : BombTickMode.AllBombsPerMove;
+            // BombTickMode is data-driven: read from GameFeelConfigSO so designers can
+            // tune behaviour without a code change. Defaults to AllBombsPerMove (GDD §36).
+            var mode = _feelConfig != null ? _feelConfig.BombTickMode : BombTickMode.AllBombsPerMove;
             switch (mode)
             {
                 case BombTickMode.SourceAndTargetPolesOnly:
@@ -470,7 +416,7 @@ namespace RingFlow.Gameplay
                     //   poleId==toPoleId AND the moved ring itself was a Bomb.
                     if (mainRecord.Ring.Type != RingType.Bomb) return false;
                     return poleId == mainRecord.ToPoleId;
-                default:
+                default: // BombTickMode.AllBombsPerMove
                     return true;
             }
         }
