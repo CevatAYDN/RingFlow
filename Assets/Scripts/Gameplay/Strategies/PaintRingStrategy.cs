@@ -45,44 +45,62 @@ namespace RingFlow.Gameplay.Strategies
 
         public void PostMoveExecution(ref MoveContext context)
         {
-            // Only act when the MOVING ring is the Paint ring itself (GDD §39).
-            // If PostMoveExecution is invoked because the ring below was Paint
-            // (MoveRingCommand targetType path), context.MovingRing.Type is NOT Paint
-            // and we skip — landing on an existing Paint ring does not trigger painting.
-            if (context.MovingRing.Type != RingType.Paint) return;
-
-            // Paint ring must have landed on another ring (not an empty pole).
             if (context.ToPole.Rings.Count < 2) return;
 
-            int paintIndex = context.ToPole.Rings.Count - 1;   // the Paint ring itself
-            int belowIndex = context.ToPole.Rings.Count - 2;   // the ring to be painted
-            var ringBelow  = context.ToPole.Rings[belowIndex];
-            var paintRing  = context.ToPole.Rings[paintIndex];
+            int topIndex = context.ToPole.Rings.Count - 1;
+            int belowIndex = context.ToPole.Rings.Count - 2;
+            var topRing = context.ToPole.Rings[topIndex];
+            var belowRing = context.ToPole.Rings[belowIndex];
 
-            // Do not paint another Paint ring — prevent chain reactions not in GDD.
-            if (ringBelow.Type == RingType.Paint) return;
+            if (topRing.Type == RingType.Paint)
+            {
+                // Case 1: Placed ring is Paint. It paints the ring below it.
+                if (belowRing.Type == RingType.Paint) return;
 
-            var paintColor = paintRing.Color;
+                var paintColor = topRing.Color;
 
-            // Record for undo
-            context.PaintedRingIndex          = belowIndex;
-            context.PaintedRingOriginalColor  = ringBelow.Color;
-            context.PaintConsumedRingIndex    = paintIndex;
-            context.PaintConsumedRingData     = new RingData(paintColor, RingType.Paint);
-            context.WasPaintApplied           = true;
+                context.PaintedRingIndex = belowIndex;
+                context.PaintedRingOriginalColor = belowRing.Color;
+                context.PaintConsumedRingIndex = topIndex;
+                context.PaintConsumedRingData = new RingData(paintColor, RingType.Paint);
+                context.WasPaintApplied = true;
 
-            // Apply paint: ring below gets paint's color (type stays, only color changes)
-            context.ToPole.Rings[belowIndex] = new RingData(paintColor, ringBelow.Type, ringBelow.AdditionalData);
+                // Apply paint: ring below gets paint's color (type stays, color changes)
+                context.ToPole.Rings[belowIndex] = new RingData(paintColor, belowRing.Type, belowRing.AdditionalData);
 
-            // Consume paint ring: becomes Standard with same color
-            context.ToPole.Rings[paintIndex] = new RingData(paintColor, RingType.Standard);
+                // Consume paint ring: becomes Standard
+                context.ToPole.Rings[topIndex] = new RingData(paintColor, RingType.Standard);
 
-            context.SignalBus?.Fire(new PaintRingSignal(context.ToPoleId, paintColor));
+                context.SignalBus?.Fire(new PaintRingSignal(context.ToPoleId, paintColor));
 
-            NexusLog.Info("PaintRingStrategy", nameof(PostMoveExecution), context.ToPoleId.ToString(),
-                $"Paint applied: ring[{belowIndex}] recolored to {paintColor} " +
-                $"(was {context.PaintedRingOriginalColor}, type={ringBelow.Type}). " +
-                $"Paint ring[{paintIndex}] consumed → Standard/{paintColor}.");
+                NexusLog.Info("PaintRingStrategy", nameof(PostMoveExecution), context.ToPoleId.ToString(),
+                    $"Paint applied: ring[{belowIndex}] recolored to {paintColor} (was {context.PaintedRingOriginalColor}). " +
+                    $"Paint ring[{topIndex}] consumed → Standard.");
+            }
+            else if (belowRing.Type == RingType.Paint)
+            {
+                // Case 2: Ring below is Paint. It paints the newly placed ring (topRing).
+                var paintColor = belowRing.Color;
+
+                context.PaintedRingIndex = topIndex;
+                context.PaintedRingOriginalColor = topRing.Color;
+                context.PaintConsumedRingIndex = belowIndex;
+                context.PaintConsumedRingData = new RingData(paintColor, RingType.Paint);
+                context.WasPaintApplied = true;
+
+                // Apply paint: top ring gets paint's color (if it's Rainbow, it becomes Standard per BoardState logic)
+                var newTopType = topRing.Type == RingType.Rainbow ? RingType.Standard : topRing.Type;
+                context.ToPole.Rings[topIndex] = new RingData(paintColor, newTopType, topRing.AdditionalData);
+
+                // Consume paint ring: becomes Standard
+                context.ToPole.Rings[belowIndex] = new RingData(paintColor, RingType.Standard);
+
+                context.SignalBus?.Fire(new PaintRingSignal(context.ToPoleId, paintColor));
+
+                NexusLog.Info("PaintRingStrategy", nameof(PostMoveExecution), context.ToPoleId.ToString(),
+                    $"Paint applied: top ring[{topIndex}] recolored to {paintColor} (was {context.PaintedRingOriginalColor}). " +
+                    $"Paint ring[{belowIndex}] consumed → Standard.");
+            }
         }
     }
 }

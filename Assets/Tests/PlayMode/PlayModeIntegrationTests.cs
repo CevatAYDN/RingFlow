@@ -897,11 +897,24 @@ namespace RingFlow.Tests
             if (signal is LevelWonSignal)  FiredLevelWon  = true;
         }
 
-        public ValueTask FireAsync<T>(T signal) where T : struct => default;
-        public void FireThreadSafe<T>(T signal) where T : struct { }
-        public void FireNextFrame<T>(T signal) where T : struct { }
-        public ValueTask FireAsyncWithTimeout<T>(T signal, int timeoutMilliseconds) where T : struct => default;
-        public ValueTask FireAsyncAndForget<T>(T signal, Action<Exception> onError = null) where T : struct => default;
+        public ValueTask FireAsync<T>(T signal) where T : struct
+        {
+            Fire(signal);
+            return default;
+        }
+
+        public void FireThreadSafe<T>(T signal) where T : struct => Fire(signal);
+        public void FireNextFrame<T>(T signal) where T : struct => Fire(signal);
+        public ValueTask FireAsyncWithTimeout<T>(T signal, int timeoutMilliseconds) where T : struct
+        {
+            Fire(signal);
+            return default;
+        }
+        public ValueTask FireAsyncAndForget<T>(T signal, Action<Exception> onError = null) where T : struct
+        {
+            Fire(signal);
+            return default;
+        }
         public ISignalSubscription Subscribe<T>(Action<T> handler) where T : struct => null;
         public ISignalSubscription SubscribeAsync<T>(Func<T, CancellationToken, ValueTask> handler) where T : struct => null;
     }
@@ -921,11 +934,24 @@ namespace RingFlow.Tests
             if (signal is LevelWonSignal) { FiredLevelWon = true; WinCount++; }
         }
 
-        public ValueTask FireAsync<T>(T signal) where T : struct => default;
-        public void FireThreadSafe<T>(T signal) where T : struct { }
-        public void FireNextFrame<T>(T signal) where T : struct { }
-        public ValueTask FireAsyncWithTimeout<T>(T signal, int timeoutMilliseconds) where T : struct => default;
-        public ValueTask FireAsyncAndForget<T>(T signal, Action<Exception> onError = null) where T : struct => default;
+        public ValueTask FireAsync<T>(T signal) where T : struct
+        {
+            Fire(signal);
+            return default;
+        }
+
+        public void FireThreadSafe<T>(T signal) where T : struct => Fire(signal);
+        public void FireNextFrame<T>(T signal) where T : struct => Fire(signal);
+        public ValueTask FireAsyncWithTimeout<T>(T signal, int timeoutMilliseconds) where T : struct
+        {
+            Fire(signal);
+            return default;
+        }
+        public ValueTask FireAsyncAndForget<T>(T signal, Action<Exception> onError = null) where T : struct
+        {
+            Fire(signal);
+            return default;
+        }
         public ISignalSubscription Subscribe<T>(Action<T> handler) where T : struct => null;
         public ISignalSubscription SubscribeAsync<T>(Func<T, CancellationToken, ValueTask> handler) where T : struct => null;
     }

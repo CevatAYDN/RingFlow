@@ -52,10 +52,8 @@ namespace RingFlow.Gameplay.Strategies
         /// </summary>
         public bool CanPopRing(RingData topRing, bool isPoleLocked)
         {
-            // Stone rings are permanently immovable (GDD §33).
-            // The locked-pole check is redundant here but kept for documentation:
-            // a locked pole would also block pop, but Stone takes precedence.
-            return false;
+            if (isPoleLocked) return false;
+            return topRing.Type != RingType.Stone;
         }
     }
 }

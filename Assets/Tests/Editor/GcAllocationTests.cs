@@ -37,11 +37,11 @@ namespace RingFlow.Tests
             _moveCmd = new MoveRingCommand();
             SetField(_moveCmd, "_model",            _model);
             SetField(_moveCmd, "_signalBus",        _signalBus);
-            SetField(_moveCmd, "_fsm",              new MockGameStateMachine());
+            // Note: _fsm and _dbConfig are NOT fields on MoveRingCommand (removed in refactor).
+            // Only inject fields that actually exist on the class.
             SetField(_moveCmd, "_strategyManager",  new RingMoveStrategyManager(_db));
             SetField(_moveCmd, "_progression",      new ProgressionService(new PlayerProgressModel(), _db));
             SetField(_moveCmd, "_validationManager",new RingValidationStrategyManager());
-            SetField(_moveCmd, "_dbConfig",         _db);
 
             _undoCmd = new UndoCommand();
             SetField(_undoCmd, "_model",     _model);
@@ -117,9 +117,9 @@ namespace RingFlow.Tests
             for (int i = 0; i < 12; i++)
                 _model.Poles.Add(new PoleState { Id = i, MaxCapacity = 4 });
 
-            var method = typeof(MoveRingCommand).GetMethod("AnyPoleHasBomb",
+            var method = typeof(MoveRingCommand).GetMethod("AnyPoleHasBombCached",
                 BindingFlags.NonPublic | BindingFlags.Instance);
-            Assert.IsNotNull(method, "AnyPoleHasBomb not found via reflection.");
+            Assert.IsNotNull(method, "AnyPoleHasBombCached not found via reflection.");
             var invoker = (System.Func<MoveRingCommand, bool>)System.Delegate.CreateDelegate(
                 typeof(System.Func<MoveRingCommand, bool>), method);
 

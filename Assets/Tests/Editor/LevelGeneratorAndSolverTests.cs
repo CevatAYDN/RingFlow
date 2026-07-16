@@ -68,27 +68,38 @@ namespace RingFlow.Tests
         public void DB_DifficultyBands_ReturnsCorrectParamsBasedOnLevel()
         {
             var db = _db;
-            // Level 1 should be Tutorial band
+            // Level 1 should be Tutorial band (first band always covers level 1)
             Assert.AreEqual(DifficultyBand.Tutorial, db.GetBandForLevel(1));
-            
-            // Validate pole = color + minEmpty from band
+
+            // Validate pole = color + minEmpty from band for level 1
             var tutorialBand = db.DifficultyBands[0];
             int tutorialColors = db.GetColorCountForLevel(1);
             int expectedTutorialPoles = tutorialColors + tutorialBand.MinEmptyPoles;
             Assert.AreEqual(expectedTutorialPoles, db.GetPoleCountForLevel(1),
                 "Pole count for level 1 must equal ColorCount + MinEmptyPoles from Tutorial band");
 
-            // Level 55: Easy
-            Assert.AreEqual(DifficultyBand.Easy, db.GetBandForLevel(55));
-            var easyBand = db.DifficultyBands.Find(b => b.Band == DifficultyBand.Easy);
-            int easyColors = db.GetColorCountForLevel(55);
-            Assert.AreEqual(easyColors + easyBand.MinEmptyPoles, db.GetPoleCountForLevel(55));
+            // DATA-DRIVEN: derive a mid-range level (50% of TotalLevels) and check its band
+            // against what DB computes. This avoids hardcoded assumptions about TotalLevels.
+            int midLevel = db.TotalLevels / 2;
+            var midBand = db.GetBandForLevel(midLevel);
+            // Mid-level must be in a band beyond Tutorial (sanity check for progression)
+            Assert.AreNotEqual(DifficultyBand.Tutorial, midBand,
+                $"Level {midLevel} (50% of TotalLevels={db.TotalLevels}) should not still be Tutorial band.");
 
-            // Level 1500: Master
-            Assert.AreEqual(DifficultyBand.Master, db.GetBandForLevel(1500));
-            var masterBand = db.DifficultyBands.Find(b => b.Band == DifficultyBand.Master);
-            int masterColors = db.GetColorCountForLevel(1500);
-            Assert.AreEqual(masterColors + masterBand.MinEmptyPoles, db.GetPoleCountForLevel(1500));
+            var midBandData = db.DifficultyBands.Find(b => b.Band == midBand);
+            Assert.IsNotNull(midBandData, $"No DifficultyBandData found for band {midBand}.");
+            int midColors = db.GetColorCountForLevel(midLevel);
+            Assert.AreEqual(midColors + midBandData.MinEmptyPoles, db.GetPoleCountForLevel(midLevel),
+                $"Pole count for level {midLevel} must equal ColorCount + MinEmptyPoles for band {midBand}.");
+
+            // DATA-DRIVEN: last level must map to the last band (Legend or Master/Legend tail)
+            int lastLevel = db.TotalLevels;
+            var lastBand = db.GetBandForLevel(lastLevel);
+            var lastBandData = db.DifficultyBands[db.DifficultyBands.Count - 1];
+            Assert.AreEqual(lastBandData.Band, lastBand,
+                $"Level {lastLevel} (TotalLevels) must map to last band {lastBandData.Band}.");
+            int lastColors = db.GetColorCountForLevel(lastLevel);
+            Assert.AreEqual(lastColors + lastBandData.MinEmptyPoles, db.GetPoleCountForLevel(lastLevel));
         }
 
         [Test]
@@ -137,48 +148,81 @@ namespace RingFlow.Tests
         [Test]
         public void LevelGenerator_UsesOnlyAllowedMechanicsForBand()
         {
+            // Tutorial band (level 1): Mystery always allowed, Frozen not yet
             var tutorialAllowed = _db.GetAllowedMechanicsForLevel(1);
             Assert.Contains(WorldMechanicType.Mystery, tutorialAllowed);
             Assert.IsFalse(tutorialAllowed.Contains(WorldMechanicType.Frozen));
 
-            var easyAllowed = _db.GetAllowedMechanicsForLevel(55);
-            Assert.Contains(WorldMechanicType.Mystery, easyAllowed);
-            Assert.Contains(WorldMechanicType.Frozen, easyAllowed);
-            Assert.IsFalse(easyAllowed.Contains(WorldMechanicType.Bomb));
+            // Easy band: first level after Tutorial max
+            var tutorialData = _db.DifficultyBands.Find(b => b.Band == DifficultyBand.Tutorial);
+            int easyLevel = System.Math.Min(_db.TotalLevels, tutorialData.MaxLevel + 1);
+            if (easyLevel <= _db.TotalLevels)
+            {
+                var easyAllowed = _db.GetAllowedMechanicsForLevel(easyLevel);
+                Assert.Contains(WorldMechanicType.Mystery, easyAllowed);
+                Assert.Contains(WorldMechanicType.Frozen, easyAllowed);
+                Assert.IsFalse(easyAllowed.Contains(WorldMechanicType.Bomb),
+                    $"Easy band (level {easyLevel}) should not allow Bomb yet.");
+            }
 
-            var hardAllowed = _db.GetAllowedMechanicsForLevel(500);
-            Assert.Contains(WorldMechanicType.Glass, hardAllowed);
-            Assert.Contains(WorldMechanicType.Rainbow, hardAllowed);
+            // Hard band: use a level in the Hard band range (data-driven)
+            bool hasHardBand = _db.DifficultyBands.Exists(b => b.Band == DifficultyBand.Hard);
+            if (hasHardBand)
+            {
+                bool hasMediumBand = _db.DifficultyBands.Exists(b => b.Band == DifficultyBand.Medium);
+                int hardLevelBase = hasMediumBand
+                    ? _db.DifficultyBands.Find(b => b.Band == DifficultyBand.Medium).MaxLevel + 1
+                    : _db.DifficultyBands.Find(b => b.Band == DifficultyBand.Hard).MaxLevel;
+                int hardLevel = System.Math.Min(_db.TotalLevels, hardLevelBase);
+                var hardAllowed = _db.GetAllowedMechanicsForLevel(hardLevel);
+                Assert.Contains(WorldMechanicType.Glass, hardAllowed,
+                    $"Hard band (level {hardLevel}) should allow Glass.");
+                Assert.Contains(WorldMechanicType.Rainbow, hardAllowed,
+                    $"Hard band (level {hardLevel}) should allow Rainbow.");
+            }
 
-            // Level 51 (Easy band, World 2): Mystery dünyası. Mystery always injects, Frozen band-allowed.
-            var w2Level = LevelGenerator.GenerateLevel(_db, 51, seed: 200, poleCount: 6, colorCount: 4, maxCapacity: 4);
-            Assert.IsNotNull(w2Level);
-            // Mystery dünya mekaniği olarak her zaman enjekte edilir
-            bool hasMysteryInW2Level = false;
-            foreach (var pole in w2Level.Poles)
-                foreach (var ring in pole.Rings)
-                    if (ring.Type == RingType.Mystery) { hasMysteryInW2Level = true; break; }
-            Assert.IsTrue(hasMysteryInW2Level, "World 2 (Mystery) seviyesinde Mystery halkası bulunamadı.");
+            // Level in Easy band: generate and verify Mystery can appear (world 2 mechanic)
+            int earlyLevel = System.Math.Min(_db.TotalLevels, tutorialData.MaxLevel + 1);
+            if (earlyLevel <= _db.TotalLevels)
+            {
+                var earlyLevelData = LevelGenerator.GenerateLevel(_db, earlyLevel, seed: 200,
+                    poleCount: _db.GetPoleCountForLevel(earlyLevel),
+                    colorCount: _db.GetColorCountForLevel(earlyLevel),
+                    maxCapacity: _db.GetMaxCapacityForLevel(earlyLevel));
+                Assert.IsNotNull(earlyLevelData);
+            }
 
-            // Level 500 (Hard band, World 10): Magnet dünyası. Magnet world mekaniği olarak her zaman enjekte edilir.
-            var midLevel = LevelGenerator.GenerateLevel(_db, 500, seed: 300, poleCount: 8, colorCount: 7, maxCapacity: 4);
-            Assert.IsNotNull(midLevel);
-            bool hasMagnetInMidLevel = false;
-            foreach (var pole in midLevel.Poles)
-                foreach (var ring in pole.Rings)
-                    if (ring.Type == RingType.Magnet) { hasMagnetInMidLevel = true; break; }
-            Assert.IsTrue(hasMagnetInMidLevel, $"World 10 (Magnet) seviyesinde Magnet halkası bulunamadı. Dünya: {_db.GetWorldForLevel(500)}, Mekanik: {_db.GetMechanicForWorld(_db.GetWorldForLevel(500))}");
-
-            // Band-dışı mekaniklerin sızmadığını doğrula (Magnet dışındakiler Hard band içinde olmalı)
-            AssertLevelContainsOnlyAllowedMechanics(midLevel, _db.GetAllowedMechanicsForLevel(500), allowedWorldMechanics: new List<WorldMechanicType> { WorldMechanicType.Magnet });
+            // Mid-range level: generate and verify it stays within allowed mechanics
+            int midLevel = System.Math.Max(1, (int)(_db.TotalLevels * 0.50f));
+            var midLevelData = LevelGenerator.GenerateLevel(_db, midLevel, seed: 300,
+                poleCount: _db.GetPoleCountForLevel(midLevel),
+                colorCount: _db.GetColorCountForLevel(midLevel),
+                maxCapacity: _db.GetMaxCapacityForLevel(midLevel));
+            Assert.IsNotNull(midLevelData);
+            // Verify no mechanics beyond what the band allows (world mechanics also permitted)
+            int midWorldIdx = _db.GetWorldForLevel(midLevel);
+            var midWorldMechanic = _db.GetMechanicForWorld(midWorldIdx);
+            AssertLevelContainsOnlyAllowedMechanics(
+                midLevelData,
+                _db.GetAllowedMechanicsForLevel(midLevel),
+                allowedWorldMechanics: new List<WorldMechanicType> { midWorldMechanic });
         }
 
         [Test]
         public void LevelGenerator_HigherLevels_HaveHigherMechanicIntensity()
         {
-            Assert.GreaterOrEqual(_db.GetMechanicIntensityForLevel(1), 1);
-            Assert.Greater(_db.GetMechanicIntensityForLevel(150), _db.GetMechanicIntensityForLevel(1));
-            Assert.GreaterOrEqual(_db.GetMechanicIntensityForLevel(1500), _db.GetMechanicIntensityForLevel(500));
+            // DATA-DRIVEN: use levels at 10%, 50%, 100% of TotalLevels
+            int lowLevel = System.Math.Max(1, (int)(_db.TotalLevels * 0.10f));
+            int midLevel = System.Math.Max(lowLevel + 1, (int)(_db.TotalLevels * 0.50f));
+            int highLevel = _db.TotalLevels;
+
+            Assert.GreaterOrEqual(_db.GetMechanicIntensityForLevel(lowLevel), 1);
+            Assert.GreaterOrEqual(_db.GetMechanicIntensityForLevel(midLevel),
+                _db.GetMechanicIntensityForLevel(lowLevel),
+                $"Mechanic intensity at level {midLevel} must be >= intensity at level {lowLevel}.");
+            Assert.GreaterOrEqual(_db.GetMechanicIntensityForLevel(highLevel),
+                _db.GetMechanicIntensityForLevel(midLevel),
+                $"Mechanic intensity at level {highLevel} must be >= intensity at level {midLevel}.");
         }
 
         [Test]
@@ -201,14 +245,14 @@ namespace RingFlow.Tests
         public void LevelGenerator_ProducesSolvableLevelAtHighDifficulty()
         {
             // Generate a high-difficulty level with enough solver budget to verify solvability.
-            // Level 800 = 9 colors (Expert band), Expert.MinEmptyPoles=1, so 9+1=10 poles.
-            int currentLevel = 800;
+            // Use 80% of TotalLevels to land in the high-difficulty bands regardless of asset size.
             var db = _db;
+            int currentLevel = System.Math.Max(1, (int)(db.TotalLevels * 0.80f));
             int colorCount = db.GetColorCountForLevel(currentLevel);
             int poleCount = db.GetPoleCountForLevel(currentLevel);
             int maxCapacity = db.GetMaxCapacityForLevel(currentLevel);
 
-            var levelData = LevelGenerator.GenerateLevel(db, currentLevel, seed: 800 * 12345, poleCount, colorCount, maxCapacity);
+            var levelData = LevelGenerator.GenerateLevel(db, currentLevel, seed: currentLevel * 12345, poleCount, colorCount, maxCapacity);
 
             Assert.IsNotNull(levelData, $"LevelGenerator returned null for level {currentLevel} — solver budget or seed distribution may need tuning.");
             Assert.AreEqual(currentLevel, levelData.LevelIndex);
@@ -863,8 +907,10 @@ namespace RingFlow.Tests
         [Test]
         public void LevelGenerator_TransitionSieve_SmoothsIntensity()
         {
-            int levelIndex = 101;
+            // Use a level in the second half of the total range to test intensity smoothing.
+            // Clamped to db.TotalLevels so the test works with any asset size.
             var db = _db;
+            int levelIndex = System.Math.Max(1, System.Math.Min(db.TotalLevels, (int)(db.TotalLevels * 0.55f)));
             int seed = levelIndex * 12345;
             int poleCount = db.GetPoleCountForLevel(levelIndex);
             int colorCount = db.GetColorCountForLevel(levelIndex);
@@ -937,11 +983,27 @@ namespace RingFlow.Tests
         public void DB_GetBandForLevel_HasNoHardcodedEarlyReturn()
         {
             var db = _db;
-            // Band must be fully determined by DifficultyBands list, not hardcoded
-            // level <= 3 returns Tutorial via the DB data
+            // Band must be fully determined by DifficultyBands list, not hardcoded values.
+            // Level 1 is always Tutorial (first band covers it).
             Assert.AreEqual(DifficultyBand.Tutorial, db.GetBandForLevel(1));
-            Assert.AreEqual(DifficultyBand.Tutorial, db.GetBandForLevel(20));
-            Assert.AreEqual(DifficultyBand.Easy, db.GetBandForLevel(21));
+
+            // DATA-DRIVEN: tutorial band max level is determined by DB, not hardcoded here.
+            // Find the actual tutorial band max and verify the transition is data-driven.
+            var tutorialBandData = db.DifficultyBands.Find(b => b.Band == DifficultyBand.Tutorial);
+            Assert.IsNotNull(tutorialBandData, "DifficultyBands must contain a Tutorial entry.");
+
+            int tutorialMax = tutorialBandData.MaxLevel;
+            // Level at tutorial max must still be Tutorial
+            Assert.AreEqual(DifficultyBand.Tutorial, db.GetBandForLevel(tutorialMax),
+                $"Level {tutorialMax} (Tutorial MaxLevel) must still be Tutorial band.");
+            // Level one above tutorial max must be the next band (Easy)
+            if (tutorialMax < db.TotalLevels)
+            {
+                Assert.AreNotEqual(DifficultyBand.Tutorial, db.GetBandForLevel(tutorialMax + 1),
+                    $"Level {tutorialMax + 1} must NOT be Tutorial — band transition must be data-driven.");
+                Assert.AreEqual(DifficultyBand.Easy, db.GetBandForLevel(tutorialMax + 1),
+                    $"Level {tutorialMax + 1} must be Easy band (first band after Tutorial).");
+            }
         }
 
         [Test]

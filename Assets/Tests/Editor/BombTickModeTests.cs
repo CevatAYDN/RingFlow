@@ -129,15 +129,17 @@ namespace RingFlow.Tests
             var dbWithMode = CloneDbWithBombTickMode(db, tickMode);
 
             // Inject dependencies via reflection (since we're in separate file).
+            // Note: _fsm, _economyService, _adService are NOT fields on MoveRingCommand;
+            // they were removed in a prior refactor. Only inject what actually exists.
             SetPrivateField(command, "_model", model);
             SetPrivateField(command, "_signalBus", signalBus);
-            SetPrivateField(command, "_fsm", new MockGameStateMachine());
             SetPrivateField(command, "_strategyManager", new RingMoveStrategyManager(dbWithMode));
             SetPrivateField(command, "_progression", new RingFlow.Gameplay.ProgressionService(progress, dbWithMode));
             SetPrivateField(command, "_validationManager", new RingValidationStrategyManager());
-            SetPrivateField(command, "_economyService", economy);
-            SetPrivateField(command, "_adService", ad);
-            SetPrivateField(command, "_dbConfig", dbWithMode);
+
+            var feelConfig = UnityEngine.ScriptableObject.CreateInstance<GameFeelConfigSO>();
+            feelConfig.BombTickMode = tickMode;
+            SetPrivateField(command, "_feelConfig", feelConfig);
 
             // Setup board:
             var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };

@@ -70,17 +70,8 @@ namespace RingFlow.Gameplay.Strategies
         /// </summary>
         public bool CanPopRing(RingData topRing, bool isPoleLocked)
         {
-            // GDD §31: Frozen ring is immovable until ice is broken by a same-color ring
-            // landing on it. Even if the pole is not locked, a frozen top cannot be selected.
-#if DEVELOPMENT_BUILD
-            if (isPoleLocked)
-            {
-                NexusLog.Info("FrozenRingValidationStrategy", nameof(CanPopRing),
-                    topRing.Color.ToString(),
-                    "CanPopRing=false (locked pole + frozen top).");
-            }
-#endif
-            return false; // Frozen ring on top can never be popped directly
+            if (isPoleLocked) return false;
+            return topRing.Type != RingType.Frozen;
         }
     }
 }
