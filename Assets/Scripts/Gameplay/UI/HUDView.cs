@@ -21,18 +21,36 @@ namespace RingFlow.Gameplay.UI
         private void Awake()
         {
             BindReferencesFromChildren();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            NexusLog.Info("HUDView", nameof(Awake), "",
+                $"HUD bound. MovesText={MovesText != null}, LevelText={LevelText != null}, " +
+                $"CoinsText={CoinsText != null}, UndoBtn={UndoButton != null}, " +
+                $"HintBtn={HintButton != null}, PauseBtn={PauseButton != null}.");
+#endif
         }
 
         public void UpdateMoves(int moves, ILocalizationService loc = null)
         {
-            if (MovesText == null) return;
+            if (MovesText == null)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                NexusLog.Warn("HUDView", nameof(UpdateMoves), moves.ToString(), "MovesText is null — HUD will not show move count.");
+#endif
+                return;
+            }
             string format = loc != null ? loc.GetString("format_moves", "Moves: {0}") : "Moves: {0}";
             MovesText.text = string.Format(format, moves);
         }
 
         public void UpdateLevel(int level, ILocalizationService loc = null)
         {
-            if (LevelText == null) return;
+            if (LevelText == null)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                NexusLog.Warn("HUDView", nameof(UpdateLevel), level.ToString(), "LevelText is null — HUD will not show level number.");
+#endif
+                return;
+            }
             string format = loc != null ? loc.GetString("format_level", "Level {0}") : "Level {0}";
             LevelText.text = string.Format(format, level);
         }
@@ -40,11 +58,17 @@ namespace RingFlow.Gameplay.UI
         public void UpdateCoins(int coins)
         {
             if (CoinsText != null) CoinsText.text = coins.ToString();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            else NexusLog.Warn("HUDView", nameof(UpdateCoins), coins.ToString(), "CoinsText is null — coin display missing.");
+#endif
         }
 
         public void UpdateDiamonds(int diamonds)
         {
             if (DiamondsText != null) DiamondsText.text = diamonds.ToString();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            else NexusLog.Warn("HUDView", nameof(UpdateDiamonds), diamonds.ToString(), "DiamondsText is null — diamond display missing.");
+#endif
         }
 
         public void Localize(ILocalizationService loc)

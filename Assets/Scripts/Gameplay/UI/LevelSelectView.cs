@@ -35,10 +35,27 @@ namespace RingFlow.Gameplay.UI
                     LevelButtons.Add(button);
                 }
             }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            NexusLog.Info("LevelSelectView", nameof(Awake), "",
+                $"LevelSelectView bound. LevelButtons={LevelButtons.Count}, BackButton={BackButton != null}, TitleText={TitleText != null}.");
+            if (BackButton == null)
+                NexusLog.Warn("LevelSelectView", nameof(Awake), "",
+                    "BackButton not found — player cannot navigate back from level select.");
+            if (LevelButtons.Count == 0)
+                NexusLog.Warn("LevelSelectView", nameof(Awake), "",
+                    "No level buttons found — level select screen will be empty.");
+#endif
         }
 
         public void Localize(ILocalizationService loc)
         {
+            if (loc == null)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                NexusLog.Warn("LevelSelectView", nameof(Localize), "", "Localize called with null ILocalizationService.");
+#endif
+                return;
+            }
             if (TitleText != null) GameUIResources.LocalizeText(TitleText.gameObject, "menu_select_level", loc);
             GameUIResources.LocalizeButtonText(_backBtn, "menu_back", loc);
         }

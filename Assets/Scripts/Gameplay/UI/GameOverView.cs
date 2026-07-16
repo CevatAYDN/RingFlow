@@ -18,14 +18,32 @@ namespace RingFlow.Gameplay.UI
         private void Awake()
         {
             BindReferencesFromChildren();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            NexusLog.Info("GameOverView", nameof(Awake), "",
+                $"GameOverView bound. RestartButton={RestartButton != null}, QuitButton={QuitButton != null}, " +
+                $"TitleText={TitleText != null}, MessageText={MessageText != null}.");
+#endif
         }
 
         public void Localize(ILocalizationService loc)
         {
+            if (loc == null)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                NexusLog.Warn("GameOverView", nameof(Localize), "", "Localize called with null ILocalizationService.");
+#endif
+                return;
+            }
             if (TitleText != null) GameUIResources.LocalizeText(TitleText.gameObject, "game_over_title", loc);
             if (MessageText != null) GameUIResources.LocalizeText(MessageText.gameObject, "game_over_message", loc);
             GameUIResources.LocalizeButtonText(_restartBtn, "game_restart", loc);
             GameUIResources.LocalizeButtonText(_quitBtn, "menu_main_menu", loc);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (TitleText == null || MessageText == null || _restartBtn == null || _quitBtn == null)
+                NexusLog.Warn("GameOverView", nameof(Localize), "",
+                    $"Missing refs during localization. TitleText={TitleText != null}, " +
+                    $"MessageText={MessageText != null}, restartBtn={_restartBtn != null}, quitBtn={_quitBtn != null}.");
+#endif
         }
 
         private void BindReferencesFromChildren()
@@ -45,6 +63,15 @@ namespace RingFlow.Gameplay.UI
                 if (upper.Contains("TITLE") || upper.Contains("GAME OVER")) TitleText = txt;
                 else if (upper.Contains("MESSAGE") || upper.Contains("FAILED")) MessageText = txt;
             }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (RestartButton == null)
+                NexusLog.Warn("GameOverView", nameof(BindReferencesFromChildren), "",
+                    "RestartButton not found in children — game over screen cannot restart.");
+            if (QuitButton == null)
+                NexusLog.Warn("GameOverView", nameof(BindReferencesFromChildren), "",
+                    "QuitButton not found in children — game over screen cannot quit.");
+#endif
         }
     }
 }

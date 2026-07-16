@@ -24,6 +24,10 @@ namespace RingFlow.Gameplay.UI
             View.Localize(_loc);
             // Lock buttons beyond MaxUnlockedLevel so the player can't select them
             int maxUnlocked = _progression?.MaxUnlockedLevel.Value ?? 1;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            NexusLog.Info("LevelSelectMediator", nameof(OnBind), "",
+                $"Binding level select. maxUnlocked={maxUnlocked}, buttons={View.LevelButtons.Count}.");
+#endif
             for (int i = 0; i < View.LevelButtons.Count; i++)
             {
                 int levelIndex = i + 1;
@@ -33,17 +37,39 @@ namespace RingFlow.Gameplay.UI
                 button.interactable = unlocked;
                 ApplyLockedStyle(button, unlocked);
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if (!unlocked)
+                    NexusLog.Info("LevelSelectMediator", nameof(OnBind), levelIndex.ToString(),
+                        $"Level {levelIndex} locked (maxUnlocked={maxUnlocked}).");
+#endif
+
                 int capturedLevel = levelIndex;
                 button.onClick.AddListener(() =>
                 {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    NexusLog.Info("LevelSelectMediator", "LevelButton", capturedLevel.ToString(),
+                        $"Level {capturedLevel} selected. Firing LevelSelectedSignal.");
+#endif
                     SignalBus.Fire(new LevelSelectedSignal(capturedLevel));
                 });
             }
 
-            View.BackButton.onClick.AddListener(() =>
+            if (View.BackButton != null)
             {
-                SignalBus.Fire(new QuitToMenuRequestedSignal());
-            });
+                View.BackButton.onClick.AddListener(() =>
+                {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    NexusLog.Info("LevelSelectMediator", "BackButton", "", "Back pressed. Firing QuitToMenuRequestedSignal.");
+#endif
+                    SignalBus.Fire(new QuitToMenuRequestedSignal());
+                });
+            }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            else
+            {
+                NexusLog.Warn("LevelSelectMediator", nameof(OnBind), "", "BackButton is null — player cannot navigate back.");
+            }
+#endif
         }
 
         private static void ApplyLockedStyle(Button button, bool unlocked)

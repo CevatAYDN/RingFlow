@@ -111,7 +111,17 @@ namespace RingFlow.Gameplay.UI
 
         public void SetLevel(int level, ILocalizationService loc = null)
         {
-            if (LevelText == null || level <= 0) return;
+            if (LevelText == null || level <= 0)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                NexusLog.Warn("WinView", nameof(SetLevel), level.ToString(),
+                    $"SetLevel skipped. LevelText={(LevelText == null ? "null" : "ok")}, level={level}.");
+#endif
+                return;
+            }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            NexusLog.Info("WinView", nameof(SetLevel), level.ToString(), $"Displaying level {level} on Win screen.");
+#endif
             string format = loc != null ? loc.GetString("format_level", "LEVEL {0}") : "LEVEL {0}";
             LevelText.text = string.Format(format, level);
 
@@ -122,6 +132,10 @@ namespace RingFlow.Gameplay.UI
 
         public void ShowResults(int moves, int targetMoves, int coins, int xp, int stars)
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            NexusLog.Info("WinView", nameof(ShowResults), "",
+                $"ShowResults: moves={moves}/{targetMoves}, coins={coins}, xp={xp}, stars={stars}.");
+#endif
             if (MovesText != null)
             {
                 string format = _loc != null

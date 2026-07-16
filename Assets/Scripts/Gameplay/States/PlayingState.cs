@@ -52,7 +52,12 @@ namespace RingFlow.Gameplay
 
             if (targetLevel <= 0)
             {
-                targetLevel = _progression?.CurrentLevel.Value ?? 1;
+                int fromProgression = _progression?.CurrentLevel.Value ?? 1;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                NexusLog.Warn("PlayingState", nameof(OnEnterAsync), targetLevel.ToString(),
+                    $"targetLevel={targetLevel} invalid; falling back to progression CurrentLevel={fromProgression}.");
+#endif
+                targetLevel = fromProgression;
             }
 
             // GDD §12: oyun %40 (Boss seviyesiyse %80) — data-driven via AudioConfigSO
@@ -64,14 +69,39 @@ namespace RingFlow.Gameplay
                 int worldIdx = _dbConfig.GetWorldForLevel(targetLevel);
                 var bgm = ProceduralAudio.GetOrCreateBgmClip(worldIdx);
                 _audio.PlayBgm(bgm, true);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                NexusLog.Info("PlayingState", nameof(OnEnterAsync), targetLevel.ToString(),
+                    $"BGM started. world={worldIdx}, isBoss={isBoss}, multiplier={_audio.BgmStateMultiplier}.");
+#endif
             }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            else
+            {
+                NexusLog.Warn("PlayingState", nameof(OnEnterAsync), targetLevel.ToString(),
+                    "IAudioService not bound — BGM will not play.");
+            }
+#endif
 
             // Start level initialization
             _diag?.Log("PlayingState", $"Starting level {targetLevel} (resume={isResume}, boss={GameConfigDatabaseSO.IsBossLevel(_dbConfig, targetLevel)}).");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            NexusLog.Info("PlayingState", nameof(OnEnterAsync), targetLevel.ToString(),
+                $"Firing InitLevelSignal for level {targetLevel}.");
+#endif
             await _signalBus.FireAsync(new InitLevelSignal(targetLevel));
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            NexusLog.Info("PlayingState", nameof(OnEnterAsync), targetLevel.ToString(),
+                $"InitLevelSignal completed for level {targetLevel}.");
+#endif
         }
 
-        public ValueTask OnExitAsync(CancellationToken ct) => default;
+        public ValueTask OnExitAsync(CancellationToken ct)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            NexusLog.Info("PlayingState", nameof(OnExitAsync), "", "PlayingState exiting.");
+#endif
+            return default;
+        }
         public void OnTick(float deltaTime)
         {
             if (_progression == null || _signalBus == null)

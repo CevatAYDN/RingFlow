@@ -513,7 +513,17 @@ namespace RingFlow.Gameplay
         public void FlashPoleError(int poleId)
         {
             var pv = GetPoleView(poleId);
-            if (pv == null) return;
+            if (pv == null)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                NexusLog.Warn("BoardView", nameof(FlashPoleError), poleId.ToString(),
+                    $"FlashPoleError: poleId {poleId} has no PoleView — error flash skipped.");
+#endif
+                return;
+            }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            NexusLog.Info("BoardView", nameof(FlashPoleError), poleId.ToString(), "Error flash triggered.");
+#endif
             pv.FlashError();
             _hapticService?.Vibrate(HapticType.Warning);
             if (_audioService != null)
@@ -523,7 +533,18 @@ namespace RingFlow.Gameplay
         public void CelebratePoleComplete(int poleId, int ringCount, int completedCount, bool isFinalPole)
         {
             var pv = GetPoleView(poleId);
-            if (pv == null) return;
+            if (pv == null)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                NexusLog.Warn("BoardView", nameof(CelebratePoleComplete), poleId.ToString(),
+                    $"CelebratePoleComplete: poleId {poleId} has no PoleView — celebration skipped.");
+#endif
+                return;
+            }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            NexusLog.Info("BoardView", nameof(CelebratePoleComplete), poleId.ToString(),
+                $"Celebrating pole {poleId}. ringCount={ringCount}, completedCount={completedCount}, isFinalPole={isFinalPole}.");
+#endif
 
             // --- 3-Tier Feedback System ---
             int tier = isFinalPole ? 2 : (completedCount >= F.MediumTierThreshold ? 1 : 0);
@@ -837,6 +858,10 @@ namespace RingFlow.Gameplay
 
         public void ClearBoard()
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            NexusLog.Info("BoardView", nameof(ClearBoard), "",
+                $"Clearing board. poles={_spawnedPoles.Count}, ringLists={_spawnedRings.Count}, materialCache={_ringMaterialCache.Count}.");
+#endif
             HideTutorialArrow();
 
             // FIX-V3: Destroy cached materials before clearing to prevent GPU leak.
@@ -861,9 +886,18 @@ namespace RingFlow.Gameplay
         {
             if (poleId < 0 || poleId >= _spawnedPoles.Count)
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                NexusLog.Warn("BoardView", nameof(ShowTutorialArrow), poleId.ToString(),
+                    $"poleId {poleId} out of range (spawned={_spawnedPoles.Count}) — hiding tutorial arrow.");
+#endif
                 HideTutorialArrow();
                 return;
             }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            NexusLog.Info("BoardView", nameof(ShowTutorialArrow), poleId.ToString(),
+                $"Showing tutorial arrow on pole {poleId} with label='{labelText}'.");
+#endif
 
             EnsureTutorialArrowCreated();
 
@@ -880,12 +914,23 @@ namespace RingFlow.Gameplay
             {
                 _tutorialLabelText.text = labelText;
             }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            else
+            {
+                NexusLog.Warn("BoardView", nameof(ShowTutorialArrow), poleId.ToString(),
+                    "_tutorialLabelText is null — label will not display. EnsureTutorialArrowCreated may have failed.");
+            }
+#endif
         }
 
         public void HideTutorialArrow()
         {
             if (_tutorialArrowGo != null)
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if (_tutorialArrowGo.activeSelf)
+                    NexusLog.Info("BoardView", nameof(HideTutorialArrow), "", "Hiding tutorial arrow.");
+#endif
                 DOTween.Kill(_tutorialArrowGo.transform);
                 DOTween.Kill(_tutorialCanvasGo != null ? _tutorialCanvasGo.transform : null);
                 _tutorialArrowGo.SetActive(false);
@@ -1442,7 +1487,18 @@ namespace RingFlow.Gameplay
 
         public void FitCameraToBoard(int poleCount)
         {
-            if (!TryGetMainCamera(out var cam)) return;
+            if (!TryGetMainCamera(out var cam))
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                NexusLog.Warn("BoardView", nameof(FitCameraToBoard), poleCount.ToString(),
+                    "FitCameraToBoard: no main camera found — camera will not be adjusted.");
+#endif
+                return;
+            }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            NexusLog.Info("BoardView", nameof(FitCameraToBoard), poleCount.ToString(),
+                $"Fitting camera to {poleCount} poles. pos={F.CameraPosition}, rot={F.CameraRotation}.");
+#endif
             cam.orthographic = true;
             var t = cam.transform;
             t.position = F.CameraPosition;

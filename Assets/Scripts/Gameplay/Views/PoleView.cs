@@ -53,11 +53,18 @@ namespace RingFlow.Gameplay
 
         private void Awake()
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            NexusLog.Info("PoleView", nameof(Awake), PoleId.ToString(), "Awake called.");
+#endif
             EnsureMaterialAccess();
         }
 
         public void SetLocked(bool locked)
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (_isLocked != locked)
+                NexusLog.Info("PoleView", nameof(SetLocked), PoleId.ToString(), $"Locked={locked}.");
+#endif
             _isLocked = locked;
             ApplyTint();
         }
@@ -65,12 +72,18 @@ namespace RingFlow.Gameplay
         public void SetSelected(bool selected)
         {
             if (_isSelected == selected) return;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            NexusLog.Info("PoleView", nameof(SetSelected), PoleId.ToString(), $"Selected={selected}.");
+#endif
             _isSelected = selected;
             ApplyTint();
         }
 
         public void FlashError(float duration = 0.35f)
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            NexusLog.Info("PoleView", nameof(FlashError), PoleId.ToString(), $"Error flash triggered. duration={duration:F2}s.");
+#endif
             if (_flashRoutine != null) StopCoroutine(_flashRoutine);
             _flashRoutine = StartCoroutine(FlashRoutine(duration));
         }
@@ -96,6 +109,9 @@ namespace RingFlow.Gameplay
 
         public void FlashSuccess(float duration, Color color)
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            NexusLog.Info("PoleView", nameof(FlashSuccess), PoleId.ToString(), $"Success flash triggered. duration={duration:F2}s, color={color}.");
+#endif
             if (_flashRoutine != null) StopCoroutine(_flashRoutine);
             _flashRoutine = StartCoroutine(FlashSuccessRoutine(duration, color));
         }
@@ -169,6 +185,13 @@ namespace RingFlow.Gameplay
             {
                 _baseColor = _renderers[0].sharedMaterial.color;
             }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            else
+            {
+                NexusLog.Warn("PoleView", nameof(EnsureMaterialAccess), PoleId.ToString(),
+                    $"No valid renderer/material found. _renderers={((_renderers == null) ? "null" : _renderers.Length.ToString())}.");
+            }
+#endif
         }
 
         /// <summary>
@@ -177,6 +200,9 @@ namespace RingFlow.Gameplay
         /// </summary>
         public void SyncMaterial()
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            NexusLog.Info("PoleView", nameof(SyncMaterial), PoleId.ToString(), "Syncing material after sharedMaterial replacement.");
+#endif
             // Force re-discovery since materials changed
             _renderers = null;
             EnsureRenderers();
@@ -184,7 +210,17 @@ namespace RingFlow.Gameplay
             if (_renderers != null && _renderers.Length > 0 && _renderers[0] != null && _renderers[0].sharedMaterial != null)
             {
                 _baseColor = _renderers[0].sharedMaterial.color;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                NexusLog.Info("PoleView", nameof(SyncMaterial), PoleId.ToString(), $"Base color synced to {_baseColor}.");
+#endif
             }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            else
+            {
+                NexusLog.Warn("PoleView", nameof(SyncMaterial), PoleId.ToString(),
+                    "SyncMaterial: no valid renderer/material after re-discovery.");
+            }
+#endif
         }
 
         public void OnPointerDown(PointerEventData eventData)

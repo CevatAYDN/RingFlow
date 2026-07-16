@@ -24,16 +24,35 @@ namespace RingFlow.Gameplay.UI
                 View.RestartButton.onClick.AddListener(() =>
                 {
                     int currentLevel = _progression?.CurrentLevel.Value ?? 1;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    NexusLog.Info("GameOverMediator", "RestartButton", currentLevel.ToString(),
+                        $"Restart requested. Firing LevelSelectedSignal({currentLevel}).");
+#endif
                     SignalBus.Fire(new LevelSelectedSignal(currentLevel));
                 });
+            }
+            else
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                NexusLog.Warn("GameOverMediator", nameof(OnBind), "", "RestartButton missing — player cannot restart from game over.");
+#endif
             }
 
             if (View.QuitButton != null)
             {
                 View.QuitButton.onClick.AddListener(() =>
                 {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    NexusLog.Info("GameOverMediator", "QuitButton", "", "Quit to menu requested.");
+#endif
                     SignalBus.Fire(new QuitToMenuRequestedSignal());
                 });
+            }
+            else
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                NexusLog.Warn("GameOverMediator", nameof(OnBind), "", "QuitButton missing — player cannot quit to menu from game over.");
+#endif
             }
 
             // Play Game Over Sound procedurally
@@ -42,6 +61,12 @@ namespace RingFlow.Gameplay.UI
                 var failClip = ProceduralAudio.GetOrCreateExplosionClip();
                 _audio.PlaySfx(failClip, 1.0f);
             }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            else
+            {
+                NexusLog.Warn("GameOverMediator", nameof(OnBind), "", "IAudioService not bound — game over sound will not play.");
+            }
+#endif
         }
 
         protected override void OnUnbind()

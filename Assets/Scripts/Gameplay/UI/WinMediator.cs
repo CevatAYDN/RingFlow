@@ -69,6 +69,10 @@ namespace RingFlow.Gameplay.UI
                 // IsGameWon fires before the level counter advances, so CurrentLevel is still
                 // the level the player just completed here.
                 int level = _progression != null ? _progression.CurrentLevel.Value : 0;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                NexusLog.Info("WinMediator", nameof(Refresh), level.ToString(),
+                    $"Refresh (fallback): level={level}, moves={moves}/{target}. LastReward.Stars=0, using placeholder.");
+#endif
                 View.SetLevel(level, _loc);
                 View.ShowResults(moves, target, moves, 10, 1);
             }
@@ -77,6 +81,11 @@ namespace RingFlow.Gameplay.UI
         private void RefreshReward(WinReward reward)
         {
             if (_model == null || View == null) return;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            NexusLog.Info("WinMediator", nameof(RefreshReward), reward.Level.ToString(),
+                $"RefreshReward: level={reward.Level}, moves={reward.Moves}/{reward.TargetMoves}, " +
+                $"coins={reward.Coins}, xp={reward.Xp}, stars={reward.Stars}.");
+#endif
             View.SetLevel(reward.Level, _loc);
             View.ShowResults(reward.Moves, reward.TargetMoves, reward.Coins, reward.Xp, reward.Stars);
         }
