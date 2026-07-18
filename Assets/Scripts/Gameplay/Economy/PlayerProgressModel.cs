@@ -25,6 +25,8 @@ namespace RingFlow.Gameplay
         public const string KeyPlayerLvl     = GameplayAssetKeys.PlayerPrefs.PlayerLevel;
         public const string KeyDailyDay      = GameplayAssetKeys.PlayerPrefs.DailyDayIndex;
         public const string KeyDailyStamp    = GameplayAssetKeys.PlayerPrefs.DailyLastClaimUtc;
+	public const string KeyDailyStreak   = GameplayAssetKeys.PlayerPrefs.DailyStreak;
+	public const string KeyBestMoves      = GameplayAssetKeys.PlayerPrefs.BestMoves;
         public const string KeyUndoUsed      = GameplayAssetKeys.PlayerPrefs.UndoUsedFree;
         public const string KeyAchieves      = GameplayAssetKeys.PlayerPrefs.Achievements;
         public const string KeyRemoveAds     = GameplayAssetKeys.PlayerPrefs.RemoveAds;
@@ -75,6 +77,12 @@ namespace RingFlow.Gameplay
 
         public ObservableProperty<int> DailyDayIndex { get; } = new(-1);
         public ObservableProperty<long> DailyLastClaimUtcTicks { get; } = new(0);
+
+        /// <summary>Consecutive daily-reward claim streak (resets when a day is missed).</summary>
+        public ObservableProperty<int> DailyStreak { get; } = new(0);
+
+        /// <summary>Best (fewest) moves recorded per level index. Level 0 = unscoped. Supports save/load.</summary>
+        public Dictionary<int, int> BestMovesPerLevel { get; } = new();
 
         public ObservableProperty<int> FreeUndosUsedThisSession { get; } = new(0);
 
@@ -128,6 +136,20 @@ namespace RingFlow.Gameplay
             return default;
         }
 
+        /// <summary>Returns the fewest moves recorded for a level, or 0 if none yet.</summary>
+        public int GetBestMovesForLevel(int level)
+        {
+            return BestMovesPerLevel.TryGetValue(level, out int best) ? best : 0;
+        }
+
+        /// <summary>Records moves if they improve (lower) the stored best for the level.</summary>
+        public void RecordBestMoves(int level, int moves)
+        {
+            if (level <= 0 || moves <= 0) return;
+            if (!BestMovesPerLevel.TryGetValue(level, out int best) || moves < best)
+                BestMovesPerLevel[level] = moves;
+        }
+
         public void Reset()
         {
             Coins.Value = 0;
@@ -142,6 +164,8 @@ namespace RingFlow.Gameplay
             ChestDiamond.Value = 0;
             DailyDayIndex.Value = -1;
             DailyLastClaimUtcTicks.Value = 0;
+            DailyStreak.Value = 0;
+            BestMovesPerLevel.Clear();
             FreeUndosUsedThisSession.Value = 0;
             HintCount.Value = 0;
             RemoveAds.Value = false;
@@ -158,7 +182,7 @@ namespace RingFlow.Gameplay
     /// </summary>
     public static class PlayerProgressSaveSystem
     {
-        private const int CurrentSchemaVersion = 2;
+        private const int CurrentSchemaVersion = 3;
         private const string KeySchemaVersion = GameplayAssetKeys.PlayerPrefs.SaveSchemaVersion;
         private const string KeyChecksum = GameplayAssetKeys.PlayerPrefs.SaveChecksum;
 
@@ -180,6 +204,8 @@ namespace RingFlow.Gameplay
             prefs.SetInt(PlayerProgressModel.KeyChestsDiamond, m.ChestDiamond.Value);
             prefs.SetInt(PlayerProgressModel.KeyDailyDay, m.DailyDayIndex.Value);
             prefs.SetString(PlayerProgressModel.KeyDailyStamp, m.DailyLastClaimUtcTicks.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            prefs.SetInt(PlayerProgressModel.KeyDailyStreak, m.DailyStreak.Value);
+            SaveBestMoves(prefs, PlayerProgressModel.KeyBestMoves, m.BestMovesPerLevel);
             prefs.SetInt(PlayerProgressModel.KeyUndoUsed, m.FreeUndosUsedThisSession.Value);
             prefs.SetInt(PlayerProgressModel.KeyHintCount, m.HintCount.Value);
             prefs.SetBool(PlayerProgressModel.KeyRemoveAds, m.RemoveAds.Value);
@@ -250,6 +276,9 @@ namespace RingFlow.Gameplay
             long stampTicks = 0;
             long.TryParse(stampStr, out stampTicks);
             m.DailyLastClaimUtcTicks.Value = stampTicks;
+
+            m.DailyStreak.Value = prefs.GetInt(PlayerProgressModel.KeyDailyStreak, 0);
+            LoadBestMoves(prefs, PlayerProgressModel.KeyBestMoves, m.BestMovesPerLevel);
 
             m.FreeUndosUsedThisSession.Value = prefs.GetInt(PlayerProgressModel.KeyUndoUsed, 0);
             m.HintCount.Value = prefs.GetInt(PlayerProgressModel.KeyHintCount, 0);
@@ -331,6 +360,39 @@ namespace RingFlow.Gameplay
             }
         }
 
+        // Best-moves dictionary codec: "level:moves|level:moves" (sorted by level for determinism).
+        private const string BestSep = ":";
+
+        public static void SaveBestMoves(IPlayerPrefsService prefs, string key, IReadOnlyDictionary<int, int> dict)
+        {
+            if (dict == null || dict.Count == 0) { prefs.SetString(key, ""); return; }
+            var sb = new System.Text.StringBuilder(dict.Count * 6);
+            var levels = new List<int>(dict.Keys);
+            levels.Sort();
+            for (int i = 0; i < levels.Count; i++)
+            {
+                if (i > 0) sb.Append(Sep);
+                sb.Append(levels[i]).Append(BestSep).Append(dict[levels[i]]);
+            }
+            prefs.SetString(key, sb.ToString());
+        }
+
+        public static void LoadBestMoves(IPlayerPrefsService prefs, string key, IDictionary<int, int> dict)
+        {
+            dict.Clear();
+            var raw = prefs.GetString(key, "");
+            if (string.IsNullOrEmpty(raw)) return;
+            var parts = raw.Split(Sep[0]);
+            foreach (var part in parts)
+            {
+                if (string.IsNullOrEmpty(part)) continue;
+                var kv = part.Split(BestSep[0]);
+                if (kv.Length != 2) continue;
+                if (int.TryParse(kv[0], out int lvl) && int.TryParse(kv[1], out int moves) && lvl > 0 && moves > 0)
+                    dict[lvl] = moves;
+            }
+        }
+
         // Deterministic variant of DJB2 hash for strings — must NOT use string.GetHashCode()
         // as it is non-deterministic across process restarts (randomized in modern .NET).
         private static int Djb2Hash(string s)
@@ -362,6 +424,8 @@ namespace RingFlow.Gameplay
                 hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyChestsDiamond, 0);
                 hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyDailyDay, 0);
                 hash = hash * 31 + Djb2Hash(prefs.GetString(PlayerProgressModel.KeyDailyStamp, ""));
+                hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyDailyStreak, 0);
+                hash = hash * 31 + Djb2Hash(prefs.GetString(PlayerProgressModel.KeyBestMoves, ""));
                 hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyUndoUsed, 0);
                 hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyHintCount, 0);
                 hash = hash * 31 + (prefs.GetBool(PlayerProgressModel.KeyRemoveAds, false) ? 1 : 0);
@@ -387,6 +451,8 @@ namespace RingFlow.Gameplay
             public int ChestGold;
             public int ChestDiamond;
             public int DailyDayIndex;
+            public int DailyStreak;
+            public string BestMoves;
             public int UndoUsed;
             public int HintCount;
             public bool RemoveAds;
@@ -415,6 +481,8 @@ namespace RingFlow.Gameplay
                 ChestGold = prefs.GetInt(PlayerProgressModel.KeyChestsGold, 0),
                 ChestDiamond = prefs.GetInt(PlayerProgressModel.KeyChestsDiamond, 0),
                 DailyDayIndex = prefs.GetInt(PlayerProgressModel.KeyDailyDay, 0),
+                DailyStreak = prefs.GetInt(PlayerProgressModel.KeyDailyStreak, 0),
+                BestMoves = prefs.GetString(PlayerProgressModel.KeyBestMoves, ""),
                 UndoUsed = prefs.GetInt(PlayerProgressModel.KeyUndoUsed, 0),
                 HintCount = prefs.GetInt(PlayerProgressModel.KeyHintCount, 0),
                 RemoveAds = prefs.GetBool(PlayerProgressModel.KeyRemoveAds, false),
@@ -465,6 +533,8 @@ namespace RingFlow.Gameplay
             prefs.SetInt(PlayerProgressModel.KeyChestsGold, snapshot.ChestGold);
             prefs.SetInt(PlayerProgressModel.KeyChestsDiamond, snapshot.ChestDiamond);
             prefs.SetInt(PlayerProgressModel.KeyDailyDay, snapshot.DailyDayIndex);
+            prefs.SetInt(PlayerProgressModel.KeyDailyStreak, snapshot.DailyStreak);
+            prefs.SetString(PlayerProgressModel.KeyBestMoves, snapshot.BestMoves ?? "");
             prefs.SetInt(PlayerProgressModel.KeyUndoUsed, snapshot.UndoUsed);
             prefs.SetInt(PlayerProgressModel.KeyHintCount, snapshot.HintCount);
             prefs.SetBool(PlayerProgressModel.KeyRemoveAds, snapshot.RemoveAds);
@@ -513,6 +583,8 @@ namespace RingFlow.Gameplay
                 hash = hash * 31 + s.ChestGold;
                 hash = hash * 31 + s.ChestDiamond;
                 hash = hash * 31 + s.DailyDayIndex;
+                hash = hash * 31 + s.DailyStreak;
+                hash = hash * 31 + Djb2Hash(s.BestMoves ?? "");
                 hash = hash * 31 + s.UndoUsed;
                 hash = hash * 31 + s.HintCount;
                 hash = hash * 31 + (s.RemoveAds ? 1 : 0);

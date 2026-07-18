@@ -18,6 +18,7 @@ namespace RingFlow.Gameplay
         public const string KeyBigButtons = GameplayAssetKeys.PlayerPrefs.BigButtons;
         public const string KeyColorBlind = GameplayAssetKeys.PlayerPrefs.ColorBlind;
         public const string KeyLanguage = GameplayAssetKeys.PlayerPrefs.Language;
+        public const string KeyOnboardingCompleted = GameplayAssetKeys.PlayerPrefs.OnboardingCompleted;
         internal const string LegacyKeyLanguage = "LanguageCode";
 
         public ObservableProperty<bool> MusicEnabled { get; } = new(true);
@@ -31,6 +32,8 @@ namespace RingFlow.Gameplay
         public ObservableProperty<int> ColorBlindMode { get; } = new(0); // 0=Off (see RingColorPaletteSO.ColorBlindMode)
 
         public ObservableProperty<string> LanguageCode { get; } = new("en");
+
+        public ObservableProperty<bool> OnboardingCompleted { get; } = new(false);
 
         public ValueTask OnBind(System.Threading.CancellationToken ct)
         {
@@ -48,6 +51,7 @@ namespace RingFlow.Gameplay
             BigButtons.Value = false;
             ColorBlindMode.Value = 0;
             LanguageCode.Value = "en";
+            OnboardingCompleted.Value = false;
         }
     }
 
@@ -63,6 +67,7 @@ namespace RingFlow.Gameplay
             prefs.SetBool(SettingsModel.KeyBigButtons, m.BigButtons.Value);
             prefs.SetInt(SettingsModel.KeyColorBlind, m.ColorBlindMode.Value);
             prefs.SetString(SettingsModel.KeyLanguage, m.LanguageCode.Value);
+            prefs.SetBool(SettingsModel.KeyOnboardingCompleted, m.OnboardingCompleted.Value);
             prefs.Save();
         }
 
@@ -76,6 +81,7 @@ namespace RingFlow.Gameplay
             m.BigButtons.Value = prefs.GetBool(SettingsModel.KeyBigButtons, false);
             m.ColorBlindMode.Value = prefs.GetInt(SettingsModel.KeyColorBlind, 0);
             m.LanguageCode.Value = prefs.GetString(SettingsModel.KeyLanguage, prefs.GetString(SettingsModel.LegacyKeyLanguage, "en"));
+            m.OnboardingCompleted.Value = prefs.GetBool(SettingsModel.KeyOnboardingCompleted, false);
         }
     }
 }

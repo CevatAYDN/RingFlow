@@ -54,6 +54,8 @@ namespace RingFlow.Gameplay
             public const string PlayerLevel = "RF_PlayerLevel";
             public const string DailyDayIndex = "RF_DailyDayIndex";
             public const string DailyLastClaimUtc = "RF_DailyLastClaimUtc";
+            public const string DailyStreak = "RF_DailyStreak";
+            public const string BestMoves = "RF_BestMoves";
             public const string UndoUsedFree = "RF_UndoUsedFree";
             public const string Achievements = "RF_Achievements";
             public const string RemoveAds = "RF_RemoveAds";
@@ -73,6 +75,7 @@ namespace RingFlow.Gameplay
             public const string BigButtons = "RF_Set_BigButtons";
             public const string ColorBlind = "RF_Set_ColorBlind";
             public const string Language = "RF_Set_Language";
+            public const string OnboardingCompleted = "RF_Set_OnboardingCompleted";
 
             // Legal / GDPR
             public const string GdprAccepted = "RF_GdprAccepted";

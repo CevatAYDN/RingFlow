@@ -1,6 +1,8 @@
 using Nexus.Core;
 using Nexus.Core.Services;
+using RingFlow.Gameplay.Localization;
 using UnityEngine.UI;
+using System.Collections.Generic;
 
 namespace RingFlow.Gameplay.UI
 {
@@ -12,17 +14,14 @@ namespace RingFlow.Gameplay.UI
         [Inject] private IIapService _iapService;
         [Inject] private IAdService _adService;
         [Inject] private ISignalBus _signalBus;
+        [Inject] private LocalizationConfigSO _locConfig;
 
         protected override void OnBind()
         {
-            if (View == null)
-            {
-                NexusLog.Warn("SettingsMediator", nameof(OnBind), "", "SettingsView not bound.");
-                return;
-            }
-
+            if (View == null) return;
             View.Localize(_loc);
-            if (View.CloseButton != null) View.CloseButton.onClick.AddListener(() => SignalBus.Fire(new CloseSettingsSignal()));
+
+            View.CloseButton?.onClick.AddListener(() => SignalBus.Fire(new CloseSettingsSignal()));
 
             if (_settings != null)
             {
@@ -41,35 +40,50 @@ namespace RingFlow.Gameplay.UI
                 View.ColorBlindSlider.onValueChanged.AddListener(v => _settings.ColorBlindMode.Value = (int)v);
             }
 
+            // Populate language dropdown
+            if (View.LanguageDropdown != null && _locConfig != null && _locConfig.Languages != null)
+            {
+                var options = new List<Dropdown.OptionData>();
+                int selectedIndex = 0;
+                for (int i = 0; i < _locConfig.Languages.Count; i++)
+                {
+                    var lang = _locConfig.Languages[i];
+                    options.Add(new Dropdown.OptionData(lang.DisplayName));
+                    if (lang.Code == _settings?.LanguageCode.Value)
+                        selectedIndex = i;
+                }
+                View.LanguageDropdown.ClearOptions();
+                View.LanguageDropdown.AddOptions(options);
+                View.LanguageDropdown.value = selectedIndex;
+
+                View.LanguageDropdown.onValueChanged.AddListener(idx =>
+                {
+                    if (idx >= 0 && idx < _locConfig.Languages.Count)
+                        _settings.LanguageCode.Value = _locConfig.Languages[idx].Code;
+                });
+            }
+
+            BindPurchaseButtons();
+        }
+
+        private void BindPurchaseButtons()
+        {
             if (_progress != null && View.RemoveAdsButton != null)
             {
-                // Re-evaluate button visibility
                 View.RemoveAdsButton.gameObject.SetActive(!_progress.RemoveAds.Value);
-
                 View.RemoveAdsButton.onClick.AddListener(() =>
                 {
                     _iapService?.PurchaseProduct("remove_ads", (success, productId) =>
                     {
-                        // FIX P0.2: surface store-unavailability gracefully instead of
-                        // silently swallowing the failure. The mediator now also fires
-                        // a FailedPurchaseSignal so toasts / analytics can react.
                         if (success)
                         {
                             _progress.RemoveAds.Value = true;
                             View.RemoveAdsButton.gameObject.SetActive(false);
-
-                            // Immediately hide banner
                             _adService?.HideBanner();
-
-                            NexusLog.Info("SettingsMediator", "Purchase", productId, "Remove Ads purchased successfully.");
                         }
                         else
                         {
-                            // success=false covers both user-cancel and store_unavailable flows.
-                            // Distinguish them so analytics doesn't lump cancels with outages.
                             bool storeUnavailable = string.Equals(productId, "store_unavailable", System.StringComparison.Ordinal);
-                            NexusLog.Warn("SettingsMediator", "Purchase", productId,
-                                $"Remove Ads purchase did not complete. storeUnavailable={storeUnavailable}.");
                             _signalBus?.Fire(new PurchaseFailedSignal(productId ?? "remove_ads", storeUnavailable));
                         }
                     });
@@ -91,7 +105,6 @@ namespace RingFlow.Gameplay.UI
                                 View.RemoveAdsButton.gameObject.SetActive(false);
                                 _adService?.HideBanner();
                             }
-                            NexusLog.Info("SettingsMediator", "Restore", "", "Purchases restored successfully. RemoveAds=" + owned);
                         }
                     });
                 });
@@ -108,7 +121,7 @@ namespace RingFlow.Gameplay.UI
             View.ReduceMotionToggle?.onValueChanged.RemoveAllListeners();
             View.BigButtonsToggle?.onValueChanged.RemoveAllListeners();
             View.ColorBlindSlider?.onValueChanged.RemoveAllListeners();
-
+            View.LanguageDropdown?.onValueChanged.RemoveAllListeners();
             View.RemoveAdsButton?.onClick.RemoveAllListeners();
             View.RestoreButton?.onClick.RemoveAllListeners();
         }

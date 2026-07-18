@@ -2,32 +2,29 @@ using Nexus.Core;
 using Nexus.Core.Services;
 using UnityEngine;
 using UnityEngine.UI;
+using DG.Tweening;
 
 namespace RingFlow.Gameplay.UI
 {
     [Mediator(typeof(DailyRewardPopupMediator))]
-    public class DailyRewardPopupView : View
+    public class DailyRewardPopupView : View, IAuthoredView
     {
         public Button ClaimButton { get; private set; }
         public Button CloseButton { get; private set; }
         public Text TitleText { get; private set; }
         public Text DayText { get; private set; }
         public Text RewardText { get; private set; }
+        public Text StreakText { get; private set; }
+        public CanvasGroup CardGroup { get; private set; }
+        public Image RewardIcon { get; private set; }
+
         private GameObject _claimBtn, _closeBtn;
         private ILocalizationService _locService;
 
         private void Awake()
         {
-            if (NeedsSelfBuild())
-            {
-                BuildUI();
-                ApplyBaseStyling();
-            }
-            else
-            {
-                BindReferencesFromChildren();
-                ApplyBaseStyling();
-            }
+            if (NeedsSelfBuild()) { BuildUI(); ApplyBaseStyling(); }
+            else { BindReferencesFromChildren(); ApplyBaseStyling(); }
         }
 
         private bool NeedsSelfBuild()
@@ -37,71 +34,89 @@ namespace RingFlow.Gameplay.UI
             return ClaimButton == null || CloseButton == null;
         }
 
-        private void BuildUI()
+        public void BuildUI()
         {
             var overlay = GetComponent<Image>();
             if (overlay != null)
             {
-                overlay.color = new Color(0, 0, 0, 0.75f);
+                overlay.color = GameUIResources.OverlayMedium;
                 overlay.raycastTarget = true;
             }
 
-            var card = GameUIResources.CreatePanel("Card", transform);
-            GameUIResources.SetAnchors(card.GetComponent<RectTransform>(), 0.08f, 0.16f, 0.92f, 0.84f);
-            card.GetComponent<Image>().color = GameUIResources.PanelColor;
-            card.GetComponent<Image>().raycastTarget = true;
+            var cardGo = GameUIResources.CreateCard("Card", transform, GameUIResources.SurfaceDark);
+            GameUIResources.SetAnchors(cardGo.GetComponent<RectTransform>(), 0.08f, 0.14f, 0.92f, 0.86f);
+            CardGroup = cardGo.GetComponent<CanvasGroup>();
 
-            var titleGo = GameUIResources.CreateText("DAILY REWARD", card.transform, 34, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
+            // Accent bar
+            var accent = new GameObject("AccentBar", typeof(RectTransform), typeof(Image));
+            accent.transform.SetParent(cardGo.transform, false);
+            GameUIResources.SetAnchors(accent.GetComponent<RectTransform>(), 0.08f, 0.80f, 0.92f, 0.82f);
+            accent.GetComponent<Image>().color = GameUIResources.AccentColor;
+
+            var titleGo = GameUIResources.CreateDisplayText("DAILY REWARD", cardGo.transform, 36, GameUIResources.AccentColor);
+            titleGo.name = "Title";
             TitleText = titleGo.GetComponent<Text>();
-            TitleText.fontStyle = FontStyle.Bold;
-            TitleText.name = "Title";
-            GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.05f, 0.74f, 0.95f, 0.86f);
+            GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.05f, 0.68f, 0.95f, 0.78f);
 
-            var dayGo = GameUIResources.CreateText("Day 1", card.transform, 56, TextAnchor.MiddleCenter, GameUIResources.TextColor);
+            // Day circle
+            var dayBg = new GameObject("DayCircle", typeof(RectTransform), typeof(Image));
+            dayBg.transform.SetParent(cardGo.transform, false);
+            GameUIResources.SetAnchors(dayBg.GetComponent<RectTransform>(), 0.35f, 0.44f, 0.65f, 0.66f);
+            dayBg.GetComponent<Image>().color = new Color(0.12f, 0.14f, 0.20f);
+            dayBg.GetComponent<Image>().sprite = GameUIResources.GetRoundedSprite();
+            dayBg.GetComponent<Image>().type = Image.Type.Sliced;
+
+            var dayGo = GameUIResources.CreateDisplayText("Day 1", cardGo.transform, 52, GameUIResources.TextOnDark);
+            dayGo.name = "Day";
             DayText = dayGo.GetComponent<Text>();
-            DayText.fontStyle = FontStyle.Bold;
-            DayText.name = "Day";
             GameUIResources.SetAnchors(dayGo.GetComponent<RectTransform>(), 0.20f, 0.46f, 0.80f, 0.64f);
 
-            var rewardGo = GameUIResources.CreateText("+50 Coins", card.transform, 22, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
+            var streakGo = GameUIResources.CreateText("", cardGo.transform, 14, TextAnchor.MiddleCenter, GameUIResources.MutedTextDark);
+            streakGo.name = "Streak";
+            StreakText = streakGo.GetComponent<Text>();
+            GameUIResources.SetAnchors(streakGo.GetComponent<RectTransform>(), 0.15f, 0.38f, 0.85f, 0.42f);
+
+            var rewardGo = GameUIResources.CreateText("", cardGo.transform, 22, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
+            rewardGo.name = "Reward";
             RewardText = rewardGo.GetComponent<Text>();
-            RewardText.name = "Reward";
-            GameUIResources.SetAnchors(rewardGo.GetComponent<RectTransform>(), 0.20f, 0.34f, 0.80f, 0.44f);
+            GameUIResources.SetAnchors(rewardGo.GetComponent<RectTransform>(), 0.12f, 0.30f, 0.88f, 0.36f);
 
-            var claimBtnGo = GameUIResources.CreateButton("CLAIM", card.transform, 300, 64);
-            ClaimButton = claimBtnGo.GetComponent<Button>();
-            ClaimButton.name = "Claim";
-            _claimBtn = claimBtnGo;
-            GameUIResources.SetAnchors(claimBtnGo.GetComponent<RectTransform>(), 0.15f, 0.14f, 0.85f, 0.26f);
+            _claimBtn = GameUIResources.CreateButton("CLAIM", cardGo.transform, 300, 60);
+            _claimBtn.name = "Btn_CLAIM";
+            GameUIResources.ApplyAccentStyle(_claimBtn);
+            ClaimButton = _claimBtn.GetComponent<Button>();
+            GameUIResources.SetAnchors(_claimBtn.GetComponent<RectTransform>(), 0.18f, 0.16f, 0.82f, 0.26f);
 
-            var closeBtnGo = GameUIResources.CreateButton("CLOSE", card.transform, 120, 40);
-            CloseButton = closeBtnGo.GetComponent<Button>();
-            CloseButton.name = "Close";
-            _closeBtn = closeBtnGo;
-            GameUIResources.ApplySecondaryStyle(closeBtnGo);
-            var closeText = closeBtnGo.GetComponentInChildren<Text>();
-            if (closeText != null) closeText.fontSize = 15;
-            GameUIResources.SetAnchors(closeBtnGo.GetComponent<RectTransform>(), 0.40f, 0.04f, 0.60f, 0.12f);
+            _closeBtn = GameUIResources.CreateButton("CLOSE", cardGo.transform, 120, 38);
+            _closeBtn.name = "Btn_CLOSE";
+            GameUIResources.ApplyTextButtonStyle(_closeBtn);
+            CloseButton = _closeBtn.GetComponent<Button>();
+            GameUIResources.SetAnchors(_closeBtn.GetComponent<RectTransform>(), 0.40f, 0.04f, 0.60f, 0.10f);
         }
 
         public void Localize(ILocalizationService loc)
         {
             _locService = loc;
+            if (loc == null) return;
             if (TitleText != null) GameUIResources.LocalizeText(TitleText.gameObject, "daily_reward_title", loc);
-            GameUIResources.LocalizeButtonText(_claimBtn, "daily_reward_claim", loc);
-            GameUIResources.LocalizeButtonText(_closeBtn, "settings_close", loc);
+            if (_claimBtn != null) GameUIResources.LocalizeButtonText(_claimBtn, "daily_reward_claim", loc);
+            if (_closeBtn != null) GameUIResources.LocalizeButtonText(_closeBtn, "settings_close", loc);
         }
 
-        public void ShowReward(int dayIndex, string rewardText)
+        public void ShowReward(int dayIndex, string rewardText, int streak = 0)
         {
             if (DayText != null)
             {
-                string dayFormat = _locService != null
-                    ? _locService.GetString("daily_reward_day", "Day {0}")
-                    : "Day {0}";
+                string dayFormat = _locService?.GetString("daily_reward_day", "Day {0}") ?? "Day {0}";
                 DayText.text = string.Format(dayFormat, dayIndex + 1);
             }
             if (RewardText != null) RewardText.text = rewardText;
+            if (StreakText != null)
+            {
+                StreakText.text = streak > 1
+                    ? $"{streak}-day streak! 🔥"
+                    : "";
+            }
             if (ClaimButton != null) ClaimButton.interactable = true;
         }
 
@@ -110,35 +125,25 @@ namespace RingFlow.Gameplay.UI
             var buttons = GetComponentsInChildren<Button>(true);
             foreach (var btn in buttons)
             {
+                GameUIResources.AddButtonEffects(btn);
                 if (btn.name.ToUpperInvariant().Contains("CLAIM")) { _claimBtn = btn.gameObject; ClaimButton = btn; }
                 else if (btn.name.ToUpperInvariant().Contains("CLOSE")) { _closeBtn = btn.gameObject; CloseButton = btn; }
             }
-
             var texts = GetComponentsInChildren<Text>(true);
             foreach (var txt in texts)
             {
-                if (txt.transform.parent != transform && txt.transform.parent?.parent != transform) continue;
-
                 var upper = txt.name.ToUpperInvariant();
-                if (txt.fontSize == 34 || upper.Contains("TITLE"))
-                {
-                    TitleText = txt;
-                }
-                else if (txt.fontSize == 56 || upper.Contains("DAY"))
-                {
-                    DayText = txt;
-                }
-                else if (txt.fontSize == 22 || upper.Contains("REWARD"))
-                {
-                    RewardText = txt;
-                }
+                if (upper.Contains("TITLE")) TitleText = txt;
+                else if (upper.Contains("DAY")) DayText = txt;
+                else if (upper.Contains("REWARD")) RewardText = txt;
+                else if (upper.Contains("STREAK")) StreakText = txt;
             }
         }
 
         private void ApplyBaseStyling()
         {
-            if (_claimBtn != null) GameUIResources.ApplyPrimaryStyle(_claimBtn);
-            if (_closeBtn != null) GameUIResources.ApplySecondaryStyle(_closeBtn);
+            if (_claimBtn != null) GameUIResources.ApplyAccentStyle(_claimBtn);
+            if (_closeBtn != null) GameUIResources.ApplyTextButtonStyle(_closeBtn);
         }
     }
 }

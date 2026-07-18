@@ -290,7 +290,7 @@ namespace RingFlow.Gameplay
                         var movedRingGameObject = movedRing.gameObject;
 
                         movedRingTransform.DOLocalJump(targetLocal, F.MoveJumpPower, 1, duration)
-                            .SetEase(Ease.InOutQuad)
+                            .SetEase(DG.Tweening.Ease.InOutQuad)
                             .SetAutoKill(true)
                             .OnComplete(() =>
                             {
@@ -306,24 +306,24 @@ namespace RingFlow.Gameplay
 
                                 DOTween.Kill(movedRingTransform);
                                 movedRingTransform.DOScale(new Vector3(localX * 1.25f, localY * 0.6f, localZ * 1.25f), 0.08f)
-                                    .SetEase(Ease.OutQuad)
+                                    .SetEase(DG.Tweening.Ease.OutQuad)
                                     .SetAutoKill(true)
                                     .OnComplete(() =>
                                     {
                                         if (movedRingGameObject == null || movedRingTransform == null) return;
-                                        movedRingTransform.DOScale(normalScale, 0.18f).SetEase(Ease.OutBack).SetAutoKill(true);
+                                        movedRingTransform.DOScale(normalScale, 0.18f).SetEase(DG.Tweening.Ease.OutBack).SetAutoKill(true);
                                     });
 
                                 ApplySelection();
                             });
 
                         movedRingTransform.DOScale(new Vector3(localX * 0.85f, localY * 1.35f, localZ * 0.85f), duration * 0.4f)
-                            .SetEase(Ease.OutQuad)
+                            .SetEase(DG.Tweening.Ease.OutQuad)
                             .SetAutoKill(true)
                             .OnComplete(() =>
                             {
                                 if (movedRingGameObject == null || movedRingTransform == null) return;
-                                movedRingTransform.DOScale(normalScale, duration * 0.4f).SetEase(Ease.InQuad).SetAutoKill(true);
+                                movedRingTransform.DOScale(normalScale, duration * 0.4f).SetEase(DG.Tweening.Ease.InQuad).SetAutoKill(true);
                             });
                     }
                 }
@@ -444,7 +444,7 @@ namespace RingFlow.Gameplay
                 }
 
                 movedRingTransform.DOLocalJump(targetLocal, F.MoveJumpPower, 1, duration)
-                    .SetEase(Ease.InOutQuad)
+                    .SetEase(DG.Tweening.Ease.InOutQuad)
                     .SetAutoKill(true)
                     .OnComplete(() =>
                     {
@@ -601,10 +601,10 @@ namespace RingFlow.Gameplay
                 // ring object and causing visual corruption on the next undo or level load.
                 var seq = DOTween.Sequence().SetTarget(ringTrans).SetAutoKill(true);
                 seq.AppendInterval(i * 0.04f);
-                seq.Append(ringTrans.DOLocalMoveY(originalY + bounceHeight, 0.15f).SetEase(Ease.OutQuad));
-                seq.Append(ringTrans.DOLocalMoveY(originalY, 0.20f).SetEase(Ease.InQuad));
-                seq.Append(ringTrans.DOScaleY(originalScaleY * 0.7f, 0.08f).SetEase(Ease.OutQuad));
-                seq.Append(ringTrans.DOScaleY(originalScaleY, 0.12f).SetEase(Ease.OutBack));
+                seq.Append(ringTrans.DOLocalMoveY(originalY + bounceHeight, 0.15f).SetEase(DG.Tweening.Ease.OutQuad));
+                seq.Append(ringTrans.DOLocalMoveY(originalY, 0.20f).SetEase(DG.Tweening.Ease.InQuad));
+                seq.Append(ringTrans.DOScaleY(originalScaleY * 0.7f, 0.08f).SetEase(DG.Tweening.Ease.OutQuad));
+                seq.Append(ringTrans.DOScaleY(originalScaleY, 0.12f).SetEase(DG.Tweening.Ease.OutBack));
             }
 
             // ----- Tier 0/1: Merge effect (replaces legacy RingPop burst) -----
@@ -786,7 +786,7 @@ namespace RingFlow.Gameplay
                         float capturedY = targetY;
                         bool capturedSelected = isSelected;
                         var capturedRing = topRing;
-                        topRing.transform.DOLocalMoveY(targetY, duration).SetEase(Ease.OutQuad)
+                        topRing.transform.DOLocalMoveY(targetY, duration).SetEase(DG.Tweening.Ease.OutQuad)
                             .SetAutoKill(true)
                             .OnComplete(() =>
                             {
@@ -794,7 +794,7 @@ namespace RingFlow.Gameplay
                                 {
                                     DOTween.Kill(capturedRing.transform);
                                     capturedRing.transform.DOLocalMoveY(capturedY + F.TutorialArrowBobHeight * 0.4f, 0.6f)
-                                        .SetEase(Ease.InOutSine)
+                                        .SetEase(DG.Tweening.Ease.InOutSine)
                                         .SetLoops(-1, LoopType.Yoyo)
                                         .SetAutoKill(true);
                                 }
@@ -1002,13 +1002,13 @@ namespace RingFlow.Gameplay
 
             // Pulse + bob — two local tweens, both auto-kill, no Sequence to leak.
             _tutorialArrowGo.transform.DOScale(F.TutorialArrowScale * 1.2f, F.TutorialArrowBobSpeed)
-                .SetEase(Ease.InOutSine)
+                .SetEase(DG.Tweening.Ease.InOutSine)
                 .SetLoops(-1, LoopType.Yoyo)
                 .SetAutoKill(true);
 
             float tutorialBaseY = F.PoleScale.y + 0.55f;
             _tutorialArrowGo.transform.DOLocalMoveY(tutorialBaseY + F.TutorialArrowBobHeight, F.TutorialArrowBobSpeed)
-                .SetEase(Ease.InOutSine)
+                .SetEase(DG.Tweening.Ease.InOutSine)
                 .SetLoops(-1, LoopType.Yoyo)
                 .SetAutoKill(true);
         }

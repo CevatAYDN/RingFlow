@@ -9,6 +9,7 @@ namespace RingFlow.Gameplay.UI
         [Inject] private GameplayModel _model;
         [Inject] private ILocalizationService _loc;
         [Inject] private IProgressionService _progression;
+        [Inject] private PlayerProgressModel _progress;
 
         private Action<bool, bool> _wonHandler;
         private Action<WinReward, WinReward> _rewardHandler;
@@ -17,45 +18,26 @@ namespace RingFlow.Gameplay.UI
         {
             if (View == null)
             {
-                NexusLog.Error("WinMediator", nameof(OnBind), "", "WinView not bound.");
+                NexusLog.Error("WinMediator", "OnBind", "", "WinView not bound.");
                 return;
             }
             View.Localize(_loc);
-            if (View.NextLevelButton != null)
-                View.NextLevelButton.onClick.AddListener(() => SignalBus.Fire(new NextLevelRequestedSignal()));
-            else
-                NexusLog.Warn("WinMediator", nameof(OnBind), "", "NextLevelButton missing on View.");
-            if (View.QuitButton != null)
-                View.QuitButton.onClick.AddListener(() => SignalBus.Fire(new QuitToMenuRequestedSignal()));
-            else
-                NexusLog.Warn("WinMediator", nameof(OnBind), "", "QuitButton missing on View.");
+
+            View.NextLevelButton?.onClick.AddListener(() => SignalBus.Fire(new NextLevelRequestedSignal()));
+            View.QuitButton?.onClick.AddListener(() => SignalBus.Fire(new QuitToMenuRequestedSignal()));
 
             if (_model != null)
             {
-                _wonHandler   = (_, won)    => Refresh(won);
+                _wonHandler = (_, won) => Refresh(won);
                 _rewardHandler = (_, reward) => RefreshReward(reward);
                 _model.IsGameWon.OnChanged(_wonHandler);
                 _model.LastReward.OnChanged(_rewardHandler);
 
-                // FIX-WIN (secondary): The Win screen is only instantiated AFTER WinState
-                // fires ShowScreenSignal, meaning OnBind always runs AFTER LevelWonCommand
-                // has already set LastReward and IsGameWon. The OnChanged callbacks will
-                // never fire for those values because they were set before we subscribed.
-                // Solution: eagerly show the current snapshot on bind.
+                // Eager show on bind (reward already set before we subscribed)
                 if (_model.LastReward.Value.Stars > 0)
-                {
-                    // LastReward is the authoritative data — prefer it.
                     RefreshReward(_model.LastReward.Value);
-                }
                 else if (_model.IsGameWon.Value)
-                {
-                    // Fallback: no reward data yet, show placeholder from model state.
                     Refresh(true);
-                }
-            }
-            else
-            {
-                NexusLog.Warn("WinMediator", nameof(OnBind), "", "GameplayModel not bound; UI won't react to win state.");
             }
         }
 
@@ -66,13 +48,7 @@ namespace RingFlow.Gameplay.UI
             {
                 int moves = _model.MovesCount.Value;
                 int target = _model.TargetMovesCount.Value > 0 ? _model.TargetMovesCount.Value : moves;
-                // IsGameWon fires before the level counter advances, so CurrentLevel is still
-                // the level the player just completed here.
-                int level = _progression != null ? _progression.CurrentLevel.Value : 0;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                NexusLog.Info("WinMediator", nameof(Refresh), level.ToString(),
-                    $"Refresh (fallback): level={level}, moves={moves}/{target}. LastReward.Stars=0, using placeholder.");
-#endif
+                int level = _progression?.CurrentLevel.Value ?? 0;
                 View.SetLevel(level, _loc);
                 View.ShowResults(moves, target, moves, 10, 1);
             }
@@ -81,13 +57,15 @@ namespace RingFlow.Gameplay.UI
         private void RefreshReward(WinReward reward)
         {
             if (_model == null || View == null) return;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            NexusLog.Info("WinMediator", nameof(RefreshReward), reward.Level.ToString(),
-                $"RefreshReward: level={reward.Level}, moves={reward.Moves}/{reward.TargetMoves}, " +
-                $"coins={reward.Coins}, xp={reward.Xp}, stars={reward.Stars}.");
-#endif
+
+            int bestMoves = 0;
+            if (_progress != null)
+            {
+                bestMoves = _progress.GetBestMovesForLevel(reward.Level);
+            }
+
             View.SetLevel(reward.Level, _loc);
-            View.ShowResults(reward.Moves, reward.TargetMoves, reward.Coins, reward.Xp, reward.Stars);
+            View.ShowResults(reward.Moves, reward.TargetMoves, reward.Coins, reward.Xp, reward.Stars, bestMoves);
         }
 
         protected override void OnUnbind()

@@ -10,8 +10,8 @@ namespace RingFlow.Gameplay.UI
     /// Shows accumulated Bronze/Silver/Gold/Diamond chest counts and a claim button.
     /// Self-building when the prefab lacks authored children.
     /// </summary>
-        [Mediator(typeof(ChestPopupMediator))]
-    public class ChestPopupView : View
+    [Mediator(typeof(ChestPopupMediator))]
+    public class ChestPopupView : View, IAuthoredView
     {
         public Button ClaimButton { get; private set; }
         public Button CloseButton { get; private set; }
@@ -45,7 +45,7 @@ namespace RingFlow.Gameplay.UI
             return ClaimButton == null || CloseButton == null;
         }
 
-        private void BuildUI()
+        public void BuildUI()
         {
             var overlay = GetComponent<Image>();
             if (overlay != null)
@@ -128,6 +128,7 @@ namespace RingFlow.Gameplay.UI
             var buttons = GetComponentsInChildren<Button>(true);
             foreach (var btn in buttons)
             {
+                GameUIResources.AddButtonEffects(btn);
                 var upper = btn.name.ToUpperInvariant();
                 if (upper.Contains("CLAIM ALL") || upper.Contains("CLAIM")) { _claimBtn = btn.gameObject; ClaimButton = btn; }
                 else if (upper.Contains("CLOSE")) { _closeBtn = btn.gameObject; CloseButton = btn; }

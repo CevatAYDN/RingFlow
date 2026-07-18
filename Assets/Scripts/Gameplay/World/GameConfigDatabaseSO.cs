@@ -731,6 +731,26 @@ namespace RingFlow.Gameplay
             return world;
         }
 
+        public int GetLevelCountForWorld(int world)
+        {
+            if (world < 0 || (Worlds != null && world >= Worlds.Count))
+                return 0;
+            int remaining = TotalLevels - (world * LevelsPerWorld);
+            return System.Math.Max(0, System.Math.Min(remaining, LevelsPerWorld));
+        }
+
+        public int GetXpRequiredForLevel(int level)
+        {
+            var cfg = BalanceConfig;
+            return level switch
+            {
+                1 => cfg.XpThresholdLevel1,
+                2 => cfg.XpThresholdLevel2,
+                3 => cfg.XpThresholdLevel3,
+                _ => cfg.XpThresholdDefault
+            };
+        }
+
         public LevelThemeData GetLevelThemeForLevel(int level)
         {
             if (LevelThemes != null && LevelThemes.Count > 0)

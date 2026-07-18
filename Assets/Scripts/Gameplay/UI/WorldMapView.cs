@@ -10,7 +10,7 @@ namespace RingFlow.Gameplay.UI
     /// The screen intentionally stays lightweight and readable for mobile.
     /// </summary>
     [Mediator(typeof(WorldMapMediator))]
-    public class WorldMapView : View
+    public class WorldMapView : View, IAuthoredView
     {
         private Text _titleText;
         private Text _bodyText;
@@ -34,7 +34,7 @@ namespace RingFlow.Gameplay.UI
             if (_bodyText != null) GameUIResources.LocalizeText(_bodyText.gameObject, "worldmap_body", loc);
         }
 
-        private void BuildUI()
+        public void BuildUI()
         {
             var card = GameUIResources.CreatePanel("Card", transform);
             GameUIResources.SetAnchors(card.GetComponent<RectTransform>(), 0.08f, 0.18f, 0.92f, 0.82f);
@@ -53,6 +53,11 @@ namespace RingFlow.Gameplay.UI
 
         private void BindReferencesFromChildren()
         {
+            var buttons = GetComponentsInChildren<Button>(true);
+            foreach (var btn in buttons)
+            {
+                GameUIResources.AddButtonEffects(btn);
+            }
             var texts = GetComponentsInChildren<Text>(true);
             foreach (var txt in texts)
             {

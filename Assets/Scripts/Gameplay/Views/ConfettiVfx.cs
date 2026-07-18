@@ -143,18 +143,18 @@ namespace RingFlow.Gameplay
                 piece.EndPos = new Vector3(piece.StartX, piece.StartPos.y - 12f, piece.StartPos.z);
 
                 t.DOLocalMoveY(piece.EndPos.y, piece.FallDuration)
-                    .SetEase(Ease.OutQuad)
+                    .SetEase(DG.Tweening.Ease.OutQuad)
                     .SetAutoKill(true);
 
                 t.DOLocalRotate(
                     new Vector3(Random.Range(360f, 720f), Random.Range(360f, 720f), Random.Range(360f, 720f)),
                     piece.FallDuration,
                     RotateMode.FastBeyond360
-                ).SetEase(Ease.Linear).SetAutoKill(true);
+                ).SetEase(DG.Tweening.Ease.Linear).SetAutoKill(true);
 
                 t.DOScale(Vector3.zero, 0.5f)
                     .SetDelay(piece.FallDuration - 0.5f)
-                    .SetEase(Ease.InQuad)
+                    .SetEase(DG.Tweening.Ease.InQuad)
                     .SetAutoKill(true)
                     .OnComplete(() => DespawnIfAllDone());
             }

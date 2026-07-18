@@ -4,6 +4,7 @@ using Nexus.Core.FSM;
 using Nexus.Core.Services;
 using UnityEngine;
 using RingFlow.Gameplay.Services;
+using DG.Tweening;
 
 namespace RingFlow.Gameplay.UI
 {
@@ -13,75 +14,63 @@ namespace RingFlow.Gameplay.UI
         [Inject] private ILocalizationService _loc;
         [Inject] private ISignalBus _signalBus;
         [Inject] private ILegalConsentService _consent;
+        [Inject] private SettingsModel _settings;
 
         protected override void OnBind()
         {
-            NexusLog.Info("SplashMediator", nameof(OnBind), "", "OnBind called");
             if (View == null)
             {
-                NexusLog.Error("SplashMediator", nameof(OnBind), "", "View not bound.");
+                NexusLog.Error("SplashMediator", "OnBind", "", "View not bound.");
                 return;
             }
-            if (_loc == null)
-            {
-                NexusLog.Warn("SplashMediator", nameof(OnBind), "", 
-                    "Localization service unbound; strings will fall back to defaults.");
-            }
-            else
-            {
-                View.Localize(_loc);
-            }
-            TransitionAfterDelay();
+            View.Localize(_loc);
+            AnimateProgress();
         }
 
-        private async void TransitionAfterDelay()
+        private async void AnimateProgress()
         {
-            NexusLog.Info("SplashMediator", nameof(TransitionAfterDelay), "", "TransitionAfterDelay started");
-            try
+            float duration = 0.8f;
+            float elapsed = 0f;
+            while (elapsed < duration)
             {
-                await Awaitable.WaitForSecondsAsync(0.8f);
-                NexusLog.Info("SplashMediator", nameof(TransitionAfterDelay), "", "TransitionAfterDelay delay completed");
+                elapsed += Time.unscaledDeltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                float progress = t < 0.5f ? 2f * t * t : 1f - Mathf.Pow(-2f * t + 2f, 2f) / 2f;
+                View?.SetProgress(progress);
+                await Task.Yield();
             }
-            catch (System.Exception ex)
-            {
-                NexusLog.Error("SplashMediator", nameof(TransitionAfterDelay), "", ex);
-                return;
-            }
+            View?.SetProgress(1f);
 
-            if (!IsViewValid)
-            {
-                NexusLog.Info("SplashMediator", nameof(TransitionAfterDelay), "", "TransitionAfterDelay aborted: IsViewValid is false");
-                return; // View was disabled/unbound before the delay completed
-            }
+            try { await Awaitable.WaitForSecondsAsync(0.3f); }
+            catch (System.Exception) { return; }
 
-            if (_fsm == null)
-            {
-                NexusLog.Error("SplashMediator", nameof(TransitionAfterDelay), "",
-                    "IGameStateMachine is null — cannot transition to MainMenuState.");
-                return;
-            }
+            if (!IsViewValid) return;
+            if (_fsm == null) return;
 
-            if (_consent == null)
+            bool reduceMotion = _settings?.ReduceMotion?.Value ?? false;
+            if (!reduceMotion && View?.CardGroup != null)
             {
-                NexusLog.Error("SplashMediator", nameof(TransitionAfterDelay), "",
-                    "ILegalConsentService is not bound; treating GDPR consent as not accepted.");
-            }
-            bool gdprAccepted = _consent != null && _consent.IsAccepted;
-
-            if (gdprAccepted)
-            {
-                try
-                {
-                    await _fsm.ChangeStateAsync<MainMenuState>();
-                }
-                catch (System.Exception ex)
-                {
-                    NexusLog.Error("SplashMediator", nameof(TransitionAfterDelay), "", ex);
-                }
+                DOTween.Kill(View.CardGroup);
+                DOTween.To(() => View.CardGroup.alpha, v => View.CardGroup.alpha = v, 0f, 0.2f)
+                    .SetEase(DG.Tweening.Ease.InCubic)
+                    .OnComplete(() => Transition());
             }
             else
             {
-                NexusLog.Info("SplashMediator", "TransitionAfterDelay", "", "GDPR not accepted. Opening Parental Gate popup.");
+                Transition();
+            }
+        }
+
+        private async void Transition()
+        {
+            bool gdprAccepted = _consent != null && _consent.IsAccepted;
+            if (gdprAccepted)
+            {
+                try { await _fsm.ChangeStateAsync<MainMenuState>(); }
+                catch (System.Exception ex) { NexusLog.Error("SplashMediator", "Transition", "", ex); }
+            }
+            else
+            {
                 _signalBus?.Fire(new ShowScreenSignal(ScreenType.ParentalGate));
             }
         }

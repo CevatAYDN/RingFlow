@@ -13,7 +13,7 @@ namespace RingFlow.Gameplay.UI
     /// auto-wired via BindReferencesFromChildren.
     /// </summary>
     [Mediator(typeof(ParentalGatePopupMediator))]
-    public class ParentalGatePopupView : View
+    public class ParentalGatePopupView : View, IAuthoredView
     {
         public Button AcceptButton;
         public Button TermsButton;
@@ -80,7 +80,7 @@ namespace RingFlow.Gameplay.UI
             return missingCritical;
         }
 
-        private void BuildUI()
+        public void BuildUI()
         {
             // ── Dimmed background overlay ──
             var overlay = GetComponent<Image>();
@@ -201,6 +201,7 @@ namespace RingFlow.Gameplay.UI
             var buttons = GetComponentsInChildren<Button>(true);
             foreach (var btn in buttons)
             {
+                GameUIResources.AddButtonEffects(btn);
                 if (btn.name.ToUpper().Contains("ACCEPT")) AcceptButton = btn;
                 else if (btn.name.ToUpper().Contains("TERMS")) TermsButton = btn;
                 else if (btn.name.ToUpper().Contains("PRIVACY")) PrivacyButton = btn;

@@ -57,6 +57,10 @@ namespace RingFlow.Gameplay
 
             int stars = ComputeStars(prevMoves, prevTarget);
 
+            // Record best (fewest) moves per level for the save model.
+            if (_progress != null)
+                _progress.RecordBestMoves(prevLevel, prevMoves);
+
             _progressionService?.CompleteCurrentLevel();
             int newLevel = _progressionService != null ? _progressionService.CurrentLevel.Value : prevLevel;
 

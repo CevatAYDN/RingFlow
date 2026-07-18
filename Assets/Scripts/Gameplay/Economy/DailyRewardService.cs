@@ -70,6 +70,12 @@ namespace RingFlow.Gameplay
             return CanClaimNow(out _);
         }
 
+        /// <summary>Consecutive-day claim streak (0 when no streak is active).</summary>
+        public int GetCurrentStreak()
+        {
+            return _progress?.DailyStreak.Value ?? 0;
+        }
+
         public bool CanClaimNow(out string reason)
         {
             var now = UtcNow;
@@ -128,6 +134,19 @@ namespace RingFlow.Gameplay
 
             int cycle = DailyRewardTable.CycleLength(_dbConfig);
             _progress.DailyDayIndex.Value = nextIndex % cycle;
+
+            // Maintain consecutive-day streak.
+            int streak = 1;
+            long lastTicks = _progress.DailyLastClaimUtcTicks.Value;
+            if (lastTicks > 0)
+            {
+                var last = new DateTime(lastTicks, DateTimeKind.Utc).Date;
+                var today = UtcNow.Date;
+                if (last == today.AddDays(-1))
+                    streak = _progress.DailyStreak.Value + 1;
+            }
+            _progress.DailyStreak.Value = streak;
+
             _progress.DailyLastClaimUtcTicks.Value = UtcNow.Ticks;
 
             NexusLog.Info("DailyRewardService", nameof(Claim), nextIndex.ToString(),

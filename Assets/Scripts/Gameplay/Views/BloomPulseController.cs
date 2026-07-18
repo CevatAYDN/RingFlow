@@ -259,7 +259,7 @@ namespace RingFlow.Gameplay
                 val => SetFloatValue(_intensityField, val),
                 targetIntensity,
                 pulseIn
-            ).SetEase(Ease.OutQuad));
+            ).SetEase(DG.Tweening.Ease.OutQuad));
 
             // Phase 2: Optional hold (final pole only)
             if (pulseHold > 0f)
@@ -273,7 +273,7 @@ namespace RingFlow.Gameplay
                 val => SetFloatValue(_intensityField, val),
                 _originalIntensity,
                 pulseOut
-            ).SetEase(Ease.InQuad));
+            ).SetEase(DG.Tweening.Ease.InQuad));
 
             // Lower threshold slightly for more dramatic bloom during the pulse
             float loweredThreshold = Mathf.Max(0.5f, _originalThreshold * 0.7f);
@@ -282,13 +282,13 @@ namespace RingFlow.Gameplay
                 val => SetFloatValue(_thresholdField, val),
                 loweredThreshold,
                 pulseIn * 0.5f
-            ).SetEase(Ease.OutQuad));
+            ).SetEase(DG.Tweening.Ease.OutQuad));
             _pulseSequence.Insert(pulseIn * 0.5f, DOTween.To(
                 () => ReadFloatValue(_thresholdField),
                 val => SetFloatValue(_thresholdField, val),
                 _originalThreshold,
                 pulseOut
-            ).SetEase(Ease.InQuad));
+            ).SetEase(DG.Tweening.Ease.InQuad));
         }
 
         /// <summary>

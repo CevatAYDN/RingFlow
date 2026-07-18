@@ -119,17 +119,17 @@ namespace RingFlow.Gameplay
                 ).normalized * Random.Range(1.5f, 3f);
 
                 t.DOLocalMove(direction, duration)
-                    .SetEase(Ease.OutQuad)
+                    .SetEase(DG.Tweening.Ease.OutQuad)
                     .SetAutoKill(true);
                 t.DOScale(Vector3.zero, duration)
-                    .SetEase(Ease.InQuad)
+                    .SetEase(DG.Tweening.Ease.InQuad)
                     .SetAutoKill(true);
                 t.DORotate(
                     new Vector3(Random.Range(-180f, 180f), Random.Range(-180f, 180f), Random.Range(-180f, 180f)),
                     duration,
                     RotateMode.FastBeyond360
                 )
-                    .SetEase(Ease.OutQuad)
+                    .SetEase(DG.Tweening.Ease.OutQuad)
                     .SetAutoKill(true)
                     .OnComplete(DespawnIfLast);
             }

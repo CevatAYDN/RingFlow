@@ -4,12 +4,6 @@ using RingFlow.Gameplay.Diagnostics;
 
 namespace RingFlow.Gameplay.UI
 {
-    /// <summary>
-    /// Read-only mediator for the Daily Reward popup. The claim + economy
-    /// mutation is delegated to <see cref="Commands.DailyRewardClaimCommand"/>
-    /// so all daily-reward triggers (UI button, scheduled, push) share one
-    /// code path.
-    /// </summary>
     public class DailyRewardPopupMediator : Mediator<DailyRewardPopupView>
     {
         [Inject] private PlayerProgressModel _progress;
@@ -22,15 +16,12 @@ namespace RingFlow.Gameplay.UI
         protected override void OnBind()
         {
             _diag?.Checkpoint("DailyRewardPopupMediator.OnBind");
-            if (View == null)
-            {
-                NexusLog.Error("DailyRewardPopupMediator", nameof(OnBind), "", "DailyRewardPopupView not bound.");
-                return;
-            }
             _tracker?.TrackViewBound(View?.GetType(), GetType());
+            if (View == null) return;
+
             View.Localize(_loc);
-            if (View.ClaimButton != null) View.ClaimButton.onClick.AddListener(OnClaimClicked);
-            if (View.CloseButton != null) View.CloseButton.onClick.AddListener(OnCloseClicked);
+            View.ClaimButton?.onClick.AddListener(OnClaimClicked);
+            View.CloseButton?.onClick.AddListener(OnCloseClicked);
 
             Subscribe<DailyRewardGrantedSignal>(_ => OnCloseClicked());
 
@@ -40,23 +31,23 @@ namespace RingFlow.Gameplay.UI
                 var rewardList = _dbConfig?.BalanceConfig.DailyRewards ?? new System.Collections.Generic.List<DailyRewardEntry>();
                 var reward = DailyRewardTable.RewardForDayIndex(rewardList, previewDay);
                 string rewardText = FormatRewardText(reward);
-                View.ShowReward(previewDay, rewardText);
+                int streak = _dailyReward.GetCurrentStreak();
+                View.ShowReward(previewDay, rewardText, streak);
 
                 bool canClaim = _dailyReward.CanClaimNow();
                 if (View.ClaimButton != null)
                     View.ClaimButton.interactable = canClaim;
 
-                _diag?.Log("DailyRewardPopupMediator", $"Bound. Day={previewDay}, Reward={rewardText}, CanClaim={canClaim}.");
+                _diag?.Log("DailyRewardPopupMediator", $"Bound. Day={previewDay}, Streak={streak}, CanClaim={canClaim}.");
             }
         }
-
 
         private string FormatRewardText(CurrencyAmount reward)
         {
             if (reward.Amount <= 0) return reward.CurrencyId;
             string currencyKey = $"currency_{reward.CurrencyId.ToLowerInvariant()}";
-            string currencyName = _loc != null ? _loc.GetString(currencyKey, reward.CurrencyId) : reward.CurrencyId;
-            string format = _loc != null ? _loc.GetString("reward_amount_format", "+{0} {1}") : "+{0} {1}";
+            string currencyName = _loc?.GetString(currencyKey, reward.CurrencyId) ?? reward.CurrencyId;
+            string format = _loc?.GetString("reward_amount_format", "+{0} {1}") ?? "+{0} {1}";
             return string.Format(format, reward.Amount, currencyName);
         }
 
@@ -76,8 +67,8 @@ namespace RingFlow.Gameplay.UI
         protected override void OnUnbind()
         {
             _tracker?.TrackViewUnbound(View?.GetType());
-            if (View.ClaimButton != null) View.ClaimButton.onClick.RemoveAllListeners();
-            if (View.CloseButton != null) View.CloseButton.onClick.RemoveAllListeners();
+            View.ClaimButton?.onClick.RemoveAllListeners();
+            View.CloseButton?.onClick.RemoveAllListeners();
         }
     }
 }

@@ -149,21 +149,21 @@ namespace RingFlow.Gameplay
             float finalDespawnAt = glowExpand + glowShrink + burstDuration;
 
             _glowOrb.DOScale(Vector3.one * 0.5f * intensityScale, glowExpand)
-                .SetEase(Ease.OutBack)
+                .SetEase(DG.Tweening.Ease.OutBack)
                 .SetAutoKill(true);
 
             _glowOrb.DORotate(new Vector3(0f, 180f, 0f), glowExpand, RotateMode.FastBeyond360)
-                .SetEase(Ease.OutQuad)
+                .SetEase(DG.Tweening.Ease.OutQuad)
                 .SetAutoKill(true);
 
             _glowOrb.DOScale(Vector3.zero, glowShrink)
                 .SetDelay(glowExpand)
-                .SetEase(Ease.InBack)
+                .SetEase(DG.Tweening.Ease.InBack)
                 .SetAutoKill(true);
 
             _glowOrb.DORotate(new Vector3(0f, 360f, 0f), glowShrink, RotateMode.FastBeyond360)
                 .SetDelay(glowExpand)
-                .SetEase(Ease.InQuad)
+                .SetEase(DG.Tweening.Ease.InQuad)
                 .SetAutoKill(true);
 
             // Phase 2: burst pieces
@@ -193,12 +193,12 @@ namespace RingFlow.Gameplay
                 float startDelay = glowExpand + glowShrink;
                 t.DOLocalMove(burstDir, burstDuration)
                     .SetDelay(startDelay)
-                    .SetEase(Ease.OutQuad)
+                    .SetEase(DG.Tweening.Ease.OutQuad)
                     .SetAutoKill(true);
 
                 t.DOScale(Vector3.zero, burstDuration)
                     .SetDelay(startDelay)
-                    .SetEase(Ease.InQuad)
+                    .SetEase(DG.Tweening.Ease.InQuad)
                     .SetAutoKill(true);
 
                 t.DOLocalRotate(
@@ -207,7 +207,7 @@ namespace RingFlow.Gameplay
                     RotateMode.FastBeyond360
                 )
                     .SetDelay(startDelay)
-                    .SetEase(Ease.OutQuad)
+                    .SetEase(DG.Tweening.Ease.OutQuad)
                     .SetAutoKill(true);
 
                 activeParticles++;
@@ -254,10 +254,10 @@ namespace RingFlow.Gameplay
                 );
 
                 t.DOLocalMove(burstDir, burstDuration)
-                    .SetEase(Ease.OutQuad)
+                    .SetEase(DG.Tweening.Ease.OutQuad)
                     .SetAutoKill(true);
                 t.DOScale(Vector3.zero, burstDuration)
-                    .SetEase(Ease.InQuad)
+                    .SetEase(DG.Tweening.Ease.InQuad)
                     .SetAutoKill(true);
             }
             _activeCount = _particleCount;

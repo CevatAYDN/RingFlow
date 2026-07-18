@@ -14,9 +14,9 @@ using DG.Tweening;
 namespace RingFlow.Gameplay.UI
 {
     /// <summary>
-    /// Creates the runtime Canvas, manages screen visibility via ShowScreenSignal,
-    /// and bridges UI button signals to FSM transitions.
-    /// Attached to NexusRoot by RingFlowEditorWindow.SetupNexusBootstrapper().
+    /// Premium UIRoot — creates the runtime Canvas, manages screen lifecycle via ShowScreenSignal,
+    /// handles popup stacking with smooth transitions, keyboard navigation, and accessibility.
+    /// Designed for production use across PC, mobile, and console.
     /// </summary>
     public class UIRoot : MonoBehaviour
     {
@@ -29,54 +29,44 @@ namespace RingFlow.Gameplay.UI
             ScreenType.ParentalGate,
         };
 
-        /// <summary>
-        /// Screens that remain semi-visible behind popups (e.g. HUD during gameplay).
-        /// They are NOT deactivated when a popup opens — only the exclusive screen is suppressed.
-        /// </summary>
         private static readonly HashSet<ScreenType> OverlayScreens = new()
         {
             ScreenType.Gameplay,
         };
 
         private Canvas _canvas;
+        private CanvasScaler _scaler;
         private readonly Dictionary<ScreenType, GameObject> _screens = new();
         private Root _root;
         private ISignalBus _signalBus;
         private SettingsModel _settings;
+        private GameFeelConfigSO _feelConfig;
+        private UIThemeConfigSO _themeConfig;
         private bool _subscribed;
         private bool _screensLoaded;
         private ScreenType _activeExclusiveScreen = ScreenType.Splash;
         private readonly Stack<ScreenType> _popupStack = new();
         private readonly List<ISignalSubscription> _subscriptions = new();
+        private UILayer[] _layers;
 
-        [SerializeField] private float _screenFadeDuration = 0.3f;
+        [SerializeField] private float _screenFadeDuration = 0.35f;
+
+        // ── Lifecycle ─────────────────────────────────────────────────────
 
         private void Awake()
         {
-            EnsureCanvasExists();
+            EnsureCanvas();
             _root = GetComponentInParent<Root>();
             if (_root == null)
-            {
-                NexusLog.Error("UIRoot", nameof(Awake), "",
-                    "No Root found in parent hierarchy; SubscribeOnce will be unreachable.");
-            }
-            else
-            {
-                NexusLog.Info("UIRoot", nameof(Awake), "",
-                    $"Root found: {_root.name}");
-            }
+                NexusLog.Warn("UIRoot", nameof(Awake), "", "No Root found in parent hierarchy.");
+            _settings = _root?.Context?.TryResolve<SettingsModel>();
+            _feelConfig = _root?.Context?.TryResolve<GameFeelConfigSO>();
+            _themeConfig = _root?.Context?.TryResolve<UIThemeConfigSO>();
         }
 
         private void OnEnable()
         {
-            NexusLog.Info("UIRoot", nameof(OnEnable), "",
-                $"Enabled. canvas={_canvas != null}, screens={_screens.Count}");
-
-            if (_canvas == null)
-            {
-                EnsureCanvasExists();
-            }
-
+            if (_canvas == null) EnsureCanvas();
             BindExistingScreens();
             if (_screens.Count == 0)
             {
@@ -93,10 +83,7 @@ namespace RingFlow.Gameplay.UI
 
         private void Start()
         {
-            NexusLog.Info("UIRoot", nameof(Start), "",
-                $"Starting. subscribed={_subscribed}, screens={_screens.Count}");
             TrySubscribeNow();
-
             if (_screens.Count == 0 && !_screensLoaded)
             {
                 _lifecycleCts?.Cancel();
@@ -108,61 +95,103 @@ namespace RingFlow.Gameplay.UI
 
         private void TrySubscribeNow()
         {
-            if (_root == null || _root.Context == null)
-            {
-                NexusLog.Warn("UIRoot", nameof(TrySubscribeNow), "",
-                    "Root or Context not ready yet; will retry next frame.");
-                return;
-            }
-
+            if (_root == null || _root.Context == null) return;
             if (!_screensLoaded && _screens.Count == 0)
             {
                 LoadPrefabScreensFromResources();
                 _screensLoaded = _screens.Count > 0;
             }
-
             SubscribeOnce();
         }
 
         private void Update()
         {
-            if (!_subscribed)
-            {
-                TrySubscribeNow();
-            }
+            if (!_subscribed) TrySubscribeNow();
 
-            // Safety net: Escape/Back key closes the topmost popup.
-            // Prevents softlocks when a popup's buttons fail to bind.
-            if (_popupStack.Count > 0 && UnityEngine.InputSystem.Keyboard.current != null &&
-                UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame)
+            // ── Keyboard Navigation ──
+            HandleKeyboardInput();
+        }
+
+        private void HandleKeyboardInput()
+        {
+            if (!Application.isPlaying) return;
+            var keyboard = UnityEngine.InputSystem.Keyboard.current;
+            if (keyboard == null) return;
+
+            // Escape/Back → close topmost popup, or pause if in gameplay
+            if (keyboard.escapeKey.wasPressedThisFrame)
             {
-                if (PopupScreens.Contains(_activeExclusiveScreen))
+                if (_popupStack.Count > 0)
                 {
-                    NexusLog.Warn("UIRoot", nameof(Update), "",
-                        $"Escape key pressed — forcibly closing popup {_activeExclusiveScreen}.");
+                    NexusLog.Info("UIRoot", "KeyEscape", "",
+                        $"Escape pressed — closing popup {_activeExclusiveScreen}.");
                     _signalBus?.Fire(new HideScreenSignal(_activeExclusiveScreen));
                 }
+                else if (_activeExclusiveScreen == ScreenType.Gameplay)
+                {
+                    _signalBus?.Fire(new PauseRequestedSignal());
+                }
+            }
+
+            // Tab → cycle focus through buttons (accessibility)
+            if (keyboard.tabKey.wasPressedThisFrame)
+            {
+                CycleFocus();
             }
         }
 
+        private void CycleFocus()
+        {
+            var activeScreen = GetActiveScreen();
+            if (activeScreen == null) return;
+            var buttons = activeScreen.GetComponentsInChildren<Selectable>(true);
+            if (buttons.Length == 0) return;
+
+            var current = UnityEngine.EventSystems.EventSystem.current?.currentSelectedGameObject;
+            int currentIndex = -1;
+            if (current != null)
+            {
+                var currentBtn = current.GetComponent<Selectable>();
+                currentIndex = System.Array.IndexOf(buttons, currentBtn);
+            }
+
+            int nextIndex = (currentIndex + 1) % buttons.Length;
+            var next = buttons[nextIndex];
+
+            if (UnityEngine.EventSystems.EventSystem.current != null)
+                UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(next.gameObject);
+
+            next.Select();
+            next.OnSelect(null);
+        }
+
+        private GameObject GetActiveScreen()
+        {
+            _screens.TryGetValue(_activeExclusiveScreen, out var go);
+            return go;
+        }
+
+        // ── Subscription ──────────────────────────────────────────────────
+
         private void SubscribeOnce()
         {
-            if (_subscribed || _root == null) return;
-            if (_root.Context == null) return;
+            if (_subscribed || _root == null || _root.Context == null) return;
             _subscribed = true;
-
-            NexusLog.Info("UIRoot", nameof(SubscribeOnce), "",
-                $"Subscribing to UI signals. screens={_screens.Count}");
 
             var sb = _root.Context.Resolve<ISignalBus>();
             _signalBus = sb;
             _settings = _root.Context.TryResolve<SettingsModel>();
+            _feelConfig = _root.Context.TryResolve<GameFeelConfigSO>();
+            _themeConfig = _root.Context.TryResolve<UIThemeConfigSO>();
 
             if (_settings?.BigButtons != null)
             {
-                _settings.BigButtons.OnChanged((old, val) => OnBigButtonsChanged());
+                _settings.BigButtons.OnChanged((_, val) => OnBigButtonsChanged());
                 OnBigButtonsChanged();
             }
+
+            if (_screenFadeDuration <= 0f && _feelConfig != null)
+                _screenFadeDuration = _feelConfig.UiScreenFadeDuration;
 
             _subscriptions.Add(sb.Subscribe<ShowScreenSignal>(OnShowScreen));
             _subscriptions.Add(sb.Subscribe<HideScreenSignal>(OnHideScreen));
@@ -171,7 +200,7 @@ namespace RingFlow.Gameplay.UI
             if (fsm == null)
             {
                 NexusLog.Error("UIRoot", nameof(SubscribeOnce), "",
-                    "IGameStateMachine unbound; all UI button signals will be ignored. The UI will appear frozen.");
+                    "IGameStateMachine unbound.");
             }
             else
             {
@@ -179,19 +208,13 @@ namespace RingFlow.Gameplay.UI
                 _subscriptions.Add(sb.Subscribe<LevelSelectedSignal>(s => fsm.ChangeStateAsync<PlayingState>(new PlayingStateArgs(s.LevelIndex))));
                 _subscriptions.Add(sb.Subscribe<PauseRequestedSignal>(_ => fsm.ChangeStateAsync<PausedState>()));
                 _subscriptions.Add(sb.Subscribe<ResumeRequestedSignal>(_ => fsm.ChangeStateAsync<PlayingState>(PlayingStateArgs.Resume)));
-                // NOTE: LevelLostSignal → LoseState transition is handled exclusively by
-                // LevelLostCommand.TransitionToLoseStateAsync() (MVCS pattern).
-                // UIRoot must NOT drive this FSM transition — doing so causes a double
-                // transition race: LevelLostCommand fires async void AND UIRoot fires
-                // ChangeStateAsync on the same signal, resulting in two simultaneous
-                // state changes. Removed per MVCS: Commands own FSM, UIRoot owns screen routing.
 
                 _subscriptions.Add(sb.Subscribe<NextLevelRequestedSignal>(_ =>
                 {
                     var prog = _root.Context.TryResolve<IProgressionService>();
                     if (prog != null)
                     {
-                        var nextLevel = prog.CurrentLevel.Value; // Already advanced by CompleteCurrentLevel() on win
+                        var nextLevel = prog.CurrentLevel.Value;
                         var completedLevel = nextLevel - 1;
                         var ads = _root.Context.TryResolve<IAdService>();
                         var progress = _root.Context.TryResolve<PlayerProgressModel>();
@@ -213,7 +236,6 @@ namespace RingFlow.Gameplay.UI
                 _subscriptions.Add(sb.Subscribe<OpenSettingsSignal>(_ => OpenPopup(ScreenType.Settings)));
                 _subscriptions.Add(sb.Subscribe<CloseDailyRewardSignal>(_ => ClosePopup(ScreenType.DailyReward)));
                 _subscriptions.Add(sb.Subscribe<CloseSettingsSignal>(_ => ClosePopup(ScreenType.Settings)));
-
                 _subscriptions.Add(sb.Subscribe<OpenChestPopupSignal>(_ => OpenPopup(ScreenType.ChestPopup)));
                 _subscriptions.Add(sb.Subscribe<CloseChestPopupSignal>(_ => ClosePopup(ScreenType.ChestPopup)));
 
@@ -227,18 +249,16 @@ namespace RingFlow.Gameplay.UI
 
         private void OnDestroy()
         {
-            foreach (var sub in _subscriptions)
-            {
-                sub?.Dispose();
-            }
+            foreach (var sub in _subscriptions) sub?.Dispose();
             _subscriptions.Clear();
-
             _lifecycleCts?.Cancel();
             _lifecycleCts?.Dispose();
             _lifecycleCts = null;
         }
 
-        private void EnsureCanvasExists()
+        // ── Canvas Setup ──────────────────────────────────────────────────
+
+        private void EnsureCanvas()
         {
             if (_canvas != null) return;
 
@@ -250,33 +270,28 @@ namespace RingFlow.Gameplay.UI
             }
 
             _canvas = canvasGo.GetComponent<Canvas>();
-            if (_canvas == null)
-            {
-                _canvas = canvasGo.AddComponent<Canvas>();
-            }
+            if (_canvas == null) _canvas = canvasGo.AddComponent<Canvas>();
             _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             _canvas.sortingOrder = 100;
+            _canvas.additionalShaderChannels = AdditionalCanvasShaderChannels.TexCoord1
+                | AdditionalCanvasShaderChannels.Tangent;
 
-            var scaler = canvasGo.GetComponent<CanvasScaler>() ?? canvasGo.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1080, 1920);
-            scaler.matchWidthOrHeight = 0.5f;
+            _scaler = canvasGo.GetComponent<CanvasScaler>();
+            if (_scaler == null) _scaler = canvasGo.AddComponent<CanvasScaler>();
+            _scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            _scaler.referenceResolution = new Vector2(1080, 1920);
+            _scaler.matchWidthOrHeight = 0.5f;
+            _scaler.referencePixelsPerUnit = 100;
 
             if (canvasGo.GetComponent<GraphicRaycaster>() == null)
-            {
                 canvasGo.AddComponent<GraphicRaycaster>();
-            }
 
-            ApplyBigButtons(scaler);
+            // Canvas group for global fade
+            if (canvasGo.GetComponent<CanvasGroup>() == null)
+                canvasGo.AddComponent<CanvasGroup>();
         }
 
-        private static void ApplyBigButtons(CanvasScaler scaler)
-        {
-            // Default reference resolution; will be overridden when context is available
-            scaler.referenceResolution = new Vector2(1080, 1920);
-        }
-
-        private bool IsBigButtonsEnabled() => _settings?.BigButtons?.Value ?? false;
+        // ── Screen Loading ────────────────────────────────────────────────
 
         private static readonly ScreenType[] s_allScreens =
         {
@@ -291,187 +306,129 @@ namespace RingFlow.Gameplay.UI
             ScreenType.ChestPopup,
             ScreenType.GameOver,
             ScreenType.ParentalGate,
+            ScreenType.WorldMap,
+            ScreenType.Onboarding,
         };
 
-    private string GetScreenPrefabKey(ScreenType screen)
-    {
-        var registry = Resources.Load<ScreenRegistrySO>(GameplayAssetKeys.ScreenRegistry);
-        if (registry != null && registry.TryGetMapping(screen, out var mapping))
+        private string GetScreenPrefabKey(ScreenType screen)
         {
-            if (!string.IsNullOrEmpty(mapping.PrefabPath))
+            var registry = Resources.Load<ScreenRegistrySO>(GameplayAssetKeys.ScreenRegistry);
+            if (registry != null && registry.TryGetMapping(screen, out var mapping))
             {
-                return mapping.PrefabPath;
+                if (!string.IsNullOrEmpty(mapping.PrefabPath)) return mapping.PrefabPath;
             }
+            return $"{GameplayAssetKeys.UiScreenPrefix}{screen}";
         }
-        return $"{GameplayAssetKeys.UiScreenPrefix}{screen}";
-    }
 
-    private List<ScreenType> GetScreensToLoad()
-    {
-        var list = new List<ScreenType>();
-        var registry = Resources.Load<ScreenRegistrySO>(GameplayAssetKeys.ScreenRegistry);
-        if (registry != null && registry.Mappings.Count > 0)
+        private List<ScreenType> GetScreensToLoad()
         {
-            for (int i = 0; i < registry.Mappings.Count; i++)
+            var list = new List<ScreenType>();
+            var registry = Resources.Load<ScreenRegistrySO>(GameplayAssetKeys.ScreenRegistry);
+            if (registry != null && registry.Mappings.Count > 0)
             {
-                list.Add(registry.Mappings[i].Screen);
+                for (int i = 0; i < registry.Mappings.Count; i++)
+                    list.Add(registry.Mappings[i].Screen);
             }
-        }
-        else
-        {
-            list.AddRange(s_allScreens);
-        }
-        return list;
-    }
-
-    public void LoadPrefabScreensFromResources()
-    {
-        EnsureCanvasExists();
-        if (_canvas == null)
-        {
-            NexusLog.Error("UIRoot", nameof(LoadPrefabScreensFromResources), "", "Canvas could not be created.");
-            return;
-        }
-
-        var missingScreens = new List<ScreenType>();
-        var screensToLoad = GetScreensToLoad();
-
-        foreach (var screen in screensToLoad)
-        {
-            if (_screens.TryGetValue(screen, out var existing) && existing != null)
+            else
             {
-                DestroyScreenInstance(existing);
+                list.AddRange(s_allScreens);
+            }
+            return list;
+        }
+
+        public void LoadPrefabScreensFromResources()
+        {
+            EnsureCanvas();
+            if (_canvas == null) return;
+
+            var missingScreens = new List<ScreenType>();
+            var screensToLoad = GetScreensToLoad();
+
+            foreach (var screen in screensToLoad)
+            {
+                if (_screens.TryGetValue(screen, out var existing) && existing != null)
+                    DestroyScreenInstance(existing);
+
+                var loaded = LoadScreenPrefab(screen);
+                if (loaded == null)
+                {
+                    missingScreens.Add(screen);
+                    continue;
+                }
+
+                var instance = Instantiate(loaded, _canvas.transform);
+                instance.name = screen.ToString();
+                instance.SetActive(false);
+                _screens[screen] = instance;
             }
 
-            var loaded = LoadScreenPrefab(screen);
-            if (loaded == null)
-            {
-                missingScreens.Add(screen);
+            ApplyGameplayOverlayStyle();
+
+            if (missingScreens.Count > 0)
                 NexusLog.Warn("UIRoot", nameof(LoadPrefabScreensFromResources), "",
-                    $"Missing UI prefab for {screen}. Expected: {GetScreenPrefabKey(screen)}");
-                continue;
-            }
-
-            var instance = UnityEngine.Object.Instantiate(loaded, _canvas.transform);
-            instance.name = screen.ToString();
-            instance.SetActive(false);
-            _screens[screen] = instance;
+                    $"Missing {missingScreens.Count} prefab(s): {string.Join(", ", missingScreens)}");
         }
 
-        ApplyGameplayOverlayStyle();
-
-        if (_screens.Count == 0)
+        public async Task LoadPrefabScreensAsync(CancellationToken ct = default)
         {
-            NexusLog.Error("UIRoot", nameof(LoadPrefabScreensFromResources), "",
-                $"No UI screens were loaded. Missing prefabs: {string.Join(", ", missingScreens)}");
-        }
-        else if (missingScreens.Count > 0)
-        {
-            NexusLog.Warn("UIRoot", nameof(LoadPrefabScreensFromResources), "",
-                $"Loaded {_screens.Count} screen(s). Missing prefabs: {string.Join(", ", missingScreens)}");
-        }
-    }
+            EnsureCanvas();
+            if (_canvas == null) return;
 
-    /// <summary>
-    /// Async variant of <see cref="LoadPrefabScreensFromResources"/>. Cancels on
-    /// scene teardown so the awaited Task doesn't replay work against a destroyed
-    /// canvas. Lazy <see cref="TryShowScreen(string)"/> requests still use the sync
-    /// fallback to honor same-frame expectations.
-    /// </summary>
-    public async Task LoadPrefabScreensAsync(CancellationToken ct = default)
-    {
-        EnsureCanvasExists();
-        if (_canvas == null)
-        {
-            NexusLog.Error("UIRoot", nameof(LoadPrefabScreensAsync), "", "Canvas could not be created.");
-            return;
-        }
+            var assets = ResolveAssetService();
+            var missingScreens = new List<ScreenType>();
+            var screensToLoad = GetScreensToLoad();
 
-        var assets = ResolveAssetService();
-        var missingScreens = new List<ScreenType>();
-        var screensToLoad = GetScreensToLoad();
-
-        foreach (var screen in screensToLoad)
-        {
-            if (ct.IsCancellationRequested) return;
-
-            if (_screens.TryGetValue(screen, out var existing) && existing != null)
+            foreach (var screen in screensToLoad)
             {
-                DestroyScreenInstance(existing);
-            }
+                if (ct.IsCancellationRequested) return;
+                if (_screens.TryGetValue(screen, out var existing) && existing != null)
+                    DestroyScreenInstance(existing);
 
-            GameObject loaded = null;
-            string prefabKey = GetScreenPrefabKey(screen);
-            if (assets != null)
-            {
-                try
+                GameObject loaded = null;
+                string prefabKey = GetScreenPrefabKey(screen);
+                if (assets != null)
                 {
-                    loaded = await assets.LoadAssetAsync<GameObject>(prefabKey).ConfigureAwait(true);
+                    try
+                    {
+                        loaded = await assets.LoadAssetAsync<GameObject>(prefabKey).ConfigureAwait(true);
+                    }
+                    catch (Exception ex)
+                    {
+                        NexusLog.Warn("UIRoot", nameof(LoadPrefabScreensAsync), screen.ToString(), $"AssetService: {ex.Message}");
+                    }
                 }
-                catch (System.Exception ex)
+                if (loaded == null) loaded = LoadScreenPrefab(screen);
+                if (loaded == null)
                 {
-                    NexusLog.Warn("UIRoot", nameof(LoadPrefabScreensAsync), screen.ToString(),
-                        $"AssetService load threw: {ex.Message}. Falling back to sync path.");
+                    missingScreens.Add(screen);
+                    continue;
                 }
-            }
-            if (loaded == null)
-            {
-                loaded = LoadScreenPrefab(screen);
-            }
-            if (loaded == null)
-            {
-                missingScreens.Add(screen);
-                NexusLog.Warn("UIRoot", nameof(LoadPrefabScreensAsync), "",
-                    $"Missing UI prefab for {screen}. Expected: {prefabKey}");
-                continue;
+
+                var instance = Instantiate(loaded, _canvas.transform);
+                instance.name = screen.ToString();
+                instance.SetActive(false);
+                _screens[screen] = instance;
+                await Task.Yield();
             }
 
-            var instance = UnityEngine.Object.Instantiate(loaded, _canvas.transform);
-            instance.name = screen.ToString();
-            instance.SetActive(false);
-            _screens[screen] = instance;
-
-            await Task.Yield();
+            ApplyGameplayOverlayStyle();
         }
 
-        ApplyGameplayOverlayStyle();
-
-        if (_screens.Count == 0)
+        private IAssetService ResolveAssetService()
         {
-            NexusLog.Error("UIRoot", nameof(LoadPrefabScreensAsync), "",
-                $"No UI screens were loaded. Missing prefabs: {string.Join(", ", missingScreens)}");
+            return _root?.Context?.TryResolve<IAssetService>();
         }
-        else if (missingScreens.Count > 0)
-        {
-            NexusLog.Warn("UIRoot", nameof(LoadPrefabScreensAsync), "",
-                $"Loaded {_screens.Count} screen(s). Missing prefabs: {string.Join(", ", missingScreens)}");
-        }
-    }
-
-    private IAssetService ResolveAssetService()
-    {
-        if (_root != null && _root.Context != null)
-        {
-            return _root.Context.TryResolve<IAssetService>();
-        }
-        return null;
-    }
 
         public void BindExistingScreens()
         {
-            EnsureCanvasExists();
+            EnsureCanvas();
             if (_canvas == null) return;
-
             _screens.Clear();
-
             foreach (Transform child in _canvas.transform)
             {
-                if (child == null) continue;
-                if (!System.Enum.TryParse<ScreenType>(child.name, out var screen)) continue;
-
+                if (child == null || !Enum.TryParse<ScreenType>(child.name, out var screen)) continue;
                 _screens[screen] = child.gameObject;
             }
-
             ApplyGameplayOverlayStyle();
         }
 
@@ -482,28 +439,17 @@ namespace RingFlow.Gameplay.UI
 
         public bool TryShowScreen(ScreenType screen)
         {
-            if (_screens.Count == 0)
-            {
-                BindExistingScreens();
-            }
-
+            if (_screens.Count == 0) BindExistingScreens();
             if (!_screens.ContainsKey(screen))
             {
                 var prefab = LoadScreenPrefab(screen);
-                if (prefab == null)
-                {
-                    NexusLog.Warn("UIRoot", nameof(TryShowScreen), "",
-                        $"Screen {screen} is unavailable because the prefab is missing.");
-                    return false;
-                }
-
-                EnsureCanvasExists();
-                var instance = UnityEngine.Object.Instantiate(prefab, _canvas.transform);
+                if (prefab == null) return false;
+                EnsureCanvas();
+                var instance = Instantiate(prefab, _canvas.transform);
                 instance.name = screen.ToString();
                 instance.SetActive(false);
                 _screens[screen] = instance;
             }
-
             OnShowScreen(new ShowScreenSignal(screen));
             return true;
         }
@@ -514,7 +460,7 @@ namespace RingFlow.Gameplay.UI
         private GameObject LoadScreenPrefab(ScreenType screen)
         {
             string prefabKey = GetScreenPrefabKey(screen);
-            if (_root != null && _root.Context != null)
+            if (_root?.Context != null)
             {
                 var asset = _root.Context.TryResolve<Services.IAssetService>();
                 if (asset != null)
@@ -529,8 +475,8 @@ namespace RingFlow.Gameplay.UI
         private void DestroyScreenInstance(GameObject go)
         {
             if (go == null) return;
-            if (Application.isPlaying) UnityEngine.Object.Destroy(go);
-            else UnityEngine.Object.DestroyImmediate(go);
+            if (Application.isPlaying) Destroy(go);
+            else DestroyImmediate(go);
         }
 
         private void ApplyGameplayOverlayStyle()
@@ -546,15 +492,12 @@ namespace RingFlow.Gameplay.UI
             }
         }
 
+        // ── Screen Transitions ────────────────────────────────────────────
+
         private void OnShowScreen(ShowScreenSignal signal)
         {
-            NexusLog.Info("UIRoot", nameof(OnShowScreen), "",
-                $"Received ShowScreenSignal for {signal.Screen}. screens={_screens.Count}");
-
             if (signal.Screen == ScreenType.Splash && _screens.Count == 0)
-            {
                 BindExistingScreens();
-            }
 
             if (PopupScreens.Contains(signal.Screen))
             {
@@ -562,18 +505,15 @@ namespace RingFlow.Gameplay.UI
                 return;
             }
 
-            EnsureCanvasExists();
-            if (_screens.Count == 0)
-            {
-                BindExistingScreens();
-            }
+            EnsureCanvas();
+            if (_screens.Count == 0) BindExistingScreens();
 
             if (!_screens.ContainsKey(signal.Screen))
             {
                 var prefab = LoadScreenPrefab(signal.Screen);
                 if (prefab != null)
                 {
-                    var instance = UnityEngine.Object.Instantiate(prefab, _canvas.transform);
+                    var instance = Instantiate(prefab, _canvas.transform);
                     instance.name = signal.Screen.ToString();
                     instance.SetActive(false);
                     _screens[signal.Screen] = instance;
@@ -583,17 +523,23 @@ namespace RingFlow.Gameplay.UI
             if (!_screens.ContainsKey(signal.Screen))
             {
                 NexusLog.Error("UIRoot", nameof(OnShowScreen), "",
-                    $"Cannot show {signal.Screen}: no scene object and no prefab at {GetPrefabAssetPath(signal.Screen)}");
+                    $"Cannot show {signal.Screen}: no prefab at {GetPrefabAssetPath(signal.Screen)}");
                 return;
             }
 
-            NexusLog.Info("UIRoot", nameof(OnShowScreen), "",
-                $"Showing {signal.Screen} and hiding {Math.Max(0, _screens.Count - 1)} other screen(s)." );
+            bool reduceMotion = _settings?.ReduceMotion?.Value ?? false;
 
             foreach (var kvp in _screens)
             {
                 bool shouldShow = kvp.Key == signal.Screen;
-                TransitionScreen(kvp.Key, kvp.Value, shouldShow);
+                if (OverlayScreens.Contains(kvp.Key))
+                {
+                    // Overlay screens always stay active
+                    if (kvp.Value != null && !kvp.Value.activeSelf)
+                        kvp.Value.SetActive(true);
+                    continue;
+                }
+                TransitionScreen(kvp.Key, kvp.Value, shouldShow, reduceMotion);
             }
             _activeExclusiveScreen = signal.Screen;
             _popupStack.Clear();
@@ -604,76 +550,110 @@ namespace RingFlow.Gameplay.UI
             ClosePopup(signal.Screen);
         }
 
+        // ── Popup Management ──────────────────────────────────────────────
+
         private void OpenPopup(ScreenType popup)
         {
             if (!_screens.TryGetValue(popup, out var go) || go == null)
             {
                 var prefab = LoadScreenPrefab(popup);
-                if (prefab == null)
-                {
-                    NexusLog.Error("UIRoot", nameof(OpenPopup), popup.ToString(),
-                        $"Cannot open popup {popup}: no scene object and no prefab at {GetPrefabAssetPath(popup)}");
-                    return;
-                }
-
-                EnsureCanvasExists();
-                go = UnityEngine.Object.Instantiate(prefab, _canvas.transform);
+                if (prefab == null) return;
+                EnsureCanvas();
+                go = Instantiate(prefab, _canvas.transform);
                 go.name = popup.ToString();
                 go.SetActive(false);
                 _screens[popup] = go;
             }
 
-            // Push current exclusive screen onto the stack before showing popup
+            // Push current exclusive screen onto stack before showing popup
             if (_popupStack.Count == 0 || _popupStack.Peek() != popup)
-            {
                 _popupStack.Push(_activeExclusiveScreen);
-            }
+
+            bool reduceMotion = _settings?.ReduceMotion?.Value ?? false;
 
             foreach (var kvp in _screens)
             {
                 if (OverlayScreens.Contains(kvp.Key)) continue;
-                TransitionScreen(kvp.Key, kvp.Value, kvp.Key == popup);
+                TransitionScreen(kvp.Key, kvp.Value, kvp.Key == popup, reduceMotion);
             }
             _activeExclusiveScreen = popup;
+
+            // Animate popup entry
+            if (!reduceMotion && go != null)
+            {
+                DOTween.Kill(go.transform);
+                go.transform.localScale = Vector3.one * 0.8f;
+                go.transform.DOScale(Vector3.one, 0.3f).SetEase(DG.Tweening.Ease.OutBack).SetAutoKill(true);
+            }
         }
 
         private void ClosePopup(ScreenType popup)
         {
             if (!_screens.TryGetValue(popup, out var go)) return;
-            FadeOutAndDeactivate(go);
+            bool reduceMotion = _settings?.ReduceMotion?.Value ?? false;
+
+            if (!reduceMotion)
+            {
+                DOTween.Kill(go.transform);
+                go.transform.DOScale(0.85f, 0.2f).SetEase(DG.Tweening.Ease.InBack).SetAutoKill(true)
+                    .OnComplete(() => go.SetActive(false));
+            }
+            else
+            {
+                go.SetActive(false);
+            }
 
             if (_popupStack.Count > 0)
             {
                 var restore = _popupStack.Pop();
                 _activeExclusiveScreen = restore;
                 if (_screens.TryGetValue(restore, out var restoreGo))
-                    FadeInAndActivate(restoreGo);
+                {
+                    bool rm = reduceMotion;
+                    TransitionScreen(restore, restoreGo, true, rm);
+                }
             }
         }
 
-        private void TransitionScreen(ScreenType type, GameObject go, bool show)
+        private void CloseAllPopups()
+        {
+            foreach (var popup in PopupScreens)
+            {
+                if (_screens.TryGetValue(popup, out var go))
+                    go.SetActive(false);
+            }
+            _popupStack.Clear();
+        }
+
+        // ── Individual Screen Transition ──────────────────────────────────
+
+        private void TransitionScreen(ScreenType type, GameObject go, bool show, bool reduceMotion)
         {
             if (go == null) return;
+
             if (show)
             {
-                FadeInAndActivate(go);
-                if (PopupScreens.Contains(type))
+                if (reduceMotion)
                 {
-                    bool reduceMotion = _settings?.ReduceMotion?.Value ?? false;
-                    if (!reduceMotion)
-                    {
-                        DOTween.Kill(go.transform);
-                        go.transform.localScale = new Vector3(0.8f, 0.8f, 0.8f);
-                        go.transform.DOScale(Vector3.one, 0.25f)
-                            .SetEase(Ease.OutBack)
-                            .SetUpdate(true)
-                            .SetAutoKill(true);
-                    }
+                    go.SetActive(true);
+                    var cg = EnsureCanvasGroup(go);
+                    cg.alpha = 1f;
+                }
+                else
+                {
+                    GameUIResources.AnimateScreenEntry(go, _screenFadeDuration);
                 }
             }
             else
             {
-                FadeOutAndDeactivate(go);
+                if (reduceMotion)
+                {
+                    go.SetActive(false);
+                }
+                else
+                {
+                    GameUIResources.AnimateScreenExit(go, _screenFadeDuration * 0.7f);
+                }
             }
         }
 
@@ -683,52 +663,8 @@ namespace RingFlow.Gameplay.UI
             if (go == null) return;
             var scaler = go.GetComponent<CanvasScaler>();
             if (scaler == null) return;
-            scaler.referenceResolution = IsBigButtonsEnabled()
-                ? new Vector2(810, 1440)
-                : new Vector2(1080, 1920);
-        }
-
-        private void FadeInAndActivate(GameObject go)
-        {
-            var cg = EnsureCanvasGroup(go);
-            DOTween.Kill(cg);
-
-            go.transform.SetAsLastSibling();
-
-            bool reduceMotion = _settings?.ReduceMotion?.Value ?? false;
-            if (reduceMotion)
-            {
-                go.SetActive(true);
-                cg.alpha = 1f;
-                return;
-            }
-
-            go.SetActive(true);
-            cg.alpha = 0f;
-            DOTween.To(() => cg.alpha, v => cg.alpha = v, 1f, _screenFadeDuration)
-                .SetEase(Ease.OutCubic)
-                .SetTarget(cg)
-                .SetAutoKill(true);
-        }
-
-        private void FadeOutAndDeactivate(GameObject go)
-        {
-            var cg = EnsureCanvasGroup(go);
-            DOTween.Kill(cg);
-
-            bool reduceMotion = _settings?.ReduceMotion?.Value ?? false;
-            if (reduceMotion)
-            {
-                go.SetActive(false);
-                cg.alpha = 0f;
-                return;
-            }
-
-            DOTween.To(() => cg.alpha, v => cg.alpha = v, 0f, _screenFadeDuration)
-                .SetEase(Ease.InCubic)
-                .SetTarget(cg)
-                .SetAutoKill(true)
-                .OnComplete(() => go.SetActive(false));
+            bool big = _settings?.BigButtons?.Value ?? false;
+            scaler.referenceResolution = big ? new Vector2(810, 1440) : new Vector2(1080, 1920);
         }
 
         private static CanvasGroup EnsureCanvasGroup(GameObject go)
@@ -738,58 +674,35 @@ namespace RingFlow.Gameplay.UI
             return cg;
         }
 
-        private void CloseAllPopups()
-        {
-            foreach (var popup in PopupScreens)
-            {
-                if (_screens.TryGetValue(popup, out var go))
-                {
-                    go.SetActive(false);
-                }
-            }
-            _popupStack.Clear();
-        }
+        // ── Editor Support ────────────────────────────────────────────────
 
         [System.Diagnostics.Conditional("UNITY_EDITOR")]
-        public void RebindFromSceneForEditor()
-        {
-            BindExistingScreens();
-        }
+        public void RebindFromSceneForEditor() => BindExistingScreens();
 
 #if UNITY_EDITOR
-        public Canvas Canvas 
-        { 
-            get 
+        public Canvas Canvas
+        {
+            get
             {
-                if (_canvas == null) EnsureCanvasExists();
-                return _canvas; 
+                if (_canvas == null) EnsureCanvas();
+                return _canvas;
             }
-            set => _canvas = value; 
+            set => _canvas = value;
         }
+        public CanvasScaler Scaler => _scaler;
         public Dictionary<ScreenType, GameObject> Screens => _screens;
-        public ScreenType ActiveExclusiveScreen 
-        { 
-            get => _activeExclusiveScreen; 
-            set => _activeExclusiveScreen = value; 
-        }
+        public ScreenType ActiveExclusiveScreen { get => _activeExclusiveScreen; set => _activeExclusiveScreen = value; }
         public Stack<ScreenType> PopupStack => _popupStack;
         public List<ISignalSubscription> Subscriptions => _subscriptions;
-        public bool Subscribed 
-        { 
-            get => _subscribed; 
-            set => _subscribed = value; 
-        }
+        public bool Subscribed { get => _subscribed; set => _subscribed = value; }
 
         public void ResetForEditor()
         {
             var toDestroy = new List<GameObject>();
             foreach (var go in _screens.Values)
-            {
                 if (go != null) toDestroy.Add(go);
-            }
             _screens.Clear();
             foreach (var go in toDestroy) DestroyImmediate(go);
-
             if (_canvas != null) DestroyImmediate(_canvas.gameObject);
             _canvas = null;
             _subscribed = false;
