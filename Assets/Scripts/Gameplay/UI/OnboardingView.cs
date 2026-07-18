@@ -293,7 +293,9 @@ namespace RingFlow.Gameplay.UI
             if (rootCandidate != null)
             {
                 _root = rootCandidate.gameObject;
-                _cardFader = _root.GetComponent<CanvasGroup>() ?? _root.AddComponent<CanvasGroup>();
+                _cardFader = _root.GetComponent<CanvasGroup>();
+                if (_cardFader == null)
+                    _cardFader = _root.AddComponent<CanvasGroup>();
             }
             _dots = new GameObject[Steps.Length];
             for (int i = 0; i < Steps.Length; i++)

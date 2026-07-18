@@ -479,10 +479,18 @@ namespace RingFlow.Gameplay.UI
 
         // ── Animation helpers ────────────────────────────────────────────
 
+        private static CanvasGroup GetOrAddCanvasGroup(GameObject go)
+        {
+            var cg = go.GetComponent<CanvasGroup>();
+            if (cg == null)
+                cg = go.AddComponent<CanvasGroup>();
+            return cg;
+        }
+
         /// <summary>Animate popup entry with scale bounce + fade.</summary>
         public static void AnimatePopupEntry(GameObject go, float duration = 0.3f)
         {
-            var cg = go.GetComponent<CanvasGroup>() ?? go.AddComponent<CanvasGroup>();
+            var cg = GetOrAddCanvasGroup(go);
             DOTween.Kill(cg);
             DOTween.Kill(go.transform);
             cg.alpha = 0f;
@@ -495,7 +503,7 @@ namespace RingFlow.Gameplay.UI
         /// <summary>Animate popup exit with scale down + fade.</summary>
         public static void AnimatePopupExit(GameObject go, float duration = 0.2f, System.Action onComplete = null)
         {
-            var cg = go.GetComponent<CanvasGroup>() ?? go.AddComponent<CanvasGroup>();
+            var cg = GetOrAddCanvasGroup(go);
             DOTween.Kill(cg);
             DOTween.Kill(go.transform);
             DOTween.To(() => cg.alpha, v => cg.alpha = v, 0f, duration).SetEase(DG.Tweening.Ease.InCubic);
@@ -506,7 +514,7 @@ namespace RingFlow.Gameplay.UI
         /// <summary>Animate screen entry with fade in.</summary>
         public static void AnimateScreenEntry(GameObject go, float duration = 0.35f)
         {
-            var cg = go.GetComponent<CanvasGroup>() ?? go.AddComponent<CanvasGroup>();
+            var cg = GetOrAddCanvasGroup(go);
             DOTween.Kill(cg);
             cg.alpha = 0f;
             go.SetActive(true);
@@ -516,7 +524,7 @@ namespace RingFlow.Gameplay.UI
         /// <summary>Animate screen exit with fade out.</summary>
         public static void AnimateScreenExit(GameObject go, float duration = 0.25f, System.Action onComplete = null)
         {
-            var cg = go.GetComponent<CanvasGroup>() ?? go.AddComponent<CanvasGroup>();
+            var cg = GetOrAddCanvasGroup(go);
             DOTween.Kill(cg);
             DOTween.To(() => cg.alpha, v => cg.alpha = v, 0f, duration).SetEase(DG.Tweening.Ease.InCubic)
                 .OnComplete(() => { go.SetActive(false); onComplete?.Invoke(); });
@@ -536,7 +544,7 @@ namespace RingFlow.Gameplay.UI
             for (int i = 0; i < elements.Length; i++)
             {
                 if (elements[i] == null) continue;
-                var cg = elements[i].GetComponent<CanvasGroup>() ?? elements[i].AddComponent<CanvasGroup>();
+                var cg = GetOrAddCanvasGroup(elements[i]);
                 DOTween.Kill(cg);
                 DOTween.Kill(elements[i].transform);
                 cg.alpha = 0f;
