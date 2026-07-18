@@ -89,9 +89,9 @@ namespace RingFlow.Gameplay.UI
             {
                 DOTween.Kill(_rect);
                 DOTween.To(() => _rect.anchorMin, v => _rect.anchorMin = v, anchorMin, TransitionDuration)
-                    .SetEase(DG.Tweening.Ease.OutCubic).SetAutoKill(true);
+                    .SetEase(DG.Tweening.Ease.OutCubic).SetAutoKill(true).SetTarget(_rect);
                 DOTween.To(() => _rect.anchorMax, v => _rect.anchorMax = v, anchorMax, TransitionDuration)
-                    .SetEase(DG.Tweening.Ease.OutCubic).SetAutoKill(true);
+                    .SetEase(DG.Tweening.Ease.OutCubic).SetAutoKill(true).SetTarget(_rect);
                 _rect.offsetMin = Vector2.zero;
                 _rect.offsetMax = Vector2.zero;
             }

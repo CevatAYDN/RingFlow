@@ -77,12 +77,17 @@ namespace RingFlow.Gameplay.UI
             {
                 _screensLoaded = true;
             }
+            // Note: signal subscription is performed in Start() and retried in Update()
+            // until Root.Context is available. OnEnable runs before Root.Awake() finishes
+            // when UIRoot is on the same GameObject as Root, so Context may be null here.
         }
 
         private CancellationTokenSource _lifecycleCts;
 
         private void Start()
         {
+            NexusLog.Info("UIRoot", nameof(Start), "Lifecycle",
+                $"_root={(_root != null ? "set" : "null")}, _root.Context={(_root?.Context != null ? "set" : "null")}, _screensLoaded={_screensLoaded}");
             TrySubscribeNow();
             if (_screens.Count == 0 && !_screensLoaded)
             {
@@ -95,7 +100,18 @@ namespace RingFlow.Gameplay.UI
 
         private void TrySubscribeNow()
         {
-            if (_root == null || _root.Context == null) return;
+            if (_root == null)
+            {
+                NexusLog.Warn("UIRoot", nameof(TrySubscribeNow), "Subscription",
+                    "Root reference is null; cannot subscribe yet.");
+                return;
+            }
+            if (_root.Context == null)
+            {
+                NexusLog.Warn("UIRoot", nameof(TrySubscribeNow), "Subscription",
+                    "Root.Context is null; cannot subscribe yet.");
+                return;
+            }
             if (!_screensLoaded && _screens.Count == 0)
             {
                 LoadPrefabScreensFromResources();
@@ -175,8 +191,15 @@ namespace RingFlow.Gameplay.UI
 
         private void SubscribeOnce()
         {
-            if (_subscribed || _root == null || _root.Context == null) return;
+            if (_subscribed || _root == null || _root.Context == null)
+            {
+                NexusLog.Warn("UIRoot", nameof(SubscribeOnce), "Subscription",
+                    $"Skipping — _subscribed={_subscribed}, _root={(_root != null)}, Context={(_root?.Context != null)}.");
+                return;
+            }
             _subscribed = true;
+            NexusLog.Info("UIRoot", nameof(SubscribeOnce), "Subscription",
+                "Subscribing to gameplay signals (PlayRequestedSignal, LevelSelectedSignal, etc.).");
 
             var sb = _root.Context.Resolve<ISignalBus>();
             _signalBus = sb;
@@ -209,13 +232,23 @@ namespace RingFlow.Gameplay.UI
             var fsm = _root.Context.TryResolve<IGameStateMachine>();
             if (fsm == null)
             {
-                NexusLog.Error("UIRoot", nameof(SubscribeOnce), "",
-                    "IGameStateMachine unbound.");
+                NexusLog.Error("UIRoot", nameof(SubscribeOnce), "Subscription",
+                    "IGameStateMachine unbound — navigation signals (PlayRequestedSignal, etc.) will NOT be subscribed.");
             }
             else
             {
-                _subscriptions.Add(sb.Subscribe<PlayRequestedSignal>(_ => fsm.ChangeStateAsync<LevelSelectState>()));
-                _subscriptions.Add(sb.Subscribe<LevelSelectedSignal>(s => fsm.ChangeStateAsync<PlayingState>(new PlayingStateArgs(s.LevelIndex))));
+                _subscriptions.Add(sb.Subscribe<PlayRequestedSignal>(_ =>
+                {
+                    NexusLog.Info("UIRoot", "PlayRequestedSignal", "Navigation",
+                        "Received — transitioning to LevelSelectState.");
+                    fsm.ChangeStateAsync<LevelSelectState>();
+                }));
+                _subscriptions.Add(sb.Subscribe<LevelSelectedSignal>(s =>
+                {
+                    NexusLog.Info("UIRoot", "LevelSelectedSignal", "Navigation",
+                        $"Received — transitioning to PlayingState (level {s.LevelIndex}). fsm={(fsm != null)}, fsm.CurrentState={(fsm?.CurrentState?.GetType().Name ?? "null")}");
+                    fsm.ChangeStateAsync<PlayingState>(new PlayingStateArgs(s.LevelIndex));
+                }));
                 _subscriptions.Add(sb.Subscribe<PauseRequestedSignal>(_ => fsm.ChangeStateAsync<PausedState>()));
                 _subscriptions.Add(sb.Subscribe<ResumeRequestedSignal>(_ => fsm.ChangeStateAsync<PlayingState>(PlayingStateArgs.Resume)));
 
@@ -254,6 +287,9 @@ namespace RingFlow.Gameplay.UI
                     CloseAllPopups();
                     fsm.ChangeStateAsync<MainMenuState>();
                 }));
+
+                NexusLog.Info("UIRoot", nameof(SubscribeOnce), "Subscription",
+                    $"Subscribed to {_subscriptions.Count} signals. UIRoot is ready to receive navigation signals.");
             }
         }
 
@@ -506,11 +542,16 @@ namespace RingFlow.Gameplay.UI
 
         private void OnShowScreen(ShowScreenSignal signal)
         {
+            NexusLog.Info("UIRoot", nameof(OnShowScreen), "Screen",
+                $"ShowScreenSignal received: Screen={signal.Screen}, _screens.Count={_screens.Count}, _activeExclusiveScreen={_activeExclusiveScreen}");
+
             if (signal.Screen == ScreenType.Splash && _screens.Count == 0)
                 BindExistingScreens();
 
             if (PopupScreens.Contains(signal.Screen))
             {
+                NexusLog.Info("UIRoot", nameof(OnShowScreen), "Screen",
+                    $"Routing {signal.Screen} to OpenPopup.");
                 OpenPopup(signal.Screen);
                 return;
             }
@@ -527,12 +568,14 @@ namespace RingFlow.Gameplay.UI
                     instance.name = signal.Screen.ToString();
                     instance.SetActive(false);
                     _screens[signal.Screen] = instance;
+                    NexusLog.Info("UIRoot", nameof(OnShowScreen), "Screen",
+                        $"Instantiated screen prefab for {signal.Screen}. SetActive=false, waiting for TransitionScreen.");
                 }
             }
 
             if (!_screens.ContainsKey(signal.Screen))
             {
-                NexusLog.Error("UIRoot", nameof(OnShowScreen), "",
+                NexusLog.Error("UIRoot", nameof(OnShowScreen), "Screen",
                     $"Cannot show {signal.Screen}: no prefab at {GetPrefabAssetPath(signal.Screen)}");
                 return;
             }
@@ -544,15 +587,37 @@ namespace RingFlow.Gameplay.UI
                 bool shouldShow = kvp.Key == signal.Screen;
                 if (OverlayScreens.Contains(kvp.Key))
                 {
-                    // Overlay screens always stay active
-                    if (kvp.Value != null && !kvp.Value.activeSelf)
-                        kvp.Value.SetActive(true);
+                    // Overlay screens (Gameplay) should only be visible when the
+                    // active exclusive screen is Gameplay itself. Otherwise the
+                    // board area shows through behind menus/popups, making it
+                    // look like the game started without actually initializing.
+                    bool overlayShouldBeActive = signal.Screen == ScreenType.Gameplay;
+                    if (kvp.Value != null && kvp.Value.activeSelf != overlayShouldBeActive)
+                    {
+                        kvp.Value.SetActive(overlayShouldBeActive);
+                        NexusLog.Info("UIRoot", nameof(OnShowScreen), "Screen",
+                            $"Overlay screen {kvp.Key} {(overlayShouldBeActive ? "activated" : "deactivated")}.");
+                    }
                     continue;
                 }
+
+                if (kvp.Key != ScreenType.Splash && !shouldShow && kvp.Value != null && kvp.Value.activeSelf)
+                {
+                    kvp.Value.SetActive(false);
+                    NexusLog.Info("UIRoot", nameof(OnShowScreen), "Screen",
+                        $"{kvp.Key} deactivated immediately before hide transition.");
+                    continue;
+                }
+
+                NexusLog.Info("UIRoot", nameof(OnShowScreen), "Screen",
+                    $"Transitioning {kvp.Key} to {(shouldShow ? "SHOW" : "HIDE")} (activeSelf={kvp.Value?.activeSelf}, reduceMotion={reduceMotion}).");
                 TransitionScreen(kvp.Key, kvp.Value, shouldShow, reduceMotion);
             }
             _activeExclusiveScreen = signal.Screen;
             _popupStack.Clear();
+
+            NexusLog.Info("UIRoot", nameof(OnShowScreen), "Screen",
+                $"Transition complete. _activeExclusiveScreen={_activeExclusiveScreen}, _popupStack cleared.");
         }
 
         private void OnHideScreen(HideScreenSignal signal)
@@ -641,6 +706,9 @@ namespace RingFlow.Gameplay.UI
         {
             if (go == null) return;
 
+            NexusLog.Info("UIRoot", nameof(TransitionScreen), "Screen",
+                $"{type}: show={show}, activeSelf(before)={go.activeSelf}, reduceMotion={reduceMotion}");
+
             if (show)
             {
                 if (reduceMotion)
@@ -665,6 +733,11 @@ namespace RingFlow.Gameplay.UI
                     GameUIResources.AnimateScreenExit(go, _screenFadeDuration * 0.7f);
                 }
             }
+
+            // Check immediately after transition call (non-animated changes are
+            // synchronous; animated ones have started their DOTween sequence).
+            NexusLog.Info("UIRoot", nameof(TransitionScreen), "Screen",
+                $"{type}: activeSelf(after transition call)={go.activeSelf}");
         }
 
         private void OnBigButtonsChanged()

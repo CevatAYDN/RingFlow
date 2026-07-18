@@ -512,8 +512,8 @@ namespace RingFlow.Gameplay.UI
             cg.alpha = 0f;
             go.transform.localScale = Vector3.one * 0.8f;
             go.SetActive(true);
-            DOTween.To(() => cg.alpha, v => cg.alpha = v, 1f, duration * 0.7f).SetEase(DG.Tweening.Ease.OutCubic);
-            go.transform.DOScale(1f, duration).SetEase(DG.Tweening.Ease.OutBack).SetAutoKill(true);
+            DOTween.To(() => cg.alpha, v => cg.alpha = v, 1f, duration * 0.7f).SetEase(DG.Tweening.Ease.OutCubic).SetTarget(cg);
+            go.transform.DOScale(1f, duration).SetEase(DG.Tweening.Ease.OutBack).SetAutoKill(true).SetTarget(go.transform);
         }
 
         /// <summary>Animate popup exit with scale down + fade.</summary>
@@ -530,9 +530,9 @@ namespace RingFlow.Gameplay.UI
                 return;
             }
 
-            DOTween.To(() => cg.alpha, v => cg.alpha = v, 0f, duration).SetEase(DG.Tweening.Ease.InCubic);
+            DOTween.To(() => cg.alpha, v => cg.alpha = v, 0f, duration).SetEase(DG.Tweening.Ease.InCubic).SetTarget(cg);
             go.transform.DOScale(0.85f, duration).SetEase(DG.Tweening.Ease.InBack).SetAutoKill(true)
-                .OnComplete(() => { go.SetActive(false); onComplete?.Invoke(); });
+                .OnComplete(() => { go.SetActive(false); onComplete?.Invoke(); }).SetTarget(go.transform);
         }
 
         /// <summary>Animate screen entry with fade in.</summary>
@@ -550,7 +550,7 @@ namespace RingFlow.Gameplay.UI
 
             cg.alpha = 0f;
             go.SetActive(true);
-            DOTween.To(() => cg.alpha, v => cg.alpha = v, 1f, duration).SetEase(DG.Tweening.Ease.OutCubic);
+            DOTween.To(() => cg.alpha, v => cg.alpha = v, 1f, duration).SetEase(DG.Tweening.Ease.OutCubic).SetTarget(cg);
         }
 
         /// <summary>Animate screen exit with fade out.</summary>
@@ -567,7 +567,7 @@ namespace RingFlow.Gameplay.UI
             }
 
             DOTween.To(() => cg.alpha, v => cg.alpha = v, 0f, duration).SetEase(DG.Tweening.Ease.InCubic)
-                .OnComplete(() => { go.SetActive(false); onComplete?.Invoke(); });
+                .OnComplete(() => { go.SetActive(false); onComplete?.Invoke(); }).SetTarget(cg);
         }
 
         /// <summary>Scale punch effect for rewards.</summary>
@@ -591,9 +591,9 @@ namespace RingFlow.Gameplay.UI
                 elements[i].transform.localScale = Vector3.one * 0.7f;
                 int index = i;
                 DOTween.To(() => cg.alpha, v => cg.alpha = v, 1f, duration)
-                    .SetDelay(index * delay).SetEase(DG.Tweening.Ease.OutCubic);
+                    .SetDelay(index * delay).SetEase(DG.Tweening.Ease.OutCubic).SetTarget(cg);
                 elements[i].transform.DOScale(1f, duration)
-                    .SetDelay(index * delay).SetEase(DG.Tweening.Ease.OutBack).SetAutoKill(true);
+                    .SetDelay(index * delay).SetEase(DG.Tweening.Ease.OutBack).SetAutoKill(true).SetTarget(elements[i].transform);
             }
         }
 

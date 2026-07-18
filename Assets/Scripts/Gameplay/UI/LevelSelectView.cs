@@ -163,7 +163,7 @@ namespace RingFlow.Gameplay.UI
                 DOTween.Kill(ProgressBar.transform);
                 DOTween.To(() => ProgressBar.GetComponent<RectTransform>().anchorMax.x,
                     v => { var m = ProgressBar.GetComponent<RectTransform>().anchorMax; m.x = v; ProgressBar.GetComponent<RectTransform>().anchorMax = m; },
-                    max.x, 0.4f).SetEase(DG.Tweening.Ease.OutCubic).SetAutoKill(true);
+                    max.x, 0.4f).SetEase(DG.Tweening.Ease.OutCubic).SetAutoKill(true).SetTarget(ProgressBar.transform);
             }
         }
 

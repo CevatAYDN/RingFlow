@@ -107,6 +107,63 @@ namespace RingFlow.Tests
         }
 
         [Test]
+        public async Task PlayingState_OnEnter_WithIntLevelArg_FiresInitLevelBeforeGameplayScreen()
+        {
+            var signalBus = new OrderedStateTestSignalBus();
+            var state = new PlayingState();
+            InjectField(state, "_signalBus", signalBus);
+
+            await state.OnEnterAsync(5, CancellationToken.None);
+
+            Assert.That(signalBus.InitLevelLevelIndex, Is.EqualTo(5));
+            Assert.That(signalBus.InitLevelSignalOrder, Is.GreaterThan(0));
+            Assert.That(signalBus.GameplayScreenSignalOrder, Is.GreaterThan(0));
+            Assert.That(signalBus.InitLevelSignalOrder, Is.LessThan(signalBus.GameplayScreenSignalOrder));
+        }
+
+        [Test]
+        public void UIRoot_OnShowScreen_HidesNonTargetExclusiveScreensImmediately()
+        {
+            var go = new UnityEngine.GameObject("UIRootTest");
+            var uiRoot = go.AddComponent<RingFlow.Gameplay.UI.UIRoot>();
+
+            var screensField = typeof(RingFlow.Gameplay.UI.UIRoot).GetField("_screens",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            var activeScreenField = typeof(RingFlow.Gameplay.UI.UIRoot).GetField("_activeExclusiveScreen",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+
+            var screens = new Dictionary<RingFlow.Gameplay.ScreenType, UnityEngine.GameObject>
+            {
+                { RingFlow.Gameplay.ScreenType.MainMenu, new UnityEngine.GameObject("MainMenu") },
+                { RingFlow.Gameplay.ScreenType.Gameplay, new UnityEngine.GameObject("Gameplay") },
+                { RingFlow.Gameplay.ScreenType.DailyReward, new UnityEngine.GameObject("DailyReward") },
+            };
+
+            screens[RingFlow.Gameplay.ScreenType.MainMenu].SetActive(true);
+            screens[RingFlow.Gameplay.ScreenType.Gameplay].SetActive(true);
+            screens[RingFlow.Gameplay.ScreenType.DailyReward].SetActive(true);
+
+            screensField.SetValue(uiRoot, screens);
+            activeScreenField.SetValue(uiRoot, RingFlow.Gameplay.ScreenType.MainMenu);
+
+            var onShowScreen = typeof(RingFlow.Gameplay.UI.UIRoot).GetMethod("OnShowScreen",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+
+            onShowScreen.Invoke(uiRoot, new object[] { new ShowScreenSignal(RingFlow.Gameplay.ScreenType.Gameplay) });
+
+            Assert.That(screens[RingFlow.Gameplay.ScreenType.Gameplay].activeSelf, Is.True);
+            Assert.That(screens[RingFlow.Gameplay.ScreenType.MainMenu].activeSelf, Is.False);
+            Assert.That(screens[RingFlow.Gameplay.ScreenType.DailyReward].activeSelf, Is.False);
+
+            UnityEngine.Object.DestroyImmediate(go);
+            foreach (var kvp in screens)
+            {
+                if (kvp.Value != null)
+                    UnityEngine.Object.DestroyImmediate(kvp.Value);
+            }
+        }
+
+        [Test]
         public async Task PlayingState_OnExit_DoesNotThrow()
         {
             var state = new PlayingState();
@@ -209,6 +266,36 @@ namespace RingFlow.Tests
                 _showScreen = showScreen.Screen;
             if (signal is InitLevelSignal initLevel)
                 _initLevelFor = initLevel.LevelIndex;
+        }
+
+        public IReadOnlyDictionary<Type, IReadOnlyList<CommandHandlerInfo>> RegisteredHandlers =>
+            new Dictionary<Type, IReadOnlyList<CommandHandlerInfo>>();
+        public ValueTask FireAsync<T>(T signal) where T : struct { Fire(signal); return default; }
+        public void FireThreadSafe<T>(T signal) where T : struct { }
+        public void FireNextFrame<T>(T signal) where T : struct { }
+        public ValueTask FireAsyncWithTimeout<T>(T signal, int timeoutMilliseconds) where T : struct => default;
+        public ValueTask FireAsyncAndForget<T>(T signal, Action<Exception> onError = null) where T : struct => default;
+        public ISignalSubscription Subscribe<T>(Action<T> handler) where T : struct => null;
+        public ISignalSubscription SubscribeAsync<T>(Func<T, CancellationToken, ValueTask> handler) where T : struct => null;
+    }
+
+    public class OrderedStateTestSignalBus : ISignalBus
+    {
+        private int _sequence;
+        public int InitLevelLevelIndex { get; private set; } = -1;
+        public int InitLevelSignalOrder { get; private set; } = -1;
+        public int GameplayScreenSignalOrder { get; private set; } = -1;
+
+        public void Fire<T>(T signal) where T : struct
+        {
+            _sequence++;
+            if (signal is InitLevelSignal initLevel)
+            {
+                InitLevelLevelIndex = initLevel.LevelIndex;
+                InitLevelSignalOrder = _sequence;
+            }
+            if (signal is ShowScreenSignal showScreen && showScreen.Screen == ScreenType.Gameplay)
+                GameplayScreenSignalOrder = _sequence;
         }
 
         public IReadOnlyDictionary<Type, IReadOnlyList<CommandHandlerInfo>> RegisteredHandlers =>

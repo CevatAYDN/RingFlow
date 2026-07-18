@@ -125,7 +125,7 @@ namespace RingFlow.Gameplay.UI
             _root.transform.localScale = Vector3.one * 0.96f;
             RenderStep(_currentIndex, loc);
             DOTween.To(() => _cardFader.alpha, v => _cardFader.alpha = v, 1f, 0.28f)
-                .SetEase(DG.Tweening.Ease.OutCubic);
+                .SetEase(DG.Tweening.Ease.OutCubic).SetTarget(_cardFader);
             _root.transform.DOScale(Vector3.one, 0.32f)
                 .SetEase(DG.Tweening.Ease.OutBack).SetAutoKill(true);
         }

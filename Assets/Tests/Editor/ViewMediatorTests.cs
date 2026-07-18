@@ -192,7 +192,7 @@ namespace RingFlow.Tests
         [Test]
         public void SplashMediator_OnBind_NullView_DoesNotThrow()
         {
-            UnityEngine.TestTools.LogAssert.Expect(UnityEngine.LogType.Error, "[Nexus][SplashMediator][OnBind] View not bound.");
+            UnityEngine.TestTools.LogAssert.Expect(UnityEngine.LogType.Error, "[Nexus][SplashMediator][OnBind][UI] View not bound.");
             var mediator = new SplashMediator();
             Assert.DoesNotThrow(() => InvokeOnBind(mediator));
         }

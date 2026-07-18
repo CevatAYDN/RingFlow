@@ -21,8 +21,8 @@ namespace RingFlow.Gameplay
         public async ValueTask OnEnterAsync(object args, CancellationToken ct)
         {
             _diag?.Checkpoint("PlayingState.OnEnterAsync");
-            _signalBus?.Fire(new ShowScreenSignal(ScreenType.Gameplay));
-
+            NexusLog.Info("PlayingState", nameof(OnEnterAsync), "",
+                $"OnEnterAsync started. args={(args?.GetType().Name ?? "null")}, _signalBus={(_signalBus != null)}, _progression={(_progression != null)}");
             bool isResume = false;
             int targetLevel = -1;
 
@@ -31,6 +31,7 @@ namespace RingFlow.Gameplay
                 isResume = playingArgs.IsResume;
                 if (isResume)
                 {
+                    _signalBus?.Fire(new ShowScreenSignal(ScreenType.Gameplay));
                     NexusLog.Info("PlayingState", nameof(OnEnterAsync), "",
                         "Resuming from pause — restoring BGM, skipping InitLevel.");
                     if (_audio != null)
@@ -93,6 +94,8 @@ namespace RingFlow.Gameplay
             NexusLog.Info("PlayingState", nameof(OnEnterAsync), targetLevel.ToString(),
                 $"InitLevelSignal completed for level {targetLevel}.");
 #endif
+
+            _signalBus?.Fire(new ShowScreenSignal(ScreenType.Gameplay));
         }
 
         public ValueTask OnExitAsync(CancellationToken ct)

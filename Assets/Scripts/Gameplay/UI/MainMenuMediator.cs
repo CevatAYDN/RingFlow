@@ -80,12 +80,16 @@ namespace RingFlow.Gameplay.UI
         private void ContinueGame()
         {
             int level = _progression?.CurrentLevel.Value ?? 1;
+            NexusLog.Info("MainMenuMediator", nameof(ContinueGame), "",
+                $"Continue button clicked. Level={level}, firing LevelSelectedSignal.");
             SignalBus.Fire(new LevelSelectedSignal(level));
         }
 
         private void QuickPlay()
         {
             int level = _progression?.CurrentLevel.Value ?? 1;
+            NexusLog.Info("MainMenuMediator", nameof(QuickPlay), "",
+                $"QuickPlay button clicked. Level={level}, firing LevelSelectedSignal.");
             SignalBus.Fire(new LevelSelectedSignal(level));
         }
 

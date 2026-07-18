@@ -106,6 +106,8 @@ namespace RingFlow.Gameplay
             builder.BindService<ILoggerService, LoggerService>();
             builder.BindService<IEconomyService, EconomyService>();
             builder.BindService<IProgressionService, ProgressionService>();
+            // IAudioRootProvider must be bound BEFORE AudioService so DI can resolve it.
+            builder.Bind<IAudioRootProvider, DefaultAudioRootProvider>();
             builder.BindService<IAudioService, AudioService>();
             builder.BindService<IHapticService, HapticService>();
             builder.BindService<IFeedbackService, FeedbackService>();

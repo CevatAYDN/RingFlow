@@ -18,6 +18,9 @@ namespace RingFlow.Gameplay
 
         public async ValueTask ExecuteAsync(InitLevelSignal signal, CancellationToken ct)
         {
+            NexusLog.Info("InitLevelCommand", nameof(ExecuteAsync), signal.LevelIndex.ToString(),
+                $"ExecuteAsync started. _model={(_model != null)}, _assetService={(_assetService != null)}, _progressionService={(_progressionService != null)}");
+
             if (_model == null)
             {
                 NexusLog.Error("InitLevelCommand", "Execute", signal.LevelIndex.ToString(),
@@ -135,7 +138,17 @@ namespace RingFlow.Gameplay
                 _analyticsService.LevelStart(currentLevel, worldIndex);
             }
 
-            _signalBus?.Fire(new LevelLoadedSignal(currentLevel));
+            if (_signalBus == null)
+            {
+                NexusLog.Error("InitLevelCommand", nameof(ExecuteAsync), currentLevel.ToString(),
+                    "ISignalBus is null — LevelLoadedSignal cannot be fired. Board will not rebuild!");
+            }
+            else
+            {
+                NexusLog.Info("InitLevelCommand", nameof(ExecuteAsync), currentLevel.ToString(),
+                    $"Firing LevelLoadedSignal for level {currentLevel} with {_model.Poles.Count} poles.");
+                _signalBus.Fire(new LevelLoadedSignal(currentLevel));
+            }
         }
 
         private void ApplyChallengeState(int currentLevel)
