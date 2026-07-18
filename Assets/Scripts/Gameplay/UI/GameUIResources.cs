@@ -23,7 +23,14 @@ namespace RingFlow.Gameplay.UI
             }
         }
 
+        private static bool _reduceMotion;
+
         public static void Bind(UIThemeConfigSO theme) => _theme = theme;
+
+        public static void SetReducedMotion(bool reduceMotion)
+        {
+            _reduceMotion = reduceMotion;
+        }
 
         // ── Color tokens ──────────────────────────────────────────────────
         public static Color PrimaryColor    => Theme.PrimaryColor;
@@ -493,6 +500,15 @@ namespace RingFlow.Gameplay.UI
             var cg = GetOrAddCanvasGroup(go);
             DOTween.Kill(cg);
             DOTween.Kill(go.transform);
+
+            if (_reduceMotion)
+            {
+                cg.alpha = 1f;
+                go.transform.localScale = Vector3.one;
+                go.SetActive(true);
+                return;
+            }
+
             cg.alpha = 0f;
             go.transform.localScale = Vector3.one * 0.8f;
             go.SetActive(true);
@@ -506,6 +522,14 @@ namespace RingFlow.Gameplay.UI
             var cg = GetOrAddCanvasGroup(go);
             DOTween.Kill(cg);
             DOTween.Kill(go.transform);
+
+            if (_reduceMotion)
+            {
+                go.SetActive(false);
+                onComplete?.Invoke();
+                return;
+            }
+
             DOTween.To(() => cg.alpha, v => cg.alpha = v, 0f, duration).SetEase(DG.Tweening.Ease.InCubic);
             go.transform.DOScale(0.85f, duration).SetEase(DG.Tweening.Ease.InBack).SetAutoKill(true)
                 .OnComplete(() => { go.SetActive(false); onComplete?.Invoke(); });
@@ -516,6 +540,14 @@ namespace RingFlow.Gameplay.UI
         {
             var cg = GetOrAddCanvasGroup(go);
             DOTween.Kill(cg);
+
+            if (_reduceMotion)
+            {
+                cg.alpha = 1f;
+                go.SetActive(true);
+                return;
+            }
+
             cg.alpha = 0f;
             go.SetActive(true);
             DOTween.To(() => cg.alpha, v => cg.alpha = v, 1f, duration).SetEase(DG.Tweening.Ease.OutCubic);
@@ -526,6 +558,14 @@ namespace RingFlow.Gameplay.UI
         {
             var cg = GetOrAddCanvasGroup(go);
             DOTween.Kill(cg);
+
+            if (_reduceMotion)
+            {
+                go.SetActive(false);
+                onComplete?.Invoke();
+                return;
+            }
+
             DOTween.To(() => cg.alpha, v => cg.alpha = v, 0f, duration).SetEase(DG.Tweening.Ease.InCubic)
                 .OnComplete(() => { go.SetActive(false); onComplete?.Invoke(); });
         }

@@ -190,6 +190,16 @@ namespace RingFlow.Gameplay.UI
                 OnBigButtonsChanged();
             }
 
+            if (_settings?.ReduceMotion != null)
+            {
+                _settings.ReduceMotion.OnChanged((_, val) =>
+                {
+                    GameUIResources.SetReducedMotion(val);
+                });
+
+                GameUIResources.SetReducedMotion(_settings.ReduceMotion.Value);
+            }
+
             if (_screenFadeDuration <= 0f && _feelConfig != null)
                 _screenFadeDuration = _feelConfig.UiScreenFadeDuration;
 
