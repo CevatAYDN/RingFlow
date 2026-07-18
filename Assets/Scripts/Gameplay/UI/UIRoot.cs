@@ -693,6 +693,8 @@ namespace RingFlow.Gameplay.UI
             var cg = EnsureCanvasGroup(go);
             DOTween.Kill(cg);
 
+            go.transform.SetAsLastSibling();
+
             bool reduceMotion = _settings?.ReduceMotion?.Value ?? false;
             if (reduceMotion)
             {

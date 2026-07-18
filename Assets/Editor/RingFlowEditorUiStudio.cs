@@ -32,20 +32,60 @@ namespace RingFlow.Editor
 
         public static void CreateMissingUIScreenPrefabs()
         {
+            CreateUIScreenPrefabs(recreateExisting: false);
+        }
+
+        public static void RecreateAllUIScreenPrefabs()
+        {
+            CreateUIScreenPrefabs(recreateExisting: true);
+        }
+
+        public static IReadOnlyList<string> GetUIScreenPrefabPreviewLines()
+        {
+            var screens = new List<ScreenType>(GetRequiredUiScreens());
+            var lines = new List<string>(screens.Count);
+            foreach (var screen in screens)
+            {
+                lines.Add($"{screen} => {GetPrefabPathForScreen(screen)}");
+            }
+            return lines;
+        }
+
+        private static void CreateUIScreenPrefabs(bool recreateExisting)
+        {
             try
             {
+                var screens = new List<ScreenType>(GetRequiredUiScreens());
                 RingFlowEditorUtils.EnsureAssetFolders(ScreenPrefabFolder);
 
                 var created = new List<string>();
-                var existing = new List<string>();
+                var skipped = new List<string>();
+                var deleted = new List<string>();
 
-                foreach (var screen in GetRequiredUiScreens())
+                string screenList = string.Join(", ", screens);
+                string confirmTitle = recreateExisting ? "Recreate UI Screens" : "Create Missing UI Screens";
+                string confirmMessage = recreateExisting
+                    ? $"This will delete and regenerate all base UI prefabs:\n{screenList}\n\nContinue?"
+                    : $"This will generate missing base UI prefabs:\n{screenList}\n\nContinue?";
+
+                if (!EditorUtility.DisplayDialog(confirmTitle, confirmMessage, "Continue", "Cancel"))
+                    return;
+
+                foreach (var screen in screens)
                 {
                     var prefabPath = GetPrefabPathForScreen(screen);
-                    if (AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath) != null)
+                    bool exists = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath) != null;
+
+                    if (exists && !recreateExisting)
                     {
-                        existing.Add(screen.ToString());
+                        skipped.Add(screen.ToString());
                         continue;
+                    }
+
+                    if (exists && recreateExisting)
+                    {
+                        if (AssetDatabase.DeleteAsset(prefabPath))
+                            deleted.Add(screen.ToString());
                     }
 
                     var root = CreateScreenPrefabRoot(screen);
@@ -59,19 +99,24 @@ namespace RingFlow.Editor
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
 
+                var title = recreateExisting ? "Recreate UI Screens" : "Create Missing UI Screens";
                 var message = created.Count > 0
                     ? $"Created {created.Count} prefab(s): {string.Join(", ", created)}"
-                    : "No missing UI prefabs were created.";
+                    : (recreateExisting ? "No UI prefabs were recreated." : "No missing UI prefabs were created.");
 
-                if (existing.Count > 0)
-                    message += $"\nAlready present: {string.Join(", ", existing)}";
+                if (deleted.Count > 0)
+                    message += $"\nDeleted before recreate: {string.Join(", ", deleted)}";
 
-                EditorUtility.DisplayDialog("Create Missing UI Screens", message, "OK");
+                if (skipped.Count > 0)
+                    message += $"\nAlready present: {string.Join(", ", skipped)}";
+
+                EditorUtility.DisplayDialog(title, message, "OK");
             }
             catch (Exception ex)
             {
-                NexusLog.Error("RingFlowEditorUiStudio", "CreateMissingUiScreens", "CreateScreens", ex.ToString());
-                EditorUtility.DisplayDialog("Create Missing UI Screens", ex.Message, "OK");
+                var label = recreateExisting ? "RecreateUiScreens" : "CreateMissingUiScreens";
+                NexusLog.Error("RingFlowEditorUiStudio", label, "CreateScreens", ex.ToString());
+                EditorUtility.DisplayDialog(recreateExisting ? "Recreate UI Screens" : "Create Missing UI Screens", ex.Message, "OK");
             }
         }
 
@@ -220,7 +265,7 @@ namespace RingFlow.Editor
             AddScreenText(root, "LogoText", "RING FLOW", 68,
                 new Vector2(0.5f, 0.72f), new Vector2(0.5f, 0.72f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(900f, 120f));
-            AddScreenText(root, "TaglineText", "Loading premium puzzle experience...", 18,
+            AddScreenText(root, "TaglineText", "Sculpted puzzles. Clean moves. Premium flow.", 18,
                 new Vector2(0.5f, 0.61f), new Vector2(0.5f, 0.61f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(720f, 50f));
             AddScreenText(root, "ProgressText", "", 14,
@@ -231,43 +276,46 @@ namespace RingFlow.Editor
         private static void CreateMainMenuTemplate(Transform root)
         {
             CreateBackdrop(root, "Backdrop", new Color(0.06f, 0.08f, 0.12f, 0.96f));
-            CreatePanel(root, "HeroCard", 0.08f, 0.10f, 0.92f, 0.92f, new Color(0.14f, 0.16f, 0.22f, 0.96f));
+            CreatePanel(root, "Card", 0.16f, 0.24f, 0.84f, 0.76f, new Color(0.14f, 0.16f, 0.22f, 0.96f));
+            CreatePanel(root, "AccentStrip", 0.14f, 0.12f, 0.86f, 0.14f, new Color(0.84f, 0.56f, 0.22f, 0.92f));
+            CreatePanel(root, "ContentCard", 0.20f, 0.62f, 0.80f, 0.70f, new Color(0.18f, 0.20f, 0.28f, 0.96f));
             AddScreenText(root, "Title", "RING FLOW", 68,
                 new Vector2(0.5f, 0.84f), new Vector2(0.5f, 0.84f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(900f, 120f));
-            AddScreenText(root, "Subtitle", "Welcome back, champion", 22,
+            AddScreenText(root, "Subtitle", "Continue your progress", 22,
                 new Vector2(0.5f, 0.76f), new Vector2(0.5f, 0.76f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(700f, 40f));
-            CreatePanel(root, "ProfilePanel", 0.12f, 0.58f, 0.88f, 0.68f, new Color(0.18f, 0.20f, 0.28f, 0.96f));
-            AddScreenText(root, "Coins", "Coins: 0", 18,
+            CreatePanel(root, "ProfilePanel", 0.12f, 0.58f, 0.88f, 0.68f, new Color(0.20f, 0.22f, 0.30f, 0.96f));
+            AddScreenText(root, "Coins", "0 Coins", 18,
                 new Vector2(0.18f, 0.62f), new Vector2(0.42f, 0.62f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(260f, 30f));
-            AddScreenText(root, "Diamonds", "◆ 0", 18,
+            AddScreenText(root, "Diamonds", "0 Gems", 18,
                 new Vector2(0.58f, 0.62f), new Vector2(0.82f, 0.62f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(260f, 30f));
-            AddScreenText(root, "Version", "v0.0.0", 12,
+            AddScreenText(root, "Version", "", 12,
                 new Vector2(0.5f, 0.04f), new Vector2(0.5f, 0.04f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(250f, 24f));
 
-            CreateButtonNode(root, "Btn_CONTINUE", "CONTINUE", 340, 70, new Vector2(0.28f, 0.48f), new Vector2(0.72f, 0.56f));
-            CreateButtonNode(root, "Btn_QUICK PLAY", "QUICK PLAY", 340, 62, new Vector2(0.28f, 0.40f), new Vector2(0.72f, 0.47f));
-            CreateButtonNode(root, "Btn_LEVELS", "LEVEL SELECT", 340, 62, new Vector2(0.28f, 0.32f), new Vector2(0.72f, 0.39f));
-            CreateButtonNode(root, "Btn_DAILY REWARD", "DAILY REWARD", 340, 58, new Vector2(0.28f, 0.24f), new Vector2(0.72f, 0.31f));
-            CreateButtonNode(root, "Btn_⚙", "⚙", 64, 64, new Vector2(0.86f, 0.82f), new Vector2(0.94f, 0.90f));
+            CreateButtonNode(root, "Btn_CONTINUE", "CONTINUE", 340, 70, new Vector2(0.28f, 0.50f), new Vector2(0.72f, 0.58f));
+            CreateButtonNode(root, "Btn_QUICK PLAY", "QUICK PLAY", 340, 62, new Vector2(0.28f, 0.42f), new Vector2(0.72f, 0.49f));
+            CreateButtonNode(root, "Btn_LEVELS", "LEVEL SELECT", 340, 62, new Vector2(0.28f, 0.34f), new Vector2(0.72f, 0.41f));
+            CreateButtonNode(root, "Btn_DAILY REWARD", "DAILY REWARD", 340, 58, new Vector2(0.28f, 0.26f), new Vector2(0.72f, 0.33f));
+            CreateButtonNode(root, "Btn_SETTINGS", "SETTINGS", 64, 64, new Vector2(0.86f, 0.82f), new Vector2(0.94f, 0.90f));
         }
 
         private static void CreateWorldMapTemplate(Transform root)
         {
             CreateBackdrop(root, "Backdrop", new Color(0.06f, 0.08f, 0.12f, 0.96f));
-            CreatePanel(root, "HeroCard", 0.08f, 0.14f, 0.92f, 0.86f, new Color(0.14f, 0.16f, 0.22f, 0.96f));
+            CreatePanel(root, "HeroCard", 0.12f, 0.18f, 0.88f, 0.82f, new Color(0.14f, 0.16f, 0.22f, 0.96f));
+            CreatePanel(root, "AccentStrip", 0.12f, 0.12f, 0.88f, 0.14f, new Color(0.22f, 0.56f, 0.84f, 0.92f));
             AddScreenText(root, "Title", "WORLD MAP", 50,
                 new Vector2(0.5f, 0.82f), new Vector2(0.5f, 0.82f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(800f, 90f));
-            AddScreenText(root, "Subtitle", "Explore the ring kingdoms", 18,
+            AddScreenText(root, "Subtitle", "Choose a world to continue", 18,
                 new Vector2(0.5f, 0.74f), new Vector2(0.5f, 0.74f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(600f, 30f));
-            CreatePanel(root, "MapPanel", 0.12f, 0.28f, 0.88f, 0.68f, new Color(0.18f, 0.20f, 0.28f, 0.96f));
-            AddScreenText(root, "Body", "World Map coming soon!", 22,
+            CreatePanel(root, "MapPanel", 0.18f, 0.32f, 0.82f, 0.60f, new Color(0.18f, 0.20f, 0.28f, 0.96f));
+            AddScreenText(root, "Body", "World nodes, rewards, and progression will appear here.", 22,
                 new Vector2(0.5f, 0.46f), new Vector2(0.5f, 0.46f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(760f, 120f));
             CreateButtonNode(root, "Btn_BACK", "BACK", 220, 54, new Vector2(0.04f, 0.08f), new Vector2(0.20f, 0.14f));
@@ -275,11 +323,13 @@ namespace RingFlow.Editor
 
         private static void CreateOnboardingTemplate(Transform root)
         {
-            CreatePanel(root, "Card", 0.08f, 0.16f, 0.92f, 0.84f, new Color(0.12f, 0.14f, 0.18f, 0.92f));
-            AddScreenText(root, "Title", "HOW TO PLAY", 42,
+            CreatePanel(root, "Card", 0.12f, 0.20f, 0.88f, 0.80f, new Color(0.12f, 0.14f, 0.18f, 0.92f));
+            CreatePanel(root, "AccentStrip", 0.12f, 0.12f, 0.88f, 0.14f, new Color(0.84f, 0.56f, 0.22f, 0.92f));
+            CreatePanel(root, "ContentCard", 0.16f, 0.28f, 0.84f, 0.68f, new Color(0.18f, 0.20f, 0.28f, 0.96f));
+            AddScreenText(root, "Title", "MASTER THE FLOW", 42,
                 new Vector2(0.5f, 0.76f), new Vector2(0.5f, 0.76f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(800f, 90f));
-            AddScreenText(root, "Body", "Sort the rings by color to clear each pole!\n\nTap to select, tap again to move.", 20,
+            AddScreenText(root, "Body", "Tap a pole to select a ring, then tap a matching pole to move it.\nClear the board by sorting every color.", 20,
                 new Vector2(0.5f, 0.42f), new Vector2(0.5f, 0.42f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(760f, 160f));
         }
@@ -287,11 +337,12 @@ namespace RingFlow.Editor
         private static void CreateLevelSelectTemplate(Transform root)
         {
             CreateBackdrop(root, "Backdrop", new Color(0.06f, 0.08f, 0.12f, 0.96f));
-            CreatePanel(root, "HeroCard", 0.06f, 0.10f, 0.94f, 0.90f, new Color(0.14f, 0.16f, 0.22f, 0.96f));
+            CreatePanel(root, "HeroCard", 0.10f, 0.16f, 0.90f, 0.84f, new Color(0.14f, 0.16f, 0.22f, 0.96f));
+            CreatePanel(root, "AccentStrip", 0.10f, 0.08f, 0.90f, 0.11f, new Color(0.22f, 0.56f, 0.84f, 0.92f));
             AddScreenText(root, "Title", "LEVEL SELECT", 50,
                 new Vector2(0.5f, 0.90f), new Vector2(0.5f, 0.90f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(900f, 90f));
-            AddScreenText(root, "Subtitle", "Choose your next puzzle world", 18,
+            AddScreenText(root, "Subtitle", "Choose your next challenge", 18,
                 new Vector2(0.5f, 0.84f), new Vector2(0.5f, 0.84f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(680f, 30f));
             CreateButtonNode(root, "Btn_BACK", "BACK", 220, 54, new Vector2(0.04f, 0.86f), new Vector2(0.20f, 0.92f));
@@ -300,7 +351,7 @@ namespace RingFlow.Editor
             AddScreenText(root, "WorldLabel", "WORLD 1", 18,
                 new Vector2(0.12f, 0.75f), new Vector2(0.28f, 0.81f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, Vector2.zero);
-            AddScreenText(root, "ProgressLabel", "8 / 120 unlocked", 18,
+            AddScreenText(root, "ProgressLabel", "0 / 120 unlocked", 18,
                 new Vector2(0.35f, 0.75f), new Vector2(0.60f, 0.81f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, Vector2.zero);
             AddScreenText(root, "DifficultyLabel", "Difficulty: Easy", 18,
@@ -331,8 +382,9 @@ namespace RingFlow.Editor
         {
             CreateBackdrop(root, "Backdrop", new Color(0.06f, 0.08f, 0.12f, 0.96f));
             CreatePanel(root, "HeroCard", 0.04f, 0.04f, 0.96f, 0.96f, new Color(0.14f, 0.16f, 0.22f, 0.96f));
+            CreatePanel(root, "AccentStrip", 0.04f, 0.02f, 0.96f, 0.05f, new Color(0.22f, 0.56f, 0.84f, 0.92f));
 
-            CreatePanel(root, "TopBar", 0.06f, 0.84f, 0.94f, 0.94f, new Color(0.18f, 0.20f, 0.28f, 0.96f));
+            CreatePanel(root, "TopBar", 0.08f, 0.84f, 0.92f, 0.94f, new Color(0.18f, 0.20f, 0.28f, 0.96f));
             AddScreenText(root, "MovesText", "Moves: 0", 20,
                 new Vector2(0.08f, 0.88f), new Vector2(0.28f, 0.92f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, Vector2.zero);
@@ -346,7 +398,7 @@ namespace RingFlow.Editor
                 new Vector2(0.54f, 0.88f), new Vector2(0.63f, 0.92f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(100f, 24f));
 
-            CreatePanel(root, "BoardFrame", 0.08f, 0.20f, 0.92f, 0.82f, new Color(0.10f, 0.11f, 0.15f, 0.92f));
+            CreatePanel(root, "BoardFrame", 0.10f, 0.22f, 0.90f, 0.80f, new Color(0.10f, 0.11f, 0.15f, 0.92f));
             AddScreenText(root, "BoardPlaceholder", "Board area", 22,
                 new Vector2(0.5f, 0.48f), new Vector2(0.5f, 0.58f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(500f, 60f));
@@ -387,7 +439,7 @@ namespace RingFlow.Editor
             AddScreenText(root, "Title", "GAME OVER", 46,
                 new Vector2(0.5f, 0.76f), new Vector2(0.5f, 0.76f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(700f, 90f));
-            AddScreenText(root, "Message", "Try again.", 22,
+            AddScreenText(root, "Message", "You can solve this one.", 22,
                 new Vector2(0.5f, 0.58f), new Vector2(0.5f, 0.58f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(620f, 60f));
             CreateButtonNode(root, "Btn_RESTART", "RESTART", 300, 60, new Vector2(0.28f, 0.22f), new Vector2(0.72f, 0.30f));
@@ -397,44 +449,47 @@ namespace RingFlow.Editor
         private static void CreateDailyRewardTemplate(Transform root)
         {
             CreateBackdrop(root, "Backdrop", new Color(0.06f, 0.08f, 0.12f, 0.96f));
-            var card = CreatePanel(root, "Card", 0.10f, 0.20f, 0.90f, 0.80f, new Color(0.14f, 0.16f, 0.22f, 0.96f));
+            var card = CreatePanel(root, "Card", 0.20f, 0.24f, 0.80f, 0.76f, new Color(0.14f, 0.16f, 0.22f, 0.96f));
             AddScreenText(card.transform, "Title", "DAILY REWARD", 36,
                 new Vector2(0.05f, 0.72f), new Vector2(0.95f, 0.85f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, Vector2.zero);
-            AddScreenText(card.transform, "Day", "Day 1", 64,
-                new Vector2(0.20f, 0.42f), new Vector2(0.80f, 0.62f), new Vector2(0.5f, 0.5f),
+            AddScreenText(card.transform, "Day", "TODAY", 56,
+                new Vector2(0.20f, 0.46f), new Vector2(0.80f, 0.64f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, Vector2.zero);
             AddScreenText(card.transform, "Reward", "+50 Coins", 24,
                 new Vector2(0.20f, 0.30f), new Vector2(0.80f, 0.42f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, Vector2.zero);
-            CreateButtonNode(card.transform, "Btn_CLAIM", "CLAIM", 300, 64, new Vector2(0.15f, 0.14f), new Vector2(0.85f, 0.26f));
-            CreateButtonNode(card.transform, "Btn_CLOSE", "CLOSE", 120, 40, new Vector2(0.40f, 0.04f), new Vector2(0.60f, 0.12f));
+            CreateButtonNode(card.transform, "Btn_CLAIM", "CLAIM REWARD", 300, 60, new Vector2(0.15f, 0.14f), new Vector2(0.85f, 0.25f));
+            CreateButtonNode(card.transform, "Btn_CLOSE", "CLOSE", 120, 38, new Vector2(0.40f, 0.04f), new Vector2(0.60f, 0.11f));
         }
 
         private static void CreateChestPopupTemplate(Transform root)
         {
             CreateBackdrop(root, "Backdrop", new Color(0.06f, 0.08f, 0.12f, 0.96f));
-            var card = CreatePanel(root, "Card", 0.08f, 0.15f, 0.92f, 0.85f, new Color(0.14f, 0.16f, 0.22f, 0.96f));
+            var card = CreatePanel(root, "Card", 0.12f, 0.20f, 0.88f, 0.80f, new Color(0.14f, 0.16f, 0.22f, 0.96f));
             AddScreenText(card.transform, "Title", "CHEST REWARDS", 34,
-                new Vector2(0.05f, 0.80f), new Vector2(0.95f, 0.92f), new Vector2(0.5f, 0.5f),
+                new Vector2(0.05f, 0.82f), new Vector2(0.95f, 0.92f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, Vector2.zero);
-            AddScreenText(card.transform, "Bronze", "Bronze: x0  (+0 XP)", 20,
-                new Vector2(0.08f, 0.62f), new Vector2(0.92f, 0.70f), new Vector2(0.5f, 0.5f),
+            AddScreenText(card.transform, "Subtitle", "Claim the rewards you have earned", 18,
+                new Vector2(0.10f, 0.74f), new Vector2(0.90f, 0.80f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, Vector2.zero);
-            AddScreenText(card.transform, "Silver", "Silver: x0  (+0 XP)", 20,
-                new Vector2(0.08f, 0.52f), new Vector2(0.92f, 0.60f), new Vector2(0.5f, 0.5f),
+            AddScreenText(card.transform, "Bronze", "Bronze Chest: x0  (+0 XP)", 20,
+                new Vector2(0.10f, 0.60f), new Vector2(0.90f, 0.67f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, Vector2.zero);
-            AddScreenText(card.transform, "Gold", "Gold: x0  (+0 XP)", 20,
-                new Vector2(0.08f, 0.42f), new Vector2(0.92f, 0.50f), new Vector2(0.5f, 0.5f),
+            AddScreenText(card.transform, "Silver", "Silver Chest: x0  (+0 XP)", 20,
+                new Vector2(0.10f, 0.50f), new Vector2(0.90f, 0.57f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, Vector2.zero);
-            AddScreenText(card.transform, "Diamond", "Diamond: x0  (+0 XP)", 20,
-                new Vector2(0.08f, 0.32f), new Vector2(0.92f, 0.40f), new Vector2(0.5f, 0.5f),
+            AddScreenText(card.transform, "Gold", "Gold Chest: x0  (+0 XP)", 20,
+                new Vector2(0.10f, 0.40f), new Vector2(0.90f, 0.47f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+            AddScreenText(card.transform, "Diamond", "Diamond Chest: x0  (+0 XP)", 20,
+                new Vector2(0.10f, 0.30f), new Vector2(0.90f, 0.37f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, Vector2.zero);
             AddScreenText(card.transform, "TotalXp", "Total XP: +0", 22,
-                new Vector2(0.15f, 0.22f), new Vector2(0.85f, 0.30f), new Vector2(0.5f, 0.5f),
+                new Vector2(0.15f, 0.20f), new Vector2(0.85f, 0.27f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, Vector2.zero);
             CreateButtonNode(card.transform, "Btn_CLAIM ALL", "CLAIM ALL", 280, 60, new Vector2(0.15f, 0.10f), new Vector2(0.85f, 0.20f));
-            CreateButtonNode(card.transform, "Btn_CLOSE", "CLOSE", 120, 38, new Vector2(0.40f, 0.02f), new Vector2(0.60f, 0.09f));
+            CreateButtonNode(card.transform, "Btn_CLOSE", "CLOSE", 140, 42, new Vector2(0.40f, 0.02f), new Vector2(0.60f, 0.09f));
         }
 
         private static void CreateSettingsTemplate(Transform root)
@@ -470,11 +525,11 @@ namespace RingFlow.Editor
         {
             CreateBackdrop(root, "Backdrop", new Color(0.06f, 0.08f, 0.12f, 0.96f));
             var card = CreatePanel(root, "Card", 0.10f, 0.18f, 0.90f, 0.82f, new Color(0.14f, 0.14f, 0.20f, 0.96f));
-            AddScreenText(card.transform, "Title", "Parental Verification", 36,
-                new Vector2(0.05f, 0.74f), new Vector2(0.95f, 0.88f), new Vector2(0.5f, 0.5f),
+            AddScreenText(card.transform, "Title", "PARENTAL CONSENT", 34,
+                new Vector2(0.05f, 0.74f), new Vector2(0.95f, 0.86f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, Vector2.zero);
-            AddScreenText(card.transform, "Question", "Please review and accept our Terms of Service and Privacy Policy to continue.", 22,
-                new Vector2(0.10f, 0.42f), new Vector2(0.90f, 0.66f), new Vector2(0.5f, 0.5f),
+            AddScreenText(card.transform, "Question", "Please review the terms and continue with consent.", 22,
+                new Vector2(0.10f, 0.42f), new Vector2(0.90f, 0.62f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, Vector2.zero);
             CreatePanel(card.transform, "ChallengePanel", 0.12f, 0.28f, 0.88f, 0.40f, new Color(0.18f, 0.20f, 0.28f, 0.96f));
             AddScreenText(card.transform, "Error", "", 18,
@@ -507,7 +562,7 @@ namespace RingFlow.Editor
             cmRect.anchorMin = new Vector2(0.5f, 0.5f);
             cmRect.anchorMax = new Vector2(0.5f, 0.5f);
             cmRect.sizeDelta = new Vector2(26f, 26f);
-            checkmarkGo.GetComponent<Image>().color = GameUIResources.AccentColor;
+            checkmarkGo.GetComponent<Image>().color = new Color(0.22f, 0.56f, 0.84f, 1f);
             tg.targetGraphic = checkmarkGo.GetComponent<Image>();
             tg.graphic = checkmarkGo.GetComponent<Image>();
         }
@@ -562,7 +617,7 @@ namespace RingFlow.Editor
             rect.sizeDelta = new Vector2(width, height);
 
             var image = go.GetComponent<Image>();
-            image.color = GameUIResources.PrimaryColor;
+            image.color = new Color(0.22f, 0.56f, 0.84f, 1f);
             image.sprite = GameUIResources.GetRoundedSprite();
             image.type = Image.Type.Sliced;
 

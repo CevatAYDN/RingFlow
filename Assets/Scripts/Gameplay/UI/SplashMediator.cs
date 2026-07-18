@@ -24,7 +24,7 @@ namespace RingFlow.Gameplay.UI
             }
             if (_loc == null)
             {
-                NexusLog.Warn("SplashMediator", nameof(OnBind), "",
+                NexusLog.Warn("SplashMediator", nameof(OnBind), "", 
                     "Localization service unbound; strings will fall back to defaults.");
             }
             else

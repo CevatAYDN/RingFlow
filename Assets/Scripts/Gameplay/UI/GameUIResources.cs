@@ -139,21 +139,20 @@ namespace RingFlow.Gameplay.UI
             image.sprite = GetRoundedSprite();
             image.type = Image.Type.Sliced;
 
-            // Soft drop shadow gives buttons depth for a more premium feel.
             var shadow = go.GetComponent<Shadow>();
-            shadow.effectColor = new Color(0f, 0f, 0f, 0.35f);
-            shadow.effectDistance = new Vector2(0f, -4f);
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.34f);
+            shadow.effectDistance = new Vector2(0f, -3f);
 
             var button = go.GetComponent<Button>();
             ApplyButtonColors(button, Theme.PrimaryButtonColors);
 
-            var textGo = new GameObject("Text", typeof(RectTransform), typeof(Text));
+            var textGo = new GameObject("Label", typeof(RectTransform), typeof(Text));
             textGo.transform.SetParent(go.transform, false);
             var textRect = textGo.GetComponent<RectTransform>();
             textRect.anchorMin = Vector2.zero;
             textRect.anchorMax = Vector2.one;
-            textRect.offsetMin = Vector2.zero;
-            textRect.offsetMax = Vector2.zero;
+            textRect.offsetMin = new Vector2(18f, 8f);
+            textRect.offsetMax = new Vector2(-18f, -8f);
             var text = textGo.GetComponent<Text>();
             text.font = GetFont();
             text.fontSize = Theme.ButtonFontSize;
@@ -161,6 +160,7 @@ namespace RingFlow.Gameplay.UI
             text.color = Color.white;
             text.text = label;
             text.fontStyle = FontStyle.Bold;
+            text.supportRichText = true;
 
             return go;
         }

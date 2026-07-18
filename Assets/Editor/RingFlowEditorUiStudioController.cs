@@ -63,9 +63,20 @@ namespace RingFlow.Editor
                 if (GUILayout.Button(new GUIContent("Eksik Ekranları Oluştur", "Eksik UI prefablarını oluşturur."), GUILayout.Height(26)))
                     RingFlowEditorUiStudio.CreateMissingUIScreenPrefabs();
 
+                if (GUILayout.Button(new GUIContent("Ekranları Yeniden Oluştur", "Mevcut base UI prefablarını siler ve hepsini yeniden üretir."), GUILayout.Height(26)))
+                    RingFlowEditorUiStudio.RecreateAllUIScreenPrefabs();
+
                 if (GUILayout.Button(new GUIContent("JSON Dışa Aktar", "UI ağacını JSON olarak kaydeder."), GUILayout.Height(26)))
                     ExportUIHierarchyAsJson();
             }
+
+            EditorGUILayout.Space(4f);
+            RingFlowEditorUtils.BeginSectionBox("Üretilecek Prefab Önizlemesi", "Her ekran için hedef yol önceden gösterilir.");
+            foreach (var line in RingFlowEditorUiStudio.GetUIScreenPrefabPreviewLines())
+            {
+                EditorGUILayout.LabelField(line, EditorStyles.miniLabel);
+            }
+            RingFlowEditorUtils.EndSectionBox();
 
             EditorGUILayout.Space(4f);
 

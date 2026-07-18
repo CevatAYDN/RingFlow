@@ -48,8 +48,8 @@ namespace RingFlow.Gameplay.UI
             var go = new GameObject("Toggle", typeof(RectTransform), typeof(Image), typeof(Toggle));
             go.transform.SetParent(parent, false);
             var rect = go.GetComponent<RectTransform>();
-            rect.sizeDelta = new Vector2(80, 40);
-            GameUIResources.SetAnchors(rect, anchorX, anchorY - 0.02f, anchorX + 0.18f, anchorY + 0.02f);
+            rect.sizeDelta = new Vector2(86, 44);
+            GameUIResources.SetAnchors(rect, anchorX, anchorY - 0.018f, anchorX + 0.19f, anchorY + 0.018f);
             go.GetComponent<Image>().color = GameUIResources.SurfaceColor;
             var toggle = go.GetComponent<Toggle>();
             toggle.isOn = initialValue;
@@ -58,7 +58,7 @@ namespace RingFlow.Gameplay.UI
             var cmRect = checkmarkGo.GetComponent<RectTransform>();
             cmRect.anchorMin = new Vector2(0.5f, 0.5f);
             cmRect.anchorMax = new Vector2(0.5f, 0.5f);
-            cmRect.sizeDelta = new Vector2(28, 28);
+            cmRect.sizeDelta = new Vector2(30, 30);
             checkmarkGo.GetComponent<Image>().color = GameUIResources.AccentColor;
             toggle.targetGraphic = checkmarkGo.GetComponent<Image>();
             toggle.graphic = checkmarkGo.GetComponent<Image>();
@@ -71,8 +71,8 @@ namespace RingFlow.Gameplay.UI
             foreach (var btn in buttons)
             {
                 var upper = btn.name.ToUpperInvariant();
-                if (upper.Contains("CLOSE")) { _closeBtn = btn.gameObject; CloseButton = btn; }
-                else if (upper.Contains("REMOVE ADS")) { _removeAdsBtn = btn.gameObject; RemoveAdsButton = btn; }
+                if (upper.Contains("CLOSE") || upper.Contains("BACK")) { _closeBtn = btn.gameObject; CloseButton = btn; }
+                else if (upper.Contains("REMOVE ADS") || upper.Contains("REMOVEADS")) { _removeAdsBtn = btn.gameObject; RemoveAdsButton = btn; }
                 else if (upper.Contains("RESTORE")) { _restoreBtn = btn.gameObject; RestoreButton = btn; }
             }
 

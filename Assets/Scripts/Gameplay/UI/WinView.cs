@@ -25,8 +25,21 @@ namespace RingFlow.Gameplay.UI
             var overlay = GetComponent<Image>();
             if (overlay != null && overlay.color == Color.white)
             {
-                overlay.color = new Color(0, 0, 0, 0.70f);
+                overlay.color = new Color(0.02f, 0.03f, 0.05f, 0.72f);
             }
+
+            var card = transform.Find("Card")?.gameObject;
+            if (card == null)
+            {
+                card = GameUIResources.CreatePanel("Card", transform);
+                GameUIResources.SetAnchors(card.GetComponent<RectTransform>(), 0.12f, 0.16f, 0.88f, 0.82f);
+                card.GetComponent<Image>().color = GameUIResources.SurfaceColor;
+            }
+
+            var accent = new GameObject("AccentBar", typeof(RectTransform), typeof(Image));
+            accent.transform.SetParent(card.transform, false);
+            GameUIResources.SetAnchors(accent.GetComponent<RectTransform>(), 0.18f, 0.74f, 0.82f, 0.76f);
+            accent.GetComponent<Image>().color = GameUIResources.SuccessColor;
 
             if (TitleText == null)
             {
@@ -39,36 +52,29 @@ namespace RingFlow.Gameplay.UI
 
             if (TitleText == null)
             {
-                var titleGo = GameUIResources.CreateText("YOU WIN!", transform, 46, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
+                var titleGo = GameUIResources.CreateText("YOU WIN!", card.transform, 50, TextAnchor.MiddleCenter, GameUIResources.TextColor);
                 TitleText = titleGo.GetComponent<Text>();
-                GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.2f, 0.73f, 0.8f, 0.80f);
+                TitleText.fontStyle = FontStyle.Bold;
+                GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.16f, 0.62f, 0.84f, 0.72f);
             }
 
             if (LevelText == null)
             {
-                var levelGo = GameUIResources.CreateText("LEVEL 1", transform, 92, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
+                var levelGo = GameUIResources.CreateText("LEVEL 1", card.transform, 86, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
                 LevelText = levelGo.GetComponent<Text>();
                 var levelOutline = levelGo.GetComponent<Outline>();
                 if (levelOutline == null) levelOutline = levelGo.AddComponent<Outline>();
-                levelOutline.effectColor = new Color(0f, 0f, 0f, 0.6f);
+                levelOutline.effectColor = new Color(0f, 0f, 0f, 0.55f);
                 levelOutline.effectDistance = new Vector2(3f, -3f);
-                GameUIResources.SetAnchors(levelGo.GetComponent<RectTransform>(), 0.1f, 0.60f, 0.9f, 0.72f);
-            }
-
-            var card = transform.Find("Card")?.gameObject;
-            if (card == null)
-            {
-                card = GameUIResources.CreatePanel("Card", transform);
-                GameUIResources.SetAnchors(card.GetComponent<RectTransform>(), 0.16f, 0.20f, 0.84f, 0.80f);
-                card.GetComponent<Image>().color = GameUIResources.PanelColor;
+                GameUIResources.SetAnchors(levelGo.GetComponent<RectTransform>(), 0.12f, 0.48f, 0.88f, 0.60f);
             }
 
             var starRow = new GameObject("Stars", typeof(RectTransform), typeof(HorizontalLayoutGroup));
-            starRow.transform.SetParent(transform, false);
+            starRow.transform.SetParent(card.transform, false);
             var starRect = starRow.GetComponent<RectTransform>();
-            GameUIResources.SetAnchors(starRect, 0.28f, 0.58f, 0.72f, 0.65f);
+            GameUIResources.SetAnchors(starRect, 0.24f, 0.36f, 0.76f, 0.44f);
             var hlg = starRow.GetComponent<HorizontalLayoutGroup>();
-            hlg.spacing = 12;
+            hlg.spacing = 14;
             hlg.childAlignment = TextAnchor.MiddleCenter;
             hlg.childControlWidth = false;
             hlg.childControlHeight = false;
@@ -77,33 +83,33 @@ namespace RingFlow.Gameplay.UI
 
             for (int i = 0; i < 3; i++)
             {
-                var starGo = GameUIResources.CreateText("★", starRow.transform, 44, TextAnchor.MiddleCenter, new Color(0.35f, 0.35f, 0.40f));
-                starGo.GetComponent<RectTransform>().sizeDelta = new Vector2(48, 48);
+                var starGo = GameUIResources.CreateText("★", starRow.transform, 46, TextAnchor.MiddleCenter, new Color(0.32f, 0.34f, 0.38f));
+                starGo.GetComponent<RectTransform>().sizeDelta = new Vector2(52, 52);
                 starGo.transform.localScale = Vector3.one;
                 StarIcons[i] = starGo.GetComponent<Text>();
             }
 
-            var movesGo = GameUIResources.CreateText("", transform, 22, TextAnchor.MiddleCenter, GameUIResources.TextColor);
-            GameUIResources.SetAnchors(movesGo.GetComponent<RectTransform>(), 0.2f, 0.48f, 0.8f, 0.55f);
+            var movesGo = GameUIResources.CreateText("", card.transform, 22, TextAnchor.MiddleCenter, GameUIResources.TextColor);
+            GameUIResources.SetAnchors(movesGo.GetComponent<RectTransform>(), 0.16f, 0.28f, 0.84f, 0.34f);
             MovesText = movesGo.GetComponent<Text>();
 
-            var rewardGo = GameUIResources.CreateText("", transform, 22, TextAnchor.MiddleCenter, GameUIResources.SuccessColor);
-            GameUIResources.SetAnchors(rewardGo.GetComponent<RectTransform>(), 0.2f, 0.42f, 0.8f, 0.49f);
+            var rewardGo = GameUIResources.CreateText("", card.transform, 22, TextAnchor.MiddleCenter, GameUIResources.SuccessColor);
+            GameUIResources.SetAnchors(rewardGo.GetComponent<RectTransform>(), 0.16f, 0.22f, 0.84f, 0.28f);
             RewardText = rewardGo.GetComponent<Text>();
 
             _nextBtn = transform.Find("Btn_NEXT LEVEL")?.gameObject;
             if (_nextBtn == null)
             {
-                _nextBtn = GameUIResources.CreateButton("NEXT LEVEL", transform, 300, 68);
-                GameUIResources.SetAnchors(_nextBtn.GetComponent<RectTransform>(), 0.28f, 0.30f, 0.72f, 0.40f);
+                _nextBtn = GameUIResources.CreateButton("NEXT LEVEL", card.transform, 312, 68);
+                GameUIResources.SetAnchors(_nextBtn.GetComponent<RectTransform>(), 0.24f, 0.12f, 0.76f, 0.20f);
             }
             NextLevelButton = _nextBtn.GetComponent<Button>();
 
             _quitBtn = transform.Find("Btn_MAIN MENU")?.gameObject;
             if (_quitBtn == null)
             {
-                _quitBtn = GameUIResources.CreateButton("MAIN MENU", transform, 300, 56);
-                GameUIResources.SetAnchors(_quitBtn.GetComponent<RectTransform>(), 0.28f, 0.22f, 0.72f, 0.28f);
+                _quitBtn = GameUIResources.CreateButton("MAIN MENU", card.transform, 312, 58);
+                GameUIResources.SetAnchors(_quitBtn.GetComponent<RectTransform>(), 0.24f, 0.04f, 0.76f, 0.10f);
                 GameUIResources.ApplyOutlineStyle(_quitBtn);
             }
             QuitButton = _quitBtn.GetComponent<Button>();

@@ -96,36 +96,31 @@ namespace RingFlow.Gameplay.UI
             card.GetComponent<Image>().color = GameUIResources.PanelColor;
             card.GetComponent<Image>().raycastTarget = true;
 
-            // ── Title ──
-            var titleGo = GameUIResources.CreateText("Parental Verification", card.transform, 36, TextAnchor.MiddleCenter, GameUIResources.TextColor);
+            var titleGo = GameUIResources.CreateText("Parental Verification", card.transform, 34, TextAnchor.MiddleCenter, GameUIResources.TextColor);
             TitleText = titleGo.GetComponent<Text>();
             var titleRt = titleGo.GetComponent<RectTransform>();
-            GameUIResources.SetAnchors(titleRt, 0.05f, 0.70f, 0.95f, 0.88f);
+            GameUIResources.SetAnchors(titleRt, 0.05f, 0.72f, 0.95f, 0.88f);
             TitleText.fontStyle = FontStyle.Bold;
             titleGo.name = "Title";
 
-            // ── Consent/body text ──
-            var questionGo = GameUIResources.CreateText("", card.transform, 24, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
+            var questionGo = GameUIResources.CreateText("", card.transform, 22, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
             QuestionText = questionGo.GetComponent<Text>();
             QuestionText.fontStyle = FontStyle.Bold;
             QuestionText.name = "Question";
             var questionRt = questionGo.GetComponent<RectTransform>();
-            GameUIResources.SetAnchors(questionRt, 0.08f, 0.42f, 0.92f, 0.66f);
+            GameUIResources.SetAnchors(questionRt, 0.08f, 0.44f, 0.92f, 0.64f);
 
-            // ── Error text (kept for safety; hidden in consent-only mode) ──
             var errorGo = GameUIResources.CreateText("", card.transform, 18, TextAnchor.MiddleCenter, GameUIResources.DangerColor);
             ErrorText = errorGo.GetComponent<Text>();
             ErrorText.name = "Error";
             var errorRt = errorGo.GetComponent<RectTransform>();
             GameUIResources.SetAnchors(errorRt, 0.15f, 0.36f, 0.85f, 0.41f);
 
-            // ── Accept button (primary) ──
             var acceptBtnGo = GameUIResources.CreateButton("ACCEPT & CONTINUE", card.transform, 320, 64);
             AcceptButton = acceptBtnGo.GetComponent<Button>();
             AcceptButton.name = "Accept";
-            GameUIResources.SetAnchors(acceptBtnGo.GetComponent<RectTransform>(), 0.20f, 0.24f, 0.80f, 0.34f);
+            GameUIResources.SetAnchors(acceptBtnGo.GetComponent<RectTransform>(), 0.20f, 0.22f, 0.80f, 0.34f);
 
-            // ── Terms button (outline) ──
             var termsBtnGo = GameUIResources.CreateButton("Terms of Service", card.transform, 180, 40);
             TermsButton = termsBtnGo.GetComponent<Button>();
             TermsButton.name = "Terms";
@@ -134,7 +129,6 @@ namespace RingFlow.Gameplay.UI
             if (termsText != null) termsText.fontSize = 14;
             GameUIResources.SetAnchors(termsBtnGo.GetComponent<RectTransform>(), 0.08f, 0.10f, 0.48f, 0.18f);
 
-            // ── Privacy button (outline) ──
             var privacyBtnGo = GameUIResources.CreateButton("Privacy Policy", card.transform, 180, 40);
             PrivacyButton = privacyBtnGo.GetComponent<Button>();
             PrivacyButton.name = "Privacy";

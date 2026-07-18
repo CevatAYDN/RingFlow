@@ -18,11 +18,18 @@ namespace RingFlow.Gameplay.UI
         private void Awake()
         {
             BindReferencesFromChildren();
+            ApplyBaseStyling();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             NexusLog.Info("GameOverView", nameof(Awake), "",
                 $"GameOverView bound. RestartButton={RestartButton != null}, QuitButton={QuitButton != null}, " +
                 $"TitleText={TitleText != null}, MessageText={MessageText != null}.");
 #endif
+        }
+
+        private void ApplyBaseStyling()
+        {
+            if (_restartBtn != null) GameUIResources.ApplyPrimaryStyle(_restartBtn);
+            if (_quitBtn != null) GameUIResources.ApplySecondaryStyle(_quitBtn);
         }
 
         public void Localize(ILocalizationService loc)

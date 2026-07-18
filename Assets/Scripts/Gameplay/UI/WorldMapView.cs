@@ -6,9 +6,8 @@ using UnityEngine.UI;
 namespace RingFlow.Gameplay.UI
 {
     /// <summary>
-    /// Placeholder view for WorldMap screen. Currently stubbed — the GDD specifies
-    /// a world-overview map but the feature is scheduled for a future milestone.
-    /// When implemented, replace this with a full authored prefab.
+    /// Base world map view used for world navigation and progression overview.
+    /// The screen intentionally stays lightweight and readable for mobile.
     /// </summary>
     [Mediator(typeof(WorldMapMediator))]
     public class WorldMapView : View
@@ -37,33 +36,19 @@ namespace RingFlow.Gameplay.UI
 
         private void BuildUI()
         {
-            var titleGo = new GameObject("Title", typeof(RectTransform), typeof(Text));
-            titleGo.transform.SetParent(transform, false);
-            _titleText = titleGo.GetComponent<Text>();
-            _titleText.text = "WORLD MAP";
-            _titleText.fontSize = 48;
-            _titleText.alignment = TextAnchor.MiddleCenter;
-            _titleText.color = Color.white;
-            _titleText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            var rt = titleGo.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(0.1f, 0.4f);
-            rt.anchorMax = new Vector2(0.9f, 0.6f);
-            rt.offsetMin = Vector2.zero;
-            rt.offsetMax = Vector2.zero;
+            var card = GameUIResources.CreatePanel("Card", transform);
+            GameUIResources.SetAnchors(card.GetComponent<RectTransform>(), 0.08f, 0.18f, 0.92f, 0.82f);
+            card.GetComponent<Image>().color = GameUIResources.PanelColor;
+            card.GetComponent<Image>().raycastTarget = true;
 
-            var bodyGo = new GameObject("Body", typeof(RectTransform), typeof(Text));
-            bodyGo.transform.SetParent(transform, false);
+            var titleGo = GameUIResources.CreateText("WORLD MAP", card.transform, 40, TextAnchor.MiddleCenter, GameUIResources.TextColor);
+            _titleText = titleGo.GetComponent<Text>();
+            _titleText.fontStyle = FontStyle.Bold;
+            GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.08f, 0.68f, 0.92f, 0.84f);
+
+            var bodyGo = GameUIResources.CreateText("Explore the kingdoms ahead.", card.transform, 22, TextAnchor.MiddleCenter, GameUIResources.MutedText);
             _bodyText = bodyGo.GetComponent<Text>();
-            _bodyText.text = "World Map coming soon!";
-            _bodyText.fontSize = 22;
-            _bodyText.alignment = TextAnchor.MiddleCenter;
-            _bodyText.color = new Color(0.6f, 0.6f, 0.65f);
-            _bodyText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            var brt = bodyGo.GetComponent<RectTransform>();
-            brt.anchorMin = new Vector2(0.15f, 0.25f);
-            brt.anchorMax = new Vector2(0.85f, 0.40f);
-            brt.offsetMin = Vector2.zero;
-            brt.offsetMax = Vector2.zero;
+            GameUIResources.SetAnchors(bodyGo.GetComponent<RectTransform>(), 0.10f, 0.30f, 0.90f, 0.52f);
         }
 
         private void BindReferencesFromChildren()

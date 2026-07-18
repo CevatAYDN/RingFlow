@@ -37,33 +37,19 @@ namespace RingFlow.Gameplay.UI
 
         private void BuildUI()
         {
-            var titleGo = new GameObject("Title", typeof(RectTransform), typeof(Text));
-            titleGo.transform.SetParent(transform, false);
-            _titleText = titleGo.GetComponent<Text>();
-            _titleText.text = "HOW TO PLAY";
-            _titleText.fontSize = 42;
-            _titleText.alignment = TextAnchor.MiddleCenter;
-            _titleText.color = Color.white;
-            _titleText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            var rt = titleGo.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(0.1f, 0.4f);
-            rt.anchorMax = new Vector2(0.9f, 0.55f);
-            rt.offsetMin = Vector2.zero;
-            rt.offsetMax = Vector2.zero;
+            var card = GameUIResources.CreatePanel("Card", transform);
+            GameUIResources.SetAnchors(card.GetComponent<RectTransform>(), 0.08f, 0.16f, 0.92f, 0.84f);
+            card.GetComponent<Image>().color = GameUIResources.PanelColor;
+            card.GetComponent<Image>().raycastTarget = true;
 
-            var bodyGo = new GameObject("Body", typeof(RectTransform), typeof(Text));
-            bodyGo.transform.SetParent(transform, false);
+            var titleGo = GameUIResources.CreateText("HOW TO PLAY", card.transform, 40, TextAnchor.MiddleCenter, GameUIResources.TextColor);
+            _titleText = titleGo.GetComponent<Text>();
+            _titleText.fontStyle = FontStyle.Bold;
+            GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.08f, 0.72f, 0.92f, 0.86f);
+
+            var bodyGo = GameUIResources.CreateText("Sort the rings by color to clear each pole. Tap a ring, then tap a pole to move it.", card.transform, 21, TextAnchor.MiddleCenter, GameUIResources.MutedText);
             _bodyText = bodyGo.GetComponent<Text>();
-            _bodyText.text = "Sort the rings by color to clear each pole!\n\nTap to select, tap again to move.";
-            _bodyText.fontSize = 20;
-            _bodyText.alignment = TextAnchor.MiddleCenter;
-            _bodyText.color = new Color(0.6f, 0.6f, 0.65f);
-            _bodyText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            var brt = bodyGo.GetComponent<RectTransform>();
-            brt.anchorMin = new Vector2(0.1f, 0.15f);
-            brt.anchorMax = new Vector2(0.9f, 0.38f);
-            brt.offsetMin = Vector2.zero;
-            brt.offsetMax = Vector2.zero;
+            GameUIResources.SetAnchors(bodyGo.GetComponent<RectTransform>(), 0.10f, 0.18f, 0.90f, 0.54f);
         }
 
         private void BindReferencesFromChildren()

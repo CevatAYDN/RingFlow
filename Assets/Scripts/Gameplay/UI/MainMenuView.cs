@@ -25,8 +25,17 @@ namespace RingFlow.Gameplay.UI
             BindReferencesFromChildren();
         }
 
-        public void UpdateCoins(int coins) { if (CoinsText != null) CoinsText.text = $"Coins: {coins}"; }
-        public void UpdateDiamonds(int diamonds) { if (DiamondsText != null) DiamondsText.text = $"◆ {diamonds}"; }
+        public void UpdateCoins(int coins)
+        {
+            if (CoinsText != null)
+                CoinsText.text = string.Format(CoinsText.text.Contains("{") ? CoinsText.text : "COINS {0}", coins);
+        }
+
+        public void UpdateDiamonds(int diamonds)
+        {
+            if (DiamondsText != null)
+                DiamondsText.text = string.Format(DiamondsText.text.Contains("{") ? DiamondsText.text : "GEMS {0}", diamonds);
+        }
 
         private ILocalizationService _locService;
 
@@ -59,11 +68,12 @@ namespace RingFlow.Gameplay.UI
             var buttons = GetComponentsInChildren<Button>(true);
             foreach (var btn in buttons)
             {
-                if (btn.name.Contains("CONTINUE")) { _continueBtn = btn.gameObject; ContinueButton = btn; }
-                else if (btn.name.Contains("QUICK PLAY")) { _playBtn = btn.gameObject; PlayButton = btn; }
-                else if (btn.name.Contains("LEVELS")) { _lvlBtn = btn.gameObject; LevelSelectButton = btn; }
-                else if (btn.name.Contains("DAILY REWARD")) { _dailyBtn = btn.gameObject; DailyRewardButton = btn; }
-                else if (btn.name.Contains("⚙")) SettingsButton = btn;
+                var upper = btn.name.ToUpperInvariant();
+                if (upper.Contains("CONTINUE")) { _continueBtn = btn.gameObject; ContinueButton = btn; }
+                else if (upper.Contains("QUICK PLAY") || upper.Contains("PLAY")) { _playBtn = btn.gameObject; PlayButton = btn; }
+                else if (upper.Contains("LEVELS") || upper.Contains("LEVEL SELECT")) { _lvlBtn = btn.gameObject; LevelSelectButton = btn; }
+                else if (upper.Contains("DAILY REWARD")) { _dailyBtn = btn.gameObject; DailyRewardButton = btn; }
+                else if (upper.Contains("SETTINGS") || upper.Contains("⚙")) SettingsButton = btn;
             }
 
             var texts = GetComponentsInChildren<Text>(true);
@@ -72,26 +82,26 @@ namespace RingFlow.Gameplay.UI
                 // Only consider texts that are direct children of the MainMenuView canvas to avoid matching button labels
                 if (txt.transform.parent != transform) continue;
 
-                if (txt.fontSize == 64)
+                var content = txt.text ?? string.Empty;
+                if (txt.fontSize >= 60 || content.Contains("RING FLOW") || content.Contains("TITLE"))
                 {
                     TitleText = txt;
                 }
-                else if (txt.fontSize == 22)
+                else if (txt.fontSize >= 20 || content.Contains("Resume") || content.Contains("Champion"))
                 {
                     TaglineText = txt;
                 }
-                else if (txt.fontSize == 12)
+                else if (txt.fontSize <= 13)
                 {
                     VersionLabel = txt;
                 }
-                else if (txt.fontSize == 16)
+                else if (txt.fontSize <= 18)
                 {
-                    // Differentiate coins vs diamonds by text content or color
-                    if (txt.text.Contains("Coins") || (txt.color.r > 0.9f && txt.color.b < 0.3f))
+                    if (content.Contains("Coin") || txt.color.r > 0.9f)
                     {
                         CoinsText = txt;
                     }
-                    else
+                    else if (content.Contains("Gem") || content.Contains("Diamond") || txt.color.b > 0.6f)
                     {
                         DiamondsText = txt;
                     }

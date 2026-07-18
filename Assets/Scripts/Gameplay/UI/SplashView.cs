@@ -14,13 +14,11 @@ namespace RingFlow.Gameplay.UI
 
         private void Awake()
         {
-            NexusLog.Info("SplashView", nameof(Awake), "", "Awake called");
             BindReferencesFromChildren();
         }
 
         protected override void OnEnable()
         {
-            NexusLog.Info("SplashView", nameof(OnEnable), "", "OnEnable called");
             base.OnEnable();
         }
 

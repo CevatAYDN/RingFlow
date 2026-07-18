@@ -15,9 +15,14 @@ namespace RingFlow.Gameplay.UI
 
         protected override void OnBind()
         {
-            if (View == null) return;
+            if (View == null)
+            {
+                NexusLog.Warn("SettingsMediator", nameof(OnBind), "", "SettingsView not bound.");
+                return;
+            }
+
             View.Localize(_loc);
-            View.CloseButton.onClick.AddListener(() => SignalBus.Fire(new CloseSettingsSignal()));
+            if (View.CloseButton != null) View.CloseButton.onClick.AddListener(() => SignalBus.Fire(new CloseSettingsSignal()));
 
             if (_settings != null)
             {

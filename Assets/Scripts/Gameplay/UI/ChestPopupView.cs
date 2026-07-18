@@ -29,10 +29,12 @@ namespace RingFlow.Gameplay.UI
             if (NeedsSelfBuild())
             {
                 BuildUI();
+                ApplyBaseStyling();
             }
             else
             {
                 BindReferencesFromChildren();
+                ApplyBaseStyling();
             }
         }
 
@@ -142,6 +144,12 @@ namespace RingFlow.Gameplay.UI
                 else if (upper.Contains("DIAMOND")) DiamondText = txt;
                 else if (upper.Contains("TOTAL")) TotalXpText = txt;
             }
+        }
+
+        private void ApplyBaseStyling()
+        {
+            if (_claimBtn != null) GameUIResources.ApplyPrimaryStyle(_claimBtn);
+            if (_closeBtn != null) GameUIResources.ApplySecondaryStyle(_closeBtn);
         }
 
         public void ShowChestCounts(int bronze, int silver, int gold, int diamond, 

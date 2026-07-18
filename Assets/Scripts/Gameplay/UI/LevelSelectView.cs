@@ -25,16 +25,18 @@ namespace RingFlow.Gameplay.UI
             var buttons = GetComponentsInChildren<Button>(true);
             foreach (var button in buttons)
             {
-                if (button.name.Contains("BACK"))
+                if (button.name.ToUpperInvariant().Contains("BACK"))
                 {
                     _backBtn = button.gameObject;
                     BackButton = button;
                 }
-                else if (button.name.Contains("Level"))
+                else if (button.name.ToUpperInvariant().Contains("LEVEL"))
                 {
                     LevelButtons.Add(button);
                 }
             }
+
+            ApplyBaseStyling();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             NexusLog.Info("LevelSelectView", nameof(Awake), "",
                 $"LevelSelectView bound. LevelButtons={LevelButtons.Count}, BackButton={BackButton != null}, TitleText={TitleText != null}.");
@@ -45,6 +47,11 @@ namespace RingFlow.Gameplay.UI
                 NexusLog.Warn("LevelSelectView", nameof(Awake), "",
                     "No level buttons found — level select screen will be empty.");
 #endif
+        }
+
+        private void ApplyBaseStyling()
+        {
+            if (_backBtn != null) GameUIResources.ApplySecondaryStyle(_backBtn);
         }
 
         public void Localize(ILocalizationService loc)

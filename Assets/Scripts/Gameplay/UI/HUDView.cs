@@ -21,12 +21,20 @@ namespace RingFlow.Gameplay.UI
         private void Awake()
         {
             BindReferencesFromChildren();
+            ApplyBaseStyling();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             NexusLog.Info("HUDView", nameof(Awake), "",
                 $"HUD bound. MovesText={MovesText != null}, LevelText={LevelText != null}, " +
                 $"CoinsText={CoinsText != null}, UndoBtn={UndoButton != null}, " +
                 $"HintBtn={HintButton != null}, PauseBtn={PauseButton != null}.");
 #endif
+        }
+
+        private void ApplyBaseStyling()
+        {
+            if (_undoBtn != null) GameUIResources.ApplyTextButtonStyle(_undoBtn);
+            if (_restartBtn != null) GameUIResources.ApplyTextButtonStyle(_restartBtn);
+            if (_hintBtn != null) GameUIResources.ApplyTextButtonStyle(_hintBtn);
         }
 
         public void UpdateMoves(int moves, ILocalizationService loc = null)
@@ -92,10 +100,12 @@ namespace RingFlow.Gameplay.UI
             var texts = GetComponentsInChildren<Text>(true);
             foreach (var txt in texts)
             {
-                if (txt.name.ToUpper().Contains("MOVE") || txt.text.Contains("Moves")) MovesText = txt;
-                else if (txt.name.ToUpper().Contains("LEVEL") || txt.text.Contains("Level")) LevelText = txt;
-                else if (txt.name.ToUpper().Contains("COIN") || txt.transform.parent?.name.Contains("Coin") == true) CoinsText = txt;
-                else if (txt.name.ToUpper().Contains("DIAMOND") || txt.name.ToUpper().Contains("DIA") || txt.transform.parent?.name.Contains("Dia") == true) DiamondsText = txt;
+                var upper = txt.name.ToUpperInvariant();
+                var content = txt.text ?? string.Empty;
+                if (upper.Contains("MOVE") || content.Contains("Moves")) MovesText = txt;
+                else if (upper.Contains("LEVEL") || content.Contains("Level")) LevelText = txt;
+                else if (upper.Contains("COIN") || txt.transform.parent?.name.ToUpperInvariant().Contains("COIN") == true) CoinsText = txt;
+                else if (upper.Contains("DIAMOND") || upper.Contains("DIA") || txt.transform.parent?.name.ToUpperInvariant().Contains("DIA") == true) DiamondsText = txt;
             }
         }
     }
