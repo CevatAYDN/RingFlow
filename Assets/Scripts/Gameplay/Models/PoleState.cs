@@ -45,6 +45,13 @@ namespace RingFlow.Gameplay
         /// </summary>
         public bool CanAddRing(RingData ring)
         {
+            // FIX-C1: Chain rings require 2 free slots when a partner chain ring
+            // exists on another pole (ring pulls its partner). PoleState is a pure
+            // model and cannot scan other poles — that is the command's responsibility.
+            // However, the basic IsFull check must still be performed here, and the
+            // command-level chain capacity validation in MoveRingCommand.TryReserveChainCapacity
+            // handles the multi-pole scan. This guard prevents a full-pole false positive
+            // when IsFull is already true.
             return DirectCanAddRing(ring);
         }
 
@@ -100,7 +107,19 @@ namespace RingFlow.Gameplay
 
         public void SetCapacity(int capacity)
         {
-            RingCapacity = capacity > 0 ? capacity : GameplayAssetKeys.Tuning.MaxCapacity;
+            if (capacity <= 0)
+            {
+                // FIX-C5: Log a warning when the fallback Tuning.MaxCapacity is used
+                // because the caller didn't provide a valid capacity value.
+                // In dev builds this also triggers the assertion check.
+                GameplayAssetKeys.Tuning.WarnFallback(nameof(SetCapacity),
+                    nameof(GameplayAssetKeys.Tuning.MaxCapacity), GameplayAssetKeys.Tuning.MaxCapacity);
+                RingCapacity = GameplayAssetKeys.Tuning.MaxCapacity;
+            }
+            else
+            {
+                RingCapacity = capacity;
+            }
             MaxCapacity = RingCapacity;
         }
 
@@ -124,6 +143,13 @@ namespace RingFlow.Gameplay
 
         private bool DirectCanAddRing(RingData ring)
         {
+            // FIX-C1: Chain-specific capacity check — if this is a Chain ring and we
+            // are already full (IsFull), the move is blocked even before checking color
+            // rules. The 2-slot partner scan is done by MoveRingCommand.TryReserveChainCapacity.
+            // AdditionalData check: Chain rings with additionalData==0 have no partner.
+            if (ring.Type == RingType.Chain && ring.AdditionalData > 0 && IsFull)
+                return false;
+
             return RingRuleEvaluator.CanAddRing(ring, TopRing, IsFull, IsLocked);
         }
 

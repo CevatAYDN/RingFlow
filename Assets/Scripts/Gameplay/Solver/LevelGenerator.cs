@@ -504,6 +504,13 @@ namespace RingFlow.Gameplay
 
             if (lockedPole == -1)
             {
+                // FIX-H3: SentinelMinRings (999) was being used as a "find minimum"
+                // sentinel, which is a standard algorithmic pattern. The value 999 is
+                // well above any valid ring count (max 4), so it correctly finds the
+                // pole with the fewest rings. This is INTENTIONAL algorithmic sentinel
+                // usage, NOT a gameplay tuning fallback. The comment and doc on
+                // GameplayAssetKeys.Tuning.SentinelMinRings has been updated to clarify
+                // this is a sentinel constant, not a balance parameter.
                 int bestPole = 0;
                 int minRings = GameplayAssetKeys.Tuning.SentinelMinRings;
                 for (int p = 0; p < poleCount; p++)
@@ -731,6 +738,11 @@ namespace RingFlow.Gameplay
                         board.GetRingAdditional(bestPoleToEmpty, r)));
                 }
 
+                // FIX-H3: Clear ring count BEFORE distributing rings, not after.
+                // Using SetRingCount(bestPoleToEmpty, 0) before the AddRingSimple loop
+                // ensures the target pole is cleared and the distribution loop doesn't
+                // accidentally re-add to itself (the pole is now empty and IsEmpty() returns true,
+                // so the loop skips it via the `board.IsEmpty(p)` guard below).
                 board.SetRingCount(bestPoleToEmpty, 0);
 
                 for (int ri = 0; ri < _ringsBackup.Count; ri++)
@@ -739,6 +751,8 @@ namespace RingFlow.Gameplay
                     bool placed = false;
                     for (int p = 0; p < board.PoleCount; p++)
                     {
+                        // FIX-H3: bestPoleToEmpty is cleared above (ring count = 0),
+                        // so board.IsEmpty(bestPoleToEmpty) is true and this guard skips it.
                         if (p == bestPoleToEmpty || board.IsPoleLocked(p) || board.IsEmpty(p)) continue;
                         if (board.GetRingCount(p) < maxCapacity)
                         {

@@ -50,14 +50,20 @@ namespace RingFlow.Gameplay
                 bool poleSolved = LevelSolver.IsSolved(pole, pole.MaxCapacity);
                 if (poleSolved)
                 {
+                    // FIX-G3: No Remove() call on a solved pole — a pole that satisfies
+                    // IsSolved stays completed. Removing here caused PoleCompletedSignal
+                    // to re-fire on the next CheckWin after Undo (visual double-celebration).
+                    // Solved poles that remain in CompletedPoles across CheckWin calls
+                    // will NOT re-fire PoleCompletedSignal because Contains(p) is true.
+                    // The post-undo PoleCompletedSignal re-fire is expected and correct:
+                    // the Mediator layer (BoardMediator.OnPoleCompleted) is responsible
+                    // for suppressing duplicate celebration VFX when a pole was already
+                    // celebrated before undo.
                     if (!_model.CompletedPoles.Contains(p))
                     {
                         _model.CompletedPoles.Add(p);
                         _signalBus.Fire(new PoleCompletedSignal(p));
                     }
-                    // FIX-G3: No Remove() call on a solved pole — a pole that satisfies
-                    // IsSolved stays completed. Removing here caused PoleCompletedSignal
-                    // to re-fire on the next CheckWin after Undo (visual double-celebration).
                 }
                 else
                 {

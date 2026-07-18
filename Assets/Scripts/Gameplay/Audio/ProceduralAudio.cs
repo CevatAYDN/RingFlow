@@ -12,7 +12,9 @@ namespace RingFlow.Gameplay
         private static AudioClip _errorClip;
         private static AudioClip _explosionClip;
         private static AudioClip _poleCompleteClip;
-        private static AudioClip _poleCompleteRichClip;
+        // FIX-H1: Dictionary keyed by ringCount so each pole size gets its own
+        // deterministic rich pole-complete clip with varied noise.
+        private static readonly System.Collections.Generic.Dictionary<int, AudioClip> _richPoleClips = new();
         private static AudioClip _finalPoleCompleteClip;
         private static readonly System.Collections.Generic.Dictionary<int, AudioClip> _bgmClips = new();
 
@@ -60,7 +62,22 @@ namespace RingFlow.Gameplay
 
         public static AudioClip GetOrCreateRichPoleCompleteClip(int ringCount)
         {
-            if (_poleCompleteRichClip == null)
+            // FIX-H1: Generate a fresh clip for each ringCount value instead of caching
+            // a single clip. The old code cached a single clip created on first call,
+            // meaning all subsequent calls (with different ringCount values) returned
+            // the clip generated for the FIRST ringCount ever passed.
+            //
+            // Additionally, Random.value inside the loop made the clip NON-deterministic
+            // at creation time, which is worse: every runtime session got a different
+            // clip, but the clip itself was frozen — the noise component never varied
+            // on subsequent playbacks because it was baked into the clip.
+            //
+            // FIX: cache one clip per ringCount so different pole sizes get distinct
+            // audio textures, AND pre-generate deterministic noise values using a seeded
+            // System.Random (based on ringCount) so the clip is stable across sessions
+            // yet each ringCount gets unique noise.
+            var cacheKey = ringCount;
+            if (!_richPoleClips.TryGetValue(cacheKey, out var clip) || clip == null)
             {
                 var cfg = _config != null ? _config.RichPoleComplete : default;
                 int sr = SampleRate;
@@ -69,6 +86,11 @@ namespace RingFlow.Gameplay
                 float[] samples = new float[samplesCount];
 
                 float ringPitchFactor = cfg.RingPitchFactorBase + (ringCount - 2) * cfg.RingPitchFactorPerRing;
+
+                // FIX-H1: Seeded RNG for deterministic noise across sessions.
+                // Each ringCount produces consistent but unique noise.
+                var seededRng = new System.Random(ringCount * 7919);
+                float nextNoise() => (float)(seededRng.NextDouble() * 2.0 - 1.0);
 
                 for (int i = 0; i < samplesCount; i++)
                 {
@@ -81,7 +103,7 @@ namespace RingFlow.Gameplay
                         : 0f;
                     float thudFreq = Mathf.Lerp(cfg.ThudLowFreq, cfg.ThudHighFreq, progress / thudDurFrac);
                     float thud = Mathf.Sin(2f * Mathf.PI * thudFreq * t) * cfg.ThudVolume * thudVolume;
-                    thud += (Random.value * 2f - 1f) * cfg.ThudNoiseVolume * thudVolume;
+                    thud += nextNoise() * cfg.ThudNoiseVolume * thudVolume;
 
                     float sweepStart = cfg.SweepStartFraction;
                     float sweepEnd = cfg.SweepEndFraction;
@@ -101,7 +123,7 @@ namespace RingFlow.Gameplay
                                           Mathf.Sin((progress - sparkleStart) / (sparkleEnd - sparkleStart) * Mathf.PI);
                     float sparkleFreq = Mathf.Lerp(cfg.SparkleFreqStart, cfg.SparkleFreqEnd, progress) * ringPitchFactor;
                     float sparkle = Mathf.Sin(2f * Mathf.PI * sparkleFreq * t) * cfg.SparkleVolume * sparkleVolume;
-                    float noise = (Random.value * 2f - 1f) * cfg.SparkleNoiseVolume * sparkleVolume;
+                    float noise = nextNoise() * cfg.SparkleNoiseVolume * sparkleVolume;
 
                     float releaseStart = cfg.ReleaseStartFraction;
                     float releaseVolume = progress < releaseStart ? 0f :
@@ -114,10 +136,11 @@ namespace RingFlow.Gameplay
                     samples[i] = (thud + sweep + sparkle + noise + release) * master;
                 }
 
-                _poleCompleteRichClip = AudioClip.Create("PoleCompleteRichSFX", samplesCount, 1, sr, false);
-                _poleCompleteRichClip.SetData(samples, 0);
+                clip = AudioClip.Create("PoleCompleteRichSFX_" + ringCount, samplesCount, 1, sr, false);
+                clip.SetData(samples, 0);
+                _richPoleClips[cacheKey] = clip;
             }
-            return _poleCompleteRichClip;
+            return clip;
         }
 
         public static AudioClip GetOrCreateFinalPoleClip()
@@ -271,11 +294,16 @@ namespace RingFlow.Gameplay
                 int samplesCount = (int)(sr * dur);
                 float[] samples = new float[samplesCount];
                 float vol = cfg.Volume > 0 ? cfg.Volume : 0.25f;
+
+                // FIX-H1: Use seeded System.Random for deterministic explosion noise.
+                // Seed is fixed so the explosion clip is consistent every session
+                // (a cached clip should always sound the same when played).
+                var seededRng = new System.Random(16180);
                 for (int i = 0; i < samplesCount; i++)
                 {
                     float t = (float)i / sr;
                     float volume = 1f - (t / dur);
-                    float noise = Random.value * 2f - 1f;
+                    float noise = (float)(seededRng.NextDouble() * 2.0 - 1.0);
                     samples[i] = noise * vol * volume;
                 }
                 _explosionClip = AudioClip.Create("ExplosionSFX", samplesCount, 1, sr, false);
@@ -334,7 +362,8 @@ namespace RingFlow.Gameplay
             _errorClip = null;
             _explosionClip = null;
             _poleCompleteClip = null;
-            _poleCompleteRichClip = null;
+            // FIX-H1: Clear the per-ringCount rich pole clips cache
+            _richPoleClips.Clear();
             _finalPoleCompleteClip = null;
             _bgmClips.Clear();
         }

@@ -61,6 +61,23 @@ namespace RingFlow.Gameplay
         }
 
 
+        /// <summary>
+        /// FIX-H2 documented contract:
+        /// RestoreBoardSnapshot fully reverses ALL aspects of the move via the
+        /// BoardBefore snapshot. This includes:
+        ///   • Standard ring positions (from→to, to→from)
+        ///   • Locked/Unlocked pole state
+        ///   • Portal partner IDs
+        ///   • Ring capacity
+        ///   • All ring data (color, type, additional data including Bomb counters)
+        ///   • Ghost ring type (handled separately by RestoreGhostReveal for pre-selection state)
+        ///   • CompletedPoles is cleared and recomputed by CheckWinSignal that FinishUndo fires
+        ///
+        /// IMPORTANT: Because the snapshot includes ring data with Bomb counters,
+        /// BombCountersBeforeTick and BombExplodedRings are NOT used during undo —
+        /// the snapshot already contains the correct counter values. These fields
+        /// exist primarily for the solver's replay engine and for debug tooling.
+        /// </summary>
         private void RestoreBoardSnapshot(MoveRecord record)
         {
             // Restore in place: mutate the existing PoleState objects (matched by Id) instead of

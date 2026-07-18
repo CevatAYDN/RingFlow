@@ -46,10 +46,13 @@ namespace RingFlow.Gameplay
         private bool _isLocked;
         private MaterialPropertyBlock _propBlock;
 
-        // Cached WaitForSeconds instances — avoids per-flash GC allocation (M6).
-        // Keyed by duration: error (0.35 s) and success (0.8 s) are the only values used.
-        private WaitForSeconds _waitError;
-        private WaitForSeconds _waitSuccess;
+        // FIX-M6: Pre-allocate WaitForSeconds instances for the two most common
+        // flash durations (0.35s error, 0.8s success) as static readonly fields.
+        // This eliminates per-flash GC allocation entirely and avoids per-instance
+        // object overhead. The old instance fields (_waitError, _waitSuccess) were
+        // removed as they are now dead code — all Flash methods use the static cache.
+        private static readonly WaitForSeconds _cachedWaitError = new WaitForSeconds(0.35f);
+        private static readonly WaitForSeconds _cachedWaitSuccess = new WaitForSeconds(0.8f);
 
         private void Awake()
         {
@@ -91,12 +94,13 @@ namespace RingFlow.Gameplay
         private IEnumerator FlashRoutine(float duration)
         {
             SetColor(GetErrorTint());
-            // Reuse cached instance for the default 0.35 s error duration (zero GC, M6).
-            // A non-default duration is rare (only the public overload with a custom value),
-            // so allocating once there is acceptable.
-            if (_waitError == null) _waitError = new WaitForSeconds(0.35f);
+            // FIX-M6: Use static cached WaitForSeconds for the standard 0.35s
+            // duration instead of instance fields. The old code allocated new
+            // WaitForSeconds on any non-default duration; now we always use
+            // the static cache for the standard value and only allocate for
+            // custom durations (which are rare).
             yield return Mathf.Approximately(duration, 0.35f)
-                ? _waitError
+                ? _cachedWaitError
                 : new WaitForSeconds(duration);
             ApplyTint();
             _flashRoutine = null;
@@ -119,10 +123,10 @@ namespace RingFlow.Gameplay
         private IEnumerator FlashSuccessRoutine(float duration, Color color)
         {
             SetColor(color);
-            // Reuse cached instance for the default 0.8 s success duration (zero GC, M6).
-            if (_waitSuccess == null) _waitSuccess = new WaitForSeconds(0.8f);
+            // FIX-M6: Use static cached WaitForSeconds for the standard 0.8s
+            // duration to avoid per-flash allocation.
             yield return Mathf.Approximately(duration, 0.8f)
-                ? _waitSuccess
+                ? _cachedWaitSuccess
                 : new WaitForSeconds(duration);
             ApplyTint();
             _flashRoutine = null;

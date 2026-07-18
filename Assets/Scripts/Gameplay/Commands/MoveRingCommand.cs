@@ -114,6 +114,10 @@ namespace RingFlow.Gameplay
 
             toPole.AddRing(ring);
 
+            // FIX-M3: Capture PlayerRingIndex immediately after AddRing but BEFORE
+            // PostMoveExecution (chain/magnet pulls may add rings above ours).
+            context.PlayerRingIndex = toPole.Rings.Count - 1;
+
             if (breaksIce)
             {
                 // Thaw the frozen ring in the model (now the ring below the newly added one).
@@ -164,10 +168,36 @@ namespace RingFlow.Gameplay
 
         private void ExecuteSubMoves(ref MoveContext context, MoveRecord mainRecord)
         {
-            context.PlayerRingIndex = context.ToPole.Rings.Count - 1;
-            // context.MainRecord is already set in Execute() before ExecuteCoreMove runs,
-            // so Chain/Magnet strategies already appended their sub-moves during PostMoveExecution.
-            // No additional strategy calls needed here.
+            // FIX-M3: Set PlayerRingIndex AFTER ExecuteCoreMove completes, because
+            // Chain/Magnet PostMoveExecution may have appended additional rings on top
+            // of the moved ring. Setting PlayerRingIndex before PostMoveExecution runs
+            // would point to the wrong index if chain/magnet pulled new rings above
+            // the player's ring. Portal teleport (ApplyPortalTeleport) uses this index
+            // to find the specific ring to teleport — a stale index would teleport the
+            // wrong ring (e.g. a pulled chain partner instead of the player's ring).
+            //
+            // Formula: PlayerRingIndex = ringCount - 1 (the player's ring sits at
+            // the top BEFORE any post-move side-effects), but after chain/magnet we
+            // need the original index which is now somewhere below the pulled rings.
+            // Correct approach: capture the index BEFORE PostMoveExecution runs, not after.
+            // Actually, PostMoveExecution is called inside ExecuteCoreMove via:
+            //   _strategyManager.ExecutePostMoveExecution(ring.Type, ref context);
+            // which may modify the ToPole's rings. So by the time we reach this method,
+            // the player's ring may no longer be at the top.
+            //
+            // The correct index is: (pre-AddRing count) — the ring's position before any
+            // chain/magnet pulls. We captured this during ExecuteCoreMove: after AddRing,
+            // the ring is at index = toPole.Rings.Count - 1 - subPulls.
+            //
+            // Simplify: set PlayerRingIndex to the index of the moved ring. We know
+            // it was placed at what was the top after AddRing, so we track it before
+            // PostMoveExecution modifies the pole.
+            // Capture in ExecuteCoreMove before strategy PostMoveExecution modifies the pole.
+            if (context.PlayerRingIndex < 0)
+            {
+                // Fallback: if not captured by strategy, use current top index
+                context.PlayerRingIndex = context.ToPole.Rings.Count - 1;
+            }
 
             // Portal teleport remains here: it is a POLE mechanic (PortalPartnerId on PoleState),
             // not a ring-type mechanic. A ring strategy cannot own pole configuration.

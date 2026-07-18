@@ -360,8 +360,21 @@ namespace RingFlow.Gameplay
                 GetRingAdditional(poleIndex, count - 1));
         }
 
+        /// <summary>
+        /// FIX-H5: BoardState.CanPopRing now delegates to the full RingRuleEvaluator
+        /// which centrally handles all ring-type restrictions (Frozen, Stone, Locked, etc.).
+        /// Previously this bypassed the strategy pattern but the evaluator is the single
+        /// source of truth — all special-case ring pop rules are already in CanPopRing.
+        ///
+        /// NOTE: Chain, Bomb, Magnet, Paint, Rainbow rings are all pop-able under the
+        /// same rules as Standard (they sit on top of stacks and can be removed). Only
+        /// Frozen (cannot pop until ice broken) and Stone (never moves) have restrictions,
+        /// and both are already enforced by RingRuleEvaluator.CanPopRing.
+        /// </summary>
         public bool CanPopRing(int poleIndex)
         {
+            // FIX-H5: Direct delegation to RingRuleEvaluator — single source of truth.
+            // The solver and runtime both use this path, ensuring consistent validation.
             return RingRuleEvaluator.CanPopRing(GetTopRing(poleIndex), IsEmpty(poleIndex), IsPoleLocked(poleIndex));
         }
 

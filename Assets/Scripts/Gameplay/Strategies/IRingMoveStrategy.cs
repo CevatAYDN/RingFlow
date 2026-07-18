@@ -66,7 +66,15 @@ namespace RingFlow.Gameplay.Strategies
         public RingColor RainbowTargetOriginalColor;
         public bool WasIceBroken;
         public bool WasPoleUnlocked;
+
+        /// <summary>
+        /// FIX-M3: The index of the player's ring on the ToPole AFTER AddRing
+        /// but BEFORE any PostMoveExecution (chain/magnet pulls). Set by
+        /// ExecuteCoreMove immediately after AddRing. PortalTeleport uses this
+        /// to find the correct ring to teleport.
+        /// </summary>
         public int PlayerRingIndex;
+
         public List<int> IceBrokenRingIndices;
         public List<(int PoleId, int RingIndex, int Counter)> BombCountersBeforeTick;
         public List<(int PoleId, int RingIndex, RingData Ring)> BombExplodedRings;

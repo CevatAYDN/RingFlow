@@ -1,3 +1,5 @@
+using Nexus.Core.Services;
+
 namespace RingFlow.Gameplay
 {
     /// <summary>
@@ -14,7 +16,7 @@ namespace RingFlow.Gameplay
     {
         // ── Resources.Load keys ───────────────────────────────────────────
         // NOTE: Files reside in Assets/Resources/Configs/, so keys must include
-        // the "Configs/" subfolder prefix.  Exception: "Localization" is the CSV
+        // the "Configs/" subfolder prefix. Exception: "Localization" is the CSV
         // file at Assets/Resources/Localization.csv (root Resources, no prefix).
         public const string GameConfigDatabase = "Configs/GameConfigDatabase";
         public const string RingColorPalette = "Configs/RingColorPalette";
@@ -29,7 +31,6 @@ namespace RingFlow.Gameplay
         public const string RingMechanicData = "Configs/RingMechanicData";
         public const string ThemeSkinDatabase = "Configs/ThemeSkinDatabase";
         public const string ScreenRegistry = "Configs/ScreenRegistry";
-
 
         public const string UiScreenPrefix = "UI/";
 
@@ -142,6 +143,31 @@ namespace RingFlow.Gameplay
                     $"[GameplayAssetKeys.Tuning] '{callerName}' reached the fallback value for '{fieldName}'. " +
                     $"This field must be read from the authoritative ScriptableObject (GameConfigDatabaseSO). " +
                     $"Bind the SO via DI and ensure it is loaded before this code runs.");
+#endif
+            }
+
+            /// <summary>
+            /// FIX-C5: Soft fallback detection that logs a warning in dev builds when a
+            /// non-authoritative value is used. Unlike AssertNotFallback (which throws in
+            /// dev builds), this allows the game to continue with the fallback value.
+            ///
+            /// NOTE: This method uses [Conditional] attributes, so it is a NO-OP in
+            /// production (release) builds. In production, the fallback value is silently
+            /// accepted to avoid crashing the game. The warning is only visible in
+            /// Unity Editor and DEVELOPMENT_BUILD logs.
+            ///
+            /// Called directly in PoleState.SetCapacity and other critical fallback paths
+            /// to catch misconfigured data during development.
+            /// </summary>
+            [System.Diagnostics.Conditional("UNITY_EDITOR")]
+            [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
+            public static void WarnFallback(string callerName, string fieldName, object usedValue)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                NexusLog.Warn("GameplayAssetKeys.Tuning", callerName, fieldName,
+                    $"Fallback value used: {fieldName}={usedValue}. " +
+                    $"This value should come from the authoritative ScriptableObject (GameConfigDatabaseSO). " +
+                    $"Ensure the SO is bound via DI and loaded before '{callerName}' runs.");
 #endif
             }
         }

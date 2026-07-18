@@ -137,7 +137,7 @@ namespace RingFlow.Tests
 
             Assert.IsNotNull(clip);
             Assert.AreEqual(1, clip.channels);
-            Assert.AreEqual("PoleCompleteRichSFX", clip.name);
+            Assert.AreEqual("PoleCompleteRichSFX_3", clip.name);
         }
 
         [Test]
