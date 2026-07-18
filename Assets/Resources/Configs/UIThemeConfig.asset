@@ -12,32 +12,97 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b1bc199d42e4ed94eab6a0b168bc39aa, type: 3}
   m_Name: UIThemeConfig
   m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.UIThemeConfigSO
-  PrimaryColor: {r: 0.22, g: 0.51, b: 0.91, a: 1}
-  PrimaryPressed: {r: 0.16, g: 0.4, b: 0.75, a: 1}
-  AccentColor: {r: 1, g: 0.76, b: 0.03, a: 1}
-  BgColor: {r: 0.96, g: 0.98, b: 1, a: 1}
-  SurfaceColor: {r: 0.9, g: 0.93, b: 0.97, a: 1}
-  PanelColor: {r: 0.88, g: 0.92, b: 0.96, a: 1}
-  TextColor: {r: 0.15, g: 0.2, b: 0.28, a: 1}
-  MutedText: {r: 0.4, g: 0.45, b: 0.52, a: 1}
-  DangerColor: {r: 0.78, g: 0.2, b: 0.2, a: 1}
-  SuccessColor: {r: 0.27, g: 0.74, b: 0.4, a: 1}
+  PrimaryColor: {r: 1, g: 0.48, b: 0.3, a: 1}
+  PrimaryLight: {r: 1, g: 0.6, b: 0.45, a: 1}
+  PrimaryPressed: {r: 0.85, g: 0.38, b: 0.22, a: 1}
+  AccentColor: {r: 1, g: 0.79, b: 0.24, a: 1}
+  AccentLight: {r: 1, g: 0.85, b: 0.5, a: 1}
+  BgColor: {r: 0.98, g: 0.96, b: 0.93, a: 1}
+  BgDark: {r: 0.98, g: 0.96, b: 0.93, a: 1}
+  SurfaceColor: {r: 1, g: 1, b: 1, a: 1}
+  SurfaceDark: {r: 1, g: 1, b: 1, a: 1}
+  PanelColor: {r: 0.98, g: 0.96, b: 0.93, a: 1}
+  PanelDark: {r: 0.98, g: 0.96, b: 0.93, a: 1}
+  TextColor: {r: 0.17, g: 0.16, b: 0.27, a: 1}
+  TextOnPrimary: {r: 1, g: 1, b: 1, a: 1}
+  TextOnDark: {r: 0.17, g: 0.16, b: 0.27, a: 1}
+  MutedText: {r: 0.42, g: 0.4, b: 0.5, a: 1}
+  MutedTextDark: {r: 0.42, g: 0.4, b: 0.5, a: 1}
+  DisabledText: {r: 0.6, g: 0.62, b: 0.68, a: 1}
+  DangerColor: {r: 0.94, g: 0.34, b: 0.49, a: 1}
+  DangerLight: {r: 0.95, g: 0.4, b: 0.4, a: 1}
+  SuccessColor: {r: 0.25, g: 0.78, b: 0.79, a: 1}
+  SuccessLight: {r: 0.5, g: 0.9, b: 0.6, a: 1}
+  WarningColor: {r: 1, g: 0.76, b: 0.03, a: 1}
+  InfoColor: {r: 0.3, g: 0.65, b: 0.95, a: 1}
+  OverlayLight: {r: 0, g: 0, b: 0, a: 0.45}
+  OverlayMedium: {r: 0, g: 0, b: 0, a: 0.65}
+  OverlayHeavy: {r: 0, g: 0, b: 0, a: 0.8}
+  StarEarned: {r: 1, g: 0.84, b: 0, a: 1}
+  StarEmpty: {r: 0.32, g: 0.34, b: 0.38, a: 1}
+  CoinColor: {r: 1, g: 0.79, b: 0.24, a: 1}
+  DiamondColor: {r: 0.25, g: 0.78, b: 0.79, a: 1}
+  XpColor: {r: 0.6, g: 0.3, b: 1, a: 1}
   PanelElevation: 4
   ButtonHeight: 56
   ButtonWidth: 240
+  SmallButtonHeight: 40
+  SmallButtonWidth: 120
+  IconButtonSize: 48
+  CornerRadius: 12
+  TitleFontSize: 50
+  HeaderFontSize: 34
+  BodyFontSize: 22
+  SmallFontSize: 16
+  DisplayFontSize: 68
   ButtonFontSize: 22
+  ToggleFontSize: 18
+  ScreenFadeDuration: 0.35
+  PopupScaleDuration: 0.3
+  PopupScaleEnter: 0.85
+  ButtonHoverScale: 1.04
+  ButtonPressScale: 0.96
+  SlideDuration: 0.35
+  StaggerDelay: 0.07
+  RewardPunchScale: 1.3
+  RewardPunchDuration: 0.4
+  StarPopDuration: 0.35
+  StarPopDelay: 0.2
+  ScreenPadding: 24
+  CardPadding: 20
+  ElementSpacing: 12
+  SectionSpacing: 24
+  ButtonSpacing: 16
   PrimaryButtonColors:
-    NormalColor: {r: 0.22, g: 0.51, b: 0.91, a: 1}
-    HighlightedColor: {r: 0.3, g: 0.62, b: 1, a: 1}
-    PressedColor: {r: 0.16, g: 0.4, b: 0.75, a: 1}
-    SelectedColor: {r: 0.3, g: 0.62, b: 1, a: 1}
-    DisabledColor: {r: 0.3, g: 0.3, b: 0.35, a: 1}
+    NormalColor: {r: 1, g: 0.48, b: 0.3, a: 1}
+    HighlightedColor: {r: 1, g: 0.6, b: 0.45, a: 1}
+    PressedColor: {r: 0.85, g: 0.38, b: 0.22, a: 1}
+    SelectedColor: {r: 1, g: 0.48, b: 0.3, a: 1}
+    DisabledColor: {r: 0.85, g: 0.85, b: 0.88, a: 1}
+  AccentButtonColors:
+    NormalColor: {r: 0.25, g: 0.78, b: 0.79, a: 1}
+    HighlightedColor: {r: 0.4, g: 0.85, b: 0.86, a: 1}
+    PressedColor: {r: 0.18, g: 0.62, b: 0.63, a: 1}
+    SelectedColor: {r: 0.25, g: 0.78, b: 0.79, a: 1}
+    DisabledColor: {r: 0.85, g: 0.85, b: 0.88, a: 1}
+  SuccessButtonColors:
+    NormalColor: {r: 0.25, g: 0.78, b: 0.79, a: 1}
+    HighlightedColor: {r: 0.4, g: 0.85, b: 0.86, a: 1}
+    PressedColor: {r: 0.18, g: 0.62, b: 0.63, a: 1}
+    SelectedColor: {r: 0.25, g: 0.78, b: 0.79, a: 1}
+    DisabledColor: {r: 0.85, g: 0.85, b: 0.88, a: 1}
   OutlineButtonColors:
-    NormalColor: {r: 0.9, g: 0.93, b: 0.97, a: 1}
-    HighlightedColor: {r: 0.8, g: 0.84, b: 0.9, a: 1}
-    PressedColor: {r: 0.7, g: 0.74, b: 0.8, a: 1}
-    SelectedColor: {r: 0.8, g: 0.84, b: 0.9, a: 1}
-    DisabledColor: {r: 0.85, g: 0.87, b: 0.9, a: 1}
+    NormalColor: {r: 1, g: 1, b: 1, a: 1}
+    HighlightedColor: {r: 0.92, g: 0.92, b: 0.95, a: 1}
+    PressedColor: {r: 0.85, g: 0.85, b: 0.88, a: 1}
+    SelectedColor: {r: 1, g: 1, b: 1, a: 1}
+    DisabledColor: {r: 0.95, g: 0.95, b: 0.97, a: 1}
+  DarkButtonColors:
+    NormalColor: {r: 0.14, g: 0.16, b: 0.22, a: 1}
+    HighlightedColor: {r: 0.2, g: 0.22, b: 0.3, a: 1}
+    PressedColor: {r: 0.1, g: 0.12, b: 0.18, a: 1}
+    SelectedColor: {r: 0.2, g: 0.22, b: 0.3, a: 1}
+    DisabledColor: {r: 0.08, g: 0.08, b: 0.1, a: 1}
   DangerButtonColors:
     NormalColor: {r: 0.78, g: 0.2, b: 0.2, a: 1}
     HighlightedColor: {r: 0.88, g: 0.32, b: 0.32, a: 1}
@@ -51,8 +116,8 @@ MonoBehaviour:
     SelectedColor: {r: 0, g: 0, b: 0, a: 0}
     DisabledColor: {r: 0, g: 0, b: 0, a: 0}
   IconButtonColors:
-    NormalColor: {r: 0.88, g: 0.92, b: 0.96, a: 1}
-    HighlightedColor: {r: 0.8, g: 0.84, b: 0.9, a: 1}
-    PressedColor: {r: 0.7, g: 0.74, b: 0.8, a: 1}
-    SelectedColor: {r: 0.8, g: 0.84, b: 0.9, a: 1}
-    DisabledColor: {r: 0.85, g: 0.87, b: 0.9, a: 1}
+    NormalColor: {r: 1, g: 1, b: 1, a: 1}
+    HighlightedColor: {r: 0.92, g: 0.92, b: 0.95, a: 1}
+    PressedColor: {r: 0.85, g: 0.85, b: 0.88, a: 1}
+    SelectedColor: {r: 1, g: 1, b: 1, a: 1}
+    DisabledColor: {r: 0.95, g: 0.95, b: 0.97, a: 1}

@@ -45,129 +45,231 @@ namespace RingFlow.Gameplay.UI
 
         public void BuildUI()
         {
-            // Backdrop
-            _backdrop = new GameObject("Backdrop", typeof(RectTransform), typeof(Image));
-            _backdrop.transform.SetParent(transform, false);
-            var bdRect = _backdrop.GetComponent<RectTransform>();
-            bdRect.anchorMin = Vector2.zero; bdRect.anchorMax = Vector2.one;
-            bdRect.offsetMin = Vector2.zero; bdRect.offsetMax = Vector2.zero;
-            _backdrop.GetComponent<Image>().color = GameUIResources.BgDark;
-            _backdrop.GetComponent<Image>().raycastTarget = false;
+            // Background - Full Screen Cream Panel
+            var bgGo = GameUIResources.CreatePanel("Background", transform);
+            var bgRect = bgGo.GetComponent<RectTransform>();
+            bgRect.anchorMin = Vector2.zero; bgRect.anchorMax = Vector2.one;
+            bgRect.offsetMin = Vector2.zero; bgRect.offsetMax = Vector2.zero;
+            bgGo.GetComponent<Image>().color = GameUIResources.BgColor;
 
-            // Main content card
-            var cardGo = GameUIResources.CreatePanel("Card", transform);
-            cardGo.GetComponent<Image>().color = GameUIResources.SurfaceDark;
-            GameUIResources.SetAnchors(cardGo.GetComponent<RectTransform>(), 0.08f, 0.10f, 0.92f, 0.90f);
-            CardGroup = cardGo.GetComponent<CanvasGroup>();
+            CardGroup = bgGo.GetComponent<CanvasGroup>();
+            if (CardGroup == null) CardGroup = bgGo.AddComponent<CanvasGroup>();
 
-            // Title
-            var titleGo = GameUIResources.CreateDisplayText("RING FLOW", cardGo.transform, 56, GameUIResources.TextOnDark);
+            // 1. TOP BAR CONTAINER (Responsive anchors)
+            var topBar = new GameObject("TopBar", typeof(RectTransform));
+            topBar.transform.SetParent(bgGo.transform, false);
+            GameUIResources.SetAnchors(topBar.GetComponent<RectTransform>(), 0f, 0.90f, 1f, 0.98f);
+
+            // Left circular avatar
+            var avatar = GameUIResources.CreateCard("Avatar", topBar.transform);
+            avatar.GetComponent<Image>().color = GameUIResources.SurfaceColor;
+            GameUIResources.SetAnchors(avatar.GetComponent<RectTransform>(), 0.04f, 0.15f, 0.14f, 0.85f);
+            var avatarTextGo = GameUIResources.CreateText("C", avatar.transform, 18, TextAnchor.MiddleCenter, GameUIResources.TextColor);
+            avatarTextGo.GetComponent<Text>().fontStyle = FontStyle.Bold;
+
+            // Middle Level Pill (Clicking it opens level select)
+            _lvlBtn = new GameObject("Btn_LEVEL_SELECT", typeof(RectTransform), typeof(Image), typeof(Button));
+            _lvlBtn.transform.SetParent(topBar.transform, false);
+            GameUIResources.SetAnchors(_lvlBtn.GetComponent<RectTransform>(), 0.18f, 0.15f, 0.50f, 0.85f);
+            var lvlImg = _lvlBtn.GetComponent<Image>();
+            lvlImg.color = GameUIResources.SurfaceColor;
+            lvlImg.sprite = GameUIResources.GetRoundedSprite();
+            lvlImg.type = Image.Type.Sliced;
+            _lvlBtn.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.08f);
+            _lvlBtn.GetComponent<Shadow>().effectDistance = new Vector2(0f, -2f);
+            LevelSelectButton = _lvlBtn.GetComponent<Button>();
+            GameUIResources.AddButtonEffects(LevelSelectButton);
+
+            var lvlTextGo = GameUIResources.CreateText("Lv 1", _lvlBtn.transform, 14, TextAnchor.MiddleLeft, GameUIResources.TextColor);
+            lvlTextGo.name = "PlayerLevel";
+            PlayerLevelText = lvlTextGo.GetComponent<Text>();
+            PlayerLevelText.fontStyle = FontStyle.Bold;
+            GameUIResources.SetAnchors(lvlTextGo.GetComponent<RectTransform>(), 0.08f, 0f, 0.35f, 1f);
+
+            // Level bar inside pill
+            var lvlBarBg = new GameObject("LevelBarBg", typeof(RectTransform), typeof(Image));
+            lvlBarBg.transform.SetParent(_lvlBtn.transform, false);
+            GameUIResources.SetAnchors(lvlBarBg.GetComponent<RectTransform>(), 0.38f, 0.35f, 0.92f, 0.65f);
+            lvlBarBg.GetComponent<Image>().color = GameUIResources.PanelColor;
+            lvlBarBg.GetComponent<Image>().sprite = GameUIResources.GetRoundedSprite();
+            lvlBarBg.GetComponent<Image>().type = Image.Type.Sliced;
+
+            var lvlBarFill = new GameObject("LevelBarFill", typeof(RectTransform), typeof(Image));
+            lvlBarFill.transform.SetParent(lvlBarBg.transform, false);
+            lvlBarFill.GetComponent<RectTransform>().anchorMin = Vector2.zero;
+            lvlBarFill.GetComponent<RectTransform>().anchorMax = new Vector2(0.5f, 1f);
+            lvlBarFill.GetComponent<RectTransform>().offsetMin = Vector2.zero;
+            lvlBarFill.GetComponent<RectTransform>().offsetMax = Vector2.zero;
+            lvlBarFill.GetComponent<Image>().color = GameUIResources.PrimaryColor; // Coral progress fill
+            lvlBarFill.GetComponent<Image>().sprite = GameUIResources.GetRoundedSprite();
+            lvlBarFill.GetComponent<Image>().type = Image.Type.Sliced;
+            PlayerLevelProgress = lvlBarFill.GetComponent<Image>();
+
+            // Right Coins Pill
+            var coinsPill = GameUIResources.CreateCard("CoinsPill", topBar.transform);
+            GameUIResources.SetAnchors(coinsPill.GetComponent<RectTransform>(), 0.54f, 0.15f, 0.74f, 0.85f);
+            var coinTextGo = GameUIResources.CreateText("🪙 0", coinsPill.transform, 14, TextAnchor.MiddleCenter, GameUIResources.TextColor);
+            coinTextGo.name = "CoinsText";
+            CoinsText = coinTextGo.GetComponent<Text>();
+            CoinsText.fontStyle = FontStyle.Bold;
+
+            // Right Gems Pill
+            var gemsPill = GameUIResources.CreateCard("GemsPill", topBar.transform);
+            GameUIResources.SetAnchors(gemsPill.GetComponent<RectTransform>(), 0.78f, 0.15f, 0.96f, 0.85f);
+            var gemsTextGo = GameUIResources.CreateText("💎 0", gemsPill.transform, 14, TextAnchor.MiddleCenter, GameUIResources.TextColor);
+            gemsTextGo.name = "DiamondsText";
+            DiamondsText = gemsTextGo.GetComponent<Text>();
+            DiamondsText.fontStyle = FontStyle.Bold;
+
+            // 2. MAIN LOGO / TAGLINE
+            var titleGo = GameUIResources.CreateDisplayText("<color=#2C2A44>Ring</color><color=#FFC93C>Flow</color>", bgGo.transform, 56, GameUIResources.TextColor);
             titleGo.name = "Title";
             TitleText = titleGo.GetComponent<Text>();
-            GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.10f, 0.78f, 0.90f, 0.90f);
+            GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.05f, 0.77f, 0.95f, 0.87f);
 
-            // Subtitle
-            var subGo = GameUIResources.CreateText("", cardGo.transform, 18, TextAnchor.MiddleCenter, GameUIResources.MutedTextDark);
+            var subGo = GameUIResources.CreateText("Renkleri Ayır, Zihni Dinlendir", bgGo.transform, 18, TextAnchor.MiddleCenter, GameUIResources.MutedText);
             subGo.name = "Subtitle";
             SubtitleText = subGo.GetComponent<Text>();
-            GameUIResources.SetAnchors(subGo.GetComponent<RectTransform>(), 0.12f, 0.72f, 0.88f, 0.76f);
+            GameUIResources.SetAnchors(subGo.GetComponent<RectTransform>(), 0.05f, 0.73f, 0.95f, 0.77f);
 
-            // Player level panel
-            var levelPanel = GameUIResources.CreatePanel("PlayerLevelPanel", cardGo.transform);
-            levelPanel.GetComponent<Image>().color = new Color(0.08f, 0.10f, 0.14f);
-            GameUIResources.SetAnchors(levelPanel.GetComponent<RectTransform>(), 0.10f, 0.64f, 0.90f, 0.70f);
+            // 3. CENTER BOARD PREVIEW (White Card with shadow + mock poles/rings)
+            var boardCard = GameUIResources.CreateCard("BoardPreviewCard", bgGo.transform);
+            boardCard.GetComponent<Image>().color = GameUIResources.SurfaceColor;
+            GameUIResources.SetAnchors(boardCard.GetComponent<RectTransform>(), 0.12f, 0.44f, 0.88f, 0.71f);
 
-            var levelGo = GameUIResources.CreateText("LVL 1", levelPanel.transform, 16, TextAnchor.MiddleLeft, GameUIResources.AccentColor);
-            levelGo.name = "PlayerLevel";
-            PlayerLevelText = levelGo.GetComponent<Text>();
-            GameUIResources.SetAnchors(levelGo.GetComponent<RectTransform>(), 0.04f, 0f, 0.20f, 1f);
+            // 3 mock poles inside boardCard
+            float[] poleX = { 0.25f, 0.50f, 0.75f };
+            for (int i = 0; i < 3; i++)
+            {
+                var pole = new GameObject($"MockPole_{i}", typeof(RectTransform), typeof(Image));
+                pole.transform.SetParent(boardCard.transform, false);
+                var pRect = pole.GetComponent<RectTransform>();
+                pRect.anchorMin = new Vector2(poleX[i] - 0.015f, 0.15f);
+                pRect.anchorMax = new Vector2(poleX[i] + 0.015f, 0.85f);
+                pRect.offsetMin = Vector2.zero; pRect.offsetMax = Vector2.zero;
+                pole.GetComponent<Image>().color = new Color(0.82f, 0.81f, 0.75f); // wood/sand color for poles
+                pole.GetComponent<Image>().sprite = GameUIResources.GetRoundedSprite();
+                pole.GetComponent<Image>().type = Image.Type.Sliced;
 
-            var levelBarBg = new GameObject("LevelBarBg", typeof(RectTransform), typeof(Image));
-            levelBarBg.transform.SetParent(levelPanel.transform, false);
-            GameUIResources.SetAnchors(levelBarBg.GetComponent<RectTransform>(), 0.22f, 0.25f, 0.70f, 0.75f);
-            levelBarBg.GetComponent<Image>().color = new Color(0.20f, 0.22f, 0.28f);
-            levelBarBg.GetComponent<Image>().sprite = GameUIResources.GetRoundedSprite();
-            levelBarBg.GetComponent<Image>().type = Image.Type.Sliced;
+                // Add mock rings on poles
+                int ringsOnPole = i switch { 0 => 3, 1 => 2, 2 => 1, _ => 0 };
+                for (int r = 0; r < ringsOnPole; r++)
+                {
+                    var ring = new GameObject($"MockRing_{i}_{r}", typeof(RectTransform), typeof(Image));
+                    ring.transform.SetParent(boardCard.transform, false);
+                    var rRect = ring.GetComponent<RectTransform>();
+                    float rY = 0.15f + r * 0.16f;
+                    rRect.anchorMin = new Vector2(poleX[i] - 0.08f, rY);
+                    rRect.anchorMax = new Vector2(poleX[i] + 0.08f, rY + 0.13f);
+                    rRect.offsetMin = Vector2.zero; rRect.offsetMax = Vector2.zero;
 
-            var levelBarFill = new GameObject("LevelBarFill", typeof(RectTransform), typeof(Image));
-            levelBarFill.transform.SetParent(levelBarBg.transform, false);
-            levelBarFill.GetComponent<RectTransform>().anchorMin = Vector2.zero;
-            levelBarFill.GetComponent<RectTransform>().anchorMax = new Vector2(0.5f, 1f);
-            levelBarFill.GetComponent<RectTransform>().offsetMin = Vector2.zero;
-            levelBarFill.GetComponent<RectTransform>().offsetMax = Vector2.zero;
-            levelBarFill.GetComponent<Image>().color = GameUIResources.AccentColor;
-            levelBarFill.GetComponent<Image>().sprite = GameUIResources.GetRoundedSprite();
-            levelBarFill.GetComponent<Image>().type = Image.Type.Sliced;
-            PlayerLevelProgress = levelBarFill.GetComponent<Image>();
+                    var ringColor = (i, r) switch
+                    {
+                        (0, 0) => GameUIResources.PrimaryColor, // Coral
+                        (0, 1) => GameUIResources.SuccessColor, // Teal
+                        (0, 2) => GameUIResources.PrimaryColor,
+                        (1, 0) => GameUIResources.AccentColor, // Sunny
+                        (1, 1) => GameUIResources.SuccessColor,
+                        (2, 0) => GameUIResources.AccentColor,
+                        _ => GameUIResources.PrimaryColor
+                    };
+                    ring.GetComponent<Image>().color = ringColor;
+                    ring.GetComponent<Image>().sprite = GameUIResources.GetRoundedSprite();
+                    ring.GetComponent<Image>().type = Image.Type.Sliced;
+                }
+            }
 
-            // Currency row
-            var currencyRow = GameUIResources.CreatePanel("CurrencyRow", cardGo.transform);
-            currencyRow.GetComponent<Image>().color = new Color(0.10f, 0.12f, 0.16f);
-            GameUIResources.SetAnchors(currencyRow.GetComponent<RectTransform>(), 0.10f, 0.56f, 0.90f, 0.62f);
-
-            // Coins
-            var coinsLabel = GameUIResources.CreateText("🪙 0", currencyRow.transform, 16, TextAnchor.MiddleLeft, GameUIResources.CoinColor);
-            coinsLabel.name = "CoinsText";
-            CoinsText = coinsLabel.GetComponent<Text>();
-            GameUIResources.SetAnchors(coinsLabel.GetComponent<RectTransform>(), 0.04f, 0f, 0.46f, 1f);
-            CoinsText.supportRichText = true;
-
-            // Diamonds
-            var gemsLabel = GameUIResources.CreateText("💎 0", currencyRow.transform, 16, TextAnchor.MiddleRight, GameUIResources.DiamondColor);
-            gemsLabel.name = "DiamondsText";
-            DiamondsText = gemsLabel.GetComponent<Text>();
-            GameUIResources.SetAnchors(gemsLabel.GetComponent<RectTransform>(), 0.54f, 0f, 0.96f, 1f);
-            DiamondsText.supportRichText = true;
-
-            // Buttons
-            float btnW = 320f;
-            float btnH = 56f;
-            float gap = 8f;
-            float startY = 0.50f;
-
-            _continueBtn = CreateMenuButton(cardGo.transform, "Btn_CONTINUE", "CONTINUE", btnW, btnH,
-                new Vector2(0.5f, startY), new Vector2(0.5f, startY - 0.055f));
+            // 4. MAIN PLAY BUTTON (▶ OYNA - Bölüm X)
+            _continueBtn = GameUIResources.CreateButton("▶ OYNA", bgGo.transform, 320f, 60f);
+            _continueBtn.name = "Btn_CONTINUE";
+            GameUIResources.SetAnchors(_continueBtn.GetComponent<RectTransform>(), 0.12f, 0.33f, 0.88f, 0.41f);
             ContinueButton = _continueBtn.GetComponent<Button>();
             GameUIResources.ApplyPrimaryStyle(_continueBtn);
+            
+            // Map PlayButton to a separate inactive button to avoid double onClick triggers on transition
+            var dummyPlayGo = new GameObject("Btn_PLAY_DUMMY", typeof(RectTransform), typeof(Button));
+            dummyPlayGo.transform.SetParent(bgGo.transform, false);
+            dummyPlayGo.SetActive(false);
+            _playBtn = dummyPlayGo;
+            PlayButton = dummyPlayGo.GetComponent<Button>();
 
-            _playBtn = CreateMenuButton(cardGo.transform, "Btn_PLAY", "QUICK PLAY", btnW, btnH * 0.9f,
-                new Vector2(0.5f, startY - 0.065f), new Vector2(0.5f, startY - 0.115f));
-            PlayButton = _playBtn.GetComponent<Button>();
-            GameUIResources.ApplyAccentStyle(_playBtn);
-
-            _lvlBtn = CreateMenuButton(cardGo.transform, "Btn_LEVELS", "LEVEL SELECT", btnW, btnH * 0.9f,
-                new Vector2(0.5f, startY - 0.125f), new Vector2(0.5f, startY - 0.175f));
-            LevelSelectButton = _lvlBtn.GetComponent<Button>();
-            GameUIResources.ApplyOutlineStyle(_lvlBtn);
-
-            _dailyBtn = CreateMenuButton(cardGo.transform, "Btn_DAILY", "DAILY REWARD", btnW, btnH * 0.85f,
-                new Vector2(0.5f, startY - 0.185f), new Vector2(0.5f, startY - 0.230f));
+            // 5. DAILY CHALLENGE & EVENTS SIDE-BY-SIDE PANELS
+            // Daily Challenge (Left)
+            _dailyBtn = new GameObject("Btn_DAILY", typeof(RectTransform), typeof(Image), typeof(Button));
+            _dailyBtn.transform.SetParent(bgGo.transform, false);
+            GameUIResources.SetAnchors(_dailyBtn.GetComponent<RectTransform>(), 0.12f, 0.20f, 0.48f, 0.30f);
+            var dailyImg = _dailyBtn.GetComponent<Image>();
+            dailyImg.color = GameUIResources.SurfaceColor;
+            dailyImg.sprite = GameUIResources.GetRoundedSprite();
+            dailyImg.type = Image.Type.Sliced;
+            _dailyBtn.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.08f);
+            _dailyBtn.GetComponent<Shadow>().effectDistance = new Vector2(0f, -2f);
             DailyRewardButton = _dailyBtn.GetComponent<Button>();
-            GameUIResources.ApplyTextButtonStyle(_dailyBtn);
+            GameUIResources.AddButtonEffects(DailyRewardButton);
 
-            // Chest button
-            _chestBtn = CreateMenuButton(cardGo.transform, "Btn_CHEST", "CHESTS", btnW * 0.45f, btnH * 0.8f,
-                new Vector2(0.5f, startY - 0.255f), new Vector2(0.5f, startY - 0.295f));
+            var dailyIcon = GameUIResources.CreateText("📅", _dailyBtn.transform, 16, TextAnchor.MiddleLeft, GameUIResources.DangerColor); // Pink/berry color
+            GameUIResources.SetAnchors(dailyIcon.GetComponent<RectTransform>(), 0.08f, 0f, 0.28f, 1f);
+            var dailyLabel = GameUIResources.CreateText("GÜNLÜK\nMeydan Okuma", _dailyBtn.transform, 11, TextAnchor.MiddleLeft, GameUIResources.TextColor);
+            dailyLabel.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            GameUIResources.SetAnchors(dailyLabel.GetComponent<RectTransform>(), 0.32f, 0f, 0.95f, 1f);
+
+            // Event (Right)
+            _chestBtn = new GameObject("Btn_CHEST", typeof(RectTransform), typeof(Image), typeof(Button));
+            _chestBtn.transform.SetParent(bgGo.transform, false);
+            GameUIResources.SetAnchors(_chestBtn.GetComponent<RectTransform>(), 0.52f, 0.20f, 0.90f, 0.30f);
+            var eventImg = _chestBtn.GetComponent<Image>();
+            eventImg.color = GameUIResources.SurfaceColor;
+            eventImg.sprite = GameUIResources.GetRoundedSprite();
+            eventImg.type = Image.Type.Sliced;
+            _chestBtn.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.08f);
+            _chestBtn.GetComponent<Shadow>().effectDistance = new Vector2(0f, -2f);
             ChestButton = _chestBtn.GetComponent<Button>();
-            GameUIResources.ApplyAccentStyle(_chestBtn);
+            GameUIResources.AddButtonEffects(ChestButton);
 
-            // Settings (icon button top right)
-            _settingsBtn = GameUIResources.CreateIconButton("⚙", cardGo.transform, 48f);
+            var eventIcon = GameUIResources.CreateText("🎁", _chestBtn.transform, 16, TextAnchor.MiddleLeft, GameUIResources.SuccessColor); // Teal color
+            GameUIResources.SetAnchors(eventIcon.GetComponent<RectTransform>(), 0.08f, 0f, 0.28f, 1f);
+            var eventLabel = GameUIResources.CreateText("ETKİNLİK\n2g 14s kaldı", _chestBtn.transform, 11, TextAnchor.MiddleLeft, GameUIResources.TextColor);
+            eventLabel.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            GameUIResources.SetAnchors(eventLabel.GetComponent<RectTransform>(), 0.32f, 0f, 0.95f, 1f);
+
+            // 6. BOTTOM FOOTER PANEL (White rounded container)
+            var footer = GameUIResources.CreateCard("FooterBar", bgGo.transform);
+            footer.GetComponent<Image>().color = GameUIResources.SurfaceColor;
+            GameUIResources.SetAnchors(footer.GetComponent<RectTransform>(), 0.12f, 0.08f, 0.90f, 0.16f);
+
+            // settings (gear button inside footer)
+            _settingsBtn = GameUIResources.CreateIconButton("⚙", footer.transform, 36f);
             _settingsBtn.name = "Btn_SETTINGS";
             SettingsButton = _settingsBtn.GetComponent<Button>();
-            var setRect = _settingsBtn.GetComponent<RectTransform>();
-            setRect.anchorMin = new Vector2(0.84f, 0.90f);
-            setRect.anchorMax = new Vector2(0.94f, 0.99f);
-            setRect.offsetMin = Vector2.zero;
-            setRect.offsetMax = Vector2.zero;
+            GameUIResources.SetAnchors(_settingsBtn.GetComponent<RectTransform>(), 0.75f, 0.15f, 0.90f, 0.85f);
+            _settingsBtn.GetComponent<Image>().color = Color.clear;
+            _settingsBtn.GetComponentInChildren<Text>().color = GameUIResources.TextColor;
 
-            // Version
-            var verGo = GameUIResources.CreateText("v1.0", cardGo.transform, 12, TextAnchor.LowerCenter, GameUIResources.MutedTextDark);
+            // leaderboard button inside footer
+            var leaderBtn = GameUIResources.CreateIconButton("🏆", footer.transform, 36f);
+            leaderBtn.name = "Btn_LEADERBOARD";
+            GameUIResources.SetAnchors(leaderBtn.GetComponent<RectTransform>(), 0.42f, 0.15f, 0.58f, 0.85f);
+            leaderBtn.GetComponent<Image>().color = Color.clear;
+            leaderBtn.GetComponentInChildren<Text>().color = GameUIResources.TextColor;
+
+            // Gift button inside footer
+            var giftBtn = GameUIResources.CreateIconButton("🎁", footer.transform, 36f);
+            giftBtn.name = "Btn_GIFT";
+            GameUIResources.SetAnchors(giftBtn.GetComponent<RectTransform>(), 0.10f, 0.15f, 0.25f, 0.85f);
+            giftBtn.GetComponent<Image>().color = Color.clear;
+            giftBtn.GetComponentInChildren<Text>().color = GameUIResources.TextColor;
+
+            // 7. VERSION & ADS AREA
+            var verGo = GameUIResources.CreateText("v1.0", bgGo.transform, 11, TextAnchor.LowerCenter, GameUIResources.MutedText);
             verGo.name = "Version";
             VersionLabel = verGo.GetComponent<Text>();
-            GameUIResources.SetAnchors(verGo.GetComponent<RectTransform>(), 0.30f, 0.01f, 0.70f, 0.04f);
+            GameUIResources.SetAnchors(verGo.GetComponent<RectTransform>(), 0.30f, 0.04f, 0.70f, 0.07f);
 
-            // Cache all buttons for tab navigation
+            var adsTextGo = GameUIResources.CreateText("BANNER REKLAM ALANI", bgGo.transform, 10, TextAnchor.MiddleCenter, GameUIResources.MutedText);
+            adsTextGo.name = "AdsAreaText";
+            GameUIResources.SetAnchors(adsTextGo.GetComponent<RectTransform>(), 0f, 0f, 1f, 0.04f);
+
+            // Cache buttons
             _allButtons = new[] { ContinueButton, PlayButton, LevelSelectButton, DailyRewardButton, ChestButton, SettingsButton };
         }
 

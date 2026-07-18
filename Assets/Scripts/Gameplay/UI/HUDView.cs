@@ -49,74 +49,108 @@ namespace RingFlow.Gameplay.UI
 
             HudGroup = gameObject.AddComponent<CanvasGroup>();
 
-            // Top bar
-            _topBar = GameUIResources.CreatePanel("TopBar", transform);
-            _topBar.GetComponent<Image>().color = new Color(0.06f, 0.08f, 0.12f, 0.88f);
-            GameUIResources.SetAnchors(_topBar.GetComponent<RectTransform>(), 0f, 0.88f, 1f, 0.98f);
+            // 1. TOP BAR CONTAINER (Responsive transparent panel)
+            _topBar = new GameObject("TopBar", typeof(RectTransform));
+            _topBar.transform.SetParent(transform, false);
+            GameUIResources.SetAnchors(_topBar.GetComponent<RectTransform>(), 0f, 0.90f, 1f, 0.98f);
 
-            // Level
-            var lvlGo = GameUIResources.CreateText("Level 1", _topBar.transform, 18, TextAnchor.MiddleLeft, GameUIResources.TextOnDark);
-            lvlGo.name = "LevelText";
-            LevelText = lvlGo.GetComponent<Text>();
+            // Left Level Pill
+            var lvlPill = GameUIResources.CreateCard("LevelPill", _topBar.transform);
+            GameUIResources.SetAnchors(lvlPill.GetComponent<RectTransform>(), 0.04f, 0.15f, 0.32f, 0.85f);
+            var lvlTextGo = GameUIResources.CreateText("Level 1", lvlPill.transform, 14, TextAnchor.MiddleCenter, GameUIResources.TextColor);
+            lvlTextGo.name = "LevelText";
+            LevelText = lvlTextGo.GetComponent<Text>();
             LevelText.fontStyle = FontStyle.Bold;
-            GameUIResources.SetAnchors(lvlGo.GetComponent<RectTransform>(), 0.04f, 0f, 0.22f, 1f);
 
-            // Moves
-            var movesGo = GameUIResources.CreateText("Moves: 0", _topBar.transform, 16, TextAnchor.MiddleLeft, GameUIResources.MutedTextDark);
-            movesGo.name = "MovesText";
-            MovesText = movesGo.GetComponent<Text>();
-            GameUIResources.SetAnchors(movesGo.GetComponent<RectTransform>(), 0.24f, 0f, 0.44f, 1f);
+            // Middle Moves/Timer Pill
+            var movesPill = GameUIResources.CreateCard("MovesPill", _topBar.transform);
+            GameUIResources.SetAnchors(movesPill.GetComponent<RectTransform>(), 0.35f, 0.15f, 0.58f, 0.85f);
+            
+            var movesTextGo = GameUIResources.CreateText("Moves: 0", movesPill.transform, 13, TextAnchor.MiddleCenter, GameUIResources.TextColor);
+            movesTextGo.name = "MovesText";
+            MovesText = movesTextGo.GetComponent<Text>();
+            MovesText.fontStyle = FontStyle.Bold;
 
-            // Timer (challenge mode)
-            var timerGo = GameUIResources.CreateText("", _topBar.transform, 16, TextAnchor.MiddleCenter, GameUIResources.WarningColor);
-            timerGo.name = "TimerText";
-            TimerText = timerGo.GetComponent<Text>();
-            GameUIResources.SetAnchors(timerGo.GetComponent<RectTransform>(), 0.44f, 0f, 0.60f, 1f);
+            var timerTextGo = GameUIResources.CreateText("", movesPill.transform, 13, TextAnchor.MiddleCenter, GameUIResources.WarningColor);
+            timerTextGo.name = "TimerText";
+            TimerText = timerTextGo.GetComponent<Text>();
+            TimerText.fontStyle = FontStyle.Bold;
+            timerTextGo.SetActive(false); // Hide timer by default unless challenge mode is active
 
-            // Coins
-            var coinsGo = GameUIResources.CreateText("🪙 0", _topBar.transform, 16, TextAnchor.MiddleRight, GameUIResources.CoinColor);
-            coinsGo.name = "CoinsText";
-            CoinsText = coinsGo.GetComponent<Text>();
-            GameUIResources.SetAnchors(coinsGo.GetComponent<RectTransform>(), 0.62f, 0f, 0.78f, 1f);
+            // Right Coins Pill
+            var coinsPill = GameUIResources.CreateCard("CoinsPill", _topBar.transform);
+            GameUIResources.SetAnchors(coinsPill.GetComponent<RectTransform>(), 0.61f, 0.15f, 0.82f, 0.85f);
+            var coinTextGo = GameUIResources.CreateText("🪙 0", coinsPill.transform, 14, TextAnchor.MiddleCenter, GameUIResources.TextColor);
+            coinTextGo.name = "CoinsText";
+            CoinsText = coinTextGo.GetComponent<Text>();
+            CoinsText.fontStyle = FontStyle.Bold;
 
-            // Diamonds
-            var gemsGo = GameUIResources.CreateText("💎 0", _topBar.transform, 16, TextAnchor.MiddleRight, GameUIResources.DiamondColor);
-            gemsGo.name = "DiamondsText";
-            DiamondsText = gemsGo.GetComponent<Text>();
-            GameUIResources.SetAnchors(gemsGo.GetComponent<RectTransform>(), 0.80f, 0f, 0.96f, 1f);
+            // Far Right Settings/Pause Button
+            _pauseBtn = GameUIResources.CreateIconButton("⚙", _topBar.transform, 36f);
+            _pauseBtn.name = "Btn_PAUSE";
+            PauseButton = _pauseBtn.GetComponent<Button>();
+            GameUIResources.SetAnchors(_pauseBtn.GetComponent<RectTransform>(), 0.85f, 0.15f, 0.96f, 0.85f);
+            _pauseBtn.GetComponent<Image>().color = GameUIResources.SurfaceColor;
+            _pauseBtn.GetComponentInChildren<Text>().color = GameUIResources.TextColor;
+            _pauseBtn.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.08f);
+            _pauseBtn.GetComponent<Shadow>().effectDistance = new Vector2(0f, -2f);
 
-            // Bottom action bar
-            var botBar = GameUIResources.CreatePanel("ActionBar", transform);
-            botBar.GetComponent<Image>().color = new Color(0.06f, 0.08f, 0.12f, 0.88f);
-            GameUIResources.SetAnchors(botBar.GetComponent<RectTransform>(), 0f, 0.02f, 1f, 0.12f);
+            // 2. INSTRUCTION LABEL (Directly under top bar)
+            var instructionGo = GameUIResources.CreateText("Her çubuğu tek renk yap", transform, 14, TextAnchor.MiddleCenter, GameUIResources.TextColor);
+            instructionGo.name = "InstructionText";
+            instructionGo.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            GameUIResources.SetAnchors(instructionGo.GetComponent<RectTransform>(), 0.05f, 0.82f, 0.95f, 0.88f);
 
-            float btnW = 120f;
-            float btnH = 44f;
+            // 3. BOTTOM ACTION BAR (Transparent panel)
+            var botBar = new GameObject("ActionBar", typeof(RectTransform));
+            botBar.transform.SetParent(transform, false);
+            GameUIResources.SetAnchors(botBar.GetComponent<RectTransform>(), 0f, 0.05f, 1f, 0.18f);
 
-            _undoBtn = CreateActionButton(botBar.transform, "Btn_UNDO", "↩", btnW, btnH, new Vector2(0.05f, 0.5f));
+            // Action Buttons
+            _undoBtn = CreateCircularActionButton(botBar.transform, "Btn_UNDO", "↩", "Geri Al", 48f, new Vector2(0.22f, 0.5f));
             UndoButton = _undoBtn.GetComponent<Button>();
 
-            _restartBtn = CreateActionButton(botBar.transform, "Btn_RESTART", "↻", btnW, btnH, new Vector2(0.28f, 0.5f));
-            RestartButton = _restartBtn.GetComponent<Button>();
-
-            _hintBtn = CreateActionButton(botBar.transform, "Btn_HINT", "💡", btnW, btnH, new Vector2(0.50f, 0.5f));
+            _hintBtn = CreateCircularActionButton(botBar.transform, "Btn_HINT", "💡", "İpucu", 48f, new Vector2(0.50f, 0.5f));
             HintButton = _hintBtn.GetComponent<Button>();
 
-            _pauseBtn = CreateActionButton(botBar.transform, "Btn_PAUSE", "⏸", btnW, btnH, new Vector2(0.72f, 0.5f));
-            PauseButton = _pauseBtn.GetComponent<Button>();
+            _restartBtn = CreateCircularActionButton(botBar.transform, "Btn_RESTART", "↻", "Yeniden", 48f, new Vector2(0.78f, 0.5f));
+            RestartButton = _restartBtn.GetComponent<Button>();
         }
 
-        private GameObject CreateActionButton(Transform parent, string name, string icon, float w, float h, Vector2 anchor)
+        private GameObject CreateCircularActionButton(Transform parent, string name, string icon, string labelText, float size, Vector2 anchor)
         {
-            var go = GameUIResources.CreateIconButton(icon, parent, 48f);
-            go.name = name;
-            var rect = go.GetComponent<RectTransform>();
-            rect.anchorMin = anchor - new Vector2(w / 2160f, h / 3840f);
-            rect.anchorMax = anchor + new Vector2(w / 2160f, h / 3840f);
-            rect.anchoredPosition = Vector2.zero;
-            rect.sizeDelta = Vector2.zero;
-            GameUIResources.ApplyDarkStyle(go);
-            return go;
+            var container = new GameObject(name, typeof(RectTransform));
+            container.transform.SetParent(parent, false);
+            var contRect = container.GetComponent<RectTransform>();
+            contRect.anchorMin = anchor;
+            contRect.anchorMax = anchor;
+            contRect.anchoredPosition = Vector2.zero;
+            contRect.sizeDelta = new Vector2(size + 24f, size + 36f);
+
+            var btnGo = GameUIResources.CreateIconButton(icon, container.transform, size);
+            btnGo.name = name + "_Button";
+            var btnRect = btnGo.GetComponent<RectTransform>();
+            btnRect.anchorMin = new Vector2(0.5f, 1f);
+            btnRect.anchorMax = new Vector2(0.5f, 1f);
+            btnRect.anchoredPosition = new Vector2(0f, -size / 2f);
+            btnRect.sizeDelta = new Vector2(size, size);
+
+            btnGo.GetComponent<Image>().color = GameUIResources.SurfaceColor;
+            btnGo.GetComponentInChildren<Text>().color = GameUIResources.TextColor;
+            btnGo.GetComponentInChildren<Text>().fontSize = Mathf.RoundToInt(size * 0.45f);
+            btnGo.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.08f);
+            btnGo.GetComponent<Shadow>().effectDistance = new Vector2(0f, -2f);
+
+            var lblGo = GameUIResources.CreateText(labelText, container.transform, 11, TextAnchor.UpperCenter, GameUIResources.TextColor);
+            lblGo.name = "Label";
+            lblGo.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var lblRect = lblGo.GetComponent<RectTransform>();
+            lblRect.anchorMin = new Vector2(0f, 0f);
+            lblRect.anchorMax = new Vector2(1f, 0.28f);
+            lblRect.offsetMin = Vector2.zero;
+            lblRect.offsetMax = Vector2.zero;
+
+            return btnGo;
         }
 
         public void UpdateMoves(int moves, ILocalizationService loc = null)
@@ -164,9 +198,26 @@ namespace RingFlow.Gameplay.UI
         public void Localize(ILocalizationService loc)
         {
             if (loc == null) return;
-            GameUIResources.LocalizeButtonText(_undoBtn, "game_undo", loc);
-            GameUIResources.LocalizeButtonText(_restartBtn, "game_restart", loc);
-            GameUIResources.LocalizeButtonText(_hintBtn, "game_hint", loc);
+            
+            // Localize the labels under the circular buttons
+            if (_undoBtn != null && _undoBtn.transform.parent != null)
+            {
+                var text = _undoBtn.transform.parent.Find("Label")?.GetComponent<Text>();
+                if (text != null) text.text = loc.GetString("game_undo", "Undo");
+            }
+            if (_restartBtn != null && _restartBtn.transform.parent != null)
+            {
+                var text = _restartBtn.transform.parent.Find("Label")?.GetComponent<Text>();
+                if (text != null) text.text = loc.GetString("game_restart", "Restart");
+            }
+            if (_hintBtn != null && _hintBtn.transform.parent != null)
+            {
+                var text = _hintBtn.transform.parent.Find("Label")?.GetComponent<Text>();
+                if (text != null) text.text = loc.GetString("game_hint", "Hint");
+            }
+
+            var instr = transform.Find("InstructionText")?.GetComponent<Text>();
+            if (instr != null) instr.text = loc.GetString("hud_instruction", "Make each rod a single color");
         }
 
         private void BindReferencesFromChildren()
