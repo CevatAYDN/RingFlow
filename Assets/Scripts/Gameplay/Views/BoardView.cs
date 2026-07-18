@@ -286,24 +286,15 @@ namespace RingFlow.Gameplay
                         float localZ = F.RingTargetWidth / F.PoleScale.z;
                         Vector3 normalScale = new Vector3(localX, localY, localZ);
 
-                        DOTween.Kill(movedRing.transform);
-
                         var movedRingTransform = movedRing.transform;
+                        var movedRingGameObject = movedRing.gameObject;
 
                         movedRingTransform.DOLocalJump(targetLocal, F.MoveJumpPower, 1, duration)
                             .SetEase(Ease.InOutQuad)
                             .SetAutoKill(true)
                             .OnComplete(() =>
                             {
-                                if (movedRing == null || movedRingTransform == null)
-                                {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                                    NexusLog.Warn("BoardView", nameof(AnimateRingMove), $"{fromPoleId}->{toPoleId}",
-                                        "Jump complete callback skipped — moved ring was destroyed.");
-#endif
-                                    _animatingTargetPoleId = -1;
-                                    return;
-                                }
+                                if (movedRingGameObject == null || movedRingTransform == null) return;
 
                                 _animatingTargetPoleId = -1;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -319,7 +310,7 @@ namespace RingFlow.Gameplay
                                     .SetAutoKill(true)
                                     .OnComplete(() =>
                                     {
-                                        if (movedRing == null || movedRingTransform == null) return;
+                                        if (movedRingGameObject == null || movedRingTransform == null) return;
                                         movedRingTransform.DOScale(normalScale, 0.18f).SetEase(Ease.OutBack).SetAutoKill(true);
                                     });
 
@@ -331,7 +322,7 @@ namespace RingFlow.Gameplay
                             .SetAutoKill(true)
                             .OnComplete(() =>
                             {
-                                if (movedRing == null || movedRingTransform == null) return;
+                                if (movedRingGameObject == null || movedRingTransform == null) return;
                                 movedRingTransform.DOScale(normalScale, duration * 0.4f).SetEase(Ease.InQuad).SetAutoKill(true);
                             });
                     }
@@ -427,8 +418,11 @@ namespace RingFlow.Gameplay
                     return;
                 }
 
-                DOTween.Kill(movedRing.transform);
-                movedRing.transform.position = oldRingWorldPos;
+                var movedRingTransform = movedRing.transform;
+                var movedRingGameObject = movedRing.gameObject;
+
+                DOTween.Kill(movedRingTransform);
+                movedRingTransform.position = oldRingWorldPos;
 
                 int ringIndex = _spawnedRings[fromPoleId].Count - 1;
                 var targetLocal = new Vector3(0f, F.RingBaseYOffset + (ringIndex * F.RingStackSpacing), 0f);
@@ -449,17 +443,19 @@ namespace RingFlow.Gameplay
                     return;
                 }
 
-                movedRing.transform.DOLocalJump(targetLocal, F.MoveJumpPower, 1, duration)
+                movedRingTransform.DOLocalJump(targetLocal, F.MoveJumpPower, 1, duration)
                     .SetEase(Ease.InOutQuad)
                     .SetAutoKill(true)
                     .OnComplete(() =>
                     {
+                        if (movedRingGameObject == null || movedRingTransform == null) return;
+
                         _animatingTargetPoleId = -1;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                         NexusLog.Info("BoardView", nameof(AnimateRingUndo), $"{toPoleId}->{fromPoleId}",
                             "Undo jump complete, _animatingTargetPoleId reset.");
 #endif
-                        TriggerMoveEffects(movedRing.transform.position, movedColor);
+                        TriggerMoveEffects(movedRingTransform.position, movedColor);
                         _hapticService?.Vibrate(HapticType.Light);
                         ApplySelection();
                     });
