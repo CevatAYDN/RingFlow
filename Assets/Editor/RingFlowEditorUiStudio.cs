@@ -75,6 +75,16 @@ namespace RingFlow.Editor
                 if (!EditorUtility.DisplayDialog(confirmTitle, confirmMessage, "Continue", "Cancel"))
                     return;
 
+                var theme = Resources.Load<UIThemeConfigSO>(GameplayAssetKeys.UIThemeConfig);
+                if (theme != null)
+                {
+                    GameUIResources.Bind(theme);
+                }
+                else
+                {
+                    NexusLog.Warn("RingFlowEditorUiStudio", "CreateUIScreenPrefabs", "", "UIThemeConfig not found in Resources. UI creation may fail.");
+                }
+
                 foreach (var screen in screens)
                 {
                     var prefabPath = GetPrefabPathForScreen(screen);

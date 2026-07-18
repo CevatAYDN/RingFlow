@@ -9,6 +9,8 @@ namespace RingFlow.Gameplay.UI
         [Inject] private ILocalizationService _loc;
         [Inject] private IAudioService _audio;
 
+        private ISignalSubscription _showScreenSub;
+
         protected override void OnBind()
         {
             if (View == null)
@@ -31,15 +33,26 @@ namespace RingFlow.Gameplay.UI
                 SignalBus.Fire(new QuitToMenuRequestedSignal());
             });
 
-            if (_audio != null)
+            _showScreenSub = SignalBus.Subscribe<ShowScreenSignal>(OnShowScreen);
+        }
+
+        private void OnShowScreen(ShowScreenSignal signal)
+        {
+            if (signal.Screen == ScreenType.GameOver)
             {
-                var failClip = ProceduralAudio.GetOrCreateExplosionClip();
-                _audio.PlaySfx(failClip, 0.8f);
+                if (_audio != null)
+                {
+                    var failClip = ProceduralAudio.GetOrCreateExplosionClip();
+                    _audio.PlaySfx(failClip, 0.8f);
+                }
             }
         }
 
         protected override void OnUnbind()
         {
+            _showScreenSub?.Dispose();
+            _showScreenSub = null;
+
             if (View == null) return;
             View.RestartButton?.onClick.RemoveAllListeners();
             View.QuitButton?.onClick.RemoveAllListeners();
