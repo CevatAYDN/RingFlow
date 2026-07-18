@@ -23,19 +23,19 @@ namespace RingFlow.Gameplay
 
         private Color GetSelectedTint()
         {
-            if (_feelConfig == null) throw new System.InvalidOperationException("[PoleView] GameFeelConfigSO not injected!");
+            if (_feelConfig == null) return _baseColor;
             return _feelConfig.SelectedTint;
         }
 
         private Color GetErrorTint()
         {
-            if (_feelConfig == null) throw new System.InvalidOperationException("[PoleView] GameFeelConfigSO not injected!");
+            if (_feelConfig == null) return Color.red;
             return _feelConfig.ErrorTint;
         }
 
         private Color GetLockedTint()
         {
-            if (_feelConfig == null) throw new System.InvalidOperationException("[PoleView] GameFeelConfigSO not injected!");
+            if (_feelConfig == null) return _baseColor;
             return _feelConfig.LockedTint;
         }
 

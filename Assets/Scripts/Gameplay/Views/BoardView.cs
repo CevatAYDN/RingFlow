@@ -14,8 +14,6 @@ namespace RingFlow.Gameplay
 
         public void SetTorusPrefab(GameObject prefab) { _torusPrefab = prefab; }
 
-        private static Shader _cachedShader;
-        private static Font _cachedBuiltinFont;
         private GameObject _polePrefab;
 
         [Inject] private IObjectPoolService _objectPoolService;
@@ -24,22 +22,13 @@ namespace RingFlow.Gameplay
         [Inject] private IHapticService _hapticService;
         [Inject] private SettingsModel _settingsModel;
         [Inject] private GameFeelConfigSO _feelConfig;
-        [Inject] private RingColorPaletteSO _colorPalette;
+        [Inject] private RingMaterialManager _ringMaterialManager;
+        [Inject] private SpecialOverlayRenderer _overlayRenderer;
 
         [Inject] private Camera _mainCamera;
         private GameFeelConfigSO F => _feelConfig;
 
-        private Color GetRingColor(RingColor color)
-        {
-            if (_colorPalette == null)
-            {
-                throw new System.InvalidOperationException("[BoardView] RingColorPaletteSO is not injected!");
-            }
-            var mode = _settingsModel != null ? (RingColorPaletteSO.ColorBlindMode)_settingsModel.ColorBlindMode.Value : RingColorPaletteSO.ColorBlindMode.Off;
-            return _colorPalette.GetColor(color, mode);
-        }
 
-        private readonly Dictionary<(RingColor, RingType), Material> _ringMaterialCache = new();
         // Reused across ApplySelection calls to avoid per-ring MaterialPropertyBlock allocations.
         // NOT a field initializer: creating engine objects in a MonoBehaviour constructor / field
         // initializer is forbidden (Unity throws "CreateImpl is not allowed from a MonoBehaviour
@@ -138,7 +127,7 @@ namespace RingFlow.Gameplay
 
 
                 var renderers = poleObj.GetComponentsInChildren<Renderer>(true);
-                var poleMat = GetPoleMaterial(poleData.IsLocked);
+                var poleMat = _ringMaterialManager.GetPoleMaterial(poleData.IsLocked);
                 foreach (var r in renderers)
                 {
                     r.sharedMaterial = poleMat;
@@ -195,9 +184,9 @@ namespace RingFlow.Gameplay
 
                     var ringRenderer = ringObj.GetComponentInChildren<Renderer>();
                     if (ringRenderer != null)
-                        ringRenderer.sharedMaterial = GetRingMaterial(ringData.Color, ringData.Type);
+                        ringRenderer.sharedMaterial = _ringMaterialManager.GetRingMaterial(ringData.Color, ringData.Type);
 
-                    AddSpecialOverlay(ringObj, ringData);
+                    _overlayRenderer.AddSpecialOverlay(ringObj, ringData);
                 }
             }
 
@@ -299,37 +288,51 @@ namespace RingFlow.Gameplay
 
                         DOTween.Kill(movedRing.transform);
 
-                        movedRing.transform.DOLocalJump(targetLocal, F.MoveJumpPower, 1, duration)
+                        var movedRingTransform = movedRing.transform;
+
+                        movedRingTransform.DOLocalJump(targetLocal, F.MoveJumpPower, 1, duration)
                             .SetEase(Ease.InOutQuad)
                             .SetAutoKill(true)
                             .OnComplete(() =>
                             {
+                                if (movedRing == null || movedRingTransform == null)
+                                {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                                    NexusLog.Warn("BoardView", nameof(AnimateRingMove), $"{fromPoleId}->{toPoleId}",
+                                        "Jump complete callback skipped — moved ring was destroyed.");
+#endif
+                                    _animatingTargetPoleId = -1;
+                                    return;
+                                }
+
                                 _animatingTargetPoleId = -1;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                                 NexusLog.Info("BoardView", nameof(AnimateRingMove), $"{fromPoleId}->{toPoleId}",
                                     "Jump complete, _animatingTargetPoleId reset.");
 #endif
-                                TriggerMoveEffects(movedRing.transform.position, movedColor);
+                                TriggerMoveEffects(movedRingTransform.position, movedColor);
                                 _hapticService?.Vibrate(HapticType.Light);
 
-                                DOTween.Kill(movedRing.transform);
-                                movedRing.transform.DOScale(new Vector3(localX * 1.25f, localY * 0.6f, localZ * 1.25f), 0.08f)
+                                DOTween.Kill(movedRingTransform);
+                                movedRingTransform.DOScale(new Vector3(localX * 1.25f, localY * 0.6f, localZ * 1.25f), 0.08f)
                                     .SetEase(Ease.OutQuad)
                                     .SetAutoKill(true)
                                     .OnComplete(() =>
                                     {
-                                        movedRing.transform.DOScale(normalScale, 0.18f).SetEase(Ease.OutBack).SetAutoKill(true);
+                                        if (movedRing == null || movedRingTransform == null) return;
+                                        movedRingTransform.DOScale(normalScale, 0.18f).SetEase(Ease.OutBack).SetAutoKill(true);
                                     });
 
                                 ApplySelection();
                             });
 
-                        movedRing.transform.DOScale(new Vector3(localX * 0.85f, localY * 1.35f, localZ * 0.85f), duration * 0.4f)
+                        movedRingTransform.DOScale(new Vector3(localX * 0.85f, localY * 1.35f, localZ * 0.85f), duration * 0.4f)
                             .SetEase(Ease.OutQuad)
                             .SetAutoKill(true)
                             .OnComplete(() =>
                             {
-                                movedRing.transform.DOScale(normalScale, duration * 0.4f).SetEase(Ease.InQuad).SetAutoKill(true);
+                                if (movedRing == null || movedRingTransform == null) return;
+                                movedRingTransform.DOScale(normalScale, duration * 0.4f).SetEase(Ease.InQuad).SetAutoKill(true);
                             });
                     }
                 }
@@ -610,7 +613,7 @@ namespace RingFlow.Gameplay
 
             // ----- Tier 0/1: Merge effect (replaces legacy RingPop burst) -----
             Vector3 poleTopPos = pv.transform.position + Vector3.up * 1.5f;
-            Color mergeColor = isFinalPole ? GetRingColor(RingColor.Yellow) : Color.white;
+            Color mergeColor = isFinalPole ? _ringMaterialManager.GetRingColor(RingColor.Yellow) : Color.white;
             SpawnMergeEffect(poleTopPos, mergeColor, ringCount, isFinalPole);
 
             // ----- Tier 1: Extra sparkle for medium-tier completions -----
@@ -860,18 +863,11 @@ namespace RingFlow.Gameplay
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             NexusLog.Info("BoardView", nameof(ClearBoard), "",
-                $"Clearing board. poles={_spawnedPoles.Count}, ringLists={_spawnedRings.Count}, materialCache={_ringMaterialCache.Count}.");
+                $"Clearing board. poles={_spawnedPoles.Count}, ringLists={_spawnedRings.Count}.");
 #endif
             HideTutorialArrow();
 
-            // FIX-V3: Destroy cached materials before clearing to prevent GPU leak.
-            // ClearBoard() is called every time BuildBoard() is called (level reload,
-            // undo rebuild). Without Destroy(), each rebuild leaks the previous material set.
-            foreach (var mat in _ringMaterialCache.Values)
-            {
-                if (mat != null) Destroy(mat);
-            }
-            _ringMaterialCache.Clear();
+            _ringMaterialManager?.ClearCache();
 
             foreach (var pole in _spawnedPoles)
                 if (pole != null) RecyclePole(pole.gameObject);
@@ -988,7 +984,7 @@ namespace RingFlow.Gameplay
             _tutorialLabelText.color = Color.white;
             _tutorialLabelText.horizontalOverflow = HorizontalWrapMode.Overflow;
             _tutorialLabelText.verticalOverflow = VerticalWrapMode.Overflow;
-            _tutorialLabelText.font = GetBuiltinLabelFont();
+            _tutorialLabelText.font = _ringMaterialManager.GetBuiltinLabelFont();
 
             var labelOutline = labelGo.GetComponent<UnityEngine.UI.Outline>();
             labelOutline.effectColor = new Color(0f, 0f, 0f, 0.85f);
@@ -1026,7 +1022,7 @@ namespace RingFlow.Gameplay
         private Material GetTutorialArrowMaterial()
         {
             if (_tutorialArrowMaterial != null) return _tutorialArrowMaterial;
-            _tutorialArrowMaterial = new Material(GetDefaultShader()) { name = "TutorialArrowMat" };
+            _tutorialArrowMaterial = new Material(_ringMaterialManager.GetDefaultShader()) { name = "TutorialArrowMat" };
             _tutorialArrowMaterial.color = F.TutorialArrowColor;
             if (_tutorialArrowMaterial.HasProperty("_BaseColor"))
                 _tutorialArrowMaterial.SetColor("_BaseColor", F.TutorialArrowColor);
@@ -1088,22 +1084,7 @@ namespace RingFlow.Gameplay
                 _proceduralTorusMesh = null;
             }
 
-            // FIX-V3: _ringMaterialCache previously called Clear() without destroying
-            // the cached Material objects. Unity materials are unmanaged GPU resources —
-            // Clear() drops the C# reference but does NOT release the GPU allocation,
-            // causing a memory leak every time the board is rebuilt (ClearBoard calls
-            // _ringMaterialCache.Clear()) and on scene unload.
-            // Fix: Destroy every cached material before clearing the dictionary.
-            foreach (var mat in _ringMaterialCache.Values)
-            {
-                if (mat != null) Destroy(mat);
-            }
-            _ringMaterialCache.Clear();
-
-            // Also clean up the shared pole materials (static fields, destroyed here
-            // because BoardView owns their lifecycle in the scene).
-            if (_openPoleMaterial != null)   { Destroy(_openPoleMaterial);   _openPoleMaterial   = null; }
-            if (_lockedPoleMaterial != null) { Destroy(_lockedPoleMaterial); _lockedPoleMaterial = null; }
+            _ringMaterialManager?.ClearCache();
 
             if (_bloomPulseController != null)
             {
@@ -1112,22 +1093,7 @@ namespace RingFlow.Gameplay
             }
         }
 
-        private static Shader GetDefaultShader()
-        {
-            if (_cachedShader != null) return _cachedShader;
-            _cachedShader = Shader.Find("Universal Render Pipeline/Lit")
-                         ?? Shader.Find("Universal Render Pipeline/Simple Lit")
-                         ?? Shader.Find("Standard");
-            return _cachedShader;
-        }
 
-        private static Font GetBuiltinLabelFont()
-        {
-            if (_cachedBuiltinFont != null) return _cachedBuiltinFont;
-            _cachedBuiltinFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
-                                 ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
-            return _cachedBuiltinFont;
-        }
 
         private void EnsurePolePrefabCreated()
         {
@@ -1216,12 +1182,20 @@ namespace RingFlow.Gameplay
             {
                 ringObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
                 var fbCol = ringObj.GetComponent<Collider>();
-                if (fbCol != null) Destroy(fbCol);
+                if (fbCol != null)
+                {
+                    if (Application.isPlaying) Destroy(fbCol);
+                    else DestroyImmediate(fbCol);
+                }
             }
             else
             {
                 var col = ringObj.GetComponent<Collider>();
-                if (col != null) Destroy(col);
+                if (col != null)
+                {
+                    if (Application.isPlaying) Destroy(col);
+                    else DestroyImmediate(col);
+                }
                 ringObj.SetActive(true);
                 KillTweens(ringObj);
             }
@@ -1254,134 +1228,7 @@ namespace RingFlow.Gameplay
 
         private static void KillTweens(GameObject obj) { if (obj != null) DOTween.Kill(obj.transform); }
 
-        private static Material _openPoleMaterial;
-        private static Material _lockedPoleMaterial;
 
-        private Material GetPoleMaterial(bool locked)
-        {
-            var feel = F;
-            if (feel == null)
-            {
-                throw new System.InvalidOperationException("[BoardView] GameFeelConfigSO is not injected!");
-            }
-            if (locked)
-            {
-                if (_lockedPoleMaterial == null)
-                {
-                    var darkColor = feel.PoleColorLocked;
-                    _lockedPoleMaterial = new Material(GetDefaultShader()) { color = darkColor, name = "PoleMat_Locked" };
-                    if (_lockedPoleMaterial.HasProperty("_BaseColor"))
-                        _lockedPoleMaterial.SetColor("_BaseColor", darkColor);
-                    _lockedPoleMaterial.SetFloat("_Metallic", feel.PoleMetallic);
-                    _lockedPoleMaterial.SetFloat("_Smoothness", feel.PoleSmoothness);
-                }
-                return _lockedPoleMaterial;
-            }
-            if (_openPoleMaterial == null)
-            {
-                var openColor = feel.PoleColorOpen;
-                _openPoleMaterial = new Material(GetDefaultShader()) { color = openColor, name = "PoleMat_Open" };
-                if (_openPoleMaterial.HasProperty("_BaseColor"))
-                    _openPoleMaterial.SetColor("_BaseColor", openColor);
-                _openPoleMaterial.SetFloat("_Metallic", feel.PoleMetallic);
-                _openPoleMaterial.SetFloat("_Smoothness", feel.PoleSmoothness);
-            }
-            return _openPoleMaterial;
-        }
-
-        private Material GetRingMaterial(RingColor color, RingType type)
-        {
-            var key = (color, type);
-            if (_ringMaterialCache.TryGetValue(key, out var cached) && cached != null) return cached;
-            var mat = new Material(GetDefaultShader());
-            Color baseColor = GetRingColor(color);
-            mat.color = baseColor;
-            if (mat.HasProperty("_BaseColor"))
-                mat.SetColor("_BaseColor", baseColor);
-            mat.SetFloat("_Metallic", F.RingMetallic);
-            mat.SetFloat("_Smoothness", F.RingSmoothness);
-            mat.EnableKeyword("_EMISSION");
-            mat.SetColor("_EmissionColor", Color.black);
-            ApplySpecialRingMaterial(mat, baseColor, type);
-            mat.name = "RingMat_" + color + "_" + type;
-            _ringMaterialCache[key] = mat;
-            return mat;
-        }
-
-        private void ApplySpecialRingMaterial(Material mat, Color baseColor, RingType type)
-        {
-            switch (type)
-            {
-                case RingType.Frozen:
-                    mat.color = Color.Lerp(baseColor, Color.cyan, 0.5f);
-                    mat.SetFloat("_Metallic", 0.1f); mat.SetFloat("_Smoothness", 0.9f);
-                    mat.EnableKeyword("_EMISSION"); mat.SetColor("_EmissionColor", new Color(0.3f, 0.6f, 0.8f, 1f)); break;
-                case RingType.Key: case RingType.Locked:
-                    mat.color = new Color(1f, 0.84f, 0f);
-                    mat.SetFloat("_Metallic", 0.8f); mat.SetFloat("_Smoothness", 0.6f);
-                    mat.EnableKeyword("_EMISSION"); mat.SetColor("_EmissionColor", new Color(0.5f, 0.4f, 0f, 1f)); break;
-                case RingType.Stone:
-                    mat.color = new Color(0.4f, 0.38f, 0.35f);
-                    mat.SetFloat("_Metallic", 0f); mat.SetFloat("_Smoothness", 0.1f); break;
-                case RingType.Glass:
-                    mat.color = new Color(1f, 1f, 1f, 0.25f);
-                    mat.SetFloat("_Metallic", 0f); mat.SetFloat("_Smoothness", 0.95f); SetFadeMode(mat); break;
-                case RingType.Rainbow:
-                    mat.SetFloat("_Metallic", 0.5f); mat.SetFloat("_Smoothness", 0.8f);
-                    mat.EnableKeyword("_EMISSION"); mat.SetColor("_EmissionColor", Color.Lerp(baseColor, Color.white, 0.3f)); break;
-                case RingType.Ghost:
-                    mat.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0.15f);
-                    mat.SetFloat("_Metallic", 0.3f); mat.SetFloat("_Smoothness", 0.3f); SetFadeMode(mat); break;
-                case RingType.Bomb:
-                    mat.EnableKeyword("_EMISSION"); mat.SetColor("_EmissionColor", new Color(0.8f, 0.2f, 0f, 1f)); break;
-                case RingType.Chain:
-                    mat.SetFloat("_Metallic", 0.7f); mat.SetFloat("_Smoothness", 0.3f); break;
-                case RingType.Magnet:
-                    mat.SetFloat("_Metallic", 0.9f); mat.SetFloat("_Smoothness", 0.5f);
-                    mat.EnableKeyword("_EMISSION"); mat.SetColor("_EmissionColor", new Color(0.5f, 0f, 0.5f, 1f)); break;
-                case RingType.Paint:
-                    mat.SetFloat("_Smoothness", 0.9f); break;
-                case RingType.Mystery:
-                    mat.color = new Color(0.3f, 0.3f, 0.3f);
-                    mat.SetFloat("_Metallic", 0.4f); mat.SetFloat("_Smoothness", 0.6f);
-                    mat.EnableKeyword("_EMISSION"); mat.SetColor("_EmissionColor", new Color(0.2f, 0.2f, 0.2f, 1f)); break;
-            }
-            if (mat.HasProperty("_BaseColor"))
-                mat.SetColor("_BaseColor", mat.color);
-        }
-
-        // FIX-V4: The old implementation used Standard Shader blend-mode properties
-        // (_Mode, _SrcBlend, _DstBlend, _ALPHABLEND_ON) which are URP/HDRP-incompatible.
-        // In URP the equivalent is the _Surface property (0=Opaque, 1=Transparent) and
-        // the _Blend property (0=Alpha, 1=Premultiply, 2=Additive, 3=Multiply).
-        // The _ALPHABLEND_ON keyword does not exist in URP shaders; use _SURFACE_TYPE_TRANSPARENT.
-        // We still set the legacy Standard properties as a fallback for any non-URP material,
-        // but add the URP-correct equivalents so Glass/Ghost rings are actually transparent
-        // in the shipping URP configuration.
-        private static void SetFadeMode(Material mat)
-        {
-            // ── URP path ──────────────────────────────────────────────────────────
-            if (mat.HasProperty("_Surface"))
-            {
-                mat.SetFloat("_Surface", 1f);            // 1 = Transparent
-                mat.SetFloat("_Blend", 0f);              // 0 = Alpha blend
-                mat.SetInt("_ZWrite", 0);
-                mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-                mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-                mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-                return;
-            }
-
-            // ── Standard Shader fallback (non-URP projects / editor preview) ──────
-            mat.SetFloat("_Mode", 3f);
-            mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            mat.SetInt("_ZWrite", 0);
-            mat.EnableKeyword("_ALPHABLEND_ON");
-            mat.renderQueue = 3000;
-        }
 
         private void TriggerMoveEffects(Vector3 position, RingColor color)
         {
@@ -1393,84 +1240,10 @@ namespace RingFlow.Gameplay
                 if (prefab != null)
                 {
                     var popInstance = _objectPoolService.Spawn(prefab, position, Quaternion.identity);
-                    popInstance?.GetComponent<RingPopVfx>()?.Initialize(GetRingColor(color));
+                    popInstance?.GetComponent<RingPopVfx>()?.Initialize(_ringMaterialManager.GetRingColor(color));
                 }
             }
         }
-
-        // FIX-V1: TextMesh (legacy) has two known mobile issues:
-        //   1. Emoji characters render as blank boxes on many Android / iOS device fonts.
-        //   2. Each TextMesh instance is its own draw call — 12 poles × 4 rings = up to
-        //      48 extra draw calls, blowing the GDD §75 budget of <80 draw calls.
-        // Fix: replace emoji with ASCII symbols that render reliably on the built-in font.
-        // Production path: swap TextMesh for SpriteRenderer + sprite atlas icons.
-        private void AddSpecialOverlay(GameObject ringObj, RingData ringData)
-        {
-            if (ringData.Type == RingType.Standard) return;
-
-            // ASCII fallback — renders on every device font (no emoji dependency).
-            var (text, color) = ringData.Type switch
-            {
-                RingType.Mystery => ("?",  Color.yellow),
-                RingType.Frozen  => ("*",  Color.cyan),
-                RingType.Locked  => ("L",  new Color(1f, 0.84f, 0f)),
-                RingType.Key     => ("K",  new Color(1f, 0.84f, 0f)),
-                RingType.Stone   => ("S",  Color.gray),
-                RingType.Glass   => ("G",  new Color(1f, 1f, 1f, 0.5f)),
-                RingType.Bomb    => (ringData.AdditionalData.ToString(), Color.red),
-                RingType.Chain   => ("C",  Color.white),
-                RingType.Magnet  => ("M",  Color.magenta),
-                RingType.Paint   => ("P",  Color.green),
-                RingType.Ghost   => ("~",  new Color(1f, 1f, 1f, 0.3f)),
-                _ => ("", Color.white)
-            };
-
-            if (ringData.Type == RingType.Rainbow)
-            {
-                var cycle = new GameObject("RainbowCycle");
-                cycle.transform.SetParent(ringObj.transform, false);
-                cycle.AddComponent<RainbowCycle>().Initialize(F);
-            }
-
-            if (string.IsNullOrEmpty(text)) return;
-
-            var overlayGo = new GameObject("SpecialOverlay", typeof(TextMesh));
-            overlayGo.transform.SetParent(ringObj.transform, false);
-            overlayGo.transform.localPosition = new Vector3(0f, 0.12f, 0f);
-            overlayGo.transform.localScale = new Vector3(0.06f, 0.06f, 0.06f);
-            overlayGo.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            var textMesh = overlayGo.GetComponent<TextMesh>();
-            textMesh.text = text;
-            textMesh.fontSize = 72;
-            textMesh.color = color;
-            textMesh.anchor = TextAnchor.MiddleCenter;
-            textMesh.alignment = TextAlignment.Center;
-            textMesh.fontStyle = FontStyle.Bold;
-
-            var font = GetBuiltinLabelFont();
-            textMesh.font = font;
-
-            // OPEN-4: Draw call reduction — all TextMesh overlays share the same
-            // font material instance so Unity can batch them into a single draw call.
-            // Each TextMesh.font has a .material property; assigning sharedMaterial
-            // prevents per-instance material copies (which Unity creates by default
-            // when you access .material, not .sharedMaterial).
-            // Production upgrade path: replace TextMesh with a sprite quad that reads
-            // from a RingIconConfig ScriptableObject (sprite atlas per ring type).
-            // That will reduce this to 1 draw call regardless of ring count via
-            // SpriteAtlas batching.
-            var mr = overlayGo.GetComponent<MeshRenderer>();
-            if (mr != null)
-            {
-                mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                mr.receiveShadows = false;
-                // Share the font's material across all overlays so they batch.
-                if (font != null && font.material != null)
-                    mr.sharedMaterial = font.material;
-            }
-        }
-
-
 
         private bool TryGetMainCamera(out Camera cam)
         {
@@ -1534,10 +1307,14 @@ namespace RingFlow.Gameplay
             }
             else
             {
-                _floorPlane = GameObject.CreatePrimitive(PrimitiveType.Plane);
-                _floorPlane.name = "ShadowFloorPlane";
-                var col = _floorPlane.GetComponent<Collider>();
-                if (col != null) Destroy(col);
+            _floorPlane = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            _floorPlane.name = "ShadowFloorPlane";
+            var col = _floorPlane.GetComponent<Collider>();
+            if (col != null)
+            {
+                if (Application.isPlaying) Destroy(col);
+                else DestroyImmediate(col);
+            }
             }
 
             _floorPlane.transform.position = new Vector3(0f, F.FloorYPosition, 0f);
@@ -1547,7 +1324,7 @@ namespace RingFlow.Gameplay
             renderer.receiveShadows = true;
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             
-            var mat = new Material(GetDefaultShader());
+            var mat = new Material(_ringMaterialManager.GetDefaultShader());
             Color floorColor = F.FloorColor;
             mat.color = floorColor;
             if (mat.HasProperty("_BaseColor"))

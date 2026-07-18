@@ -161,6 +161,10 @@ namespace RingFlow.Gameplay
             // Register validation strategy manager for pole placement rules (GDD §4)
             builder.Bind<RingValidationStrategyManager>();
 
+            // -------------------- Helper Components (Aşama 2 - BoardView Refactoring) --------------------
+            builder.Bind<RingMaterialManager>();
+            builder.Bind<SpecialOverlayRenderer>();
+
             // -------------------- Commands --------------------
             builder.BindAsyncCommand<InitLevelSignal, InitLevelCommand>();
             builder.BindCommand<SelectPoleSignal, SelectPoleCommand>();
