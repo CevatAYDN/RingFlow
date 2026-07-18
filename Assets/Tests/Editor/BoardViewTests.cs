@@ -162,6 +162,9 @@ namespace RingFlow.Tests
             // Clean up material cache (destroys GPU resources)
             _ringMaterialManager?.ClearCache();
 
+            // Reset DOTween to clean state between tests
+            DG.Tweening.DOTween.Clear(true);
+
             _view = null;
             _boardGo = null;
             _testCamera = null;
