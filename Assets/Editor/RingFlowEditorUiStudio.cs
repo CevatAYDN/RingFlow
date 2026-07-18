@@ -181,12 +181,22 @@ namespace RingFlow.Editor
                     CreateGameplayTemplate(root);
                     break;
                 case ScreenType.Pause:
+                    CreatePauseTemplate(root);
+                    break;
                 case ScreenType.Win:
+                    CreateWinTemplate(root);
+                    break;
                 case ScreenType.GameOver:
+                    CreateGameOverTemplate(root);
+                    break;
                 case ScreenType.Settings:
+                    CreateSettingsTemplate(root);
+                    break;
                 case ScreenType.DailyReward:
+                    CreateDailyRewardTemplate(root);
+                    break;
                 case ScreenType.ChestPopup:
-                    CreatePopupTemplate(root, screen);
+                    CreateChestPopupTemplate(root);
                     break;
                 case ScreenType.ParentalGate:
                     CreateParentalGateTemplate(root);
@@ -205,172 +215,360 @@ namespace RingFlow.Editor
 
         private static void CreateSplashTemplate(Transform root)
         {
-            AddScreenText(root, "LogoText", "RING FLOW", 64,
-                new Vector2(0.5f, 0.78f), new Vector2(0.5f, 0.78f), new Vector2(0.5f, 0.5f),
+            CreateBackdrop(root, "Backdrop", new Color(0.06f, 0.08f, 0.12f, 0.96f));
+            CreatePanel(root, "LogoCard", 0.18f, 0.58f, 0.82f, 0.84f, new Color(0.14f, 0.16f, 0.22f, 0.96f));
+            AddScreenText(root, "LogoText", "RING FLOW", 68,
+                new Vector2(0.5f, 0.72f), new Vector2(0.5f, 0.72f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(900f, 120f));
-            AddScreenText(root, "TaglineText", "Loading...", 18,
-                new Vector2(0.5f, 0.62f), new Vector2(0.5f, 0.62f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, new Vector2(600f, 50f));
+            AddScreenText(root, "TaglineText", "Loading premium puzzle experience...", 18,
+                new Vector2(0.5f, 0.61f), new Vector2(0.5f, 0.61f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, new Vector2(720f, 50f));
             AddScreenText(root, "ProgressText", "", 14,
-                new Vector2(0.5f, 0.18f), new Vector2(0.5f, 0.18f), new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.20f), new Vector2(0.5f, 0.20f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, new Vector2(500f, 40f));
         }
 
         private static void CreateMainMenuTemplate(Transform root)
         {
-            AddScreenText(root, "Title", "Main Menu", 54,
+            CreateBackdrop(root, "Backdrop", new Color(0.06f, 0.08f, 0.12f, 0.96f));
+            CreatePanel(root, "HeroCard", 0.08f, 0.10f, 0.92f, 0.92f, new Color(0.14f, 0.16f, 0.22f, 0.96f));
+            AddScreenText(root, "Title", "RING FLOW", 68,
                 new Vector2(0.5f, 0.84f), new Vector2(0.5f, 0.84f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, new Vector2(900f, 100f));
-            AddScreenText(root, "Subtitle", "Welcome back", 20,
+                Vector2.zero, new Vector2(900f, 120f));
+            AddScreenText(root, "Subtitle", "Welcome back, champion", 22,
                 new Vector2(0.5f, 0.76f), new Vector2(0.5f, 0.76f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, new Vector2(600f, 40f));
-            AddScreenText(root, "Body",
-                "Add buttons as children here and wire them with MainMenuView.", 20,
-                new Vector2(0.5f, 0.48f), new Vector2(0.5f, 0.48f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, new Vector2(700f, 160f));
+                Vector2.zero, new Vector2(700f, 40f));
+            CreatePanel(root, "ProfilePanel", 0.12f, 0.58f, 0.88f, 0.68f, new Color(0.18f, 0.20f, 0.28f, 0.96f));
+            AddScreenText(root, "Coins", "Coins: 0", 18,
+                new Vector2(0.18f, 0.62f), new Vector2(0.42f, 0.62f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, new Vector2(260f, 30f));
+            AddScreenText(root, "Diamonds", "◆ 0", 18,
+                new Vector2(0.58f, 0.62f), new Vector2(0.82f, 0.62f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, new Vector2(260f, 30f));
+            AddScreenText(root, "Version", "v0.0.0", 12,
+                new Vector2(0.5f, 0.04f), new Vector2(0.5f, 0.04f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, new Vector2(250f, 24f));
+
+            CreateButtonNode(root, "Btn_CONTINUE", "CONTINUE", 340, 70, new Vector2(0.28f, 0.48f), new Vector2(0.72f, 0.56f));
+            CreateButtonNode(root, "Btn_QUICK PLAY", "QUICK PLAY", 340, 62, new Vector2(0.28f, 0.40f), new Vector2(0.72f, 0.47f));
+            CreateButtonNode(root, "Btn_LEVELS", "LEVEL SELECT", 340, 62, new Vector2(0.28f, 0.32f), new Vector2(0.72f, 0.39f));
+            CreateButtonNode(root, "Btn_DAILY REWARD", "DAILY REWARD", 340, 58, new Vector2(0.28f, 0.24f), new Vector2(0.72f, 0.31f));
+            CreateButtonNode(root, "Btn_⚙", "⚙", 64, 64, new Vector2(0.86f, 0.82f), new Vector2(0.94f, 0.90f));
+        }
+
+        private static void CreateWorldMapTemplate(Transform root)
+        {
+            CreateBackdrop(root, "Backdrop", new Color(0.06f, 0.08f, 0.12f, 0.96f));
+            CreatePanel(root, "HeroCard", 0.08f, 0.14f, 0.92f, 0.86f, new Color(0.14f, 0.16f, 0.22f, 0.96f));
+            AddScreenText(root, "Title", "WORLD MAP", 50,
+                new Vector2(0.5f, 0.82f), new Vector2(0.5f, 0.82f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, new Vector2(800f, 90f));
+            AddScreenText(root, "Subtitle", "Explore the ring kingdoms", 18,
+                new Vector2(0.5f, 0.74f), new Vector2(0.5f, 0.74f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, new Vector2(600f, 30f));
+            CreatePanel(root, "MapPanel", 0.12f, 0.28f, 0.88f, 0.68f, new Color(0.18f, 0.20f, 0.28f, 0.96f));
+            AddScreenText(root, "Body", "World Map coming soon!", 22,
+                new Vector2(0.5f, 0.46f), new Vector2(0.5f, 0.46f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, new Vector2(760f, 120f));
+            CreateButtonNode(root, "Btn_BACK", "BACK", 220, 54, new Vector2(0.04f, 0.08f), new Vector2(0.20f, 0.14f));
+        }
+
+        private static void CreateOnboardingTemplate(Transform root)
+        {
+            CreatePanel(root, "Card", 0.08f, 0.16f, 0.92f, 0.84f, new Color(0.12f, 0.14f, 0.18f, 0.92f));
+            AddScreenText(root, "Title", "HOW TO PLAY", 42,
+                new Vector2(0.5f, 0.76f), new Vector2(0.5f, 0.76f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, new Vector2(800f, 90f));
+            AddScreenText(root, "Body", "Sort the rings by color to clear each pole!\n\nTap to select, tap again to move.", 20,
+                new Vector2(0.5f, 0.42f), new Vector2(0.5f, 0.42f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, new Vector2(760f, 160f));
         }
 
         private static void CreateLevelSelectTemplate(Transform root)
         {
-            AddScreenText(root, "Title", "Level Select", 48,
-                new Vector2(0.5f, 0.88f), new Vector2(0.5f, 0.88f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, new Vector2(900f, 100f));
-            AddScreenText(root, "Body",
-                "Create a grid of level buttons under this prefab. LevelSelectView binds children only.", 20,
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, new Vector2(760f, 180f));
+            CreateBackdrop(root, "Backdrop", new Color(0.06f, 0.08f, 0.12f, 0.96f));
+            CreatePanel(root, "HeroCard", 0.06f, 0.10f, 0.94f, 0.90f, new Color(0.14f, 0.16f, 0.22f, 0.96f));
+            AddScreenText(root, "Title", "LEVEL SELECT", 50,
+                new Vector2(0.5f, 0.90f), new Vector2(0.5f, 0.90f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, new Vector2(900f, 90f));
+            AddScreenText(root, "Subtitle", "Choose your next puzzle world", 18,
+                new Vector2(0.5f, 0.84f), new Vector2(0.5f, 0.84f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, new Vector2(680f, 30f));
+            CreateButtonNode(root, "Btn_BACK", "BACK", 220, 54, new Vector2(0.04f, 0.86f), new Vector2(0.20f, 0.92f));
+
+            CreatePanel(root, "SummaryPanel", 0.10f, 0.74f, 0.90f, 0.82f, new Color(0.18f, 0.20f, 0.28f, 0.96f));
+            AddScreenText(root, "WorldLabel", "WORLD 1", 18,
+                new Vector2(0.12f, 0.75f), new Vector2(0.28f, 0.81f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+            AddScreenText(root, "ProgressLabel", "8 / 120 unlocked", 18,
+                new Vector2(0.35f, 0.75f), new Vector2(0.60f, 0.81f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+            AddScreenText(root, "DifficultyLabel", "Difficulty: Easy", 18,
+                new Vector2(0.68f, 0.75f), new Vector2(0.88f, 0.81f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+
+            var grid = new GameObject("LevelGrid", typeof(RectTransform), typeof(GridLayoutGroup));
+            grid.transform.SetParent(root, false);
+            var gridRt = grid.GetComponent<RectTransform>();
+            gridRt.anchorMin = new Vector2(0.10f, 0.16f);
+            gridRt.anchorMax = new Vector2(0.90f, 0.70f);
+            gridRt.offsetMin = Vector2.zero;
+            gridRt.offsetMax = Vector2.zero;
+            var gridLayout = grid.GetComponent<GridLayoutGroup>();
+            gridLayout.cellSize = new Vector2(150f, 60f);
+            gridLayout.spacing = new Vector2(16f, 16f);
+            gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            gridLayout.constraintCount = 4;
+            gridLayout.childAlignment = TextAnchor.MiddleCenter;
+
+            for (int i = 1; i <= 8; i++)
+            {
+                CreateButtonNode(grid.transform, $"Btn_Level {i}", $"LEVEL {i}", 150, 60, Vector2.zero, Vector2.one);
+            }
         }
 
         private static void CreateGameplayTemplate(Transform root)
         {
-            AddScreenText(root, "HUDTitle", "Gameplay HUD", 36,
-                new Vector2(0.5f, 0.92f), new Vector2(0.5f, 0.92f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, new Vector2(800f, 70f));
-            AddScreenText(root, "Body",
-                "Add HUD widgets and action buttons as prefab children.", 20,
-                new Vector2(0.5f, 0.55f), new Vector2(0.5f, 0.55f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, new Vector2(760f, 160f));
+            CreateBackdrop(root, "Backdrop", new Color(0.06f, 0.08f, 0.12f, 0.96f));
+            CreatePanel(root, "HeroCard", 0.04f, 0.04f, 0.96f, 0.96f, new Color(0.14f, 0.16f, 0.22f, 0.96f));
+
+            CreatePanel(root, "TopBar", 0.06f, 0.84f, 0.94f, 0.94f, new Color(0.18f, 0.20f, 0.28f, 0.96f));
+            AddScreenText(root, "MovesText", "Moves: 0", 20,
+                new Vector2(0.08f, 0.88f), new Vector2(0.28f, 0.92f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+            AddScreenText(root, "LevelText", "Level 1", 20,
+                new Vector2(0.72f, 0.88f), new Vector2(0.92f, 0.92f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+            AddScreenText(root, "CoinsText", "0", 18,
+                new Vector2(0.44f, 0.88f), new Vector2(0.53f, 0.92f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, new Vector2(100f, 24f));
+            AddScreenText(root, "DiamondsText", "0", 18,
+                new Vector2(0.54f, 0.88f), new Vector2(0.63f, 0.92f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, new Vector2(100f, 24f));
+
+            CreatePanel(root, "BoardFrame", 0.08f, 0.20f, 0.92f, 0.82f, new Color(0.10f, 0.11f, 0.15f, 0.92f));
+            AddScreenText(root, "BoardPlaceholder", "Board area", 22,
+                new Vector2(0.5f, 0.48f), new Vector2(0.5f, 0.58f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, new Vector2(500f, 60f));
+            AddScreenText(root, "BoardHint", "This panel is where the ring board appears.", 16,
+                new Vector2(0.5f, 0.40f), new Vector2(0.5f, 0.46f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, new Vector2(520f, 40f));
+
+            CreatePanel(root, "ActionBar", 0.06f, 0.06f, 0.94f, 0.16f, new Color(0.18f, 0.20f, 0.28f, 0.96f));
+            CreateButtonNode(root, "Btn_UNDO", "UNDO", 140, 48, new Vector2(0.08f, 0.08f), new Vector2(0.22f, 0.14f));
+            CreateButtonNode(root, "Btn_RESTART", "RESTART", 160, 48, new Vector2(0.26f, 0.08f), new Vector2(0.42f, 0.14f));
+            CreateButtonNode(root, "Btn_HINT", "HINT", 140, 48, new Vector2(0.44f, 0.08f), new Vector2(0.58f, 0.14f));
+            CreateButtonNode(root, "Btn_PAUSE", "PAUSE", 140, 48, new Vector2(0.62f, 0.08f), new Vector2(0.76f, 0.14f));
         }
 
-        private static void CreatePopupTemplate(Transform root, ScreenType screen)
+        private static void CreatePauseTemplate(Transform root)
         {
-            AddScreenText(root, "Title", screen.ToString(), 44,
+            // PauseView self-builds when there are no authored children.
+        }
+
+        private static void CreateWinTemplate(Transform root)
+        {
+            CreateBackdrop(root, "Backdrop", new Color(0.06f, 0.08f, 0.12f, 0.96f));
+            CreatePanel(root, "Card", 0.16f, 0.20f, 0.84f, 0.80f, new Color(0.14f, 0.16f, 0.22f, 0.96f));
+            AddScreenText(root, "Text", "YOU WIN!", 48,
+                new Vector2(0.5f, 0.78f), new Vector2(0.5f, 0.78f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, new Vector2(700f, 90f));
+            AddScreenText(root, "RewardText", "Rewards unlocked", 18,
+                new Vector2(0.5f, 0.66f), new Vector2(0.5f, 0.66f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, new Vector2(500f, 30f));
+            CreateButtonNode(root, "Btn_NEXT LEVEL", "NEXT LEVEL", 320, 70, new Vector2(0.26f, 0.18f), new Vector2(0.74f, 0.26f));
+            CreateButtonNode(root, "Btn_MAIN MENU", "MAIN MENU", 300, 58, new Vector2(0.28f, 0.10f), new Vector2(0.72f, 0.16f));
+        }
+
+        private static void CreateGameOverTemplate(Transform root)
+        {
+            CreateBackdrop(root, "Backdrop", new Color(0.06f, 0.08f, 0.12f, 0.96f));
+            CreatePanel(root, "Card", 0.16f, 0.20f, 0.84f, 0.80f, new Color(0.14f, 0.16f, 0.22f, 0.96f));
+            AddScreenText(root, "Title", "GAME OVER", 46,
                 new Vector2(0.5f, 0.76f), new Vector2(0.5f, 0.76f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, new Vector2(700f, 80f));
-            AddScreenText(root, "Body",
-                "Add popup content and buttons as children. Popup views bind existing prefab children only.", 20,
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, new Vector2(720f, 160f));
+                Vector2.zero, new Vector2(700f, 90f));
+            AddScreenText(root, "Message", "Try again.", 22,
+                new Vector2(0.5f, 0.58f), new Vector2(0.5f, 0.58f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, new Vector2(620f, 60f));
+            CreateButtonNode(root, "Btn_RESTART", "RESTART", 300, 60, new Vector2(0.28f, 0.22f), new Vector2(0.72f, 0.30f));
+            CreateButtonNode(root, "Btn_MAIN MENU", "MAIN MENU", 300, 54, new Vector2(0.28f, 0.12f), new Vector2(0.72f, 0.18f));
+        }
+
+        private static void CreateDailyRewardTemplate(Transform root)
+        {
+            CreateBackdrop(root, "Backdrop", new Color(0.06f, 0.08f, 0.12f, 0.96f));
+            var card = CreatePanel(root, "Card", 0.10f, 0.20f, 0.90f, 0.80f, new Color(0.14f, 0.16f, 0.22f, 0.96f));
+            AddScreenText(card.transform, "Title", "DAILY REWARD", 36,
+                new Vector2(0.05f, 0.72f), new Vector2(0.95f, 0.85f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+            AddScreenText(card.transform, "Day", "Day 1", 64,
+                new Vector2(0.20f, 0.42f), new Vector2(0.80f, 0.62f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+            AddScreenText(card.transform, "Reward", "+50 Coins", 24,
+                new Vector2(0.20f, 0.30f), new Vector2(0.80f, 0.42f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+            CreateButtonNode(card.transform, "Btn_CLAIM", "CLAIM", 300, 64, new Vector2(0.15f, 0.14f), new Vector2(0.85f, 0.26f));
+            CreateButtonNode(card.transform, "Btn_CLOSE", "CLOSE", 120, 40, new Vector2(0.40f, 0.04f), new Vector2(0.60f, 0.12f));
+        }
+
+        private static void CreateChestPopupTemplate(Transform root)
+        {
+            CreateBackdrop(root, "Backdrop", new Color(0.06f, 0.08f, 0.12f, 0.96f));
+            var card = CreatePanel(root, "Card", 0.08f, 0.15f, 0.92f, 0.85f, new Color(0.14f, 0.16f, 0.22f, 0.96f));
+            AddScreenText(card.transform, "Title", "CHEST REWARDS", 34,
+                new Vector2(0.05f, 0.80f), new Vector2(0.95f, 0.92f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+            AddScreenText(card.transform, "Bronze", "Bronze: x0  (+0 XP)", 20,
+                new Vector2(0.08f, 0.62f), new Vector2(0.92f, 0.70f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+            AddScreenText(card.transform, "Silver", "Silver: x0  (+0 XP)", 20,
+                new Vector2(0.08f, 0.52f), new Vector2(0.92f, 0.60f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+            AddScreenText(card.transform, "Gold", "Gold: x0  (+0 XP)", 20,
+                new Vector2(0.08f, 0.42f), new Vector2(0.92f, 0.50f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+            AddScreenText(card.transform, "Diamond", "Diamond: x0  (+0 XP)", 20,
+                new Vector2(0.08f, 0.32f), new Vector2(0.92f, 0.40f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+            AddScreenText(card.transform, "TotalXp", "Total XP: +0", 22,
+                new Vector2(0.15f, 0.22f), new Vector2(0.85f, 0.30f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+            CreateButtonNode(card.transform, "Btn_CLAIM ALL", "CLAIM ALL", 280, 60, new Vector2(0.15f, 0.10f), new Vector2(0.85f, 0.20f));
+            CreateButtonNode(card.transform, "Btn_CLOSE", "CLOSE", 120, 38, new Vector2(0.40f, 0.02f), new Vector2(0.60f, 0.09f));
+        }
+
+        private static void CreateSettingsTemplate(Transform root)
+        {
+            CreateBackdrop(root, "Backdrop", new Color(0.06f, 0.08f, 0.12f, 0.96f));
+            var card = CreatePanel(root, "Card", 0.06f, 0.08f, 0.94f, 0.92f, new Color(0.14f, 0.16f, 0.22f, 0.96f));
+            AddScreenText(card.transform, "Title", "SETTINGS", 44,
+                new Vector2(0.5f, 0.92f), new Vector2(0.5f, 0.92f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, new Vector2(700f, 90f));
+
+            CreateToggleRow(card.transform, "Music", "MUSIC", 0.74f, true);
+            CreateToggleRow(card.transform, "SFX", "SFX", 0.68f, true);
+            CreateToggleRow(card.transform, "Haptic", "HAPTIC", 0.62f, true);
+            CreateToggleRow(card.transform, "Motion", "REDUCE MOTION", 0.56f, false);
+            CreateToggleRow(card.transform, "Big", "BIG BUTTONS", 0.50f, false);
+
+            CreateSliderNode(card.transform, "ColorBlindSlider", 0.08f, 0.38f, 0.92f, 0.44f);
+            AddScreenText(card.transform, "ColorBlind", "COLOR BLIND", 18,
+                new Vector2(0.08f, 0.44f), new Vector2(0.30f, 0.48f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+
+            CreateDropdownNode(card.transform, "LanguageDropdown", 0.52f, 0.38f, 0.92f, 0.44f);
+            AddScreenText(card.transform, "Lang", "LANGUAGE", 18,
+                new Vector2(0.52f, 0.44f), new Vector2(0.76f, 0.48f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+
+            CreateButtonNode(card.transform, "Btn_REMOVE ADS", "REMOVE ADS", 280, 54, new Vector2(0.16f, 0.18f), new Vector2(0.52f, 0.26f));
+            CreateButtonNode(card.transform, "Btn_RESTORE", "RESTORE", 220, 54, new Vector2(0.56f, 0.18f), new Vector2(0.84f, 0.26f));
+            CreateButtonNode(card.transform, "Btn_CLOSE", "CLOSE", 120, 40, new Vector2(0.40f, 0.06f), new Vector2(0.60f, 0.14f));
         }
 
         private static void CreateParentalGateTemplate(Transform root)
         {
-            // Card background (dark panel)
-            var card = new GameObject("Card", typeof(RectTransform), typeof(Image));
-            card.transform.SetParent(root, false);
-            var cardRt = card.GetComponent<RectTransform>();
-            cardRt.anchorMin = new Vector2(0.10f, 0.20f);
-            cardRt.anchorMax = new Vector2(0.90f, 0.80f);
-            cardRt.offsetMin = Vector2.zero;
-            cardRt.offsetMax = Vector2.zero;
-            card.GetComponent<Image>().color = new Color(0.14f, 0.14f, 0.20f);
-
-            // Title text
+            CreateBackdrop(root, "Backdrop", new Color(0.06f, 0.08f, 0.12f, 0.96f));
+            var card = CreatePanel(root, "Card", 0.10f, 0.18f, 0.90f, 0.82f, new Color(0.14f, 0.14f, 0.20f, 0.96f));
             AddScreenText(card.transform, "Title", "Parental Verification", 36,
-                new Vector2(0.05f, 0.72f), new Vector2(0.95f, 0.88f), new Vector2(0.5f, 0.5f),
+                new Vector2(0.05f, 0.74f), new Vector2(0.95f, 0.88f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, Vector2.zero);
-
-            // Question text (named "Question" for BindReferencesFromChildren)
-            var questionGo = AddScreenText(card.transform, "Question", "5 x 7 = ?", 28,
-                new Vector2(0.05f, 0.56f), new Vector2(0.95f, 0.68f), new Vector2(0.5f, 0.5f),
+            AddScreenText(card.transform, "Question", "Please review and accept our Terms of Service and Privacy Policy to continue.", 22,
+                new Vector2(0.10f, 0.42f), new Vector2(0.90f, 0.66f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, Vector2.zero);
-            var questionText = questionGo.GetComponent<Text>();
-            questionText.color = new Color(1f, 0.76f, 0.03f);
-            questionText.fontStyle = FontStyle.Bold;
-
-            // Answer input field
-            var inputGo = new GameObject("Answer", typeof(RectTransform), typeof(Image), typeof(InputField));
-            inputGo.transform.SetParent(card.transform, false);
-            var inputRt = inputGo.GetComponent<RectTransform>();
-            inputRt.anchorMin = new Vector2(0.28f, 0.44f);
-            inputRt.anchorMax = new Vector2(0.72f, 0.53f);
-            inputRt.offsetMin = Vector2.zero;
-            inputRt.offsetMax = Vector2.zero;
-            inputGo.GetComponent<Image>().color = new Color(0.12f, 0.13f, 0.18f);
-
-            var placeholderGo = new GameObject("Placeholder", typeof(RectTransform), typeof(Text));
-            placeholderGo.transform.SetParent(inputGo.transform, false);
-            var phRt = placeholderGo.GetComponent<RectTransform>();
-            phRt.anchorMin = Vector2.zero;
-            phRt.anchorMax = Vector2.one;
-            phRt.offsetMin = new Vector2(10, 0);
-            phRt.offsetMax = new Vector2(-10, 0);
-            var phText = placeholderGo.GetComponent<Text>();
-            phText.text = "Enter answer...";
-            phText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            phText.fontSize = 22;
-            phText.alignment = TextAnchor.MiddleLeft;
-            phText.color = new Color(0.6f, 0.6f, 0.65f);
-            phText.fontStyle = FontStyle.Italic;
-
-            var textGo = new GameObject("Text", typeof(RectTransform), typeof(Text));
-            textGo.transform.SetParent(inputGo.transform, false);
-            var tRt = textGo.GetComponent<RectTransform>();
-            tRt.anchorMin = Vector2.zero;
-            tRt.anchorMax = Vector2.one;
-            tRt.offsetMin = new Vector2(10, 0);
-            tRt.offsetMax = new Vector2(-10, 0);
-            var tText = textGo.GetComponent<Text>();
-            tText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            tText.fontSize = 22;
-            tText.alignment = TextAnchor.MiddleLeft;
-            tText.color = Color.white;
-
-            var inputField = inputGo.GetComponent<InputField>();
-            inputField.textComponent = tText;
-            inputField.placeholder = phText;
-            inputField.characterLimit = 5;
-            inputField.contentType = InputField.ContentType.IntegerNumber;
-
-            // Error text (named "Error")
-            var errorGo = AddScreenText(card.transform, "Error", "", 18,
-                new Vector2(0.15f, 0.38f), new Vector2(0.85f, 0.43f), new Vector2(0.5f, 0.5f),
+            CreatePanel(card.transform, "ChallengePanel", 0.12f, 0.28f, 0.88f, 0.40f, new Color(0.18f, 0.20f, 0.28f, 0.96f));
+            AddScreenText(card.transform, "Error", "", 18,
+                new Vector2(0.15f, 0.36f), new Vector2(0.85f, 0.41f), new Vector2(0.5f, 0.5f),
                 Vector2.zero, Vector2.zero);
-            errorGo.GetComponent<Text>().color = new Color(0.78f, 0.20f, 0.20f);
-
-            // Accept button (named "Accept")
-            var acceptGo = CreateButtonPrefabChild(card.transform, "Accept", "ACCEPT & CONTINUE", 320, 64,
-                new Vector2(0.20f, 0.24f), new Vector2(0.80f, 0.34f));
-            var acceptImg = acceptGo.GetComponent<Image>();
-            acceptImg.color = new Color(0.22f, 0.51f, 0.91f);
-
-            // Terms button (named "Terms")
-            var termsGo = CreateButtonPrefabChild(card.transform, "Terms", "Terms of Service", 180, 40,
-                new Vector2(0.08f, 0.10f), new Vector2(0.48f, 0.18f));
-            var termsImg = termsGo.GetComponent<Image>();
-            termsImg.color = new Color(0.12f, 0.13f, 0.18f);
-            var termsTxt = termsGo.GetComponentInChildren<Text>();
-            if (termsTxt != null) termsTxt.fontSize = 14;
-
-            // Privacy button (named "Privacy")
-            var privacyGo = CreateButtonPrefabChild(card.transform, "Privacy", "Privacy Policy", 180, 40,
-                new Vector2(0.52f, 0.10f), new Vector2(0.92f, 0.18f));
-            var privacyImg = privacyGo.GetComponent<Image>();
-            privacyImg.color = new Color(0.12f, 0.13f, 0.18f);
-            var privacyTxt = privacyGo.GetComponentInChildren<Text>();
-            if (privacyTxt != null) privacyTxt.fontSize = 14;
+            CreateButtonNode(card.transform, "Btn_ACCEPT", "ACCEPT & CONTINUE", 340, 66, new Vector2(0.18f, 0.24f), new Vector2(0.82f, 0.34f));
+            CreateButtonNode(card.transform, "Btn_TERMS", "TERMS", 180, 40, new Vector2(0.08f, 0.10f), new Vector2(0.48f, 0.18f));
+            CreateButtonNode(card.transform, "Btn_PRIVACY", "PRIVACY", 180, 40, new Vector2(0.52f, 0.10f), new Vector2(0.92f, 0.18f));
         }
 
-        private static GameObject CreateButtonPrefabChild(Transform parent, string name, string label, float width, float height,
-            Vector2 anchorMin, Vector2 anchorMax)
+        private static void CreateToggleRow(Transform parent, string name, string label, float anchorY, bool initialValue)
         {
-            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+            AddScreenText(parent, label, label, 18,
+                new Vector2(0.10f, anchorY - 0.015f), new Vector2(0.42f, anchorY + 0.015f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, Vector2.zero);
+            var toggle = new GameObject($"{name} Toggle", typeof(RectTransform), typeof(Image), typeof(Toggle));
+            toggle.transform.SetParent(parent, false);
+            var rect = toggle.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.46f, anchorY - 0.02f);
+            rect.anchorMax = new Vector2(0.58f, anchorY + 0.02f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            var image = toggle.GetComponent<Image>();
+            image.color = new Color(0.18f, 0.20f, 0.24f, 1f);
+            var tg = toggle.GetComponent<Toggle>();
+            tg.isOn = initialValue;
+            var checkmarkGo = new GameObject("Checkmark", typeof(RectTransform), typeof(Image));
+            checkmarkGo.transform.SetParent(toggle.transform, false);
+            var cmRect = checkmarkGo.GetComponent<RectTransform>();
+            cmRect.anchorMin = new Vector2(0.5f, 0.5f);
+            cmRect.anchorMax = new Vector2(0.5f, 0.5f);
+            cmRect.sizeDelta = new Vector2(26f, 26f);
+            checkmarkGo.GetComponent<Image>().color = GameUIResources.AccentColor;
+            tg.targetGraphic = checkmarkGo.GetComponent<Image>();
+            tg.graphic = checkmarkGo.GetComponent<Image>();
+        }
+
+        private static void CreateSliderNode(Transform parent, string name, float xMin, float yMin, float xMax, float yMax)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Slider));
+            go.transform.SetParent(parent, false);
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(xMin, yMin);
+            rect.anchorMax = new Vector2(xMax, yMax);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            go.GetComponent<Image>().color = new Color(0.18f, 0.20f, 0.24f, 1f);
+        }
+
+        private static void CreateDropdownNode(Transform parent, string name, float xMin, float yMin, float xMax, float yMax)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Dropdown));
+            go.transform.SetParent(parent, false);
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(xMin, yMin);
+            rect.anchorMax = new Vector2(xMax, yMax);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            go.GetComponent<Image>().color = new Color(0.18f, 0.20f, 0.24f, 1f);
+        }
+
+        private static void CreateBackdrop(Transform parent, string name, Color color)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            var image = go.GetComponent<Image>();
+            image.color = color;
+            image.raycastTarget = false;
+        }
+
+        private static void CreateButtonNode(Transform parent, string name, string label, float width, float height, Vector2 anchorMin, Vector2 anchorMax)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button), typeof(Shadow));
             go.transform.SetParent(parent, false);
             var rect = go.GetComponent<RectTransform>();
             rect.anchorMin = anchorMin;
             rect.anchorMax = anchorMax;
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
+            rect.sizeDelta = new Vector2(width, height);
+
+            var image = go.GetComponent<Image>();
+            image.color = GameUIResources.PrimaryColor;
+            image.sprite = GameUIResources.GetRoundedSprite();
+            image.type = Image.Type.Sliced;
+
+            var shadow = go.GetComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.35f);
+            shadow.effectDistance = new Vector2(0f, -4f);
 
             var textGo = new GameObject("Text", typeof(RectTransform), typeof(Text));
             textGo.transform.SetParent(go.transform, false);
@@ -386,7 +584,21 @@ namespace RingFlow.Editor
             text.color = Color.white;
             text.text = label;
             text.fontStyle = FontStyle.Bold;
+        }
 
+        private static GameObject CreatePanel(Transform parent, string name, float xMin, float yMin, float xMax, float yMax, Color color)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(xMin, yMin);
+            rect.anchorMax = new Vector2(xMax, yMax);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            var image = go.GetComponent<Image>();
+            image.color = color;
+            image.sprite = GameUIResources.GetRoundedSprite();
+            image.type = Image.Type.Sliced;
             return go;
         }
 

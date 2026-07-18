@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.LevelDataSO
   Data:
     LevelIndex: 26
-    Seed: 206895
-    TargetMoves: 9
+    Seed: 206910
+    TargetMoves: 16
     Poles:
     - RingCapacity: 4
       Rings:
@@ -25,10 +25,10 @@ MonoBehaviour:
       - Color: 5
         Type: 0
         AdditionalData: 0
-      - Color: 2
+      - Color: 7
         Type: 0
         AdditionalData: 0
-      - Color: 5
+      - Color: 10
         Type: 0
         AdditionalData: 0
       IsLocked: 0
@@ -39,13 +39,13 @@ MonoBehaviour:
       PortalTargetId: -1
     - RingCapacity: 4
       Rings:
-      - Color: 1
-        Type: 0
-        AdditionalData: 0
-      - Color: 1
-        Type: 0
-        AdditionalData: 0
       - Color: 2
+        Type: 0
+        AdditionalData: 0
+      - Color: 10
+        Type: 0
+        AdditionalData: 0
+      - Color: 4
         Type: 0
         AdditionalData: 0
       - Color: 2
@@ -58,18 +58,62 @@ MonoBehaviour:
       - Color: 2
         Type: 0
         AdditionalData: 0
-      - Color: 1
+      - Color: 2
         Type: 0
         AdditionalData: 0
-      - Color: 5
+      - Color: 6
         Type: 0
         AdditionalData: 0
-      - Color: 1
+      - Color: 7
         Type: 0
         AdditionalData: 0
       IsLocked: 0
       PortalTargetId: -1
     - RingCapacity: 4
-      Rings: []
+      Rings:
+      - Color: 4
+        Type: 0
+        AdditionalData: 0
+      - Color: 4
+        Type: 0
+        AdditionalData: 0
+      - Color: 4
+        Type: 0
+        AdditionalData: 0
+      - Color: 7
+        Type: 0
+        AdditionalData: 0
+      IsLocked: 0
+      PortalTargetId: -1
+    - RingCapacity: 4
+      Rings:
+      - Color: 10
+        Type: 0
+        AdditionalData: 0
+      - Color: 7
+        Type: 0
+        AdditionalData: 0
+      - Color: 5
+        Type: 0
+        AdditionalData: 0
+      - Color: 5
+        Type: 0
+        AdditionalData: 0
+      IsLocked: 0
+      PortalTargetId: -1
+    - RingCapacity: 4
+      Rings:
+      - Color: 6
+        Type: 0
+        AdditionalData: 0
+      - Color: 6
+        Type: 0
+        AdditionalData: 0
+      - Color: 10
+        Type: 0
+        AdditionalData: 0
+      - Color: 6
+        Type: 0
+        AdditionalData: 0
       IsLocked: 0
       PortalTargetId: -1
