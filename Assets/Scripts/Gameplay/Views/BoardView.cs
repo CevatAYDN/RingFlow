@@ -87,10 +87,6 @@ namespace RingFlow.Gameplay
             EnsureRingPoolPrewarmed();
             EnsureFloorPlaneCreated();
 
-            float spacing = F.PoleSpacing;
-            float boardWidth = (poles.Count - 1) * spacing;
-            float startX = -boardWidth * 0.5f;
-
             for (int p = 0; p < poles.Count; p++)
             {
                 var poleData = poles[p];
@@ -114,7 +110,7 @@ namespace RingFlow.Gameplay
                 poleObj.SetActive(true);
                 poleView.PoleId = p;
                 poleView.SetLocked(poleData.IsLocked);
-                poleObj.transform.localPosition = new Vector3(startX + p * spacing, F.FloorYPosition, 0f);
+                poleObj.transform.localPosition = GetPolePosition(p, poles.Count, F);
                 poleObj.transform.localRotation = Quaternion.identity;
                 var poleScale = F.PoleScale;
                 int poleCap = poleData.RingCapacity;
@@ -134,7 +130,7 @@ namespace RingFlow.Gameplay
                 {
                     float targetWorldWidth = F.PoleSpacing * F.PoleColliderWidthFraction;
                     float targetWorldHeight = totalHeight + 1.5f;
-                    float targetWorldDepth = 4.0f;
+                    float targetWorldDepth = poles.Count <= 5 ? 4.0f : 2.0f;
                     box.size = new Vector3(targetWorldWidth / poleScale.x, targetWorldHeight / poleScale.y, targetWorldDepth / poleScale.z);
                     float centerWorldY = (targetWorldHeight / 2.0f) - 0.5f;
                     box.center = new Vector3(0f, centerWorldY / poleScale.y, 0f);
@@ -1279,6 +1275,45 @@ namespace RingFlow.Gameplay
                 cam.transform.DOShakePosition(duration, intensity, 10, 90f, false, true);
         }
 
+        public static Vector3 GetPolePosition(int index, int totalCount, GameFeelConfigSO f)
+        {
+            if (f == null) return Vector3.zero;
+
+            float spacing = f.PoleSpacing;
+            float floorY = f.FloorYPosition;
+
+            if (totalCount <= 5)
+            {
+                float boardWidth = (totalCount - 1) * spacing;
+                float startX = -boardWidth * 0.5f;
+                return new Vector3(startX + index * spacing, floorY, 0f);
+            }
+            else
+            {
+                int backRowCount = Mathf.CeilToInt(totalCount / 2.0f);
+                int frontRowCount = totalCount - backRowCount;
+                float rowSpacingZ = 2.5f; // Z depth spacing between rows
+
+                if (index < backRowCount)
+                {
+                    // Back row (Row 0, Z = +rowSpacingZ)
+                    float boardWidth = (backRowCount - 1) * spacing;
+                    float startX = -boardWidth * 0.5f;
+                    float offset = (backRowCount == frontRowCount) ? -spacing * 0.25f : 0f;
+                    return new Vector3(startX + index * spacing + offset, floorY, rowSpacingZ);
+                }
+                else
+                {
+                    // Front row (Row 1, Z = -rowSpacingZ)
+                    int frontIndex = index - backRowCount;
+                    float boardWidth = (frontRowCount - 1) * spacing;
+                    float startX = -boardWidth * 0.5f;
+                    float offset = (backRowCount == frontRowCount) ? spacing * 0.25f : 0f;
+                    return new Vector3(startX + frontIndex * spacing + offset, floorY, -rowSpacingZ);
+                }
+            }
+        }
+
         public void FitCameraToBoard(int poleCount)
         {
             if (!TryGetMainCamera(out var cam))
@@ -1299,11 +1334,18 @@ namespace RingFlow.Gameplay
             t.rotation = Quaternion.Euler(F.CameraRotation);
             
             float spacing = F.PoleSpacing;
-            float boardWidth = Mathf.Max(0f, (poleCount - 1) * spacing);
+            int effectiveColumns = poleCount <= 5 ? poleCount : Mathf.CeilToInt(poleCount / 2.0f);
+            float boardWidth = Mathf.Max(0f, (effectiveColumns - 1) * spacing);
             float aspect = Mathf.Max(0.01f, cam.aspect);
             float desiredHalfWidth = (boardWidth * 0.5f) + 1.5f;
             float desiredOrthoSize = desiredHalfWidth / aspect;
-            cam.orthographicSize = Mathf.Max(desiredOrthoSize, 5.5f);
+            
+            float baseOrtho = Mathf.Max(desiredOrthoSize, 5.5f);
+            if (poleCount > 5)
+            {
+                baseOrtho += 1.5f;
+            }
+            cam.orthographicSize = baseOrtho;
         }
 
         private void EnsureFloorPlaneCreated()

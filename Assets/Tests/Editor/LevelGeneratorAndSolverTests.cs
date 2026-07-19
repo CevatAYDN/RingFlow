@@ -1178,5 +1178,32 @@ namespace RingFlow.Tests
                 lastPoleCount = poles;
             }
         }
+
+        [Test]
+        public void LevelsOnDisk_DoNotContainRingColorNone()
+        {
+#if UNITY_EDITOR
+            var assets = UnityEditor.AssetDatabase.FindAssets("t:LevelDataSO", new[] { "Assets/Resources/Levels" });
+            foreach (var guid in assets)
+            {
+                string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                var levelData = UnityEditor.AssetDatabase.LoadAssetAtPath<LevelDataSO>(path);
+                Assert.IsNotNull(levelData, $"Level asset failed to load: {path}");
+                Assert.IsNotNull(levelData.Data, $"LevelData.Data is null in asset: {path}");
+                
+                for (int p = 0; p < levelData.Data.Poles.Count; p++)
+                {
+                    var pole = levelData.Data.Poles[p];
+                    for (int r = 0; r < pole.Rings.Count; r++)
+                    {
+                        var ring = pole.Rings[r];
+                        Assert.AreNotEqual(RingColor.None, ring.Color, 
+                            $"Level {levelData.Data.LevelIndex} has a ring with Color=None on pole {p} index {r}! " +
+                            "This is a serialization bug that clashes with default empty-pole rules.");
+                    }
+                }
+            }
+#endif
+        }
     }
 }

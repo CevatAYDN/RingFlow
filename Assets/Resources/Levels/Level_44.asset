@@ -22,7 +22,7 @@ MonoBehaviour:
       - Color: 4
         Type: 0
         AdditionalData: 0
-      - Color: 0
+      - Color: 15
         Type: 0
         AdditionalData: 0
       - Color: 9
@@ -87,10 +87,10 @@ MonoBehaviour:
       PortalTargetId: -1
     - RingCapacity: 4
       Rings:
-      - Color: 0
+      - Color: 15
         Type: 0
         AdditionalData: 0
-      - Color: 0
+      - Color: 15
         Type: 0
         AdditionalData: 0
       - Color: 11
@@ -157,7 +157,7 @@ MonoBehaviour:
       - Color: 15
         Type: 0
         AdditionalData: 0
-      - Color: 0
+      - Color: 15
         Type: 0
         AdditionalData: 0
       - Color: 5

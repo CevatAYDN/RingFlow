@@ -376,10 +376,6 @@ namespace RingFlow.Editor
                 return;
             }
 
-            float spacing = f.PoleSpacing;
-            float boardWidth = (board.PoleCount - 1) * spacing;
-            float startX = -boardWidth * 0.5f;
-
             for (int p = 0; p < board.PoleCount; p++)
             {
                 bool isLocked = board.IsPoleLocked(p);
@@ -394,17 +390,16 @@ namespace RingFlow.Editor
                     ));
                 }
 
-                CreatePole(boardRoot.transform, p, startX, spacing, isLocked, board.MaxCapacity, rings, torusModel, f, palette, GetPortalTarget(portalTargets, p));
+                CreatePole(boardRoot.transform, p, board.PoleCount, isLocked, board.MaxCapacity, rings, torusModel, f, palette, GetPortalTarget(portalTargets, p));
             }
         }
 
-        private static void CreatePole(Transform parent, int index, float startX, float spacing, bool isLocked, int capacity, List<RingData> rings, GameObject torusModel, GameFeelConfigSO f, RingColorPaletteSO palette, int portalTarget)
+        private static void CreatePole(Transform parent, int index, int totalCount, bool isLocked, int capacity, List<RingData> rings, GameObject torusModel, GameFeelConfigSO f, RingColorPaletteSO palette, int portalTarget)
         {
             var poleObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             poleObj.name = $"Pole_{index}" + (isLocked ? " [LOCKED]" : "");
             poleObj.transform.SetParent(parent);
             
-            float floorY = f != null ? f.FloorYPosition : -0.51f;
             float poleScaleYDefault = f != null ? f.PoleScale.y : 2.5f;
             float ringStackSpacingDefault = f != null ? f.RingStackSpacing : 0.176f;
             
@@ -416,8 +411,9 @@ namespace RingFlow.Editor
             poleScale.y = totalHeight / 2.0f;
             poleObj.transform.localScale = poleScale;
             
-            float poleY = floorY + (totalHeight / 2.0f);
-            poleObj.transform.position = new Vector3(startX + index * spacing, poleY, 0f);
+            Vector3 basePos = BoardView.GetPolePosition(index, totalCount, f);
+            float poleY = basePos.y + (totalHeight / 2.0f);
+            poleObj.transform.position = new Vector3(basePos.x, poleY, basePos.z);
 
             var capacityLabel = new GameObject("CapacityLabel");
             capacityLabel.transform.SetParent(poleObj.transform);
@@ -458,12 +454,14 @@ namespace RingFlow.Editor
                 Object.DestroyImmediate(capsule);
 
             var box = poleObj.AddComponent<BoxCollider>();
-            float colWidth = f != null ? (spacing * f.PoleColliderWidthFraction) : 2.125f;
+            float currentSpacing = f != null ? f.PoleSpacing : 3.5f;
+            float colWidth = f != null ? (currentSpacing * f.PoleColliderWidthFraction) : 2.125f;
             float targetWorldWidth = colWidth;
             float targetWorldHeight = totalHeight + 1.5f;
-            float targetWorldDepth = 4.0f;
+            float targetWorldDepth = totalCount <= 5 ? 4.0f : 2.0f;
             box.size = new Vector3(targetWorldWidth / poleScale.x, targetWorldHeight / poleScale.y, targetWorldDepth / poleScale.z);
-            box.center = Vector3.zero;
+            float centerWorldY = (targetWorldHeight / 2.0f) - 0.5f;
+            box.center = new Vector3(0f, (centerWorldY - (totalHeight / 2.0f)) / poleScale.y, 0f);
 
             var renderer = poleObj.GetComponent<Renderer>();
             if (renderer != null)
