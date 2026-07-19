@@ -130,7 +130,7 @@ namespace RingFlow.Gameplay
         private bool CanPopRing(PoleState pole)
         {
             if (_validationManager != null)
-                return _validationManager.CanPopRing(pole.TopRing, pole.IsLocked);
+                return _validationManager.CanPopRing(pole.TopRing, pole.IsLocked, pole.Rings.Count);
             return pole.CanPopRing();
         }
 

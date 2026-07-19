@@ -403,13 +403,25 @@ namespace RingFlow.Editor
             var poleObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             poleObj.name = $"Pole_{index}" + (isLocked ? " [LOCKED]" : "");
             poleObj.transform.SetParent(parent);
-            float poleY = f != null ? f.PoleYPosition : 2.0f;
+            
+            float floorY = f != null ? f.FloorYPosition : -0.51f;
+            float poleScaleYDefault = f != null ? f.PoleScale.y : 2.5f;
+            float ringStackSpacingDefault = f != null ? f.RingStackSpacing : 0.176f;
+            
+            float worldBaseFromBottom = 0.22f;
+            float worldSpacing = ringStackSpacingDefault * poleScaleYDefault;
+            float totalHeight = worldBaseFromBottom + (capacity * worldSpacing) + 0.15f;
+            
+            Vector3 poleScale = f != null ? f.PoleScale : new Vector3(0.4f, 2.5f, 0.4f);
+            poleScale.y = totalHeight / 2.0f;
+            poleObj.transform.localScale = poleScale;
+            
+            float poleY = floorY + (totalHeight / 2.0f);
             poleObj.transform.position = new Vector3(startX + index * spacing, poleY, 0f);
-            poleObj.transform.localScale = f != null ? f.PoleScale : new Vector3(0.2f, 2.0f, 0.2f);
 
             var capacityLabel = new GameObject("CapacityLabel");
             capacityLabel.transform.SetParent(poleObj.transform);
-            capacityLabel.transform.localPosition = new Vector3(0f, 2.25f, 0f);
+            capacityLabel.transform.localPosition = new Vector3(0f, 1.1f, 0f);
             var text = capacityLabel.AddComponent<TextMesh>();
             text.text = $"Cap: {capacity}";
             text.characterSize = 0.08f;
@@ -422,7 +434,7 @@ namespace RingFlow.Editor
             {
                 var portalLabel = new GameObject("PortalLabel");
                 portalLabel.transform.SetParent(poleObj.transform);
-                portalLabel.transform.localPosition = new Vector3(0f, 2.45f, 0f);
+                portalLabel.transform.localPosition = new Vector3(0f, 1.25f, 0f);
                 var portalText = portalLabel.AddComponent<TextMesh>();
                 portalText.text = $"Portal → {portalTarget}";
                 portalText.characterSize = 0.07f;
@@ -447,7 +459,11 @@ namespace RingFlow.Editor
 
             var box = poleObj.AddComponent<BoxCollider>();
             float colWidth = f != null ? (spacing * f.PoleColliderWidthFraction) : 2.125f;
-            box.size = new Vector3(colWidth, 3.0f, 2.0f);
+            float targetWorldWidth = colWidth;
+            float targetWorldHeight = totalHeight + 1.5f;
+            float targetWorldDepth = 4.0f;
+            box.size = new Vector3(targetWorldWidth / poleScale.x, targetWorldHeight / poleScale.y, targetWorldDepth / poleScale.z);
+            box.center = Vector3.zero;
 
             var renderer = poleObj.GetComponent<Renderer>();
             if (renderer != null)
@@ -483,24 +499,36 @@ namespace RingFlow.Editor
         private static void CreateRing(Transform parent, int index, RingData ringData, GameObject torusModel, Shader shader, GameFeelConfigSO f, RingColorPaletteSO palette)
         {
             GameObject ringObj;
-            float ringBaseY = f != null ? f.RingBaseYOffset : -0.9f;
-            float ringSpacing = f != null ? f.RingStackSpacing : 0.4f;
+            float poleScaleYDefault = f != null ? f.PoleScale.y : 2.5f;
+            float ringStackSpacingDefault = f != null ? f.RingStackSpacing : 0.176f;
+            
+            float worldBaseFromBottom = 0.22f;
+            float worldSpacing = ringStackSpacingDefault * poleScaleYDefault;
+            float targetWorldY = worldBaseFromBottom + (index * worldSpacing);
+            float targetY = (targetWorldY / parent.localScale.y) - 1.0f;
 
             if (torusModel != null)
             {
                 ringObj = Object.Instantiate(torusModel);
                 ringObj.transform.SetParent(parent);
-                ringObj.transform.localPosition = new Vector3(0f, ringBaseY + (index * ringSpacing), 0f);
+                ringObj.transform.localPosition = new Vector3(0f, targetY, 0f);
                 ringObj.transform.localRotation = Quaternion.identity;
-                ringObj.transform.localScale = f != null ? f.RingScaleTorus : new Vector3(3.5f, 0.2f, 3.5f);
+                
+                float localX = f != null ? f.RingScaleTorus.x : 3.0f;
+                float localY = (f != null ? f.RingScaleTorus.y : 0.25f) / parent.localScale.y;
+                float localZ = f != null ? f.RingScaleTorus.z : 3.0f;
+                ringObj.transform.localScale = new Vector3(localX, localY, localZ);
             }
             else
             {
                 ringObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
                 ringObj.transform.SetParent(parent);
-                ringObj.transform.localPosition = new Vector3(0f, ringBaseY + (index * ringSpacing), 0f);
-                float scale = f != null ? f.RingScaleFallback.x : 0.8f;
-                ringObj.transform.localScale = Vector3.one * scale;
+                ringObj.transform.localPosition = new Vector3(0f, targetY, 0f);
+                
+                float scaleX = f != null ? f.RingScaleFallback.x : 0.8f;
+                float scaleY = (f != null ? f.RingScaleFallback.y : 0.12f) / parent.localScale.y;
+                float scaleZ = f != null ? f.RingScaleFallback.x : 0.8f;
+                ringObj.transform.localScale = new Vector3(scaleX, scaleY, scaleZ);
             }
 
             ringObj.name = ringData.AdditionalData > 0

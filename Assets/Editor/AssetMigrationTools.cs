@@ -8,7 +8,7 @@ namespace RingFlow.Editor
 {
     internal static class AssetMigrationTools
     {
-        [MenuItem("RingFlow/Migration/Sync GameConfigDatabase AllowedMechanics")]
+        [MenuItem("Ring Flow/Migration/Sync GameConfigDatabase AllowedMechanics")]
         public static void SyncGameConfigDatabaseAllowedMechanics()
         {
             const string assetPath = EditorPaths.GameConfigDbPath;
@@ -146,7 +146,7 @@ namespace RingFlow.Editor
         //  bu menü öğeleri AssetDatabase.MoveAsset kullanarak güvenli taşır.
         // ─────────────────────────────────────────────────────────────────
 
-        [MenuItem("RingFlow/Migration/Fix Folder — Move GameConfigDatabaseSO to Config/")]
+        [MenuItem("Ring Flow/Migration/Fix Folder — Move GameConfigDatabaseSO to Config/")]
         public static void MoveGameConfigDatabaseSOToConfig()
         {
             // GameConfigDatabaseSO World/ klasöründe duruyor — Config/ altına alınmalı.
@@ -155,7 +155,7 @@ namespace RingFlow.Editor
             MoveScriptSafe(from, to, "GameConfigDatabaseSO");
         }
 
-        [MenuItem("RingFlow/Migration/Fix Folder — Move GameplayHelpers to Gameplay root")]
+        [MenuItem("Ring Flow/Migration/Fix Folder — Move GameplayHelpers to Gameplay root")]
         public static void MoveGameplayHelpersToRoot()
         {
             // GameplayHelpers Commands/ klasöründe duruyor — utility sınıfı root'a ait.
@@ -201,6 +201,58 @@ namespace RingFlow.Editor
                     $"[Migration] {label} taşıma başarısız: {result}");
                 EditorUtility.DisplayDialog("Taşıma Başarısız",
                     $"{label} taşınamadı.\nHata: {result}", "Tamam");
+            }
+        }
+
+        [MenuItem("Ring Flow/Migration/Migrate RingColor.None to RingColor.Grey in Levels")]
+        public static void MigrateRingColorNoneToGrey()
+        {
+            var assets = AssetDatabase.FindAssets("t:LevelDataSO", new[] { "Assets/Resources/Levels" });
+            int patchedLevels = 0;
+            int patchedRings = 0;
+
+            foreach (var guid in assets)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                var levelData = AssetDatabase.LoadAssetAtPath<LevelDataSO>(path);
+                if (levelData == null || levelData.Data == null || levelData.Data.Poles == null) continue;
+
+                bool isDirty = false;
+                foreach (var pole in levelData.Data.Poles)
+                {
+                    if (pole.Rings == null) continue;
+                    for (int i = 0; i < pole.Rings.Count; i++)
+                    {
+                        if (pole.Rings[i].Color == RingColor.None)
+                        {
+                            var r = pole.Rings[i];
+                            r.Color = RingColor.Grey; // Migrate index 0 (None) to 15 (Grey)
+                            pole.Rings[i] = r;
+                            patchedRings++;
+                            isDirty = true;
+                        }
+                    }
+                }
+
+                if (isDirty)
+                {
+                    EditorUtility.SetDirty(levelData);
+                    patchedLevels++;
+                }
+            }
+
+            if (patchedLevels > 0)
+            {
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                NexusLog.Info("AssetMigrationTools", nameof(MigrateRingColorNoneToGrey), "Complete",
+                    $"[Migration] Successfully patched {patchedRings} rings across {patchedLevels} levels.");
+                EditorUtility.DisplayDialog("Migrasyon Başarılı",
+                    $"{patchedRings} adet halka ({patchedLevels} seviyede) RingColor.None -> RingColor.Grey olarak güncellendi ve kaydedildi.", "Tamam");
+            }
+            else
+            {
+                EditorUtility.DisplayDialog("Migrasyon Gerekli Değil", "Hiçbir seviyede RingColor.None renkli halka bulunmadı.", "Tamam");
             }
         }
     }

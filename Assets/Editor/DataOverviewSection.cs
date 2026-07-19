@@ -540,6 +540,103 @@ namespace RingFlow.Editor
                     AuditStatus.Fail);
             }
 
+            // 8. Level Metadata Compliance Audit (GDD §7 & §5)
+            // Verify that generated LevelDataSO files have correct GDD metadata fields populated and in sync.
+            int metadataPassCount = 0;
+            int metadataWarnCount = 0;
+            int metadataFailCount = 0;
+            int totalCheckedLevels = 0;
+            string metadataMismatchDetails = "";
+
+            for (int lvl = 1; lvl <= db.TotalLevels; lvl++)
+            {
+                string assetPath = $"{EditorPaths.LevelsFolder}/Level_{lvl}.asset";
+                // Convert from project-relative (Assets/...) to full filesystem path to check if file exists.
+                string fullPath = System.IO.Path.Combine(
+                    System.IO.Path.GetDirectoryName(UnityEngine.Application.dataPath),
+                    assetPath.Replace('/', System.IO.Path.DirectorySeparatorChar));
+                
+                if (System.IO.File.Exists(fullPath))
+                {
+                    totalCheckedLevels++;
+                    var levelSO = AssetDatabase.LoadAssetAtPath<LevelDataSO>(assetPath);
+                    if (levelSO == null || levelSO.Data == null)
+                    {
+                        metadataFailCount++;
+                        metadataMismatchDetails += $"Lvl_{lvl}(Yüklenemedi) ";
+                        continue;
+                    }
+
+                    var data = levelSO.Data;
+                    // Check if GDD fields are missing/default
+                    bool hasGddFields = !string.IsNullOrEmpty(data.LevelType) && 
+                                        data.PoleCount > 0 && 
+                                        data.PoleCapacity > 0 && 
+                                        data.ColorCount > 0;
+                    
+                    if (!hasGddFields)
+                    {
+                        metadataWarnCount++;
+                        metadataMismatchDetails += $"Lvl_{lvl}(Eksik alan) ";
+                    }
+                    else
+                    {
+                        // Verify consistency with actual layout
+                        int actualEmptyPoles = 0;
+                        var uniqueColors = new HashSet<RingColor>();
+                        for (int p = 0; p < data.Poles.Count; p++)
+                        {
+                            var pole = data.Poles[p];
+                            if (pole.Rings.Count == 0) actualEmptyPoles++;
+                            for (int r = 0; r < pole.Rings.Count; r++)
+                            {
+                                uniqueColors.Add(pole.Rings[r].Color);
+                            }
+                        }
+
+                        bool consistent = data.PoleCount == data.Poles.Count &&
+                                          data.EmptyPoleCount == actualEmptyPoles &&
+                                          data.ColorCount == uniqueColors.Count;
+                        
+                        if (!consistent)
+                        {
+                            metadataFailCount++;
+                            metadataMismatchDetails += $"Lvl_{lvl}(Tutarsız: Direk sayısı {data.PoleCount} vs {data.Poles.Count}) ";
+                        }
+                        else
+                        {
+                            metadataPassCount++;
+                        }
+                    }
+                }
+            }
+
+            if (totalCheckedLevels == 0)
+            {
+                AddAuditResult("Seviye GDD Metadatası (Bölüm 7)", 
+                    "Hiçbir üretilmiş seviye (.asset) bulunamadı. Denetlenecek veri yok.", 
+                    AuditStatus.Warning);
+            }
+            else if (metadataFailCount > 0)
+            {
+                AddAuditResult("Seviye GDD Metadatası (Bölüm 7)", 
+                    $"HATA: {metadataFailCount} seviyede kritik tutarsızlık var. Seviye İşlemleri sekmesinden Toplu Doğrulama'yı 'TargetMoves'u kaydet' seçeneğiyle çalıştırarak bu alanları doldurabilir veya düzeltebilirsiniz. Detay: {metadataMismatchDetails}", 
+                    AuditStatus.Fail);
+            }
+            else if (metadataWarnCount > 0)
+            {
+                AddAuditResult("Seviye GDD Metadatası (Bölüm 7)", 
+                    $"UYARI: {metadataWarnCount}/{totalCheckedLevels} seviyede GDD metadata alanları boş. " +
+                    "Seviye İşlemleri sekmesinden Toplu Doğrulama'yı 'TargetMoves'u kaydet' seçeneğiyle çalıştırarak bu alanları doldurabilirsiniz. Detay: {metadataMismatchDetails}", 
+                    AuditStatus.Warning);
+            }
+            else
+            {
+                AddAuditResult("Seviye GDD Metadatası (Bölüm 7)", 
+                    $"Başarılı: Tüm {totalCheckedLevels} seviye dosyası eksiksiz GDD metadatası barındırıyor ve tutarlı.", 
+                    AuditStatus.Pass);
+            }
+
             _auditRun = true;
         }
 
