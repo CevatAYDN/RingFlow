@@ -400,6 +400,9 @@ namespace RingFlow.Editor
             poleObj.name = $"Pole_{index}" + (isLocked ? " [LOCKED]" : "");
             poleObj.transform.SetParent(parent);
             
+            int backRowCount = Mathf.CeilToInt(totalCount / 2.0f);
+            float scaleFactor = (totalCount > 5 && index < backRowCount) ? 0.85f : 1.0f;
+            
             float poleScaleYDefault = f != null ? f.PoleScale.y : 2.5f;
             float ringStackSpacingDefault = f != null ? f.RingStackSpacing : 0.176f;
             
@@ -407,12 +410,12 @@ namespace RingFlow.Editor
             float worldSpacing = ringStackSpacingDefault * poleScaleYDefault;
             float totalHeight = worldBaseFromBottom + (capacity * worldSpacing) + 0.15f;
             
-            Vector3 poleScale = f != null ? f.PoleScale : new Vector3(0.4f, 2.5f, 0.4f);
-            poleScale.y = totalHeight / 2.0f;
+            Vector3 poleScale = (f != null ? f.PoleScale : new Vector3(0.4f, 2.5f, 0.4f)) * scaleFactor;
+            poleScale.y = (totalHeight * scaleFactor) / 2.0f;
             poleObj.transform.localScale = poleScale;
             
             Vector3 basePos = BoardView.GetPolePosition(index, totalCount, f);
-            float poleY = basePos.y + (totalHeight / 2.0f);
+            float poleY = basePos.y + ((totalHeight * scaleFactor) / 2.0f);
             poleObj.transform.position = new Vector3(basePos.x, poleY, basePos.z);
 
             var capacityLabel = new GameObject("CapacityLabel");
@@ -456,12 +459,12 @@ namespace RingFlow.Editor
             var box = poleObj.AddComponent<BoxCollider>();
             float currentSpacing = f != null ? f.PoleSpacing : 3.5f;
             float colWidth = f != null ? (currentSpacing * f.PoleColliderWidthFraction) : 2.125f;
-            float targetWorldWidth = colWidth;
-            float targetWorldHeight = totalHeight + 1.5f;
-            float targetWorldDepth = totalCount <= 5 ? 4.0f : 2.0f;
+            float targetWorldWidth = colWidth * scaleFactor;
+            float targetWorldHeight = (totalHeight + 1.5f) * scaleFactor;
+            float targetWorldDepth = (totalCount <= 5 ? 4.0f : 2.0f) * scaleFactor;
             box.size = new Vector3(targetWorldWidth / poleScale.x, targetWorldHeight / poleScale.y, targetWorldDepth / poleScale.z);
-            float centerWorldY = (targetWorldHeight / 2.0f) - 0.5f;
-            box.center = new Vector3(0f, (centerWorldY - (totalHeight / 2.0f)) / poleScale.y, 0f);
+            float centerWorldY = (targetWorldHeight / 2.0f) - (0.5f * scaleFactor);
+            box.center = new Vector3(0f, (centerWorldY - ((totalHeight * scaleFactor) / 2.0f)) / poleScale.y, 0f);
 
             var renderer = poleObj.GetComponent<Renderer>();
             if (renderer != null)

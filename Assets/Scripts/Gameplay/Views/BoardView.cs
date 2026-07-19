@@ -87,6 +87,7 @@ namespace RingFlow.Gameplay
             EnsureRingPoolPrewarmed();
             EnsureFloorPlaneCreated();
 
+            int backRowCount = Mathf.CeilToInt(poles.Count / 2.0f);
             for (int p = 0; p < poles.Count; p++)
             {
                 var poleData = poles[p];
@@ -112,7 +113,10 @@ namespace RingFlow.Gameplay
                 poleView.SetLocked(poleData.IsLocked);
                 poleObj.transform.localPosition = GetPolePosition(p, poles.Count, F);
                 poleObj.transform.localRotation = Quaternion.identity;
-                var poleScale = F.PoleScale;
+
+                // Faux-3D perspective scale: make back row 85% scale!
+                float scaleFactor = (poles.Count > 5 && p < backRowCount) ? 0.85f : 1.0f;
+                var poleScale = F.PoleScale * scaleFactor;
                 int poleCap = poleData.RingCapacity;
                 if (poleCap <= 0)
                     throw new System.InvalidOperationException(
@@ -122,17 +126,17 @@ namespace RingFlow.Gameplay
                 float worldBaseFromBottom = 0.22f;
                 float worldSpacing = F.RingStackSpacing * F.PoleScale.y;
                 float totalHeight = worldBaseFromBottom + (poleCap * worldSpacing) + 0.15f;
-                poleScale.y = totalHeight / 2.0f;
+                poleScale.y = (totalHeight * scaleFactor) / 2.0f;
                 poleObj.transform.localScale = poleScale;
 
                 var box = poleObj.GetComponent<BoxCollider>();
                 if (box != null)
                 {
-                    float targetWorldWidth = F.PoleSpacing * F.PoleColliderWidthFraction;
-                    float targetWorldHeight = totalHeight + 1.5f;
-                    float targetWorldDepth = poles.Count <= 5 ? 4.0f : 2.0f;
+                    float targetWorldWidth = F.PoleSpacing * F.PoleColliderWidthFraction * scaleFactor;
+                    float targetWorldHeight = (totalHeight + 1.5f) * scaleFactor;
+                    float targetWorldDepth = (poles.Count <= 5 ? 4.0f : 2.0f) * scaleFactor;
                     box.size = new Vector3(targetWorldWidth / poleScale.x, targetWorldHeight / poleScale.y, targetWorldDepth / poleScale.z);
-                    float centerWorldY = (targetWorldHeight / 2.0f) - 0.5f;
+                    float centerWorldY = (targetWorldHeight / 2.0f) - (0.5f * scaleFactor);
                     box.center = new Vector3(0f, centerWorldY / poleScale.y, 0f);
                 }
 
@@ -178,19 +182,19 @@ namespace RingFlow.Gameplay
 
                     ringObj.name = $"Ring_{r}_{ringData.Color}_{ringData.Type}";
 
-                    float targetWorldY = 0.22f + (r * (F.RingStackSpacing * F.PoleScale.y));
+                    float targetWorldY = (0.22f + (r * (F.RingStackSpacing * F.PoleScale.y))) * scaleFactor;
                     if (p == _lastSelectedPoleId && r == neededRingCount - 1)
                     {
                         bool reduceMotion = _settingsModel != null && _settingsModel.ReduceMotion.Value;
-                        if (!reduceMotion) targetWorldY += F.RingSelectionLift;
+                        if (!reduceMotion) targetWorldY += F.RingSelectionLift * scaleFactor;
                     }
 
                     ringObj.transform.localPosition = new Vector3(0f, targetWorldY / poleObj.transform.localScale.y, 0f);
                     ringObj.transform.localRotation = Quaternion.identity;
 
-                    float localX = F.RingTargetWidth / poleObj.transform.localScale.x;
-                    float localY = (F.RingTargetHeight / F.RingMeshHeight) / poleObj.transform.localScale.y;
-                    float localZ = F.RingTargetWidth / poleObj.transform.localScale.z;
+                    float localX = (F.RingTargetWidth * scaleFactor) / poleObj.transform.localScale.x;
+                    float localY = ((F.RingTargetHeight / F.RingMeshHeight) * scaleFactor) / poleObj.transform.localScale.y;
+                    float localZ = (F.RingTargetWidth * scaleFactor) / poleObj.transform.localScale.z;
                     ringObj.transform.localScale = new Vector3(localX, localY, localZ);
 
                     var ringRenderer = ringObj.GetComponentInChildren<Renderer>();
@@ -274,12 +278,15 @@ namespace RingFlow.Gameplay
                 var movedRing = _spawnedRings[toPoleId][^1];
                 if (movedRing != null)
                 {
+                    int toBackRowCount = Mathf.CeilToInt(poles.Count / 2.0f);
+                    float toScaleFactor = (poles.Count > 5 && toPoleId < toBackRowCount) ? 0.85f : 1.0f;
+
                     DOTween.Kill(movedRing.transform);
                     movedRing.transform.position = oldRingWorldPos;
                     int ringIndex = _spawnedRings[toPoleId].Count - 1;
                     var toPoleObj = _spawnedPoles[toPoleId].gameObject;
                     var toPoleScale = toPoleObj.transform.localScale;
-                    float targetWorldY = 0.22f + (ringIndex * (F.RingStackSpacing * F.PoleScale.y));
+                    float targetWorldY = (0.22f + (ringIndex * (F.RingStackSpacing * F.PoleScale.y))) * toScaleFactor;
                     var targetLocal = new Vector3(0f, targetWorldY / toPoleScale.y, 0f);
 
                     if (reduceMotion)
@@ -295,15 +302,20 @@ namespace RingFlow.Gameplay
                     }
                     else
                     {
-                        float localX = F.RingTargetWidth / toPoleScale.x;
-                        float localY = (F.RingTargetHeight / F.RingMeshHeight) / toPoleScale.y;
-                        float localZ = F.RingTargetWidth / toPoleScale.z;
+                        float localX = (F.RingTargetWidth * toScaleFactor) / toPoleScale.x;
+                        float localY = ((F.RingTargetHeight / F.RingMeshHeight) * toScaleFactor) / toPoleScale.y;
+                        float localZ = (F.RingTargetWidth * toScaleFactor) / toPoleScale.z;
                         Vector3 normalScale = new Vector3(localX, localY, localZ);
+
+                        var fromPoleObj = _spawnedPoles[fromPoleId].gameObject;
+                        float dist = Vector3.Distance(fromPoleObj.transform.position, toPoleObj.transform.position);
+                        float worldJumpPower = F.MoveJumpPower + (dist * 0.35f);
+                        float localJumpPower = worldJumpPower / toPoleScale.y;
 
                         var movedRingTransform = movedRing.transform;
                         var movedRingGameObject = movedRing.gameObject;
 
-                        movedRingTransform.DOLocalJump(targetLocal, F.MoveJumpPower, 1, duration)
+                        movedRingTransform.DOLocalJump(targetLocal, localJumpPower, 1, duration)
                             .SetEase(DG.Tweening.Ease.InOutQuad)
                             .SetAutoKill(true)
                             .OnComplete(() =>
@@ -441,10 +453,17 @@ namespace RingFlow.Gameplay
                 int ringIndex = _spawnedRings[fromPoleId].Count - 1;
                 var fromPoleObj = _spawnedPoles[fromPoleId].gameObject;
                 var fromPoleScale = fromPoleObj.transform.localScale;
-                float targetWorldY = 0.22f + (ringIndex * (F.RingStackSpacing * F.PoleScale.y));
+                
+                int fromBackRowCount = Mathf.CeilToInt(poles.Count / 2.0f);
+                float fromScaleFactor = (poles.Count > 5 && fromPoleId < fromBackRowCount) ? 0.85f : 1.0f;
+                
+                float targetWorldY = (0.22f + (ringIndex * (F.RingStackSpacing * F.PoleScale.y))) * fromScaleFactor;
                 var targetLocal = new Vector3(0f, targetWorldY / fromPoleScale.y, 0f);
 
-                // _animatingTargetPoleId already set above — no reassignment needed here.
+                #if UNITY_EDITOR || DEVELOPMENT_BUILD
+                NexusLog.Info("BoardView", nameof(AnimateRingUndo), $"{toPoleId}->{fromPoleId}",
+                    $"Calculated targetLocal={targetLocal} for fromPoleId={fromPoleId} (scaleFactor={fromScaleFactor})");
+                #endif
 
                 if (reduceMotion)
                 {
@@ -460,7 +479,12 @@ namespace RingFlow.Gameplay
                     return;
                 }
 
-                movedRingTransform.DOLocalJump(targetLocal, F.MoveJumpPower, 1, duration)
+                var toPoleObj = _spawnedPoles[toPoleId].gameObject;
+                float dist = Vector3.Distance(toPoleObj.transform.position, fromPoleObj.transform.position);
+                float worldJumpPower = F.MoveJumpPower + (dist * 0.35f);
+                float localJumpPower = worldJumpPower / fromPoleScale.y;
+
+                movedRingTransform.DOLocalJump(targetLocal, localJumpPower, 1, duration)
                     .SetEase(DG.Tweening.Ease.InOutQuad)
                     .SetAutoKill(true)
                     .OnComplete(() =>
@@ -780,20 +804,29 @@ namespace RingFlow.Gameplay
                     // the visible jitter on all poles during undo.
                     var poleObj = _spawnedPoles[i].gameObject;
                     float poleScaleY = poleObj.transform.localScale.y;
+                    
+                    int backRowCount = Mathf.CeilToInt(_spawnedPoles.Count / 2.0f);
+                    float scaleFactor = (_spawnedPoles.Count > 5 && i < backRowCount) ? 0.85f : 1.0f;
+
                     for (int r = 0; r < topRingIndex; r++)
                     {
                         var ring = ringList[r];
                         if (ring == null) continue;
-                        float restY = (0.22f + (r * (F.RingStackSpacing * F.PoleScale.y))) / poleScaleY;
+                        float restY = ((0.22f + (r * (F.RingStackSpacing * F.PoleScale.y))) * scaleFactor) / poleScaleY;
                         // Only snap if the ring is significantly out of place (not mid-celebrate).
                         // We intentionally do NOT kill celebrate tweens here — just let them finish.
                         // We skip DOTween.Kill so celebration bounce sequences are not interrupted.
-                        ring.transform.localPosition = new Vector3(0f, ring.transform.localPosition.y, 0f);
+                        ring.transform.localPosition = new Vector3(0f, restY, 0f);
                     }
 
                     int ringIndex = topRingIndex;
-                    float targetWorldY = 0.22f + (ringIndex * (F.RingStackSpacing * F.PoleScale.y)) + (isSelected ? F.RingSelectionLift : 0f);
+                    float targetWorldY = (0.22f + (ringIndex * (F.RingStackSpacing * F.PoleScale.y))) * scaleFactor + (isSelected ? F.RingSelectionLift * scaleFactor : 0f);
                     float targetY = targetWorldY / poleScaleY;
+
+                    #if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    NexusLog.Info("BoardView", nameof(ApplySelection), i.ToString(),
+                        $"Pole {i} isSelected={isSelected} targetY={targetY} scaleFactor={scaleFactor}");
+                    #endif
 
                     DOTween.Kill(topRing.transform);
                     if (reduceMotion)
@@ -813,7 +846,8 @@ namespace RingFlow.Gameplay
                                 if (capturedSelected && capturedRing != null)
                                 {
                                     DOTween.Kill(capturedRing.transform);
-                                    capturedRing.transform.DOLocalMoveY(capturedY + F.TutorialArrowBobHeight * 0.4f, 0.6f)
+                                    float bobOffset = (F.TutorialArrowBobHeight * 0.4f * scaleFactor) / poleScaleY;
+                                    capturedRing.transform.DOLocalMoveY(capturedY + bobOffset, 0.6f)
                                         .SetEase(DG.Tweening.Ease.InOutSine)
                                         .SetLoops(-1, LoopType.Yoyo)
                                         .SetAutoKill(true);

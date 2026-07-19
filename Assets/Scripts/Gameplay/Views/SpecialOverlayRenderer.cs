@@ -87,9 +87,10 @@ namespace RingFlow.Gameplay
                 textMesh.alignment = TextAlignment.Center;
                 textMesh.fontStyle = FontStyle.Bold;
 
-                // Position overlay above the ring surface
-                overlayGo.transform.localPosition = new Vector3(0f, 0.12f, 0f);
-                overlayGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                // Position overlay above the ring surface and tilt it to face the camera
+                overlayGo.transform.localPosition = new Vector3(0f, 0.22f, 0f);
+                float tilt = _feelConfig != null ? _feelConfig.CameraRotation.x : 30f;
+                overlayGo.transform.localRotation = Quaternion.Euler(tilt, 0f, 0f);
                 overlayGo.transform.localScale = new Vector3(0.06f, 0.06f, 0.06f);
             }
 

@@ -95,7 +95,7 @@ MonoBehaviour:
   RingTargetHeight: 0.44
   RingMeshHeight: 0.26
   FloorYPosition: -0.51
-  FloorScale: {x: 10, y: 1, z: 10}
+  FloorScale: {x: 40, y: 1, z: 40}
   PoleScaleFullCapacity: 4
   DefaultPoleCapacity: 4
   TutorialForwardOffset: 0.35

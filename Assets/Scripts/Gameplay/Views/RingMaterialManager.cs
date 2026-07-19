@@ -199,8 +199,10 @@ namespace RingFlow.Gameplay
                     mat.SetFloat("_Metallic", 0f); mat.SetFloat("_Smoothness", 0.1f);
                     break;
                 case RingType.Glass:
-                    mat.color = new Color(1f, 1f, 1f, 0.25f);
-                    mat.SetFloat("_Metallic", 0f); mat.SetFloat("_Smoothness", 0.95f);
+                    mat.color = new Color(1f, 1f, 1f, 0.45f);
+                    mat.SetFloat("_Metallic", 0.1f); mat.SetFloat("_Smoothness", 0.95f);
+                    mat.EnableKeyword("_EMISSION");
+                    mat.SetColor("_EmissionColor", new Color(0.15f, 0.15f, 0.15f, 1f));
                     SetFadeMode(mat);
                     break;
                 case RingType.Rainbow:
@@ -209,8 +211,10 @@ namespace RingFlow.Gameplay
                     mat.SetColor("_EmissionColor", Color.Lerp(baseColor, Color.white, 0.3f));
                     break;
                 case RingType.Ghost:
-                    mat.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0.15f);
+                    mat.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0.45f);
                     mat.SetFloat("_Metallic", 0.3f); mat.SetFloat("_Smoothness", 0.3f);
+                    mat.EnableKeyword("_EMISSION");
+                    mat.SetColor("_EmissionColor", new Color(baseColor.r * 0.2f, baseColor.g * 0.2f, baseColor.b * 0.2f, 1f));
                     SetFadeMode(mat);
                     break;
                 case RingType.Bomb:
