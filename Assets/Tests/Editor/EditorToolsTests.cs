@@ -170,5 +170,69 @@ namespace RingFlow.Tests
             public string Type;
             public int AdditionalData;
         }
+
+        [Test]
+        public void GenerateMissingLevels51to100()
+        {
+            var db = AssetDatabase.LoadAssetAtPath<RingFlow.Gameplay.GameConfigDatabaseSO>("Assets/Resources/Configs/GameConfigDatabase.asset");
+            Assert.IsNotNull(db, "GameConfigDatabaseSO not found!");
+
+            string folderPath = "Assets/Resources/Levels";
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+            }
+
+            int okCount = 0;
+            for (int level = 51; level <= 100; level++)
+            {
+                string assetPath = $"{folderPath}/Level_{level}.asset";
+                if (File.Exists(assetPath))
+                {
+                    continue;
+                }
+
+                int poles = db.GetPoleCountForLevel(level);
+                int colors = db.GetColorCountForLevel(level);
+                int maxCap = db.GetMaxCapacityForLevel(level);
+
+                var levelData = RingFlow.Gameplay.LevelGenerator.GenerateLevel(db, level, RingFlow.Gameplay.LevelGenerator.GetDeterministicSeed(level), poles, colors, maxCap);
+                Assert.IsNotNull(levelData, $"Failed to generate level {level}");
+
+                var levelSO = ScriptableObject.CreateInstance<RingFlow.Gameplay.LevelDataSO>();
+                levelSO.Data = new RingFlow.Gameplay.LevelData
+                {
+                    LevelIndex = levelData.LevelIndex,
+                    Seed = levelData.Seed,
+                    TargetMoves = levelData.TargetMoves,
+                    LevelType = levelData.LevelType,
+                    PoleCount = levelData.PoleCount,
+                    PoleCapacity = levelData.PoleCapacity,
+                    ColorCount = levelData.ColorCount,
+                    EmptyPoleCount = levelData.EmptyPoleCount,
+                    DifficultyScore = levelData.DifficultyScore,
+                    IsTutorial = levelData.IsTutorial,
+                    RuleReferences = levelData.RuleReferences != null ? new List<string>(levelData.RuleReferences) : new List<string>(),
+                    IsChallenge = levelData.IsChallenge,
+                    ProgressionFlags = levelData.ProgressionFlags,
+                    Poles = new List<RingFlow.Gameplay.PoleData>()
+                };
+
+                foreach (var p in levelData.Poles)
+                {
+                    var poleClone = new RingFlow.Gameplay.PoleData(p.RingCapacity) { IsLocked = p.IsLocked, PortalTargetId = p.PortalTargetId, Rings = new List<RingFlow.Gameplay.RingData>() };
+                    foreach (var r in p.Rings)
+                        poleClone.Rings.Add(new RingFlow.Gameplay.RingData(r.Color, r.Type, r.AdditionalData));
+                    levelSO.Data.Poles.Add(poleClone);
+                }
+
+                AssetDatabase.CreateAsset(levelSO, assetPath);
+                okCount++;
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log($"[Test] Batch generation completed: {okCount} levels generated.");
+        }
     }
 }

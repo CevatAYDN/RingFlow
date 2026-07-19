@@ -394,7 +394,7 @@ namespace RingFlow.Gameplay
                 {
                     Band = DifficultyBand.Master,
                     MaxLevel = Mathf.RoundToInt(t * 0.90f),
-                    MinEmptyPoles = 0, MaxCapacity = 5, MechanicIntensity = 3,
+                    MinEmptyPoles = 1, MaxCapacity = 5, MechanicIntensity = 3,
                     AllowedMechanics = new List<WorldMechanicType>
                         { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen,
                           WorldMechanicType.LockedPole, WorldMechanicType.Stone,
@@ -406,7 +406,7 @@ namespace RingFlow.Gameplay
                 {
                     Band = DifficultyBand.Legend,
                     MaxLevel = t,
-                    MinEmptyPoles = 0, MaxCapacity = 5, MechanicIntensity = 4,
+                    MinEmptyPoles = 1, MaxCapacity = 5, MechanicIntensity = 4,
                     AllowedMechanics = new List<WorldMechanicType>
                         { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen,
                           WorldMechanicType.LockedPole, WorldMechanicType.Stone,

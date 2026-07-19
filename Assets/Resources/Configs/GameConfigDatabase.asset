@@ -49,32 +49,32 @@ MonoBehaviour:
     AllowedMechanics: 0000000001000000020000000300000004000000050000000600000007000000080000000f000000
   - Band: 5
     MaxLevel: 90
-    MinEmptyPoles: 0
+    MinEmptyPoles: 1
     MaxCapacity: 5
     MechanicIntensity: 3
     AllowedMechanics: 000000000100000002000000030000000400000005000000060000000700000008000000090000000f000000
   - Band: 6
     MaxLevel: 100
-    MinEmptyPoles: 0
+    MinEmptyPoles: 1
     MaxCapacity: 5
     MechanicIntensity: 4
     AllowedMechanics: 000000000100000002000000030000000400000005000000060000000700000008000000090000000a0000000b0000000f0000000c0000000d0000000e000000
   ColorCurve:
   - LevelThreshold: 1
     ColorCount: 3
-  - LevelThreshold: 6
+  - LevelThreshold: 5
     ColorCount: 4
-  - LevelThreshold: 11
+  - LevelThreshold: 10
     ColorCount: 5
-  - LevelThreshold: 16
+  - LevelThreshold: 20
     ColorCount: 6
-  - LevelThreshold: 21
+  - LevelThreshold: 35
     ColorCount: 7
-  - LevelThreshold: 31
+  - LevelThreshold: 50
     ColorCount: 8
-  - LevelThreshold: 41
+  - LevelThreshold: 65
     ColorCount: 9
-  - LevelThreshold: 51
+  - LevelThreshold: 80
     ColorCount: 10
   LevelThemes:
   - StartLevel: 1
@@ -91,55 +91,55 @@ MonoBehaviour:
     ForcedMechanics: 02000000
   - StartLevel: 16
     EndLevel: 20
-    ColorCount: 6
+    ColorCount: 5
     ForcedMechanics: 03000000
   - StartLevel: 21
     EndLevel: 25
-    ColorCount: 7
+    ColorCount: 6
     ForcedMechanics: 04000000
   - StartLevel: 26
     EndLevel: 30
-    ColorCount: 7
+    ColorCount: 6
     ForcedMechanics: 05000000
   - StartLevel: 31
     EndLevel: 35
-    ColorCount: 8
+    ColorCount: 6
     ForcedMechanics: 06000000
   - StartLevel: 36
     EndLevel: 40
-    ColorCount: 8
+    ColorCount: 7
     ForcedMechanics: 07000000
   - StartLevel: 41
     EndLevel: 45
-    ColorCount: 9
+    ColorCount: 7
     ForcedMechanics: 08000000
   - StartLevel: 46
     EndLevel: 50
-    ColorCount: 9
+    ColorCount: 7
     ForcedMechanics: 09000000
   - StartLevel: 51
     EndLevel: 55
-    ColorCount: 10
+    ColorCount: 8
     ForcedMechanics: 0a000000
   - StartLevel: 56
     EndLevel: 60
-    ColorCount: 10
+    ColorCount: 8
     ForcedMechanics: 0b000000
   - StartLevel: 61
     EndLevel: 65
-    ColorCount: 10
+    ColorCount: 8
     ForcedMechanics: 01000000
   - StartLevel: 66
     EndLevel: 70
-    ColorCount: 10
+    ColorCount: 9
     ForcedMechanics: 02000000
   - StartLevel: 71
     EndLevel: 75
-    ColorCount: 10
+    ColorCount: 9
     ForcedMechanics: 03000000
   - StartLevel: 76
     EndLevel: 80
-    ColorCount: 10
+    ColorCount: 9
     ForcedMechanics: 04000000
   - StartLevel: 81
     EndLevel: 85
@@ -159,12 +159,12 @@ MonoBehaviour:
     ForcedMechanics: 08000000
   Worlds:
   - WorldIndex: 0
-    Theme: theme.grassland
+    Theme: Grass Valley
     UnlockedByWorldIndex: 0
     IsEventWorld: 0
     MechanicType: 0
   - WorldIndex: 1
-    Theme: theme.desert
+    Theme: World 2
     UnlockedByWorldIndex: 0
     IsEventWorld: 0
     MechanicType: 1
@@ -256,8 +256,8 @@ MonoBehaviour:
     ScrambleTargetRandomRange: 80
     MaxGenerationSeeds: 50
     MaxCandidates: 5
-    BombCountdown: 3
     BombTickMode: 0
+    BombCountdown: 3
     MaxMechanicTypesPerLevel: 4
     MinSolverMoves: 2
     DefaultMaxMovesLimit: 200

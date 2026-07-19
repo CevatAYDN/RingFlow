@@ -55,7 +55,8 @@ namespace RingFlow.Gameplay
             builder.BindInstance<VfxPrefabRegistry>(vfxRegistry);
             
             // -------------------- Config Databases & Themes --------------------
-            var assetService = new ResourcesAssetService();
+            IAssetService assetService = new ResourcesAssetService();
+            builder.BindInstance<IAssetService>(assetService);
 
             var db = assetService.LoadAsync<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase).GetAwaiter().GetResult();
             if (db == null)
@@ -138,7 +139,7 @@ namespace RingFlow.Gameplay
             builder.BindService<IObjectPoolService, ObjectPoolService>();
 
             // -------------------- Asset Service (GDD §6) --------------------
-            builder.Bind<IAssetService, ResourcesAssetService>();
+            // Bound above as an instance in OnConfigure
 
             // -------------------- Diagnostics & Tracing --------------------
             builder.BindService<IGameDiagnostics, GameDiagnostics>();
@@ -202,15 +203,14 @@ namespace RingFlow.Gameplay
 
         public async ValueTask OnInitializeAsync(CancellationToken ct)
         {
-            var visualBoard = GameObject.Find("RingFlow_VisualBoard");
-            if (visualBoard != null)
+            if (_visualBoardToDestroy != null)
             {
-                Object.Destroy(visualBoard);
+                Object.Destroy(_visualBoardToDestroy);
             }
             else
             {
                 NexusLog.Warn("GameplayLifecycle", "OnInitializeAsync", "", 
-                    "'RingFlow_VisualBoard' scene object not found. This is normal in tests or when loaded from other scenes.");
+                    "'_visualBoardToDestroy' reference is null. This is normal in tests or when loaded from other scenes.");
             }
 
             var context = NexusRuntime.CurrentContext;

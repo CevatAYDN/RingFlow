@@ -556,9 +556,9 @@ namespace RingFlow.Editor
                     System.IO.Path.GetDirectoryName(UnityEngine.Application.dataPath),
                     assetPath.Replace('/', System.IO.Path.DirectorySeparatorChar));
                 
+                totalCheckedLevels++;
                 if (System.IO.File.Exists(fullPath))
                 {
-                    totalCheckedLevels++;
                     var levelSO = AssetDatabase.LoadAssetAtPath<LevelDataSO>(assetPath);
                     if (levelSO == null || levelSO.Data == null)
                     {
@@ -576,7 +576,7 @@ namespace RingFlow.Editor
                     
                     if (!hasGddFields)
                     {
-                        metadataWarnCount++;
+                        metadataFailCount++;
                         metadataMismatchDetails += $"Lvl_{lvl}(Eksik alan) ";
                     }
                     else
@@ -608,6 +608,11 @@ namespace RingFlow.Editor
                             metadataPassCount++;
                         }
                     }
+                }
+                else
+                {
+                    metadataFailCount++;
+                    metadataMismatchDetails += $"Lvl_{lvl}(Eksik asset) ";
                 }
             }
 

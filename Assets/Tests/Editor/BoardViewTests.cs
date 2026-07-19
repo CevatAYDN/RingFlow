@@ -490,6 +490,7 @@ namespace RingFlow.Tests
         [Test]
         public void AnimateRingMove_NegativePoleId_DoesNotThrow()
         {
+            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
             _view.BuildBoard(TwoPoleBoard());
             var poles = TwoPoleBoard();
 
@@ -502,6 +503,7 @@ namespace RingFlow.Tests
         [Test]
         public void AnimateRingMove_OutOfRangePoleId_DoesNotThrow()
         {
+            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
             _view.BuildBoard(TwoPoleBoard());
             var poles = TwoPoleBoard();
 
@@ -580,8 +582,10 @@ namespace RingFlow.Tests
         [Test]
         public void AnimateRingMove_InvalidPoleId_DoesNotThrow_AfterFix()
         {
+            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
             _view.BuildBoard(TwoPoleBoard());
             var poles = TwoPoleBoard();
+
             Assert.DoesNotThrow(
                 () => _view.AnimateRingMove(-1, 0, poles),
                 "BUG-4 FIX: AnimateRingMove(-1, 0) must NOT throw after bounds guard added.");

@@ -28,9 +28,6 @@ MonoBehaviour:
       - Color: 4
         Type: 0
         AdditionalData: 0
-      - Color: 0
-        Type: 0
-        AdditionalData: 0
       IsLocked: 0
       PortalTargetId: -1
     - RingCapacity: 4
@@ -77,9 +74,6 @@ MonoBehaviour:
       - Color: 7
         Type: 0
         AdditionalData: 0
-      - Color: 0
-        Type: 0
-        AdditionalData: 0
       - Color: 1
         Type: 0
         AdditionalData: 0
@@ -103,9 +97,6 @@ MonoBehaviour:
       PortalTargetId: -1
     - RingCapacity: 4
       Rings:
-      - Color: 0
-        Type: 0
-        AdditionalData: 0
       - Color: 1
         Type: 0
         AdditionalData: 0
@@ -119,9 +110,6 @@ MonoBehaviour:
       PortalTargetId: -1
     - RingCapacity: 4
       Rings:
-      - Color: 0
-        Type: 0
-        AdditionalData: 0
       - Color: 7
         Type: 0
         AdditionalData: 0
@@ -152,7 +140,7 @@ MonoBehaviour:
     LevelType: Normal
     PoleCount: 9
     PoleCapacity: 4
-    ColorCount: 6
+    ColorCount: 7
     EmptyPoleCount: 1
     DifficultyScore: 60.5
     IsTutorial: 0

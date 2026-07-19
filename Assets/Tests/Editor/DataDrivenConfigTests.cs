@@ -201,9 +201,9 @@ namespace RingFlow.Tests
             int colorCount = db.GetColorCountForLevel(masterLevel);
             int minEmptyPoles = db.GetMinEmptyPolesForLevel(masterLevel);
 
-            // Verify bug precondition: Master band must have MinEmptyPoles == 0
-            Assert.AreEqual(0, minEmptyPoles,
-                $"This test requires MinEmptyPoles=0 for Master band, but got {minEmptyPoles}. " +
+            // Verify bug precondition: Master band must have MinEmptyPoles == 1
+            Assert.AreEqual(1, minEmptyPoles,
+                $"This test requires MinEmptyPoles=1 for Master band, but got {minEmptyPoles}. " +
                 "If the asset changed, update this test.");
 
             int poleCount = db.GetPoleCountForLevel(masterLevel);
