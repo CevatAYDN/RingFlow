@@ -61,6 +61,18 @@ MonoBehaviour:
     Icon: {fileID: 0}
     IsMovementRestricting: 0
     AffectedRingTypes: 
+  - Type: 12
+    Icon: {fileID: 0}
+    IsMovementRestricting: 0
+    AffectedRingTypes: 
+  - Type: 13
+    Icon: {fileID: 0}
+    IsMovementRestricting: 0
+    AffectedRingTypes: 
+  - Type: 14
+    Icon: {fileID: 0}
+    IsMovementRestricting: 0
+    AffectedRingTypes: 
   - Type: 15
     Icon: {fileID: 0}
     IsMovementRestricting: 0

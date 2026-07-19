@@ -307,6 +307,17 @@ namespace RingFlow.Gameplay
                         float localZ = (F.RingTargetWidth * toScaleFactor) / toPoleScale.z;
                         Vector3 normalScale = new Vector3(localX, localY, localZ);
 
+                        // BUG-4 FIX: Guard fromPoleId before accessing _spawnedPoles list.
+                        // Without this, a negative or out-of-range fromPoleId causes ArgumentOutOfRangeException.
+                        // Animation is visual-only — early return has no gameplay impact.
+                        if (fromPoleId < 0 || fromPoleId >= _spawnedPoles.Count)
+                        {
+                            NexusLog.Error("BoardView", nameof(AnimateRingMove), $"{fromPoleId}->{toPoleId}",
+                                $"fromPoleId {fromPoleId} out of _spawnedPoles range ({_spawnedPoles.Count}) — animation aborted, _animatingTargetPoleId reset.");
+                            _animatingTargetPoleId = -1;
+                            return;
+                        }
+
                         var fromPoleObj = _spawnedPoles[fromPoleId].gameObject;
                         float dist = Vector3.Distance(fromPoleObj.transform.position, toPoleObj.transform.position);
                         float worldJumpPower = F.MoveJumpPower + (dist * 0.35f);
@@ -369,6 +380,15 @@ namespace RingFlow.Gameplay
             if (fromPoleId < 0 || toPoleId < 0) return;
             if (poles == null) return;
             if (fromPoleId >= poles.Count || toPoleId >= poles.Count) return;
+            // BUG-4 FIX: Also guard against out-of-range _spawnedPoles access.
+            // poles.Count check above is insufficient when _spawnedPoles is shorter than poles
+            // (e.g. board not yet built). Animation is visual-only — early return has no gameplay impact.
+            if (fromPoleId >= _spawnedPoles.Count || toPoleId >= _spawnedPoles.Count)
+            {
+                NexusLog.Warn("BoardView", nameof(AnimateRingUndo), $"{toPoleId}->{fromPoleId}",
+                    $"fromPoleId {fromPoleId} or toPoleId {toPoleId} out of _spawnedPoles range ({_spawnedPoles.Count}) — undo animation aborted.");
+                return;
+            }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             NexusLog.Info("BoardView", nameof(AnimateRingUndo), $"{toPoleId}->{fromPoleId}",

@@ -15,17 +15,27 @@ MonoBehaviour:
   Data:
     LevelIndex: 5
     Seed: 40598
-    TargetMoves: 9
+    TargetMoves: 4
     Poles:
-    - RingCapacity: 4
+    - RingCapacity: 3
       Rings:
-      - Color: 13
+      - Color: 4
         Type: 0
         AdditionalData: 0
-      - Color: 13
+      - Color: 4
         Type: 0
         AdditionalData: 0
+      - Color: 4
+        Type: 0
+        AdditionalData: 0
+      IsLocked: 0
+      PortalTargetId: -1
+    - RingCapacity: 3
+      Rings:
       - Color: 5
+        Type: 0
+        AdditionalData: 0
+      - Color: 13
         Type: 0
         AdditionalData: 0
       - Color: 13
@@ -33,43 +43,36 @@ MonoBehaviour:
         AdditionalData: 0
       IsLocked: 0
       PortalTargetId: -1
-    - RingCapacity: 4
-      Rings:
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
-      - Color: 13
-        Type: 0
-        AdditionalData: 0
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
-      - Color: 5
-        Type: 0
-        AdditionalData: 0
-      IsLocked: 0
-      PortalTargetId: -1
-    - RingCapacity: 4
+    - RingCapacity: 3
       Rings: []
       IsLocked: 0
       PortalTargetId: -1
-    - RingCapacity: 4
+    - RingCapacity: 3
       Rings:
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
-      - Color: 4
-        Type: 0
-        AdditionalData: 0
       - Color: 5
         Type: 0
         AdditionalData: 0
       - Color: 5
+        Type: 0
+        AdditionalData: 0
+      - Color: 13
         Type: 0
         AdditionalData: 0
       IsLocked: 0
       PortalTargetId: -1
-    - RingCapacity: 4
+    - RingCapacity: 3
       Rings: []
       IsLocked: 0
       PortalTargetId: -1
+    LevelType: Normal
+    PoleCount: 5
+    PoleCapacity: 3
+    ColorCount: 3
+    EmptyPoleCount: 2
+    DifficultyScore: 16.7
+    IsTutorial: 1
+    RuleReferences:
+    - StandardMove
+    - ColorMatch
+    IsChallenge: 0
+    ProgressionFlags: 

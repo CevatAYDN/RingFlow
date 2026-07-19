@@ -14,78 +14,78 @@ MonoBehaviour:
   m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.LevelDataSO
   Data:
     LevelIndex: 7
-    Seed: 56435
-    TargetMoves: 13
+    Seed: 56436
+    TargetMoves: 8
     Poles:
-    - RingCapacity: 4
-      Rings:
-      - Color: 3
-        Type: 0
-        AdditionalData: 0
-      - Color: 1
-        Type: 0
-        AdditionalData: 0
-      - Color: 10
-        Type: 0
-        AdditionalData: 0
-      - Color: 3
-        Type: 0
-        AdditionalData: 0
-      IsLocked: 0
-      PortalTargetId: -1
-    - RingCapacity: 4
+    - RingCapacity: 3
       Rings: []
       IsLocked: 0
       PortalTargetId: -1
-    - RingCapacity: 4
+    - RingCapacity: 3
       Rings:
-      - Color: 2
+      - Color: 11
         Type: 0
         AdditionalData: 0
-      - Color: 2
+      - Color: 15
         Type: 0
         AdditionalData: 0
-      - Color: 2
-        Type: 0
-        AdditionalData: 0
-      - Color: 10
+      - Color: 6
         Type: 0
         AdditionalData: 0
       IsLocked: 0
       PortalTargetId: -1
-    - RingCapacity: 4
+    - RingCapacity: 3
       Rings:
-      - Color: 1
+      - Color: 15
         Type: 0
         AdditionalData: 0
-      - Color: 3
+      - Color: 6
         Type: 0
         AdditionalData: 0
-      - Color: 3
-        Type: 0
-        AdditionalData: 0
-      - Color: 1
+      - Color: 11
         Type: 0
         AdditionalData: 0
       IsLocked: 0
       PortalTargetId: -1
-    - RingCapacity: 4
+    - RingCapacity: 3
       Rings:
-      - Color: 2
+      - Color: 11
         Type: 0
         AdditionalData: 0
-      - Color: 1
+      - Color: 6
         Type: 0
         AdditionalData: 0
-      - Color: 10
-        Type: 0
-        AdditionalData: 0
-      - Color: 10
+      - Color: 15
         Type: 0
         AdditionalData: 0
       IsLocked: 0
       PortalTargetId: -1
-    - RingCapacity: 4
+    - RingCapacity: 3
+      Rings:
+      - Color: 12
+        Type: 0
+        AdditionalData: 0
+      - Color: 12
+        Type: 0
+        AdditionalData: 0
+      - Color: 12
+        Type: 0
+        AdditionalData: 0
+      IsLocked: 0
+      PortalTargetId: -1
+    - RingCapacity: 3
       Rings: []
       IsLocked: 0
       PortalTargetId: -1
+    LevelType: Normal
+    PoleCount: 6
+    PoleCapacity: 3
+    ColorCount: 4
+    EmptyPoleCount: 2
+    DifficultyScore: 25.4
+    IsTutorial: 1
+    RuleReferences:
+    - StandardMove
+    - ColorMatch
+    IsChallenge: 0
+    ProgressionFlags: 

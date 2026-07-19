@@ -93,7 +93,7 @@ namespace RingFlow.Gameplay
             public const int MaxPoleCount = 12;
 
             /// <summary>Max rings per pole hard default. Must match GameConfigDatabase ring capacity.</summary>
-            public const int MaxCapacity = 4;
+            public const int MaxCapacity = 5;
 
             /// <summary>Default tween capacity for DOTween bootstrap.</summary>
             public const int TweenCapacityDefault = 1500;

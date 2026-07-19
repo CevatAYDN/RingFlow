@@ -13,6 +13,9 @@ namespace RingFlow.Gameplay
             [Inject] private IProgressionService _progression;
             [Inject] private RingValidationStrategyManager _validationManager;
             [Inject] private GameFeelConfigSO _feelConfig;
+            // BUG-7 FIX: Inject GameConfigDatabaseSO so ShouldTickBomb reads BombTickMode
+            // from the same SSOT as LevelGenerator and LevelSolver (AGENTS.md Golden Rule #3).
+            [Inject] private GameConfigDatabaseSO _dbConfig;
 
         // IResettable: called by CommandPool before returning this instance to the pool.
         // Clears the bomb-count cache so the next Execute() starts with a fresh scan.
@@ -429,9 +432,12 @@ namespace RingFlow.Gameplay
 
         private bool ShouldTickBomb(int poleId, int ringIndex, MoveRecord mainRecord, RingData ring)
         {
-            // BombTickMode is data-driven: read from GameFeelConfigSO so designers can
-            // tune behaviour without a code change. Defaults to AllBombsPerMove (GDD §36).
-            var mode = _feelConfig != null ? _feelConfig.BombTickMode : BombTickMode.AllBombsPerMove;
+            // BUG-7 FIX: Read BombTickMode from GameConfigDatabaseSO (SSOT) instead of
+            // GameFeelConfigSO. LevelGenerator and LevelSolver already read from _dbConfig,
+            // so this aligns all three systems to the same single source.
+            // AGENTS.md Golden Rule #3: "Generator and Solver must use identical rules."
+            var mode = _dbConfig != null ? _dbConfig.LevelGen.BombTickMode
+                     : (_feelConfig != null ? _feelConfig.BombTickMode : BombTickMode.AllBombsPerMove);
             switch (mode)
             {
                 case BombTickMode.SourceAndTargetPolesOnly:

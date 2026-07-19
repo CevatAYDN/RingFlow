@@ -32,6 +32,10 @@ namespace RingFlow.Gameplay
         [SerializeField] private GameObject _confettiPrefab;
         [UnityEngine.Scripting.Preserve]
         [SerializeField] private GameObject _mergeEffectPrefab;
+        // BUG-5 FIX: Replace GameObject.Find("RingFlow_VisualBoard") with a SerializeField
+        // reference. AGENTS.md forbids GameObject.Find — inject via Inspector instead.
+        [UnityEngine.Scripting.Preserve]
+        [SerializeField] private GameObject _visualBoardToDestroy;
         
         private static float s_sessionStartTime;
         private static bool s_sessionEndTracked;

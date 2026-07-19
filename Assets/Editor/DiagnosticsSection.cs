@@ -195,7 +195,6 @@ namespace RingFlow.Editor
                 details.AppendLine($"• Toplam Seviye: {db.TotalLevels}");
                 details.AppendLine($"• Dünya Başına Seviye: {db.LevelsPerWorld}");
                 details.AppendLine($"• Toplam Dünya: {db.TotalWorlds}");
-                details.AppendLine($"• Minimum Boş Direk: {db.MinimumEmptyPoles}");
                 details.AppendLine($"• Zorluk Bandları ({db.DifficultyBands.Count}):");
                 foreach (var band in db.DifficultyBands)
                 {

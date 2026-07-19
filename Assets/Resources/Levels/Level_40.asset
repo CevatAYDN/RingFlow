@@ -15,7 +15,7 @@ MonoBehaviour:
   Data:
     LevelIndex: 40
     Seed: 317762
-    TargetMoves: 25
+    TargetMoves: 26
     Poles:
     - RingCapacity: 4
       Rings:
@@ -149,7 +149,15 @@ MonoBehaviour:
         AdditionalData: 0
       IsLocked: 0
       PortalTargetId: -1
-    - RingCapacity: 4
-      Rings: []
-      IsLocked: 0
-      PortalTargetId: -1
+    LevelType: Normal
+    PoleCount: 9
+    PoleCapacity: 4
+    ColorCount: 7
+    EmptyPoleCount: 1
+    DifficultyScore: 60.3
+    IsTutorial: 0
+    RuleReferences:
+    - StandardMove
+    - ColorMatch
+    IsChallenge: 0
+    ProgressionFlags: 

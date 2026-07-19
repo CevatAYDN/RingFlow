@@ -15,14 +15,12 @@ MonoBehaviour:
   TotalLevels: 100
   LevelsPerWorld: 50
   TotalWorlds: 2
-  BossLevelModulo: 50
   LevelsPerThemeStep: 5
-  MinimumEmptyPoles: 1
   DifficultyBands:
   - Band: 0
     MaxLevel: 10
     MinEmptyPoles: 2
-    MaxCapacity: 4
+    MaxCapacity: 3
     MechanicIntensity: 1
     AllowedMechanics: 0000000001000000
   - Band: 1
@@ -33,32 +31,32 @@ MonoBehaviour:
     AllowedMechanics: 000000000100000002000000
   - Band: 2
     MaxLevel: 45
-    MinEmptyPoles: 2
+    MinEmptyPoles: 1
     MaxCapacity: 4
     MechanicIntensity: 2
     AllowedMechanics: 0000000001000000020000000300000004000000
   - Band: 3
     MaxLevel: 60
-    MinEmptyPoles: 2
+    MinEmptyPoles: 1
     MaxCapacity: 4
     MechanicIntensity: 2
     AllowedMechanics: 00000000010000000200000003000000040000000500000006000000
   - Band: 4
     MaxLevel: 75
-    MinEmptyPoles: 2
-    MaxCapacity: 4
+    MinEmptyPoles: 1
+    MaxCapacity: 5
     MechanicIntensity: 3
     AllowedMechanics: 0000000001000000020000000300000004000000050000000600000007000000080000000f000000
   - Band: 5
     MaxLevel: 90
-    MinEmptyPoles: 2
-    MaxCapacity: 4
+    MinEmptyPoles: 0
+    MaxCapacity: 5
     MechanicIntensity: 3
     AllowedMechanics: 000000000100000002000000030000000400000005000000060000000700000008000000090000000f000000
   - Band: 6
     MaxLevel: 100
-    MinEmptyPoles: 2
-    MaxCapacity: 4
+    MinEmptyPoles: 0
+    MaxCapacity: 5
     MechanicIntensity: 4
     AllowedMechanics: 000000000100000002000000030000000400000005000000060000000700000008000000090000000a0000000b0000000f0000000c0000000d0000000e000000
   ColorCurve:
@@ -161,12 +159,12 @@ MonoBehaviour:
     ForcedMechanics: 08000000
   Worlds:
   - WorldIndex: 0
-    Theme: Grass Valley
+    Theme: theme.grassland
     UnlockedByWorldIndex: 0
     IsEventWorld: 0
     MechanicType: 0
   - WorldIndex: 1
-    Theme: World 2
+    Theme: theme.desert
     UnlockedByWorldIndex: 0
     IsEventWorld: 0
     MechanicType: 1
@@ -258,7 +256,7 @@ MonoBehaviour:
     ScrambleTargetRandomRange: 80
     MaxGenerationSeeds: 50
     MaxCandidates: 5
-    BombCountdown: 5
+    BombCountdown: 3
     BombTickMode: 0
     MaxMechanicTypesPerLevel: 4
     MinSolverMoves: 2
@@ -274,15 +272,15 @@ MonoBehaviour:
     ScrambleMinEmptyPolesFloor: 1
     SolverLimitBuckets:
     - MaxColorCount: 3
-      StateLimit: 20000
-    - MaxColorCount: 5
       StateLimit: 30000
+    - MaxColorCount: 5
+      StateLimit: 50000
     - MaxColorCount: 7
-      StateLimit: 20000
+      StateLimit: 80000
     - MaxColorCount: 9
-      StateLimit: 12000
+      StateLimit: 100000
     - MaxColorCount: 99
-      StateLimit: 8000
+      StateLimit: 100000
     TransitionLevelCount: 10
     RetrySeedMultipliers: 836c0000b77a0000343f0000
     MechanicPriorityOrder: 0300000001000000020000000400000005000000060000000700000008000000090000000a0000000b0000000f000000

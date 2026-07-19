@@ -83,9 +83,7 @@ namespace RingFlow.Editor
                 }
 
                 db.LevelsPerThemeStep = EditorGUILayout.IntField(new GUIContent("Tema Başına Seviye Adımı", "Görsel veya mekanik temaların kaç seviyede bir güncelleneceğini belirler."), db.LevelsPerThemeStep);
-                db.MinimumEmptyPoles = EditorGUILayout.IntField(new GUIContent("Minimum Boş Direk Sayısı", "Bulmacaların çözülebilir olması için seviyelerde bulunacak en az boş direk sayısı."), db.MinimumEmptyPoles);
-                db.MinimumEmptyPoles = Mathf.Max(0, db.MinimumEmptyPoles);
-
+                // Boş direk sayıları her DifficultyBand'da tanımlıdır (GetMinEmptyPolesForLevel).
                 // Hızlı ön ayar butonları — hardcode değil, InitializeDefaults kullanır
                 EditorGUILayout.Space(6f);
                 EditorGUILayout.LabelField("Hızlı Ön Ayar", EditorStyles.miniBoldLabel);

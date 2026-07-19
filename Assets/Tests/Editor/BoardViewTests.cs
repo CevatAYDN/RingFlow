@@ -569,6 +569,27 @@ namespace RingFlow.Tests
                 "ClearBoard after AnimateRingMove must not throw.");
         }
 
+        // ── BUG-4 Fix Verification Tests ────────────────────────────────
+
+        /// <summary>
+        /// BUG-4 Fix Verification — FIXED: AnimateRingMove with invalid pole ID must NOT throw.
+        /// Previously threw ArgumentOutOfRangeException at _spawnedPoles[fromPoleId].
+        /// After fix: early return with NexusLog.Error, no exception, no gameplay impact.
+        /// Validates: Requirements 2.7, 2.8
+        /// </summary>
+        [Test]
+        public void AnimateRingMove_InvalidPoleId_DoesNotThrow_AfterFix()
+        {
+            _view.BuildBoard(TwoPoleBoard());
+            var poles = TwoPoleBoard();
+            Assert.DoesNotThrow(
+                () => _view.AnimateRingMove(-1, 0, poles),
+                "BUG-4 FIX: AnimateRingMove(-1, 0) must NOT throw after bounds guard added.");
+            Assert.DoesNotThrow(
+                () => _view.AnimateRingMove(999, 0, poles),
+                "BUG-4 FIX: AnimateRingMove(999, 0) must NOT throw after bounds guard added.");
+        }
+
         // ── AnimateRingUndo Tests ───────────────────────────────────────
 
         [Test]

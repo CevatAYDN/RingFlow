@@ -149,7 +149,15 @@ MonoBehaviour:
         AdditionalData: 0
       IsLocked: 0
       PortalTargetId: -1
-    - RingCapacity: 4
-      Rings: []
-      IsLocked: 0
-      PortalTargetId: -1
+    LevelType: Normal
+    PoleCount: 9
+    PoleCapacity: 4
+    ColorCount: 6
+    EmptyPoleCount: 1
+    DifficultyScore: 57.3
+    IsTutorial: 0
+    RuleReferences:
+    - StandardMove
+    - ColorMatch
+    IsChallenge: 0
+    ProgressionFlags: 

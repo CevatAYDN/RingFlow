@@ -150,8 +150,8 @@ namespace RingFlow.Gameplay
         public int ScrambleTargetRandomRange;
         public int MaxGenerationSeeds;
         public int MaxCandidates;
-        public int BombCountdown;
         public BombTickMode BombTickMode;
+        public int BombCountdown; // Ticks before bomb detonates (stored as 4-bit, max 15)
         public int MaxMechanicTypesPerLevel;
         public int MinSolverMoves;
         public int DefaultMaxMovesLimit;
@@ -184,10 +184,8 @@ namespace RingFlow.Gameplay
     {
         public int TotalLevels = 0;
         public int LevelsPerWorld = 50;
-        public int TotalWorlds = 40;
-        public int BossLevelModulo = 50;
+        public int TotalWorlds = 0;
         public int LevelsPerThemeStep = 5;
-        public int MinimumEmptyPoles = 0;
         public List<DifficultyBandData> DifficultyBands = new();
         public List<ColorCurvePoint> ColorCurve = new();
         public List<LevelThemeData> LevelThemes = new();
@@ -201,8 +199,8 @@ namespace RingFlow.Gameplay
             ScrambleTargetRandomRange = 80,
             MaxGenerationSeeds = 50,
             MaxCandidates = 5,
-            BombCountdown = 5,
             BombTickMode = BombTickMode.AllBombsPerMove,
+            BombCountdown = 3,
             MaxMechanicTypesPerLevel = 4,
             MinSolverMoves = 2,
             DefaultMaxMovesLimit = 200,
@@ -218,22 +216,12 @@ namespace RingFlow.Gameplay
             TransitionLevelCount = 10,
             SolverLimitBuckets = new()
             {
-                new() { MaxColorCount = 3, StateLimit = 20000 },
-                new() { MaxColorCount = 5, StateLimit = 30000 },
-                new() { MaxColorCount = 7, StateLimit = 20000 },
-                new() { MaxColorCount = 9, StateLimit = 12000 },
-                new() { MaxColorCount = 99, StateLimit = 8000 }
+                new() { MaxColorCount = 3, StateLimit = 30000 },
+                new() { MaxColorCount = 5, StateLimit = 50000 },
+                new() { MaxColorCount = 7, StateLimit = 80000 },
+                new() { MaxColorCount = 9, StateLimit = 100000 },
+                new() { MaxColorCount = 99, StateLimit = 100000 }
             },
-            // FIX-L2: Original list had only 3 retry multipliers. With MaxGenerationSeeds=50
-            // and MaxCandidates=5, the generator makes up to 50 seed attempts per call but
-            // only 3 deterministic retry paths are available when the primary seed fails.
-            // If all 3 retries exhaust their candidate window without producing a solvable
-            // level, InitLevelCommand logs an error and leaves the board empty — a hard crash
-            // for the player. Added 3 more well-distributed primes to give 6 independent
-            // retry seed spaces, covering the full 50-seed window with meaningful diversity.
-            // Values chosen: large primes that don't share factors with each other or with
-            // BaseGenerationSeedMultiplier (12345), ensuring no two seeds produce the same
-            // scramble pattern for the same level index.
             RetrySeedMultipliers = new() { 27779, 31415, 16180, 73939, 49297, 65537 },
             MechanicPriorityOrder = new() { 3, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12 }
         };
@@ -290,7 +278,8 @@ namespace RingFlow.Gameplay
                 TotalWorlds = 1;
             }
 
-            BossLevelModulo = LevelsPerWorld; // Boss on last level of each world.
+            // Boss automatically detected: last level of each world via IsBossLevel().
+            // No separate BossLevelModulo field needed — GDD §46.
 
             MechanicUnlocks = new List<MechanicUnlockEntry>
             {
@@ -349,17 +338,9 @@ namespace RingFlow.Gameplay
                 InterstitialAdInterval = 3
             };
 
-            // DATA-1: DifficultyBands are now scaled proportionally to TotalLevels.
-            // Band boundaries are computed as percentages of TotalLevels so the curve
-            // feels the same at 100, 500, or 2000 levels. Each band covers ~10-30% of
-            // the total range. Mechanics are unlocked progressively per GDD §3:
-            //   Tutorial  → 10% : None, Mystery
-            //   Easy      → 25% : + Frozen
-            //   Medium    → 45% : + LockedPole, Stone
-            //   Hard      → 60% : + Glass, Rainbow
-            //   Expert    → 75% : + Bomb, Chain, Portal
-            //   Master    → 90% : + Magnet
-            //   Legend    → 100%: + Paint, Ghost, RandomPools
+            // GDD §3: DifficultyBands scaled proportionally to TotalLevels.
+            // Capacity curve: Tutorial=3 (gentle intro), Easy-Hard=4, Expert+=5.
+            // Empty poles decrease as difficulty rises (fewer buffers = tighter play).
             int t = TotalLevels;
             DifficultyBands = new List<DifficultyBandData>
             {
@@ -367,7 +348,7 @@ namespace RingFlow.Gameplay
                 {
                     Band = DifficultyBand.Tutorial,
                     MaxLevel = Mathf.Max(5, Mathf.RoundToInt(t * 0.10f)),
-                    MinEmptyPoles = 2, MaxCapacity = 4, MechanicIntensity = 1,
+                    MinEmptyPoles = 2, MaxCapacity = 3, MechanicIntensity = 1,
                     AllowedMechanics = new List<WorldMechanicType>
                         { WorldMechanicType.None, WorldMechanicType.Mystery }
                 },
@@ -375,7 +356,7 @@ namespace RingFlow.Gameplay
                 {
                     Band = DifficultyBand.Easy,
                     MaxLevel = Mathf.RoundToInt(t * 0.25f),
-                    MinEmptyPoles = 1, MaxCapacity = 4, MechanicIntensity = 1,
+                    MinEmptyPoles = 2, MaxCapacity = 4, MechanicIntensity = 1,
                     AllowedMechanics = new List<WorldMechanicType>
                         { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen }
                 },
@@ -402,7 +383,7 @@ namespace RingFlow.Gameplay
                 {
                     Band = DifficultyBand.Expert,
                     MaxLevel = Mathf.RoundToInt(t * 0.75f),
-                    MinEmptyPoles = 1, MaxCapacity = 4, MechanicIntensity = 3,
+                    MinEmptyPoles = 1, MaxCapacity = 5, MechanicIntensity = 3,
                     AllowedMechanics = new List<WorldMechanicType>
                         { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen,
                           WorldMechanicType.LockedPole, WorldMechanicType.Stone,
@@ -413,7 +394,7 @@ namespace RingFlow.Gameplay
                 {
                     Band = DifficultyBand.Master,
                     MaxLevel = Mathf.RoundToInt(t * 0.90f),
-                    MinEmptyPoles = 1, MaxCapacity = 4, MechanicIntensity = 3,
+                    MinEmptyPoles = 0, MaxCapacity = 5, MechanicIntensity = 3,
                     AllowedMechanics = new List<WorldMechanicType>
                         { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen,
                           WorldMechanicType.LockedPole, WorldMechanicType.Stone,
@@ -424,8 +405,8 @@ namespace RingFlow.Gameplay
                 new()
                 {
                     Band = DifficultyBand.Legend,
-                    MaxLevel = t, // always covers up to TotalLevels
-                    MinEmptyPoles = 1, MaxCapacity = 4, MechanicIntensity = 4,
+                    MaxLevel = t,
+                    MinEmptyPoles = 0, MaxCapacity = 5, MechanicIntensity = 4,
                     AllowedMechanics = new List<WorldMechanicType>
                         { WorldMechanicType.None, WorldMechanicType.Mystery, WorldMechanicType.Frozen,
                           WorldMechanicType.LockedPole, WorldMechanicType.Stone,
@@ -609,6 +590,11 @@ namespace RingFlow.Gameplay
 
         public int GetPoleCountForLevel(int level)
         {
+            // GDD: return colorCount + MinEmptyPoles directly from the difficulty band data.
+            // Master/Legend bands define MinEmptyPoles=0 — this is intentional GDD data.
+            // The generator's scramble-phase safety guard lives in InitLevelCommand
+            // (if (poleCount < colorCount + 1) poleCount = colorCount + 1;) and is
+            // independent of this method. Do NOT add Math.Max here.
             return GetColorCountForLevel(level) + GetMinEmptyPolesForLevel(level);
         }
 
@@ -878,6 +864,76 @@ namespace RingFlow.Gameplay
             return issues;
         }
 
+        /// <summary>
+        /// Runs all DB validators and returns every issue found.
+        /// Combines ValidateDifficultyBands() + ValidateColorCurve()
+        /// plus cross-field checks (Worlds vs MechanicUnlocks, etc.).
+        /// Returns empty list when the asset is fully consistent.
+        /// </summary>
+        public List<string> ValidateAsset()
+        {
+            var issues = new List<string>();
+
+            issues.AddRange(ValidateDifficultyBands());
+            issues.AddRange(ValidateColorCurve());
+
+            // TotalLevels must be positive
+            if (TotalLevels <= 0)
+                issues.Add("TotalLevels must be > 0.");
+
+            // LevelsPerWorld must be positive
+            if (LevelsPerWorld <= 0)
+                issues.Add("LevelsPerWorld must be > 0.");
+
+            // TotalLevels must be evenly divisible by LevelsPerWorld (unless worlds==1)
+            if (TotalWorlds > 1 && TotalLevels != TotalWorlds * LevelsPerWorld)
+                issues.Add($"TotalLevels ({TotalLevels}) ≠ TotalWorlds ({TotalWorlds}) × LevelsPerWorld ({LevelsPerWorld}) = {TotalWorlds * LevelsPerWorld}. " +
+                           "Levels are not evenly distributed across worlds.");
+
+            // Worlds list must match TotalWorlds
+            if (Worlds == null)
+                issues.Add("Worlds list is null.");
+            else if (Worlds.Count != TotalWorlds)
+                issues.Add($"Worlds.Count ({Worlds.Count}) ≠ TotalWorlds ({TotalWorlds}). " +
+                           "Each world needs a WorldConfigData entry.");
+
+            // LevelThemes must cover the full level range
+            if (LevelThemes == null || LevelThemes.Count == 0)
+                issues.Add("LevelThemes list is empty — levels will have no theme assignment.");
+            else
+            {
+                int lastEnd = 0;
+                for (int i = 0; i < LevelThemes.Count; i++)
+                {
+                    var t = LevelThemes[i];
+                    if (t.StartLevel <= lastEnd)
+                        issues.Add($"LevelThemes[{i}]: StartLevel={t.StartLevel} ≤ previous EndLevel={lastEnd}. Themes must not overlap.");
+                    if (t.StartLevel > t.EndLevel)
+                        issues.Add($"LevelThemes[{i}]: StartLevel={t.StartLevel} > EndLevel={t.EndLevel}. Invalid range.");
+                    lastEnd = t.EndLevel;
+                }
+                if (lastEnd < TotalLevels)
+                    issues.Add($"LevelThemes last EndLevel={lastEnd} < TotalLevels={TotalLevels}. " +
+                               $"Levels {lastEnd + 1}–{TotalLevels} have no theme.");
+            }
+
+            // MechanicUnlocks must have entries
+            if (MechanicUnlocks == null || MechanicUnlocks.Count == 0)
+                issues.Add("MechanicUnlocks list is empty.");
+
+            // BalanceConfig base checks
+            if (BalanceConfig.NormalCoinReward <= 0)
+                issues.Add("BalanceConfig.NormalCoinReward must be > 0.");
+            if (BalanceConfig.FreeUndosPerSession < 0)
+                issues.Add("BalanceConfig.FreeUndosPerSession must be >= 0.");
+
+            // LevelGen basic sanity
+            if (LevelGen.MaxSolverStatesLimit <= 0)
+                issues.Add("LevelGen.MaxSolverStatesLimit must be > 0.");
+
+            return issues;
+        }
+
         #endregion
 
         #region Static Progression Helpers (shared)
@@ -942,19 +998,6 @@ namespace RingFlow.Gameplay
         Hard,
         Expert,
         Master,
-        Legend,
-        /// <summary>
-        /// Reserved — not currently used in DifficultyBands configuration.
-        /// Boss levels are identified by <see cref="GameConfigDatabaseSO.IsBossLevel"/> and
-        /// handled through GameBalanceConfig reward multipliers, not a difficulty band.
-        /// FIX-L1: Do not wire this into DifficultyBands unless a distinct difficulty curve
-        /// for Insane-tier levels (2000+) is intentionally designed.
-        /// </summary>
-        Insane,
-        /// <summary>
-        /// Reserved — not currently used in DifficultyBands configuration.
-        /// See <see cref="Insane"/> note above.
-        /// </summary>
-        Boss,
+        Legend
     }
 }

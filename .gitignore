@@ -101,12 +101,20 @@ poetry.lock
 
 # AI / LLM / Agent Workspace Ignores
 /.agents/
-/.devin/
-/.omo/
-/-p/
-/.commandcode/
+/.claude/
+/.codegraph
 /.codegraph/
+/.codex/
+/.commandcode/
+/.cursor/
+/.devin/
+/.kiro/
+/.omo/
+/.roo/
+/.zenflow/
 /AGENTS.md
+/blackbox_mcp_settings.json
+/-p/
 
 # AI-related names/directories (case-insensitive blocks)
 *[Oo]pen[Aa]i*

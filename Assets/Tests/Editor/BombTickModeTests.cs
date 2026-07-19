@@ -136,6 +136,9 @@ namespace RingFlow.Tests
             SetPrivateField(command, "_strategyManager", new RingMoveStrategyManager(dbWithMode));
             SetPrivateField(command, "_progression", new RingFlow.Gameplay.ProgressionService(progress, dbWithMode));
             SetPrivateField(command, "_validationManager", new RingValidationStrategyManager());
+            // BUG-7 FIX: Inject _dbConfig (SSOT for BombTickMode) so ShouldTickBomb reads
+            // from GameConfigDatabaseSO instead of GameFeelConfigSO.
+            SetPrivateField(command, "_dbConfig", dbWithMode);
 
             var feelConfig = UnityEngine.ScriptableObject.CreateInstance<GameFeelConfigSO>();
             feelConfig.BombTickMode = tickMode;

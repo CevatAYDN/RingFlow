@@ -109,7 +109,6 @@ namespace RingFlow.Editor
             {
                 _database.TotalLevels        = EditorGUILayout.IntField("Toplam Seviye Sayısı", _database.TotalLevels);
                 _database.LevelsPerThemeStep = EditorGUILayout.IntField("Tema Başına Seviye Adımı", _database.LevelsPerThemeStep);
-                _database.MinimumEmptyPoles  = EditorGUILayout.IntField("Minimum Boş Direk Sayısı", _database.MinimumEmptyPoles);
             }
             else
             {
@@ -117,7 +116,6 @@ namespace RingFlow.Editor
                 {
                     _database.TotalLevels        = EditorGUILayout.IntField("Toplam Seviye", _database.TotalLevels, GUILayout.Width(260f));
                     _database.LevelsPerThemeStep = EditorGUILayout.IntField("Tema Adımı", _database.LevelsPerThemeStep, GUILayout.Width(200f));
-                    _database.MinimumEmptyPoles  = EditorGUILayout.IntField("Min Boş Direk", _database.MinimumEmptyPoles, GUILayout.Width(180f));
                 }
             }
 
