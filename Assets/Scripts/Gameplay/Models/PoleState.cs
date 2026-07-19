@@ -109,12 +109,7 @@ namespace RingFlow.Gameplay
         {
             if (capacity <= 0)
             {
-                // FIX-C5: Log a warning when the fallback Tuning.MaxCapacity is used
-                // because the caller didn't provide a valid capacity value.
-                // In dev builds this also triggers the assertion check.
-                GameplayAssetKeys.Tuning.WarnFallback(nameof(SetCapacity),
-                    nameof(GameplayAssetKeys.Tuning.MaxCapacity), GameplayAssetKeys.Tuning.MaxCapacity);
-                RingCapacity = GameplayAssetKeys.Tuning.MaxCapacity;
+                throw new System.InvalidOperationException("[PoleState] Ring capacity must be provided.");
             }
             else
             {

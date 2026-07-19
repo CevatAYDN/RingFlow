@@ -99,7 +99,9 @@ namespace RingFlow.Editor
         private void EnsureCachedDatabase()
         {
             if (_cachedDatabase == null)
-                _cachedDatabase = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
+                _cachedDatabase = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                    .LoadAsync<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey)
+                    .GetAwaiter().GetResult();
         }
 
         private void EnsureCachedAssets()
@@ -221,7 +223,9 @@ namespace RingFlow.Editor
 
             // 2. Single Source of Truth check (GDD §2)
             // Verify RingMechanicDataSO fields are clean and in sync with GameConfigDatabaseSO.
-            var mechanicData = Resources.Load<RingMechanicDataSO>(EditorPaths.RingMechanicDataKey);
+            var mechanicData = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                .LoadAsync<RingMechanicDataSO>(EditorPaths.RingMechanicDataKey)
+                .GetAwaiter().GetResult();
             if (mechanicData != null)
             {
                 bool hasDuplicateFields = false;
@@ -286,7 +290,9 @@ namespace RingFlow.Editor
             // 3. Localization Config Completeness (GDD §13 & §5)
             // DATA-2: GDD §66 hedefi 15 dil; bu sayı hardcode yerine LocalizationConfigSO'dan okunur.
             // MVP aşamasında daha az dil kabul edilebilir (Warning), eksik SO ise Fail.
-            var loc = Resources.Load<LocalizationConfigSO>(EditorPaths.LocalizationConfigKey);
+            var loc = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                .LoadAsync<LocalizationConfigSO>(EditorPaths.LocalizationConfigKey)
+                .GetAwaiter().GetResult();
             const int gddTargetLanguages = 15; // GDD §66 targets 15 languages — single definition
             if (loc != null)
             {
@@ -476,7 +482,9 @@ namespace RingFlow.Editor
             AddAuditResult("Bomba Tick Modu", $"BombTickMode data-driven: {db.LevelGen.BombTickMode}.", AuditStatus.Pass);
 
             // E5: Localization CSV asset existence — verify the CSV localization table is accessible
-            var locCsv = Resources.Load<TextAsset>(GameplayAssetKeys.Localization);
+            var locCsv = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                .LoadAsync<TextAsset>(GameplayAssetKeys.Localization)
+                .GetAwaiter().GetResult();
             if (locCsv != null)
             {
                 string[] csvLines = locCsv.text.Split(new[] { "\r\n", "\n" }, System.StringSplitOptions.RemoveEmptyEntries);
@@ -708,7 +716,7 @@ namespace RingFlow.Editor
             AddCrossSoResult("Temel Referans", "GameConfigDatabase.asset mevcut.", AuditStatus.Pass);
 
             // ── 1. RingMechanicDataSO → GameConfigDatabaseSO.MechanicUnlocks ──
-            var mechanicData = Resources.Load<RingMechanicDataSO>(EditorPaths.RingMechanicDataKey);
+            var mechanicData = LoadAsset<RingMechanicDataSO>(EditorPaths.RingMechanicDataKey);
             if (mechanicData != null)
             {
                 AddCrossSoResult("RingMechanicDataSO Varlığı", "RingMechanicDataSO.asset mevcut.", AuditStatus.Pass);
@@ -846,7 +854,7 @@ namespace RingFlow.Editor
                 AddCrossSoResult("LevelThemes ↔ MechanicUnlocks", $"Eksik: {string.Join(", ", themeMechanicIssues)}", AuditStatus.Warning);
 
             // ── 5. LocalizationConfig languages check ──
-            var loc = Resources.Load<LocalizationConfigSO>(EditorPaths.LocalizationConfigKey);
+            var loc = LoadAsset<LocalizationConfigSO>(EditorPaths.LocalizationConfigKey);
             if (loc != null)
                 AddCrossSoResult("LocalizationConfig Varlığı", "LocalizationConfigSO.asset mevcut.", AuditStatus.Pass);
             else
@@ -858,12 +866,12 @@ namespace RingFlow.Editor
                 ("GameConfigDatabase", db),
                 ("RingMechanicData", mechanicData),
                 ("LocalizationConfig", loc),
-                ("GameFeelConfig", Resources.Load<GameFeelConfigSO>(EditorPaths.GameFeelConfigKey)),
-                ("RingColorPalette", Resources.Load<RingColorPaletteSO>(EditorPaths.RingColorPaletteKey)),
-                ("AudioConfig", Resources.Load<AudioConfigSO>(EditorPaths.AudioConfigKey)),
-                ("UIThemeConfig", Resources.Load<UIThemeConfigSO>(EditorPaths.UIThemeConfigKey)),
-                ("StoreCatalog", Resources.Load<StoreCatalogSO>(EditorPaths.StoreCatalogKey)),
-                ("ThemeSkinDatabase", Resources.Load<ThemeSkinDatabaseSO>(EditorPaths.ThemeSkinDatabaseKey)),
+                ("GameFeelConfig", LoadAsset<GameFeelConfigSO>(EditorPaths.GameFeelConfigKey)),
+                ("RingColorPalette", LoadAsset<RingColorPaletteSO>(EditorPaths.RingColorPaletteKey)),
+                ("AudioConfig", LoadAsset<AudioConfigSO>(EditorPaths.AudioConfigKey)),
+                ("UIThemeConfig", LoadAsset<UIThemeConfigSO>(EditorPaths.UIThemeConfigKey)),
+                ("StoreCatalog", LoadAsset<StoreCatalogSO>(EditorPaths.StoreCatalogKey)),
+                ("ThemeSkinDatabase", LoadAsset<ThemeSkinDatabaseSO>(EditorPaths.ThemeSkinDatabaseKey)),
             };
 
             int nullCount = 0;
@@ -920,17 +928,24 @@ namespace RingFlow.Editor
             }
         }
 
+        private static T LoadAsset<T>(string key) where T : ScriptableObject
+        {
+            return new RingFlow.Gameplay.Services.ResourcesAssetService()
+                .LoadAsync<T>(key)
+                .GetAwaiter().GetResult();
+        }
+
         private static readonly (string Label, System.Func<UnityEngine.Object> Load)[] AssetEntries =
         {
-            ("Oyun Veritabanı (GameConfigDatabase)", () => Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey)),
-            ("Oyun Hissiyatı (Game Feel)", () => Resources.Load<GameFeelConfigSO>(EditorPaths.GameFeelConfigKey)),
-            ("Halka Renk Paleti", () => Resources.Load<RingColorPaletteSO>(EditorPaths.RingColorPaletteKey)),
-            ("Ses (Audio)", () => Resources.Load<AudioConfigSO>(EditorPaths.AudioConfigKey)),
-            ("Arayüz Teması (UI Theme)", () => Resources.Load<UIThemeConfigSO>(EditorPaths.UIThemeConfigKey)),
-            ("Mağaza Kataloğu (StoreCatalog)", () => Resources.Load<RingFlow.Gameplay.Economy.StoreCatalogSO>(EditorPaths.StoreCatalogKey)),
-            ("Yerelleştirme (LocalizationConfig)", () => Resources.Load<RingFlow.Gameplay.Localization.LocalizationConfigSO>(EditorPaths.LocalizationConfigKey)),
-            ("Halka Mekanik Verisi (RingMechanicData)", () => Resources.Load<RingFlow.Gameplay.Strategies.RingMechanicDataSO>(EditorPaths.RingMechanicDataKey)),
-            ("Tema/Skin Veritabanı (ThemeSkinDatabase)", () => Resources.Load<RingFlow.Gameplay.Views.ThemeSkinDatabaseSO>(EditorPaths.ThemeSkinDatabaseKey)),
+            ("Oyun Veritabanı (GameConfigDatabase)", () => LoadAsset<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey)),
+            ("Oyun Hissiyatı (Game Feel)", () => LoadAsset<GameFeelConfigSO>(EditorPaths.GameFeelConfigKey)),
+            ("Halka Renk Paleti", () => LoadAsset<RingColorPaletteSO>(EditorPaths.RingColorPaletteKey)),
+            ("Ses (Audio)", () => LoadAsset<AudioConfigSO>(EditorPaths.AudioConfigKey)),
+            ("Arayüz Teması (UI Theme)", () => LoadAsset<UIThemeConfigSO>(EditorPaths.UIThemeConfigKey)),
+            ("Mağaza Kataloğu (StoreCatalog)", () => LoadAsset<StoreCatalogSO>(EditorPaths.StoreCatalogKey)),
+            ("Yerelleştirme (LocalizationConfig)", () => LoadAsset<LocalizationConfigSO>(EditorPaths.LocalizationConfigKey)),
+            ("Halka Mekanik Verisi (RingMechanicData)", () => LoadAsset<RingMechanicDataSO>(EditorPaths.RingMechanicDataKey)),
+            ("Tema/Skin Veritabanı (ThemeSkinDatabase)", () => LoadAsset<ThemeSkinDatabaseSO>(EditorPaths.ThemeSkinDatabaseKey)),
         };
     }
 }

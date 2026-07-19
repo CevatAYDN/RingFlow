@@ -56,9 +56,11 @@ namespace RingFlow.Editor
             }
             else
             {
-                // First launch: default to TotalLevels from DB, fallback 100 if DB not loaded yet.
-                var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
-                _batchEndLevel = db != null && db.TotalLevels > 0 ? db.TotalLevels : 100;
+                // First launch: default to TotalLevels from DB if available; otherwise keep a conservative editor default.
+                var db = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                    .LoadAsync<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey)
+                    .GetAwaiter().GetResult();
+                _batchEndLevel = db != null && db.TotalLevels > 0 ? db.TotalLevels : _batchEndLevel;
             }
 
             _autoSave = EditorPrefs.GetBool(EditorPrefsKeys.AutoSave, true);
@@ -79,7 +81,9 @@ namespace RingFlow.Editor
             if (!IsFoldedOut) return;
 
             if (_cachedDatabase == null)
-                _cachedDatabase = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
+                _cachedDatabase = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                    .LoadAsync<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey)
+                    .GetAwaiter().GetResult();
             if (_cachedDatabase == null)
             {
                 // FIX-E1: throw in OnGUI() crashes the entire editor window and prevents
@@ -526,6 +530,16 @@ namespace RingFlow.Editor
                 LevelIndex = source.LevelIndex,
                 Seed = source.Seed,
                 TargetMoves = source.TargetMoves,
+                LevelType = source.LevelType,
+                PoleCount = source.PoleCount,
+                PoleCapacity = source.PoleCapacity,
+                ColorCount = source.ColorCount,
+                EmptyPoleCount = source.EmptyPoleCount,
+                DifficultyScore = source.DifficultyScore,
+                IsTutorial = source.IsTutorial,
+                RuleReferences = source.RuleReferences != null ? new List<string>(source.RuleReferences) : new List<string>(),
+                IsChallenge = source.IsChallenge,
+                ProgressionFlags = source.ProgressionFlags,
                 Poles = new List<PoleData>()
             };
 

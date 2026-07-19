@@ -19,7 +19,9 @@ namespace RingFlow.Editor
 
             if (_cachedDb == null)
             {
-                _cachedDb = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
+                _cachedDb = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                    .LoadAsync<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey)
+                    .GetAwaiter().GetResult();
             }
 
             if (_cachedDb == null)

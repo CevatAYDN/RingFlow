@@ -735,7 +735,9 @@ namespace RingFlow.Editor
                 {
                     using (new EditorGUILayout.HorizontalScope())
                     {
-                        var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
+                        var db = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                        .LoadAsync<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey)
+                        .GetAwaiter().GetResult();
                         int maxLevels = db != null ? db.TotalLevels : 2000;
 
                         using (new EditorGUI.DisabledScope(activeLevel.Data.LevelIndex <= 1))
@@ -1000,7 +1002,9 @@ namespace RingFlow.Editor
                     _cachedAssetEditor = null;
                 }
                 _cachedAssetKey = key;
-                _cachedAssetObj = Resources.Load<ScriptableObject>(key);
+                _cachedAssetObj = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                    .LoadAsync<ScriptableObject>(key)
+                    .GetAwaiter().GetResult();
             }
 
             if (_cachedAssetObj == null)

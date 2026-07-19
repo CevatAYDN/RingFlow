@@ -148,7 +148,9 @@ namespace RingFlow.Editor
 
             void CheckAsset<T>(string key, string label) where T : ScriptableObject
             {
-                var obj = Resources.Load<T>(key);
+                var obj = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                    .LoadAsync<T>(key)
+                    .GetAwaiter().GetResult();
                 if (obj == null)
                 {
                     report.AppendLine($"[BAŞARISIZ] {label} ({key}) — Bulunamadı!");

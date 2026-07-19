@@ -1274,9 +1274,10 @@ namespace RingFlow.Gameplay
             t.rotation = Quaternion.Euler(F.CameraRotation);
             
             float spacing = F.PoleSpacing;
-            float boardWidth = (poleCount - 1) * spacing;
+            float boardWidth = Mathf.Max(0f, (poleCount - 1) * spacing);
+            float aspect = Mathf.Max(0.01f, cam.aspect);
             float desiredHalfWidth = (boardWidth * 0.5f) + 1.5f;
-            float desiredOrthoSize = desiredHalfWidth / cam.aspect;
+            float desiredOrthoSize = desiredHalfWidth / aspect;
             cam.orthographicSize = Mathf.Max(desiredOrthoSize, 5.5f);
         }
 

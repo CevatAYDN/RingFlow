@@ -244,6 +244,8 @@ namespace RingFlow.Gameplay
                         levelData.Poles.Add(poleData);
                     }
 
+                    PopulateGddMetadata(levelData, db, scrambledState, solveResult.MoveCount, maxCapacity, portalTargets);
+
                     // GDD Zorluk Puanı hesaplama ve karşılaştırma
                     int specialCount = 0;
                     for (int p = 0; p < scrambledState.PoleCount; p++)
@@ -291,6 +293,54 @@ namespace RingFlow.Gameplay
                 if (board.IsEmpty(p)) empty++;
             }
             return empty;
+        }
+
+        public static void PopulateGddMetadata(LevelData data, GameConfigDatabaseSO db, BoardState board, int targetMoves, int maxCapacity, int[] portalTargets)
+        {
+            data.PoleCount = board.PoleCount;
+            data.PoleCapacity = maxCapacity;
+
+            // Calculate colors count
+            var colorsList = new HashSet<RingColor>();
+            for (int p = 0; p < board.PoleCount; p++)
+            {
+                int rCount = board.GetRingCount(p);
+                for (int r = 0; r < rCount; r++)
+                {
+                    var color = board.GetRingColor(p, r);
+                    if (color != RingColor.None) colorsList.Add(color);
+                }
+            }
+            data.ColorCount = colorsList.Count;
+
+            // Calculate empty poles
+            int finalEmptyCount = 0;
+            for (int p = 0; p < board.PoleCount; p++)
+            {
+                if (board.IsEmpty(p)) finalEmptyCount++;
+            }
+            data.EmptyPoleCount = finalEmptyCount;
+
+            // Calculate difficulty score
+            int specialCount = 0;
+            for (int p = 0; p < board.PoleCount; p++)
+            {
+                if (board.IsPoleLocked(p)) specialCount++;
+                int rCount = board.GetRingCount(p);
+                for (int r = 0; r < rCount; r++)
+                {
+                    if (board.GetRingType(p, r) != RingType.Standard)
+                        specialCount++;
+                }
+            }
+            float difficultyScore = (board.PoleCount * 2.5f) + (data.ColorCount * 3.0f) + (targetMoves * 0.8f) + (finalEmptyCount * -4.0f) + (specialCount * 5.0f);
+            data.DifficultyScore = difficultyScore;
+
+            data.LevelType = GameConfigDatabaseSO.IsBossLevel(db, data.LevelIndex) ? "Boss" : "Normal";
+            data.IsTutorial = db.GetBandForLevel(data.LevelIndex) == DifficultyBand.Tutorial;
+            data.IsChallenge = db.ChallengeMode.Enabled && (data.LevelIndex % db.ChallengeMode.LevelInterval == 0);
+            data.RuleReferences = new List<string> { "StandardMove", "ColorMatch" };
+            data.ProgressionFlags = "";
         }
 
         private static int GetSmoothedIntensity(GameConfigDatabaseSO db, int levelIndex, int rawIntensity)
@@ -512,7 +562,7 @@ namespace RingFlow.Gameplay
                 // GameplayAssetKeys.Tuning.SentinelMinRings has been updated to clarify
                 // this is a sentinel constant, not a balance parameter.
                 int bestPole = 0;
-                int minRings = GameplayAssetKeys.Tuning.SentinelMinRings;
+                int minRings = int.MaxValue;
                 for (int p = 0; p < poleCount; p++)
                 {
                     int rc = board.GetRingCount(p);
@@ -712,7 +762,7 @@ namespace RingFlow.Gameplay
             {
                 attemptsToEmpty++;
                 int bestPoleToEmpty = -1;
-                int minRings = GameplayAssetKeys.Tuning.SentinelMinRings;
+                int minRings = int.MaxValue;
                 for (int p = 0; p < board.PoleCount; p++)
                 {
                     if (board.IsEmpty(p) || board.IsPoleLocked(p)) continue;

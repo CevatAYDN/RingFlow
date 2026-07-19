@@ -12,7 +12,9 @@ namespace RingFlow.Editor
     {
         private static List<string> GetLanguageOptions()
         {
-            var config = Resources.Load<LocalizationConfigSO>(EditorPaths.LocalizationConfigKey);
+            var config = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                    .LoadAsync<LocalizationConfigSO>(EditorPaths.LocalizationConfigKey)
+                    .GetAwaiter().GetResult();
             if (config != null && config.Languages != null && config.Languages.Count > 0)
             {
                 var options = new List<string>(config.Languages.Count);

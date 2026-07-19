@@ -213,8 +213,15 @@ namespace RingFlow.Editor
 
             if (GUILayout.Button("Unlock All Levels"))
             {
-                var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
-                int totalLevels = db != null ? db.LevelsPerWorld * db.TotalWorlds : 40;
+                var db = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                    .LoadAsync<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey)
+                    .GetAwaiter().GetResult();
+                if (db == null)
+                {
+                    throw new System.InvalidOperationException($"[RuntimeSection] GameConfigDatabaseSO '{EditorPaths.GameConfigDatabaseKey}' not found.");
+                }
+
+                int totalLevels = db.LevelsPerWorld * db.TotalWorlds;
                 progress.MaxUnlockedLevel.Value = totalLevels;
                 int worldCount = progress.UnlockedWorlds?.Count ?? 0;
                 for (int i = 0; i < worldCount; i++)

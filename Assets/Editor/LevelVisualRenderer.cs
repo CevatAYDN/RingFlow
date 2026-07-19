@@ -119,7 +119,9 @@ namespace RingFlow.Editor
             float ringY = poleRect.yMax - 6f - (ringIndex + 1) * (RingHeight + 2f);
             Rect ringRect = new(poleRect.x + 4f, ringY, PoleWidth - 8f, RingHeight);
 
-            var palette = Resources.Load<RingColorPaletteSO>(EditorPaths.RingColorPaletteKey);
+            var palette = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                    .LoadAsync<RingColorPaletteSO>(EditorPaths.RingColorPaletteKey)
+                    .GetAwaiter().GetResult();
             Color ringColor = palette != null ? palette.GetColor(ring.Color, RingColorPaletteSO.ColorBlindMode.Off) : Color.grey;
             
             Color borderColor = Color.black;

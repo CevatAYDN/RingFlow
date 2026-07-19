@@ -246,6 +246,12 @@ namespace RingFlow.Editor
                             {
                                 Undo.RecordObject(levelSO, "Adım Çözücü: Hedef Hamle Yaz");
                                 levelSO.Data.TargetMoves = _stepMoves.Count;
+                                var database = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
+                                if (database != null)
+                                {
+                                    var board = BuildBoardStateFromLevelData(levelSO.Data, database, out int maxCapacity, out int[] portalTargets);
+                                    LevelGenerator.PopulateGddMetadata(levelSO.Data, database, board, _stepMoves.Count, maxCapacity, portalTargets);
+                                }
                                 EditorUtility.SetDirty(levelSO);
                                 AssetDatabase.SaveAssets();
                                 EditorUtility.DisplayDialog("Hedef Hamle Güncellendi",
@@ -321,6 +327,7 @@ namespace RingFlow.Editor
             {
                 Undo.RecordObject(levelSO, "Hedef Hamleleri Güncelle");
                 levelSO.Data.TargetMoves = solveResult.MoveCount;
+                LevelGenerator.PopulateGddMetadata(levelSO.Data, database, board, solveResult.MoveCount, maxCapacity, portalTargets);
                 EditorUtility.DisplayDialog("Çözücü Sonuçları",
                     $"Seviye ÇÖZÜLEBİLİR!\nBand: {band}\nMekanik Yoğunluğu: {intensity}\nOptimal gereken hamle sayısı: {solveResult.MoveCount} (Hedef Hamle güncellendi).", "Tamam");
             }

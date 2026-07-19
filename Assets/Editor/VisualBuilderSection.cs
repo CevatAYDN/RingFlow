@@ -176,32 +176,43 @@ namespace RingFlow.Editor
             int poleCount = polesToBuild != null ? polesToBuild.Count : _generator.GeneratedLevel.Poles.Count;
             NexusLog.Info("RingFlowEditor", nameof(BuildInScene), "", $"Building visual board with {poleCount} poles.");
 
-            var database = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
-            int defaultMaxCapacity = _generator.GeneratedLevel != null && database != null
-                ? database.GetMaxCapacityForLevel(_generator.GeneratedLevel.LevelIndex) 
-                : 4;
+            var database = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                    .LoadAsync<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey)
+                    .GetAwaiter().GetResult();
+            if (database == null)
+            {
+                EditorUtility.DisplayDialog("Veritabanı Bulunamadı",
+                    $"GameConfigDatabaseSO '{EditorPaths.GameConfigDatabaseKey}' path'inde bulunamadı.",
+                    "Tamam");
+                return;
+            }
 
-            var board = new BoardState { PoleCount = poleCount, MaxCapacity = defaultMaxCapacity };
+            int levelIndex = _generator.GeneratedLevel != null
+                ? _generator.GeneratedLevel.LevelIndex
+                : _generator.GeneratedLevel == null ? 0 : _generator.GeneratedLevel.LevelIndex;
+            if (levelIndex <= 0)
+            {
+                throw new System.InvalidOperationException("[VisualBuilderSection] GeneratedLevel is required to resolve capacity.");
+            }
+
+            int resolvedMaxCapacity = database.GetMaxCapacityForLevel(levelIndex);
+            var board = new BoardState { PoleCount = poleCount, MaxCapacity = resolvedMaxCapacity };
             var portalTargets = CreateEmptyPortalTargets(poleCount);
-            int boardMaxCapacity = defaultMaxCapacity;
 
             for (int p = 0; p < poleCount; p++)
             {
                 bool isLocked;
-                int maxCapacity;
                 int portalTarget;
                 List<RingData> rings;
                 if (polesToBuild != null)
                 {
                     isLocked = polesToBuild[p].IsLocked;
-                    maxCapacity = polesToBuild[p].MaxCapacity;
                     portalTarget = polesToBuild[p].PortalPartnerId;
                     rings = polesToBuild[p].Rings;
                 }
                 else
                 {
                     isLocked = _generator.GeneratedLevel.Poles[p].IsLocked;
-                    maxCapacity = _generator.GeneratedLevel.Poles[p].RingCapacity;
                     portalTarget = _generator.GeneratedLevel.Poles[p].PortalTargetId;
                     rings = _generator.GeneratedLevel.Poles[p].Rings;
                 }
@@ -214,23 +225,23 @@ namespace RingFlow.Editor
                     board.SetRingType(p, r, rings[r].Type);
                     board.SetRingAdditional(p, r, rings[r].AdditionalData);
                 }
-                boardMaxCapacity = Mathf.Max(boardMaxCapacity, maxCapacity);
             }
-            board.MaxCapacity = boardMaxCapacity;
 
             BuildBoardStateInScene(board, portalTargets);
 
             var boardRoot = GameObject.Find(EditorPaths.VisualBoardName);
-            if (boardRoot != null)
+            if (boardRoot == null)
             {
-                var selectedRoot = boardRoot;
-                EditorApplication.delayCall += () =>
-                {
-                    if (selectedRoot == null) return;
-                    Selection.activeGameObject = selectedRoot;
-                    SceneView.FrameLastActiveSceneView();
-                };
+                throw new System.InvalidOperationException($"[VisualBuilderSection] Visual board root '{EditorPaths.VisualBoardName}' was not created.");
             }
+
+            var selectedRoot = boardRoot;
+            EditorApplication.delayCall += () =>
+            {
+                if (selectedRoot == null) return;
+                Selection.activeGameObject = selectedRoot;
+                SceneView.FrameLastActiveSceneView();
+            };
             NexusLog.Info("RingFlowEditor", nameof(BuildInScene), "", "Visual board built successfully.");
         }
 
@@ -257,13 +268,19 @@ namespace RingFlow.Editor
         private BoardState ReadBoardFromScene(out int[] portalTargets)
         {
             var boardRoot = GameObject.Find(EditorPaths.VisualBoardName);
-            if (boardRoot == null)
+                        if (boardRoot == null)
             {
-                portalTargets = System.Array.Empty<int>();
-                return default;
+                throw new System.InvalidOperationException($"[VisualBuilderSection] Visual board root '{EditorPaths.VisualBoardName}' was not found in the scene. Build the board first.");
             }
 
-            var f = Resources.Load<GameFeelConfigSO>(EditorPaths.GameFeelConfigKey);
+            var f = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                    .LoadAsync<GameFeelConfigSO>(EditorPaths.GameFeelConfigKey)
+                    .GetAwaiter().GetResult();
+            if (f == null)
+            {
+                throw new System.InvalidOperationException($"[VisualBuilderSection] GameFeelConfigSO '{EditorPaths.GameFeelConfigKey}' not found.");
+            }
+
             var polesList = new List<Transform>();
             foreach (Transform child in boardRoot.transform)
             {
@@ -271,15 +288,11 @@ namespace RingFlow.Editor
                     polesList.Add(child);
             }
 
-            int resolvedMaxCapacity = 4;
-            if (polesList.Count > 0)
-            {
-                var firstPoleText = polesList[0].GetComponentInChildren<TextMesh>();
-                if (firstPoleText != null && firstPoleText.text.StartsWith("Cap: "))
-                {
-                    int.TryParse(firstPoleText.text.Substring(5), out resolvedMaxCapacity);
-                }
-            }
+            int resolvedMaxCapacity = f.PoleSpacing > 0f
+                ? _generator.GeneratedLevel != null
+                    ? _generator.GeneratedLevel.Poles[0].RingCapacity
+                    : throw new System.InvalidOperationException("[VisualBuilderSection] Cannot infer max capacity from scene without generated level data.")
+                : throw new System.InvalidOperationException("[VisualBuilderSection] GameFeelConfigSO has invalid PoleSpacing.");
 
             var board = new BoardState { PoleCount = polesList.Count, MaxCapacity = resolvedMaxCapacity };
             portalTargets = CreateEmptyPortalTargets(polesList.Count);
@@ -349,9 +362,21 @@ namespace RingFlow.Editor
             Undo.RegisterCreatedObjectUndo(boardRoot, "Build Visual Board");
 
             var torusModel = AssetDatabase.LoadAssetAtPath<GameObject>(EditorPaths.TorusPrefabPath);
-            var f = Resources.Load<GameFeelConfigSO>(EditorPaths.GameFeelConfigKey);
-            var palette = Resources.Load<RingColorPaletteSO>(EditorPaths.RingColorPaletteKey);
-            float spacing = f != null ? f.PoleSpacing : 2.5f;
+            var f = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                    .LoadAsync<GameFeelConfigSO>(EditorPaths.GameFeelConfigKey)
+                    .GetAwaiter().GetResult();
+            var palette = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                    .LoadAsync<RingColorPaletteSO>(EditorPaths.RingColorPaletteKey)
+                    .GetAwaiter().GetResult();
+            if (f == null || palette == null)
+            {
+                EditorUtility.DisplayDialog("Görsel Konfig Eksik",
+                    "GameFeelConfigSO veya RingColorPaletteSO bulunamadı. Visual Builder çalıştırılamıyor.",
+                    "Tamam");
+                return;
+            }
+
+            float spacing = f.PoleSpacing;
             float boardWidth = (board.PoleCount - 1) * spacing;
             float startX = -boardWidth * 0.5f;
 

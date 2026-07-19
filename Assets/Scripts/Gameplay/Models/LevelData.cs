@@ -52,8 +52,8 @@ namespace RingFlow.Gameplay
     [Serializable]
     public class PoleData
     {
-        public int RingCapacity = 4;
-        public List<RingData> Rings = new(4);
+        public int RingCapacity;
+        public List<RingData> Rings = new();
         public bool IsLocked;
         public int PortalTargetId = -1;
         public string CapacityText => $"{RingCapacity}";
@@ -62,7 +62,7 @@ namespace RingFlow.Gameplay
 
         public PoleData(int ringCapacity)
         {
-            RingCapacity = ringCapacity > 0 ? ringCapacity : GameplayAssetKeys.Tuning.MaxCapacity;
+            RingCapacity = ringCapacity;
         }
     }
 
@@ -73,6 +73,18 @@ namespace RingFlow.Gameplay
         public int Seed;
         public int TargetMoves;
         public List<PoleData> Poles = new();
+
+        // GDD §7/§11: GDD uyumluluğu için eklenen meta veri alanları
+        public string LevelType;
+        public int PoleCount;
+        public int PoleCapacity;
+        public int ColorCount;
+        public int EmptyPoleCount;
+        public float DifficultyScore;
+        public bool IsTutorial;
+        public List<string> RuleReferences = new();
+        public bool IsChallenge;
+        public string ProgressionFlags;
     }
 }
 

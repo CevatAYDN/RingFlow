@@ -95,84 +95,14 @@ namespace RingFlow.Gameplay
             /// <summary>Max rings per pole hard default. Must match GameConfigDatabase ring capacity.</summary>
             public const int MaxCapacity = 4;
 
-            /// <summary>
-            /// Bomb countdown HARD FALLBACK. Production code must read from LevelGenConfig.BombCountdown.
-            /// Use ThrowIfMissingConfig() in callers that reach this value at runtime.
-            /// </summary>
-            public const int BombCountdown = 5;
-
-            /// <summary>
-            /// Fallback when DifficultyBands is not configured. Surfaces missing config in dev builds.
-            /// </summary>
-            public const int DefaultMinEmptyPoles = 1;
-
-            /// <summary>
-            /// Fallback when DifficultyBands is not configured. Surfaces missing config in dev builds.
-            /// </summary>
-            public const int DefaultMechanicIntensity = 1;
-
-            /// <summary>Default tween capacity for DOTween (used before SO loading in bootstrap only).</summary>
+            /// <summary>Default tween capacity for DOTween bootstrap.</summary>
             public const int TweenCapacityDefault = 1500;
 
-            /// <summary>Default sequence capacity for DOTween (used before SO loading in bootstrap only).</summary>
+            /// <summary>Default sequence capacity for DOTween bootstrap.</summary>
             public const int SequenceCapacityDefault = 200;
-
-            /// <summary>Fallback world count when SO is not configured.</summary>
-            public const int DefaultWorldCount = 40;
-
-            /// <summary>Threshold for sentinel mechanic activation (technical debt: must come from SO).</summary>
-            public const int SentinelMinRings = 999;
 
             /// <summary>Highest valid color index (hard clamp, not balance).</summary>
             public const int ColorIndexMax = 10;
-
-            /// <summary>
-            /// Color index fallback when palette has fewer entries.
-            /// C5: callers must validate palette size before reaching this; never rely on it silently.
-            /// </summary>
-            public const int ColorIndexFallback = 3;
-
-            /// <summary>
-            /// C5: Asserts in development builds that the caller should never reach a Tuning.* fallback
-            /// for a value that must come from an authoritative ScriptableObject.
-            /// In release builds this is a no-op to avoid hard crashes.
-            /// </summary>
-            [System.Diagnostics.Conditional("UNITY_EDITOR")]
-            [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
-            public static void AssertNotFallback(string callerName, string fieldName)
-            {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                throw new System.InvalidOperationException(
-                    $"[GameplayAssetKeys.Tuning] '{callerName}' reached the fallback value for '{fieldName}'. " +
-                    $"This field must be read from the authoritative ScriptableObject (GameConfigDatabaseSO). " +
-                    $"Bind the SO via DI and ensure it is loaded before this code runs.");
-#endif
-            }
-
-            /// <summary>
-            /// FIX-C5: Soft fallback detection that logs a warning in dev builds when a
-            /// non-authoritative value is used. Unlike AssertNotFallback (which throws in
-            /// dev builds), this allows the game to continue with the fallback value.
-            ///
-            /// NOTE: This method uses [Conditional] attributes, so it is a NO-OP in
-            /// production (release) builds. In production, the fallback value is silently
-            /// accepted to avoid crashing the game. The warning is only visible in
-            /// Unity Editor and DEVELOPMENT_BUILD logs.
-            ///
-            /// Called directly in PoleState.SetCapacity and other critical fallback paths
-            /// to catch misconfigured data during development.
-            /// </summary>
-            [System.Diagnostics.Conditional("UNITY_EDITOR")]
-            [System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
-            public static void WarnFallback(string callerName, string fieldName, object usedValue)
-            {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                NexusLog.Warn("GameplayAssetKeys.Tuning", callerName, fieldName,
-                    $"Fallback value used: {fieldName}={usedValue}. " +
-                    $"This value should come from the authoritative ScriptableObject (GameConfigDatabaseSO). " +
-                    $"Ensure the SO is bound via DI and loaded before '{callerName}' runs.");
-#endif
-            }
         }
     }
 }

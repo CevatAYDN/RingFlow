@@ -19,7 +19,9 @@ namespace RingFlow.Editor
 
         public static string GetPrefabPathForScreen(ScreenType screen)
         {
-            var registry = Resources.Load<ScreenRegistrySO>(GameplayAssetKeys.ScreenRegistry);
+            var registry = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                    .LoadAsync<ScreenRegistrySO>(GameplayAssetKeys.ScreenRegistry)
+                    .GetAwaiter().GetResult();
             if (registry != null && registry.TryGetMapping(screen, out var mapping))
             {
                 if (!string.IsNullOrEmpty(mapping.PrefabPath))
@@ -75,7 +77,9 @@ namespace RingFlow.Editor
                 if (!EditorUtility.DisplayDialog(confirmTitle, confirmMessage, "Continue", "Cancel"))
                     return;
 
-                var theme = Resources.Load<UIThemeConfigSO>(GameplayAssetKeys.UIThemeConfig);
+                var theme = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                    .LoadAsync<UIThemeConfigSO>(GameplayAssetKeys.UIThemeConfig)
+                    .GetAwaiter().GetResult();
                 if (theme != null)
                 {
                     GameUIResources.Bind(theme);
@@ -136,7 +140,9 @@ namespace RingFlow.Editor
 
         private static IEnumerable<ScreenType> GetRequiredUiScreens()
         {
-            var registry = Resources.Load<ScreenRegistrySO>(GameplayAssetKeys.ScreenRegistry);
+            var registry = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                    .LoadAsync<ScreenRegistrySO>(GameplayAssetKeys.ScreenRegistry)
+                    .GetAwaiter().GetResult();
             if (registry != null && registry.Mappings.Count > 0)
             {
                 var list = new List<ScreenType>();

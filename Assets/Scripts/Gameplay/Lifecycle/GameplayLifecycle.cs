@@ -51,52 +51,62 @@ namespace RingFlow.Gameplay
             builder.BindInstance<VfxPrefabRegistry>(vfxRegistry);
             
             // -------------------- Config Databases & Themes --------------------
-            var db = Resources.Load<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase);
-            if (db == null) throw new System.InvalidOperationException("GameConfigDatabase.asset not found in Resources!");
+            var assetService = new ResourcesAssetService();
+
+            var db = assetService.LoadAsync<GameConfigDatabaseSO>(GameplayAssetKeys.GameConfigDatabase).GetAwaiter().GetResult();
+            if (db == null)
+                throw new System.InvalidOperationException($"[GameplayLifecycle] GameConfigDatabaseSO '{GameplayAssetKeys.GameConfigDatabase}' not found.");
             builder.BindInstance<GameConfigDatabaseSO>(db);
 
-            var feel = Resources.Load<GameFeelConfigSO>(GameplayAssetKeys.GameFeelConfig);
-            if (feel == null) throw new System.InvalidOperationException("GameFeelConfig.asset not found in Resources!");
+            var feel = assetService.LoadAsync<GameFeelConfigSO>(GameplayAssetKeys.GameFeelConfig).GetAwaiter().GetResult();
+            if (feel == null)
+                throw new System.InvalidOperationException($"[GameplayLifecycle] GameFeelConfigSO '{GameplayAssetKeys.GameFeelConfig}' not found.");
             builder.BindInstance<GameFeelConfigSO>(feel);
 
             DoTweenCapacityBootstrap.EnsureInitialized(feel.DoTweenTweensCapacity, feel.DoTweenSequencesCapacity);
 
-            var palette = Resources.Load<RingColorPaletteSO>(GameplayAssetKeys.RingColorPalette);
-            if (palette == null) throw new System.InvalidOperationException("RingColorPalette.asset not found in Resources!");
+            var palette = assetService.LoadAsync<RingColorPaletteSO>(GameplayAssetKeys.RingColorPalette).GetAwaiter().GetResult();
+            if (palette == null)
+                throw new System.InvalidOperationException($"[GameplayLifecycle] RingColorPaletteSO '{GameplayAssetKeys.RingColorPalette}' not found.");
             builder.BindInstance<RingColorPaletteSO>(palette);
 
-            var theme = Resources.Load<UIThemeConfigSO>(GameplayAssetKeys.UIThemeConfig);
-            if (theme == null) throw new System.InvalidOperationException("UIThemeConfig.asset not found in Resources!");
-            // C3: static wrapper kept for backward-compat; DI-injectable via IGameUIResourcesService.
+            var theme = assetService.LoadAsync<UIThemeConfigSO>(GameplayAssetKeys.UIThemeConfig).GetAwaiter().GetResult();
+            if (theme == null)
+                throw new System.InvalidOperationException($"[GameplayLifecycle] UIThemeConfigSO '{GameplayAssetKeys.UIThemeConfig}' not found.");
             GameUIResources.Bind(theme);
             builder.BindInstance<UIThemeConfigSO>(theme);
 
-            var audioConfig = Resources.Load<AudioConfigSO>(GameplayAssetKeys.AudioConfig);
-            if (audioConfig == null) throw new System.InvalidOperationException("AudioConfig.asset not found in Resources!");
-            // C4: static wrapper kept for backward-compat; DI-injectable via IProceduralAudioService.
+            var audioConfig = assetService.LoadAsync<AudioConfigSO>(GameplayAssetKeys.AudioConfig).GetAwaiter().GetResult();
+            if (audioConfig == null)
+                throw new System.InvalidOperationException($"[GameplayLifecycle] AudioConfigSO '{GameplayAssetKeys.AudioConfig}' not found.");
             ProceduralAudio.Initialize(audioConfig);
             builder.BindInstance<AudioConfigSO>(audioConfig);
-            // --- New Data-Driven Configs ---
-            var storeCatalog = Resources.Load<StoreCatalogSO>(GameplayAssetKeys.StoreCatalog);
-            if (storeCatalog == null) throw new System.InvalidOperationException("StoreCatalog.asset not found in Resources!");
+
+            var storeCatalog = assetService.LoadAsync<StoreCatalogSO>(GameplayAssetKeys.StoreCatalog).GetAwaiter().GetResult();
+            if (storeCatalog == null)
+                throw new System.InvalidOperationException($"[GameplayLifecycle] StoreCatalogSO '{GameplayAssetKeys.StoreCatalog}' not found.");
             builder.BindInstance<StoreCatalogSO>(storeCatalog);
 
-            var localizationConfig = Resources.Load<LocalizationConfigSO>(GameplayAssetKeys.LocalizationConfig);
-            if (localizationConfig == null) throw new System.InvalidOperationException("LocalizationConfig.asset not found in Resources!");
+            var localizationConfig = assetService.LoadAsync<LocalizationConfigSO>(GameplayAssetKeys.LocalizationConfig).GetAwaiter().GetResult();
+            if (localizationConfig == null)
+                throw new System.InvalidOperationException($"[GameplayLifecycle] LocalizationConfigSO '{GameplayAssetKeys.LocalizationConfig}' not found.");
             builder.BindInstance<LocalizationConfigSO>(localizationConfig);
 
-            var ringMechanicData = Resources.Load<RingMechanicDataSO>(GameplayAssetKeys.RingMechanicData);
-            if (ringMechanicData == null) throw new System.InvalidOperationException("RingMechanicData.asset not found in Resources!");
+            var ringMechanicData = assetService.LoadAsync<RingMechanicDataSO>(GameplayAssetKeys.RingMechanicData).GetAwaiter().GetResult();
+            if (ringMechanicData == null)
+                throw new System.InvalidOperationException($"[GameplayLifecycle] RingMechanicDataSO '{GameplayAssetKeys.RingMechanicData}' not found.");
             builder.BindInstance<RingMechanicDataSO>(ringMechanicData);
 
-            var themeSkinDb = Resources.Load<ThemeSkinDatabaseSO>(GameplayAssetKeys.ThemeSkinDatabase);
-            if (themeSkinDb == null) throw new System.InvalidOperationException("ThemeSkinDatabase.asset not found in Resources!");
+            var themeSkinDb = assetService.LoadAsync<ThemeSkinDatabaseSO>(GameplayAssetKeys.ThemeSkinDatabase).GetAwaiter().GetResult();
+            if (themeSkinDb == null)
+                throw new System.InvalidOperationException($"[GameplayLifecycle] ThemeSkinDatabaseSO '{GameplayAssetKeys.ThemeSkinDatabase}' not found.");
             builder.BindInstance<ThemeSkinDatabaseSO>(themeSkinDb);
 
             var mainCamera = Camera.main;
             if (mainCamera == null)
-                throw new System.InvalidOperationException("Main Camera not found. Scene must provide exactly one camera.");
+                throw new System.InvalidOperationException("[GameplayLifecycle] Camera.main is null. Scene must have a Main Camera.");
             builder.BindInstance<Camera>(mainCamera);
+
 
             // -------------------- Storage --------------------
             builder.Bind<IPlayerPrefsService, EncryptedStorageService>();
@@ -191,7 +201,12 @@ namespace RingFlow.Gameplay
             var visualBoard = GameObject.Find("RingFlow_VisualBoard");
             if (visualBoard != null)
             {
-                UnityEngine.Object.Destroy(visualBoard);
+                Object.Destroy(visualBoard);
+            }
+            else
+            {
+                NexusLog.Warn("GameplayLifecycle", "OnInitializeAsync", "", 
+                    "'RingFlow_VisualBoard' scene object not found. This is normal in tests or when loaded from other scenes.");
             }
 
             var context = NexusRuntime.CurrentContext;

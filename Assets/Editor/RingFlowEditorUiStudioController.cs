@@ -239,7 +239,9 @@ namespace RingFlow.Editor
                 var path = RingFlowEditorUiStudio.GetPrefabPathForScreen(screen);
                 var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
                 if (prefab == null)
-                    prefab = Resources.Load<GameObject>($"{EditorPaths.UiScreenPrefix}{screen}");
+                    prefab = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                            .LoadAsync<GameObject>($"{EditorPaths.UiScreenPrefix}{screen}")
+                            .GetAwaiter().GetResult();
                 if (prefab == null)
                 {
                     missingScreens.Add(screen.ToString());
@@ -431,7 +433,9 @@ namespace RingFlow.Editor
             {
                 if (cachedEditor == null || cachedEditor.target == null)
                 {
-                    var asset = Resources.Load<ScriptableObject>(key);
+                    var asset = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                            .LoadAsync<ScriptableObject>(key)
+                            .GetAwaiter().GetResult();
                     if (asset != null)
                     {
                         cachedEditor = UnityEditor.Editor.CreateEditor(asset);

@@ -123,11 +123,11 @@ namespace RingFlow.Editor
 
             // Live consistency hint (data-driven, no hardcode)
             int computedTotal = _database.TotalWorlds * _database.LevelsPerWorld;
-            if (_database.TotalLevels != computedTotal && _database.TotalWorlds > 0 && _database.LevelsPerWorld > 0)
+            if (_database.TotalWorlds > 0 && _database.LevelsPerWorld > 0 && _database.TotalLevels != computedTotal)
             {
                 EditorGUILayout.HelpBox(
                     $"TotalLevels ({_database.TotalLevels}) ≠ TotalWorlds ({_database.TotalWorlds}) × LevelsPerWorld ({_database.LevelsPerWorld}) = {computedTotal}. " +
-                    "'Hızlı Ön Ayar' butonlarından birini kullanarak senkronize edebilirsiniz.",
+                    "'Hızlı Ön Ayar' butonları veya InitializeDefaults ile senkronize edebilirsiniz.",
                     MessageType.Warning);
             }
 
@@ -378,7 +378,9 @@ namespace RingFlow.Editor
             int totalMoves = 0;
 
             if (_database == null)
-                _database = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
+                _database = new RingFlow.Gameplay.Services.ResourcesAssetService()
+                    .LoadAsync<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey)
+                    .GetAwaiter().GetResult();
             if (_database == null)
             {
                 NexusLog.Error("DatabaseSection", "ValidateAllLevels", "LoadDatabase", "[DatabaseSection] GameConfigDatabase not loaded!");
@@ -466,6 +468,10 @@ namespace RingFlow.Editor
                             {
                                 Undo.RecordObject(levelSO, "TargetMoves Düzelt");
                                 levelSO.Data.TargetMoves = solveResult.MoveCount;
+                                var portalTargets = new int[levelSO.Data.Poles.Count];
+                                for (int p = 0; p < levelSO.Data.Poles.Count; p++)
+                                    portalTargets[p] = levelSO.Data.Poles[p].PortalTargetId;
+                                LevelGenerator.PopulateGddMetadata(levelSO.Data, _database, board, solveResult.MoveCount, maxCap, portalTargets);
                                 EditorUtility.SetDirty(levelSO);
                                 fixedCount++;
                             }

@@ -358,7 +358,9 @@ namespace RingFlow.Gameplay.UI
 
         private string GetScreenPrefabKey(ScreenType screen)
         {
-            var registry = Resources.Load<ScreenRegistrySO>(GameplayAssetKeys.ScreenRegistry);
+            var registry = new ResourcesAssetService()
+                .LoadAsync<ScreenRegistrySO>(GameplayAssetKeys.ScreenRegistry)
+                .GetAwaiter().GetResult();
             if (registry != null && registry.TryGetMapping(screen, out var mapping))
             {
                 if (!string.IsNullOrEmpty(mapping.PrefabPath)) return mapping.PrefabPath;
@@ -515,7 +517,12 @@ namespace RingFlow.Gameplay.UI
                     return task.GetAwaiter().GetResult();
                 }
             }
-            return Resources.Load<GameObject>(prefabKey);
+            var result = new ResourcesAssetService()
+                .LoadAsync<GameObject>(prefabKey)
+                .GetAwaiter().GetResult();
+            if (result == null)
+                return null;
+            return result;
         }
 
         private void DestroyScreenInstance(GameObject go)
