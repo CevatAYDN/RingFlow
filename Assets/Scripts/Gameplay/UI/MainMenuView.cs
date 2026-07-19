@@ -211,11 +211,18 @@ namespace RingFlow.Gameplay.UI
             }
 
             // 4. MAIN PLAY BUTTON (▶ OYNA - Bölüm X)
-            _continueBtn = GameUIResources.CreateButton("▶ OYNA", bgGo.transform, 320f, 60f);
+            _continueBtn = GameUIResources.CreateButton("OYNA", bgGo.transform, 320f, 60f);
             _continueBtn.name = "Btn_CONTINUE";
             GameUIResources.SetAnchors(_continueBtn.GetComponent<RectTransform>(), 0.12f, 0.33f, 0.88f, 0.41f);
             ContinueButton = _continueBtn.GetComponent<Button>();
             GameUIResources.ApplyPrimaryStyle(_continueBtn);
+            
+            var playIconGo = new GameObject("IconImage", typeof(RectTransform), typeof(Image));
+            playIconGo.transform.SetParent(_continueBtn.transform, false);
+            var playIcon = playIconGo.GetComponent<Image>();
+            playIcon.sprite = GameUIResources.GetSprite("play_icon");
+            playIcon.preserveAspect = true;
+            GameUIResources.SetAnchors(playIconGo.GetComponent<RectTransform>(), 0.10f, 0.20f, 0.30f, 0.80f);
             
             // Map PlayButton to a separate inactive button to avoid double onClick triggers on transition
             var dummyPlayGo = new GameObject("Btn_PLAY_DUMMY", typeof(RectTransform), typeof(Button));
@@ -238,11 +245,16 @@ namespace RingFlow.Gameplay.UI
             DailyRewardButton = _dailyBtn.GetComponent<Button>();
             GameUIResources.AddButtonEffects(DailyRewardButton);
 
-            var dailyIcon = GameUIResources.CreateText("📅", _dailyBtn.transform, 16, TextAnchor.MiddleLeft, GameUIResources.DangerColor); // Pink/berry color
-            GameUIResources.SetAnchors(dailyIcon.GetComponent<RectTransform>(), 0.08f, 0f, 0.28f, 1f);
+            var dailyIconGo = new GameObject("IconImage", typeof(RectTransform), typeof(Image));
+            dailyIconGo.transform.SetParent(_dailyBtn.transform, false);
+            var dailyIcon = dailyIconGo.GetComponent<Image>();
+            dailyIcon.sprite = GameUIResources.GetSprite("calendar");
+            dailyIcon.preserveAspect = true;
+            GameUIResources.SetAnchors(dailyIconGo.GetComponent<RectTransform>(), 0.08f, 0.2f, 0.35f, 0.8f);
+
             var dailyLabel = GameUIResources.CreateText("GÜNLÜK\nMeydan Okuma", _dailyBtn.transform, 11, TextAnchor.MiddleLeft, GameUIResources.TextColor);
             dailyLabel.GetComponent<Text>().fontStyle = FontStyle.Bold;
-            GameUIResources.SetAnchors(dailyLabel.GetComponent<RectTransform>(), 0.32f, 0f, 0.95f, 1f);
+            GameUIResources.SetAnchors(dailyLabel.GetComponent<RectTransform>(), 0.40f, 0f, 0.95f, 1f);
 
             // Event (Right)
             _chestBtn = new GameObject("Btn_CHEST", typeof(RectTransform), typeof(Image), typeof(Button));
@@ -257,11 +269,16 @@ namespace RingFlow.Gameplay.UI
             ChestButton = _chestBtn.GetComponent<Button>();
             GameUIResources.AddButtonEffects(ChestButton);
 
-            var eventIcon = GameUIResources.CreateText("🎁", _chestBtn.transform, 16, TextAnchor.MiddleLeft, GameUIResources.SuccessColor); // Teal color
-            GameUIResources.SetAnchors(eventIcon.GetComponent<RectTransform>(), 0.08f, 0f, 0.28f, 1f);
+            var eventIconGo = new GameObject("IconImage", typeof(RectTransform), typeof(Image));
+            eventIconGo.transform.SetParent(_chestBtn.transform, false);
+            var eventIcon = eventIconGo.GetComponent<Image>();
+            eventIcon.sprite = GameUIResources.GetSprite("gift");
+            eventIcon.preserveAspect = true;
+            GameUIResources.SetAnchors(eventIconGo.GetComponent<RectTransform>(), 0.08f, 0.2f, 0.35f, 0.8f);
+
             var eventLabel = GameUIResources.CreateText("ETKİNLİK\n2g 14s kaldı", _chestBtn.transform, 11, TextAnchor.MiddleLeft, GameUIResources.TextColor);
             eventLabel.GetComponent<Text>().fontStyle = FontStyle.Bold;
-            GameUIResources.SetAnchors(eventLabel.GetComponent<RectTransform>(), 0.32f, 0f, 0.95f, 1f);
+            GameUIResources.SetAnchors(eventLabel.GetComponent<RectTransform>(), 0.40f, 0f, 0.95f, 1f);
 
             // 6. BOTTOM FOOTER PANEL (White rounded container)
             var footer = GameUIResources.CreateCard("FooterBar", bgGo.transform);
@@ -347,12 +364,12 @@ namespace RingFlow.Gameplay.UI
 
         public void UpdateCoins(int coins)
         {
-            if (CoinsText != null) CoinsText.text = $"🪙 {coins:N0}";
+            if (CoinsText != null) CoinsText.text = $"{coins:N0}";
         }
 
         public void UpdateDiamonds(int diamonds)
         {
-            if (DiamondsText != null) DiamondsText.text = $"💎 {diamonds:N0}";
+            if (DiamondsText != null) DiamondsText.text = $"{diamonds:N0}";
         }
 
         public void UpdatePlayerLevel(int level, float xpProgress)

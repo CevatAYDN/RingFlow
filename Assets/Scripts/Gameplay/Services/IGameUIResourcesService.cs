@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using Nexus.Core.Services;
+using RingFlow.Gameplay;
 
 namespace RingFlow.Gameplay.Services
 {
@@ -64,6 +65,8 @@ namespace RingFlow.Gameplay.Services
         float CardPadding { get; }
 
         // ── Cache & Creators ────────────────────────────────────────
+        /// <summary>Access to the bound sprite library (may be null if SpriteLibrary not assigned on UIThemeConfigSO).</summary>
+        UISpriteLibrarySO SpriteLibrary { get; }
         Font GetFont();
         Sprite GetRoundedSprite();
         GameObject CreatePanel(string name, Transform parent);

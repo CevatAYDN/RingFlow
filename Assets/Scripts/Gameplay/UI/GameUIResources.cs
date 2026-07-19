@@ -1,4 +1,5 @@
 using Nexus.Core.Services;
+using RingFlow.Gameplay;
 using RingFlow.Gameplay.Services;
 using UnityEngine;
 using UnityEngine.UI;
@@ -102,6 +103,13 @@ namespace RingFlow.Gameplay.UI
 
         public static Font GetFont() => Service.GetFont();
         public static Sprite GetRoundedSprite() => Service.GetRoundedSprite();
+
+        /// <summary>
+        /// Direct access to the UISpriteLibrarySO. Useful when you need to assign
+        /// sprites directly to Image components in View code without string lookup.
+        /// Example: myImage.sprite = GameUIResources.SpriteLibrary?.IconCoin;
+        /// </summary>
+        public static UISpriteLibrarySO SpriteLibrary => Service.SpriteLibrary;
 
         // ── Panel creators ────────────────────────────────────────────────
         public static GameObject CreatePanel(string name, Transform parent) => Service.CreatePanel(name, parent);

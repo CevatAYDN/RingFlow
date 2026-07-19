@@ -13,12 +13,15 @@ namespace RingFlow.Gameplay.UI
         public Button QuitButton { get; private set; }
         public Text MovesText { get; private set; }
         public Text RewardText { get; private set; }
-        public Text[] StarIcons { get; private set; } = new Text[3];
+        // Stars are now Image components for proper sprite rendering
+        public Image[] StarImages { get; private set; } = new Image[3];
         public Text TitleText { get; private set; }
         public Text LevelText { get; private set; }
         public Text BestScoreText { get; private set; }
         public GameObject[] Stars { get; private set; } = new GameObject[3];
         public CanvasGroup CardGroup { get; private set; }
+        private Text _coinsValueText;
+        private Text _xpValueText;
 
         private GameObject _nextBtn, _quitBtn;
         private ILocalizationService _loc;
@@ -71,23 +74,29 @@ namespace RingFlow.Gameplay.UI
             LevelText = levelGo.GetComponent<Text>();
             GameUIResources.SetAnchors(levelGo.GetComponent<RectTransform>(), 0.08f, 0.54f, 0.92f, 0.66f);
 
-            // Stars
+            // ── Stars (Image sprites, not text chars) ──────────────────────
             var starRow = new GameObject("Stars", typeof(RectTransform), typeof(HorizontalLayoutGroup));
             starRow.transform.SetParent(cardGo.transform, false);
             var starRect = starRow.GetComponent<RectTransform>();
-            GameUIResources.SetAnchors(starRect, 0.18f, 0.38f, 0.82f, 0.50f);
+            GameUIResources.SetAnchors(starRect, 0.15f, 0.38f, 0.85f, 0.52f);
             var hlg = starRow.GetComponent<HorizontalLayoutGroup>();
-            hlg.spacing = 16;
+            hlg.spacing = 12;
             hlg.childAlignment = TextAnchor.MiddleCenter;
             hlg.childControlWidth = false;
             hlg.childControlHeight = false;
 
+            var emptyStarSprite = GameUIResources.GetSprite("star_empty");
             for (int i = 0; i < 3; i++)
             {
-                var starGo = GameUIResources.CreateDisplayText("★", starRow.transform, 52, GameUIResources.StarEmpty);
-                starGo.name = $"Star{i + 1}";
+                var starGo = new GameObject($"Star{i + 1}", typeof(RectTransform), typeof(Image));
+                starGo.transform.SetParent(starRow.transform, false);
+                var starRt = starGo.GetComponent<RectTransform>();
+                starRt.sizeDelta = new Vector2(64f, 64f);
+                var starImg = starGo.GetComponent<Image>();
+                starImg.sprite = emptyStarSprite;
+                starImg.preserveAspect = true;
                 Stars[i] = starGo;
-                StarIcons[i] = starGo.GetComponent<Text>();
+                StarImages[i] = starImg;
                 starGo.transform.localScale = Vector3.zero;
             }
 
@@ -103,11 +112,53 @@ namespace RingFlow.Gameplay.UI
             BestScoreText = bestGo.GetComponent<Text>();
             GameUIResources.SetAnchors(bestGo.GetComponent<RectTransform>(), 0.12f, 0.26f, 0.88f, 0.30f);
 
-            // Reward
-            var rewardGo = GameUIResources.CreateText("", cardGo.transform, 18, TextAnchor.MiddleCenter, GameUIResources.CoinColor);
-            rewardGo.name = "RewardText";
+            // ── Reward Row (coin sprite + value | energy sprite + value) ─────
+            var rewardRow = new GameObject("RewardRow", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            rewardRow.transform.SetParent(cardGo.transform, false);
+            GameUIResources.SetAnchors(rewardRow.GetComponent<RectTransform>(), 0.10f, 0.20f, 0.90f, 0.28f);
+            var rewardHlg = rewardRow.GetComponent<HorizontalLayoutGroup>();
+            rewardHlg.spacing = 8f;
+            rewardHlg.childAlignment = TextAnchor.MiddleCenter;
+            rewardHlg.childControlWidth = false;
+            rewardHlg.childControlHeight = false;
+
+            // Coin icon + text
+            var coinIconGo = new GameObject("CoinIcon", typeof(RectTransform), typeof(Image));
+            coinIconGo.transform.SetParent(rewardRow.transform, false);
+            coinIconGo.GetComponent<RectTransform>().sizeDelta = new Vector2(28f, 28f);
+            var coinIconImg = coinIconGo.GetComponent<Image>();
+            coinIconImg.sprite = GameUIResources.GetSprite("coin");
+            coinIconImg.preserveAspect = true;
+
+            var coinValGo = GameUIResources.CreateText("+0", rewardRow.transform, 18, TextAnchor.MiddleLeft, GameUIResources.CoinColor);
+            coinValGo.name = "CoinsValue";
+            coinValGo.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            coinValGo.GetComponent<RectTransform>().sizeDelta = new Vector2(60f, 32f);
+            _coinsValueText = coinValGo.GetComponent<Text>();
+
+            // Separator
+            var sepGo = GameUIResources.CreateText("  ", rewardRow.transform, 18, TextAnchor.MiddleCenter, GameUIResources.MutedText);
+            sepGo.GetComponent<RectTransform>().sizeDelta = new Vector2(12f, 32f);
+
+            // Energy icon + text
+            var energyIconGo = new GameObject("EnergyIcon", typeof(RectTransform), typeof(Image));
+            energyIconGo.transform.SetParent(rewardRow.transform, false);
+            energyIconGo.GetComponent<RectTransform>().sizeDelta = new Vector2(28f, 28f);
+            var energyIconImg = energyIconGo.GetComponent<Image>();
+            energyIconImg.sprite = GameUIResources.GetSprite("energy");
+            energyIconImg.preserveAspect = true;
+
+            var xpValGo = GameUIResources.CreateText("+0", rewardRow.transform, 18, TextAnchor.MiddleLeft, GameUIResources.SuccessColor);
+            xpValGo.name = "XPValue";
+            xpValGo.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            xpValGo.GetComponent<RectTransform>().sizeDelta = new Vector2(60f, 32f);
+            _xpValueText = xpValGo.GetComponent<Text>();
+
+            // Keep RewardText for backward compat (hidden)
+            var rewardGo = new GameObject("RewardText", typeof(RectTransform), typeof(Text));
+            rewardGo.transform.SetParent(cardGo.transform, false);
+            rewardGo.SetActive(false);
             RewardText = rewardGo.GetComponent<Text>();
-            GameUIResources.SetAnchors(rewardGo.GetComponent<RectTransform>(), 0.12f, 0.20f, 0.88f, 0.26f);
 
             // Next Level button
             _nextBtn = GameUIResources.CreateButton("NEXT LEVEL", cardGo.transform, 300, 60);
@@ -146,7 +197,7 @@ namespace RingFlow.Gameplay.UI
 
             if (BestScoreText != null && bestMoves > 0 && moves < bestMoves)
             {
-                string fmt = _loc?.GetString("win_best_format", "Best: {0} 🎉") ?? "Best: {0} 🎉";
+                string fmt = _loc?.GetString("win_best_format", "New Best: {0}!") ?? "New Best: {0}!";
                 BestScoreText.text = string.Format(fmt, bestMoves);
                 BestScoreText.color = GameUIResources.SuccessColor;
             }
@@ -155,11 +206,9 @@ namespace RingFlow.Gameplay.UI
                 BestScoreText.text = "";
             }
 
-            if (RewardText != null)
-            {
-                string format = _loc?.GetString("win_reward_format", "+{0} 🪙  +{1} ⚡") ?? "+{0} 🪙  +{1} ⚡";
-                RewardText.text = string.Format(format, coins, xp);
-            }
+            // Update sprite-based reward counters
+            if (_coinsValueText != null) _coinsValueText.text = $"+{coins}";
+            if (_xpValueText != null) _xpValueText.text = $"+{xp}";
 
             // Animate stars
             for (int i = 0; i < Stars.Length; i++)
@@ -181,13 +230,11 @@ namespace RingFlow.Gameplay.UI
                     .SetAutoKill(true)
                     .OnStart(() =>
                     {
-                        if (!isEarned) return;
-                        var starText = StarIcons[index];
-                        if (starText != null)
+                        // Swap star sprite to filled when earned
+                        if (isEarned && StarImages[index] != null)
                         {
-                            starText.color = GameUIResources.StarEarned;
-                            var outline = starText.GetComponent<Outline>();
-                            if (outline != null) outline.effectColor = new Color(0.8f, 0.6f, 0f, 0.6f);
+                            StarImages[index].sprite = GameUIResources.GetSprite("star_filled");
+                            Stars[index].transform.DOPunchScale(Vector3.one * 0.3f, 0.25f, 3, 0.5f).SetAutoKill(true);
                         }
                         if (_audio != null)
                         {
@@ -234,16 +281,23 @@ namespace RingFlow.Gameplay.UI
                 else if (upper.Contains("BEST") || upper.Contains("SCORE")) BestScoreText = txt;
             }
 
-            var starTexts = GetComponentsInChildren<Text>(true);
+            // Stars are now Image components
+            var allImages = GetComponentsInChildren<Image>(true);
             int starIdx = 0;
-            foreach (var txt in starTexts)
+            foreach (var img in allImages)
             {
-                if (txt.text == "★" && starIdx < StarIcons.Length)
+                if ((img.name == "Star1" || img.name == "Star2" || img.name == "Star3") && starIdx < StarImages.Length)
                 {
-                    StarIcons[starIdx] = txt;
-                    Stars[starIdx] = txt.gameObject;
+                    StarImages[starIdx] = img;
+                    Stars[starIdx] = img.gameObject;
                     starIdx++;
                 }
+            }
+            // Reward text sub-items
+            foreach (var txt in GetComponentsInChildren<Text>(true))
+            {
+                if (txt.name == "CoinsValue") _coinsValueText = txt;
+                else if (txt.name == "XPValue") _xpValueText = txt;
             }
         }
     }

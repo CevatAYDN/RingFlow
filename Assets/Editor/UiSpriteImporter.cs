@@ -15,8 +15,8 @@ namespace RingFlow.Editor
             string[] files = Directory.GetFiles(path, "*.png");
             foreach (string file in files)
             {
-                // First remove black background to create clean transparent png
-                ProcessAndRemoveBlackBackground(file);
+                // First remove white background to create clean transparent png
+                ProcessAndRemoveWhiteBackground(file);
 
                 // Configure Unity import settings
                 var importer = AssetImporter.GetAtPath(file) as TextureImporter;
@@ -26,6 +26,8 @@ namespace RingFlow.Editor
                     importer.spriteImportMode = SpriteImportMode.Single;
                     importer.alphaIsTransparency = true;
                     importer.mipmapEnabled = false;
+                    importer.maxTextureSize = 2048;
+                    importer.filterMode = FilterMode.Bilinear;
                     importer.SaveAndReimport();
                     Debug.Log($"[UiSpriteImporter] Configured {file} as UI Sprite.");
                 }
@@ -33,7 +35,7 @@ namespace RingFlow.Editor
             AssetDatabase.Refresh();
         }
 
-        private static void ProcessAndRemoveBlackBackground(string filePath)
+        private static void ProcessAndRemoveWhiteBackground(string filePath)
         {
             if (!File.Exists(filePath)) return;
 
@@ -55,19 +57,18 @@ namespace RingFlow.Editor
                 // Calculate luminance
                 float luminance = 0.2126f * r + 0.7152f * g + 0.0722f * b;
 
-                // Thresholds for black background removal with smooth transition
-                float minThreshold = 22f; // pixels darker than this are fully transparent
-                float maxThreshold = 65f; // pixels brighter than this are fully opaque
+                // Thresholds for white background removal
+                float minThreshold = 190f; // pixels brighter than this become transparent
+                float maxThreshold = 255f; // pure white is fully transparent
 
-                if (luminance <= minThreshold)
+                if (luminance >= maxThreshold)
                 {
                     pixels[i] = new Color32(0, 0, 0, 0);
                 }
-                else if (luminance < maxThreshold)
+                else if (luminance > minThreshold)
                 {
-                    float t = (luminance - minThreshold) / (maxThreshold - minThreshold);
-                    byte alpha = (byte)(t * 255);
-                    pixels[i].a = alpha;
+                    float t = 1f - ((luminance - minThreshold) / (maxThreshold - minThreshold));
+                    pixels[i].a = (byte)(t * 255);
                 }
             }
 

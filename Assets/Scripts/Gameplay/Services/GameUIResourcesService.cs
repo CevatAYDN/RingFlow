@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
 using System.Collections.Generic;
+using RingFlow.Gameplay;
 
 namespace RingFlow.Gameplay.Services
 {
@@ -104,7 +105,13 @@ namespace RingFlow.Gameplay.Services
         
         public float PanelElevation => _theme.PanelElevation;
 
-        // ── Cache & Creators ────────────────────────────────────────
+        // ── Cache & Creators ────────────────────────────────────────────
+        /// <summary>
+        /// Provides access to the UISpriteLibrarySO assigned on the UIThemeConfigSO.
+        /// Returns null if the theme does not have a SpriteLibrary configured.
+        /// </summary>
+        public UISpriteLibrarySO SpriteLibrary => _theme.SpriteLibrary;
+
         public Font GetFont()
         {
             if (_font == null)
@@ -610,8 +617,23 @@ namespace RingFlow.Gameplay.Services
             }
         }
 
+        /// <summary>
+        /// Returns a sprite by name. Resolution order:
+        /// 1. UISpriteLibrarySO.GetSprite(name)  — Inspector-assigned, swappable at runtime
+        /// 2. Resources.Load&lt;Sprite&gt;("UI/Sprites/{name}")  — file-system fallback
+        /// Returns null if neither source has the sprite.
+        /// </summary>
         public Sprite GetSprite(string name)
         {
+            // 1. Try the SO sprite library first (swappable via Inspector)
+            if (_theme.SpriteLibrary != null)
+            {
+                var fromLibrary = _theme.SpriteLibrary.GetSprite(name);
+                if (fromLibrary != null)
+                    return fromLibrary;
+            }
+
+            // 2. Fallback: load directly from Resources/UI/Sprites/{name}
             return Resources.Load<Sprite>($"UI/Sprites/{name}");
         }
     }

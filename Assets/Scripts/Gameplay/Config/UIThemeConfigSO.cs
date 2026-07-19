@@ -241,5 +241,12 @@ namespace RingFlow.Gameplay
         /// <summary>Text color suitable for the current surface.</summary>
         public Color GetTextOnColor(Color surface) =>
             surface.grayscale > 0.5f ? TextColor : TextOnDark;
+
+        // ── Sprite Library ──────────────────────────────────────────────────
+
+        [Header("🖼 Sprite Library")]
+        [Tooltip("Assign a UISpriteLibrarySO asset here to provide named sprites for UI elements. " +
+                 "When null, GameUIResources.GetSprite falls back to Resources.Load(\"UI/Sprites/{name}\").")]
+        public UISpriteLibrarySO SpriteLibrary;
     }
 }

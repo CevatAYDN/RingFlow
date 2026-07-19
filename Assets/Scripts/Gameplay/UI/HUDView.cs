@@ -80,18 +80,34 @@ namespace RingFlow.Gameplay.UI
             // Right Coins Pill
             var coinsPill = GameUIResources.CreateCard("CoinsPill", _topBar.transform);
             GameUIResources.SetAnchors(coinsPill.GetComponent<RectTransform>(), 0.61f, 0.15f, 0.82f, 0.85f);
-            var coinTextGo = GameUIResources.CreateText("🪙 0", coinsPill.transform, 14, TextAnchor.MiddleCenter, GameUIResources.TextColor);
+            
+            var coinImgGo = new GameObject("CoinIcon", typeof(RectTransform), typeof(Image));
+            coinImgGo.transform.SetParent(coinsPill.transform, false);
+            var coinImg = coinImgGo.GetComponent<Image>();
+            coinImg.sprite = GameUIResources.GetSprite("coin");
+            coinImg.preserveAspect = true;
+            GameUIResources.SetAnchors(coinImgGo.GetComponent<RectTransform>(), 0.05f, 0.15f, 0.35f, 0.85f);
+
+            var coinTextGo = GameUIResources.CreateText("0", coinsPill.transform, 14, TextAnchor.MiddleLeft, GameUIResources.TextColor);
             coinTextGo.name = "CoinsText";
             CoinsText = coinTextGo.GetComponent<Text>();
             CoinsText.fontStyle = FontStyle.Bold;
+            GameUIResources.SetAnchors(coinTextGo.GetComponent<RectTransform>(), 0.40f, 0f, 0.95f, 1f);
 
             // Far Right Settings/Pause Button
-            _pauseBtn = GameUIResources.CreateIconButton("⚙", _topBar.transform, 36f);
+            _pauseBtn = GameUIResources.CreateIconButton("", _topBar.transform, 36f);
             _pauseBtn.name = "Btn_PAUSE";
             PauseButton = _pauseBtn.GetComponent<Button>();
             GameUIResources.SetAnchors(_pauseBtn.GetComponent<RectTransform>(), 0.85f, 0.15f, 0.96f, 0.85f);
             _pauseBtn.GetComponent<Image>().color = GameUIResources.SurfaceColor;
-            _pauseBtn.GetComponentInChildren<Text>().color = GameUIResources.TextColor;
+            
+            var pauseIconGo = new GameObject("IconImage", typeof(RectTransform), typeof(Image));
+            pauseIconGo.transform.SetParent(_pauseBtn.transform, false);
+            var pauseIcon = pauseIconGo.GetComponent<Image>();
+            pauseIcon.sprite = GameUIResources.GetSprite("settings");
+            pauseIcon.preserveAspect = true;
+            GameUIResources.SetAnchors(pauseIconGo.GetComponent<RectTransform>(), 0.15f, 0.15f, 0.85f, 0.85f);
+
             _pauseBtn.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.08f);
             _pauseBtn.GetComponent<Shadow>().effectDistance = new Vector2(0f, -2f);
 
@@ -107,17 +123,17 @@ namespace RingFlow.Gameplay.UI
             GameUIResources.SetAnchors(botBar.GetComponent<RectTransform>(), 0f, 0.05f, 1f, 0.18f);
 
             // Action Buttons
-            _undoBtn = CreateCircularActionButton(botBar.transform, "Btn_UNDO", "↩", "Geri Al", 48f, new Vector2(0.22f, 0.5f));
+            _undoBtn = CreateCircularActionButton(botBar.transform, "Btn_UNDO", "undo", "Geri Al", 48f, new Vector2(0.22f, 0.5f));
             UndoButton = _undoBtn.GetComponent<Button>();
 
-            _hintBtn = CreateCircularActionButton(botBar.transform, "Btn_HINT", "💡", "İpucu", 48f, new Vector2(0.50f, 0.5f));
+            _hintBtn = CreateCircularActionButton(botBar.transform, "Btn_HINT", "hint", "İpucu", 48f, new Vector2(0.50f, 0.5f));
             HintButton = _hintBtn.GetComponent<Button>();
 
-            _restartBtn = CreateCircularActionButton(botBar.transform, "Btn_RESTART", "↻", "Yeniden", 48f, new Vector2(0.78f, 0.5f));
+            _restartBtn = CreateCircularActionButton(botBar.transform, "Btn_RESTART", "restart", "Yeniden", 48f, new Vector2(0.78f, 0.5f));
             RestartButton = _restartBtn.GetComponent<Button>();
         }
 
-        private GameObject CreateCircularActionButton(Transform parent, string name, string icon, string labelText, float size, Vector2 anchor)
+        private GameObject CreateCircularActionButton(Transform parent, string name, string iconSpriteName, string labelText, float size, Vector2 anchor)
         {
             var container = new GameObject(name, typeof(RectTransform));
             container.transform.SetParent(parent, false);
@@ -127,7 +143,7 @@ namespace RingFlow.Gameplay.UI
             contRect.anchoredPosition = Vector2.zero;
             contRect.sizeDelta = new Vector2(size + 24f, size + 36f);
 
-            var btnGo = GameUIResources.CreateIconButton(icon, container.transform, size);
+            var btnGo = GameUIResources.CreateIconButton("", container.transform, size);
             btnGo.name = name + "_Button";
             var btnRect = btnGo.GetComponent<RectTransform>();
             btnRect.anchorMin = new Vector2(0.5f, 1f);
@@ -136,8 +152,14 @@ namespace RingFlow.Gameplay.UI
             btnRect.sizeDelta = new Vector2(size, size);
 
             btnGo.GetComponent<Image>().color = GameUIResources.SurfaceColor;
-            btnGo.GetComponentInChildren<Text>().color = GameUIResources.TextColor;
-            btnGo.GetComponentInChildren<Text>().fontSize = Mathf.RoundToInt(size * 0.45f);
+            
+            var iconGo = new GameObject("IconImage", typeof(RectTransform), typeof(Image));
+            iconGo.transform.SetParent(btnGo.transform, false);
+            var iconImg = iconGo.GetComponent<Image>();
+            iconImg.sprite = GameUIResources.GetSprite(iconSpriteName);
+            iconImg.preserveAspect = true;
+            GameUIResources.SetAnchors(iconGo.GetComponent<RectTransform>(), 0.2f, 0.2f, 0.8f, 0.8f);
+
             btnGo.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.08f);
             btnGo.GetComponent<Shadow>().effectDistance = new Vector2(0f, -2f);
 
@@ -171,7 +193,7 @@ namespace RingFlow.Gameplay.UI
 
         public void UpdateCoins(int coins)
         {
-            if (CoinsText != null) CoinsText.text = $"🪙 {coins:N0}";
+            if (CoinsText != null) CoinsText.text = $"{coins:N0}";
         }
 
         public void UpdateDiamonds(int diamonds)

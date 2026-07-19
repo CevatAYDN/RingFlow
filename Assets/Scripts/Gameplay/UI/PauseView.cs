@@ -71,11 +71,18 @@ namespace RingFlow.Gameplay.UI
             GameUIResources.SetAnchors(progGo.GetComponent<RectTransform>(), 0.05f, 0.62f, 0.95f, 0.68f);
 
             // 2. MAIN RESUME BUTTON (Coral)
-            _resumeBtn = GameUIResources.CreateButton("▶ DEVAM ET", cardGo.transform, 240f, 52f);
+            _resumeBtn = GameUIResources.CreateButton("DEVAM ET", cardGo.transform, 240f, 52f);
             _resumeBtn.name = "Btn_RESUME";
             GameUIResources.ApplyPrimaryStyle(_resumeBtn);
             ResumeButton = _resumeBtn.GetComponent<Button>();
             GameUIResources.SetAnchors(_resumeBtn.GetComponent<RectTransform>(), 0.12f, 0.44f, 0.88f, 0.54f);
+            
+            var playIconGo = new GameObject("IconImage", typeof(RectTransform), typeof(Image));
+            playIconGo.transform.SetParent(_resumeBtn.transform, false);
+            var playIcon = playIconGo.GetComponent<Image>();
+            playIcon.sprite = GameUIResources.GetSprite("play_icon");
+            playIcon.preserveAspect = true;
+            GameUIResources.SetAnchors(playIconGo.GetComponent<RectTransform>(), 0.05f, 0.15f, 0.25f, 0.85f);
 
             // 3. RESTART (Teal) & QUIT (White/Outline) SIDE-BY-SIDE BUTTONS
             // Restart
@@ -98,19 +105,33 @@ namespace RingFlow.Gameplay.UI
             GameUIResources.SetAnchors(bottomPanel.GetComponent<RectTransform>(), 0.12f, 0.12f, 0.88f, 0.22f);
 
             // Audio aesthetic icons
-            var soundIcon = GameUIResources.CreateText("🔊", bottomPanel.transform, 16, TextAnchor.MiddleCenter, GameUIResources.SurfaceColor);
-            GameUIResources.SetAnchors(soundIcon.GetComponent<RectTransform>(), 0.10f, 0f, 0.30f, 1f);
+            var soundIconGo = new GameObject("SoundIconImage", typeof(RectTransform), typeof(Image));
+            soundIconGo.transform.SetParent(bottomPanel.transform, false);
+            var soundIcon = soundIconGo.GetComponent<Image>();
+            soundIcon.sprite = GameUIResources.GetSprite("sound_on");
+            soundIcon.preserveAspect = true;
+            GameUIResources.SetAnchors(soundIconGo.GetComponent<RectTransform>(), 0.10f, 0.15f, 0.30f, 0.85f);
 
-            var musicIcon = GameUIResources.CreateText("🎵", bottomPanel.transform, 16, TextAnchor.MiddleCenter, GameUIResources.SurfaceColor);
-            GameUIResources.SetAnchors(musicIcon.GetComponent<RectTransform>(), 0.40f, 0f, 0.60f, 1f);
+            var musicIconGo = new GameObject("MusicIconImage", typeof(RectTransform), typeof(Image));
+            musicIconGo.transform.SetParent(bottomPanel.transform, false);
+            var musicIcon = musicIconGo.GetComponent<Image>();
+            musicIcon.sprite = GameUIResources.GetSprite("music_on");
+            musicIcon.preserveAspect = true;
+            GameUIResources.SetAnchors(musicIconGo.GetComponent<RectTransform>(), 0.40f, 0.15f, 0.60f, 0.85f);
 
             // Settings button (Gear) inside yellow panel
-            _settingsBtn = GameUIResources.CreateIconButton("⚙", bottomPanel.transform, 32f);
+            _settingsBtn = GameUIResources.CreateIconButton("", bottomPanel.transform, 32f);
             _settingsBtn.name = "Btn_SETTINGS";
             SettingsButton = _settingsBtn.GetComponent<Button>();
             GameUIResources.SetAnchors(_settingsBtn.GetComponent<RectTransform>(), 0.70f, 0.15f, 0.90f, 0.85f);
             _settingsBtn.GetComponent<Image>().color = Color.clear;
-            _settingsBtn.GetComponentInChildren<Text>().color = GameUIResources.SurfaceColor;
+            
+            var settingsIconGo = new GameObject("IconImage", typeof(RectTransform), typeof(Image));
+            settingsIconGo.transform.SetParent(_settingsBtn.transform, false);
+            var settingsIcon = settingsIconGo.GetComponent<Image>();
+            settingsIcon.sprite = GameUIResources.GetSprite("settings");
+            settingsIcon.preserveAspect = true;
+            GameUIResources.SetAnchors(settingsIconGo.GetComponent<RectTransform>(), 0.10f, 0.10f, 0.90f, 0.90f);
         }
 
         private ILocalizationService _locService;
