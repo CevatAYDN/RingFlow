@@ -307,6 +307,17 @@ namespace RingFlow.Gameplay.UI
             }
         }
 
+        public void UpdateContinueButtonText(int level)
+        {
+            if (_continueBtn == null) return;
+            var label = _continueBtn.GetComponentInChildren<Text>();
+            if (label != null)
+            {
+                string baseText = _locService != null ? _locService.GetString("menu_continue", "PLAY") : "PLAY";
+                label.text = $"{baseText} (LVL {level})";
+            }
+        }
+
         public void Localize(ILocalizationService loc)
         {
             _locService = loc;

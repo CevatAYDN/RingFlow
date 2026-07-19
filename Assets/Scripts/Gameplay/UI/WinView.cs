@@ -66,7 +66,7 @@ namespace RingFlow.Gameplay.UI
             GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.12f, 0.68f, 0.88f, 0.80f);
 
             // Level
-            var levelGo = GameUIResources.CreateDisplayText("LEVEL 1", cardGo.transform, 72, GameUIResources.AccentColor);
+            var levelGo = GameUIResources.CreateDisplayText("LEVEL 1", cardGo.transform, 72, GameUIResources.TextColor);
             levelGo.name = "LevelText";
             LevelText = levelGo.GetComponent<Text>();
             GameUIResources.SetAnchors(levelGo.GetComponent<RectTransform>(), 0.08f, 0.54f, 0.92f, 0.66f);
@@ -126,7 +126,7 @@ namespace RingFlow.Gameplay.UI
 
         public void SetLevel(int level, ILocalizationService loc = null)
         {
-            if (LevelText == null || level <= 0) return;
+            if (LevelText == null || level < 0) return;
             string format = loc != null ? loc.GetString("format_level", "LEVEL {0}") : "LEVEL {0}";
             LevelText.text = string.Format(format, level);
 

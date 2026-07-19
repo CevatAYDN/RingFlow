@@ -28,6 +28,9 @@ namespace RingFlow.Gameplay.UI
 
             View.Localize(_loc);
 
+            int currentLvl = _progression?.CurrentLevel.Value ?? 1;
+            View.UpdateContinueButtonText(currentLvl);
+
             View.ContinueButton?.onClick.AddListener(ContinueGame);
             View.PlayButton?.onClick.AddListener(QuickPlay);
             View.LevelSelectButton?.onClick.AddListener(GoToLevelSelect);

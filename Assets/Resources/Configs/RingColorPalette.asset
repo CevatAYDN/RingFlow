@@ -68,3 +68,53 @@ MonoBehaviour:
     Protanopia: {r: 0.53333336, g: 0.6901961, b: 0.3764706, a: 1}
     Deuteranopia: {r: 0.5647059, g: 0.627451, b: 0.3764706, a: 1}
     Tritanopia: {r: 0.4392157, g: 0.72156864, b: 0.5019608, a: 1}
+  - Color: 11
+    Normal: {r: 0.54509807, g: 0.3529412, b: 0.16862746, a: 1}
+    Protanopia: {r: 0.54509807, g: 0.3529412, b: 0.16862746, a: 1}
+    Deuteranopia: {r: 0.54509807, g: 0.3529412, b: 0.16862746, a: 1}
+    Tritanopia: {r: 0.54509807, g: 0.3529412, b: 0.16862746, a: 1}
+  - Color: 12
+    Normal: {r: 0, g: 0.5019608, b: 0.5019608, a: 1}
+    Protanopia: {r: 0, g: 0.5019608, b: 0.5019608, a: 1}
+    Deuteranopia: {r: 0, g: 0.5019608, b: 0.5019608, a: 1}
+    Tritanopia: {r: 0, g: 0.5019608, b: 0.5019608, a: 1}
+  - Color: 13
+    Normal: {r: 0.5019608, g: 0.5019608, b: 0, a: 1}
+    Protanopia: {r: 0.5019608, g: 0.5019608, b: 0, a: 1}
+    Deuteranopia: {r: 0.5019608, g: 0.5019608, b: 0, a: 1}
+    Tritanopia: {r: 0.5019608, g: 0.5019608, b: 0, a: 1}
+  - Color: 14
+    Normal: {r: 0, g: 0, b: 0.5019608, a: 1}
+    Protanopia: {r: 0, g: 0, b: 0.5019608, a: 1}
+    Deuteranopia: {r: 0, g: 0, b: 0.5019608, a: 1}
+    Tritanopia: {r: 0, g: 0, b: 0.5019608, a: 1}
+  - Color: 15
+    Normal: {r: 0.49803922, g: 0.49803922, b: 0.49803922, a: 1}
+    Protanopia: {r: 0.49803922, g: 0.49803922, b: 0.49803922, a: 1}
+    Deuteranopia: {r: 0.49803922, g: 0.49803922, b: 0.49803922, a: 1}
+    Tritanopia: {r: 0.49803922, g: 0.49803922, b: 0.49803922, a: 1}
+  - Color: 16
+    Normal: {r: 0.9254902, g: 0.9254902, b: 0.9254902, a: 1}
+    Protanopia: {r: 0.9254902, g: 0.9254902, b: 0.9254902, a: 1}
+    Deuteranopia: {r: 0.9254902, g: 0.9254902, b: 0.9254902, a: 1}
+    Tritanopia: {r: 0.9254902, g: 0.9254902, b: 0.9254902, a: 1}
+  - Color: 17
+    Normal: {r: 0.9019608, g: 0.9019608, b: 0.98039216, a: 1}
+    Protanopia: {r: 0.9019608, g: 0.9019608, b: 0.98039216, a: 1}
+    Deuteranopia: {r: 0.9019608, g: 0.9019608, b: 0.98039216, a: 1}
+    Tritanopia: {r: 0.9019608, g: 0.9019608, b: 0.98039216, a: 1}
+  - Color: 18
+    Normal: {r: 0.5019608, g: 0, b: 0, a: 1}
+    Protanopia: {r: 0.5019608, g: 0, b: 0, a: 1}
+    Deuteranopia: {r: 0.5019608, g: 0, b: 0, a: 1}
+    Tritanopia: {r: 0.5019608, g: 0, b: 0, a: 1}
+  - Color: 19
+    Normal: {r: 1, g: 0.84313726, b: 0, a: 1}
+    Protanopia: {r: 1, g: 0.84313726, b: 0, a: 1}
+    Deuteranopia: {r: 1, g: 0.84313726, b: 0, a: 1}
+    Tritanopia: {r: 1, g: 0.84313726, b: 0, a: 1}
+  - Color: 20
+    Normal: {r: 0.59607846, g: 1, b: 0.59607846, a: 1}
+    Protanopia: {r: 0.59607846, g: 1, b: 0.59607846, a: 1}
+    Deuteranopia: {r: 0.59607846, g: 1, b: 0.59607846, a: 1}
+    Tritanopia: {r: 0.59607846, g: 1, b: 0.59607846, a: 1}

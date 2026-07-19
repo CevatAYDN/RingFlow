@@ -12,6 +12,16 @@ namespace RingFlow.Gameplay
         Cyan,
         Magenta,
         Pink,
-        Lime
+        Lime,
+        Brown,
+        Teal,
+        Olive,
+        Navy,
+        Grey,
+        White,
+        Lavender,
+        Maroon,
+        Gold,
+        Mint
     }
 }

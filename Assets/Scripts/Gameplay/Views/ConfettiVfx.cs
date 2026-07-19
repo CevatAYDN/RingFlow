@@ -124,7 +124,7 @@ namespace RingFlow.Gameplay
                 r.enabled = true;
 
                 piece.StartPos = new Vector3(
-                    Random.Range(-5f, 15f),
+                    Random.Range(-16f, 16f), // Centered and wide enough to cover any number of poles
                     Random.Range(6f, 9f),
                     Random.Range(-2f, 2f)
                 );
@@ -220,6 +220,26 @@ namespace RingFlow.Gameplay
         private void OnDestroy()
         {
             KillAllPieces();
+        }
+
+        private void Update()
+        {
+            if (_pieces == null) return;
+            float time = Time.time;
+            for (int i = 0; i < _count; i++)
+            {
+                ref Piece piece = ref _pieces[i];
+                var t = piece.Transform;
+                if (t == null || !t.gameObject.activeSelf) continue;
+
+                // Dynamic, smooth sway logic for satisfying confetti motion (zero GC)
+                float swayX = Mathf.Sin(time * piece.SwayFreq) * piece.SwayAmp;
+                float swayZ = Mathf.Cos(time * piece.SwayFreq * 0.7f) * piece.SwayAmp * 0.3f;
+                var pos = t.localPosition;
+                pos.x = piece.StartX + swayX;
+                pos.z = piece.StartPos.z + swayZ;
+                t.localPosition = pos;
+            }
         }
     }
 }

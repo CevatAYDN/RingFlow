@@ -18,11 +18,11 @@ MonoBehaviour:
   PoleColliderWidthFraction: 0.85
   RingScaleTorus: {x: 3, y: 0.25, z: 3}
   RingScaleFallback: {x: 3, y: 0.12, z: 3}
-  RingBaseYOffset: -0.9
-  RingStackSpacing: 0.34
+  RingBaseYOffset: -0.408
+  RingStackSpacing: 0.176
   RingSelectionLift: 0.35
   MoveDuration: 0.3
-  MoveJumpPower: 0.8
+  MoveJumpPower: 1.8
   RingPlacePulseScale: 1.25
   RingPlacePulseDuration: 0.2
   SelectionLiftDuration: 0.15
@@ -41,8 +41,8 @@ MonoBehaviour:
   ErrorTint: {r: 1, g: 0.3, b: 0.3, a: 1}
   LockedTint: {r: 0, g: 0, b: 0, a: 1}
   ErrorFlashDuration: 0.35
-  PoleColorOpen: {r: 0.902, g: 0.894, b: 0.863, a: 1}
-  PoleColorLocked: {r: 0.12, g: 0.12, b: 0.14, a: 1}
+  PoleColorOpen: {r: 0.9254902, g: 0.91764706, b: 0.89411765, a: 1}
+  PoleColorLocked: {r: 0.29803923, g: 0.2901961, b: 0.32941177, a: 1}
   PoleMetallic: 0.8
   PoleSmoothness: 0.8
   RingMetallic: 0.1
@@ -84,6 +84,9 @@ MonoBehaviour:
   MediumTierThreshold: 3
   CompleteShakeIntensity: 0.06
   CompleteShakeDuration: 0.15
+  BombTickMode: 0
+  WinStateDelayMs: 500
+  WinStateRetryDelayMs: 1000
   RingPoolSize: 100
   RingPopPoolSize: 50
   ConfettiPoolSize: 30
