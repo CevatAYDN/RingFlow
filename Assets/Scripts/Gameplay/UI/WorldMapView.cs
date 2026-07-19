@@ -52,14 +52,17 @@ namespace RingFlow.Gameplay.UI
             GameUIResources.SetAnchors(bodyGo.GetComponent<RectTransform>(), 0.10f, 0.30f, 0.90f, 0.52f);
 
             // Back button
-            var backBtnGo = GameUIResources.CreateIconButton("◀", transform, 36f);
+            var backBtnGo = GameUIResources.CreateIconButton("", transform, 36f);
             backBtnGo.name = "Btn_BACK";
             BackButton = backBtnGo.GetComponent<Button>();
             GameUIResources.SetAnchors(backBtnGo.GetComponent<RectTransform>(), 0.04f, 0.90f, 0.15f, 0.98f);
             backBtnGo.GetComponent<Image>().color = GameUIResources.SurfaceColor;
-            backBtnGo.GetComponentInChildren<Text>().color = GameUIResources.TextColor;
-            backBtnGo.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.08f);
-            backBtnGo.GetComponent<Shadow>().effectDistance = new Vector2(0f, -2f);
+            var backIconGo = new GameObject("IconImage", typeof(RectTransform), typeof(Image));
+            backIconGo.transform.SetParent(backBtnGo.transform, false);
+            var backIcon = backIconGo.GetComponent<Image>();
+            backIcon.sprite = GameUIResources.GetSprite("back_arrow");
+            backIcon.preserveAspect = true;
+            GameUIResources.SetAnchors(backIconGo.GetComponent<RectTransform>(), 0.15f, 0.15f, 0.85f, 0.85f);
         }
 
         private void BindReferencesFromChildren()

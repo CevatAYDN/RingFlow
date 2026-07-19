@@ -149,5 +149,6 @@ namespace RingFlow.Gameplay.UI
         public static void AnimateStaggeredEntry(GameObject[] elements, float delay = 0.07f, float duration = 0.3f) => Service.AnimateStaggeredEntry(elements, delay, duration);
         public static void AddButtonEffects(GameObject go) => Service.AddButtonEffects(go);
         public static void AddButtonEffects(Button button) => Service.AddButtonEffects(button);
+        public static Sprite GetSprite(string name) => Service.GetSprite(name);
     }
 }

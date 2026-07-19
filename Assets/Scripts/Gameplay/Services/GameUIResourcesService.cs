@@ -609,5 +609,10 @@ namespace RingFlow.Gameplay.Services
                 button.gameObject.AddComponent<UI.UIButtonEffects>();
             }
         }
+
+        public Sprite GetSprite(string name)
+        {
+            return Resources.Load<Sprite>($"UI/Sprites/{name}");
+        }
     }
 }

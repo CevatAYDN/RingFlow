@@ -102,5 +102,6 @@ namespace RingFlow.Gameplay.Services
         void AnimateStaggeredEntry(GameObject[] elements, float delay = 0.07f, float duration = 0.3f);
         void AddButtonEffects(GameObject go);
         void AddButtonEffects(Button button);
+        Sprite GetSprite(string name);
     }
 }

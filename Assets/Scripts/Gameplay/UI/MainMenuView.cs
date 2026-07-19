@@ -108,25 +108,55 @@ namespace RingFlow.Gameplay.UI
 
             // Right Coins Pill
             var coinsPill = GameUIResources.CreateCard("CoinsPill", topBar.transform);
-            GameUIResources.SetAnchors(coinsPill.GetComponent<RectTransform>(), 0.54f, 0.15f, 0.74f, 0.85f);
-            var coinTextGo = GameUIResources.CreateText("🪙 0", coinsPill.transform, 14, TextAnchor.MiddleCenter, GameUIResources.TextColor);
+            GameUIResources.SetAnchors(coinsPill.GetComponent<RectTransform>(), 0.52f, 0.15f, 0.73f, 0.85f);
+            
+            var coinImgGo = new GameObject("CoinIcon", typeof(RectTransform), typeof(Image));
+            coinImgGo.transform.SetParent(coinsPill.transform, false);
+            var coinImg = coinImgGo.GetComponent<Image>();
+            coinImg.sprite = GameUIResources.GetSprite("coin");
+            coinImg.preserveAspect = true;
+            GameUIResources.SetAnchors(coinImgGo.GetComponent<RectTransform>(), 0.05f, 0.15f, 0.35f, 0.85f);
+
+            var coinTextGo = GameUIResources.CreateText("0", coinsPill.transform, 14, TextAnchor.MiddleLeft, GameUIResources.TextColor);
             coinTextGo.name = "CoinsText";
             CoinsText = coinTextGo.GetComponent<Text>();
             CoinsText.fontStyle = FontStyle.Bold;
+            GameUIResources.SetAnchors(coinTextGo.GetComponent<RectTransform>(), 0.40f, 0f, 0.95f, 1f);
 
             // Right Gems Pill
             var gemsPill = GameUIResources.CreateCard("GemsPill", topBar.transform);
-            GameUIResources.SetAnchors(gemsPill.GetComponent<RectTransform>(), 0.78f, 0.15f, 0.96f, 0.85f);
-            var gemsTextGo = GameUIResources.CreateText("💎 0", gemsPill.transform, 14, TextAnchor.MiddleCenter, GameUIResources.TextColor);
+            GameUIResources.SetAnchors(gemsPill.GetComponent<RectTransform>(), 0.76f, 0.15f, 0.97f, 0.85f);
+
+            var gemImgGo = new GameObject("GemIcon", typeof(RectTransform), typeof(Image));
+            gemImgGo.transform.SetParent(gemsPill.transform, false);
+            var gemImg = gemImgGo.GetComponent<Image>();
+            gemImg.sprite = GameUIResources.GetSprite("diamond");
+            gemImg.preserveAspect = true;
+            GameUIResources.SetAnchors(gemImgGo.GetComponent<RectTransform>(), 0.05f, 0.15f, 0.35f, 0.85f);
+
+            var gemsTextGo = GameUIResources.CreateText("0", gemsPill.transform, 14, TextAnchor.MiddleLeft, GameUIResources.TextColor);
             gemsTextGo.name = "DiamondsText";
             DiamondsText = gemsTextGo.GetComponent<Text>();
             DiamondsText.fontStyle = FontStyle.Bold;
+            GameUIResources.SetAnchors(gemsTextGo.GetComponent<RectTransform>(), 0.40f, 0f, 0.95f, 1f);
 
             // 2. MAIN LOGO / TAGLINE
-            var titleGo = GameUIResources.CreateDisplayText("<color=#2C2A44>Ring</color><color=#FFC93C>Flow</color>", bgGo.transform, 56, GameUIResources.TextColor);
+            var titleGo = GameUIResources.CreateDisplayText("RingFlow", bgGo.transform, 56, Color.clear);
             titleGo.name = "Title";
             TitleText = titleGo.GetComponent<Text>();
-            GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.05f, 0.77f, 0.95f, 0.87f);
+            TitleText.text = "";
+            GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.15f, 0.75f, 0.85f, 0.88f);
+
+            var logoGo = new GameObject("LogoImage", typeof(RectTransform), typeof(Image));
+            logoGo.transform.SetParent(titleGo.transform, false);
+            var logoImg = logoGo.GetComponent<Image>();
+            logoImg.sprite = GameUIResources.GetSprite("logo");
+            logoImg.preserveAspect = true;
+            var logoRt = logoGo.GetComponent<RectTransform>();
+            logoRt.anchorMin = Vector2.zero;
+            logoRt.anchorMax = Vector2.one;
+            logoRt.offsetMin = Vector2.zero;
+            logoRt.offsetMax = Vector2.zero;
 
             var subGo = GameUIResources.CreateText("Renkleri Ayır, Zihni Dinlendir", bgGo.transform, 18, TextAnchor.MiddleCenter, GameUIResources.MutedText);
             subGo.name = "Subtitle";
@@ -239,34 +269,54 @@ namespace RingFlow.Gameplay.UI
             GameUIResources.SetAnchors(footer.GetComponent<RectTransform>(), 0.12f, 0.08f, 0.90f, 0.16f);
 
             // settings (gear button inside footer)
-            _settingsBtn = GameUIResources.CreateIconButton("⚙", footer.transform, 36f);
+            _settingsBtn = GameUIResources.CreateIconButton("", footer.transform, 36f);
             _settingsBtn.name = "Btn_SETTINGS";
             SettingsButton = _settingsBtn.GetComponent<Button>();
             GameUIResources.SetAnchors(_settingsBtn.GetComponent<RectTransform>(), 0.75f, 0.15f, 0.90f, 0.85f);
             _settingsBtn.GetComponent<Image>().color = Color.clear;
-            _settingsBtn.GetComponentInChildren<Text>().color = GameUIResources.TextColor;
+            var settingsIconGo = new GameObject("IconImage", typeof(RectTransform), typeof(Image));
+            settingsIconGo.transform.SetParent(_settingsBtn.transform, false);
+            var settingsIcon = settingsIconGo.GetComponent<Image>();
+            settingsIcon.sprite = GameUIResources.GetSprite("settings");
+            settingsIcon.preserveAspect = true;
+            GameUIResources.SetAnchors(settingsIconGo.GetComponent<RectTransform>(), 0.15f, 0.15f, 0.85f, 0.85f);
 
             // leaderboard button inside footer
-            var leaderBtn = GameUIResources.CreateIconButton("🏆", footer.transform, 36f);
+            var leaderBtn = GameUIResources.CreateIconButton("", footer.transform, 36f);
             leaderBtn.name = "Btn_LEADERBOARD";
             GameUIResources.SetAnchors(leaderBtn.GetComponent<RectTransform>(), 0.52f, 0.15f, 0.67f, 0.85f);
             leaderBtn.GetComponent<Image>().color = Color.clear;
-            leaderBtn.GetComponentInChildren<Text>().color = GameUIResources.TextColor;
+            var leaderIconGo = new GameObject("IconImage", typeof(RectTransform), typeof(Image));
+            leaderIconGo.transform.SetParent(leaderBtn.transform, false);
+            var leaderIcon = leaderIconGo.GetComponent<Image>();
+            leaderIcon.sprite = GameUIResources.GetSprite("leaderboard");
+            leaderIcon.preserveAspect = true;
+            GameUIResources.SetAnchors(leaderIconGo.GetComponent<RectTransform>(), 0.15f, 0.15f, 0.85f, 0.85f);
 
             // World Map button inside footer
-            _mapBtn = GameUIResources.CreateIconButton("🗺", footer.transform, 36f);
+            _mapBtn = GameUIResources.CreateIconButton("", footer.transform, 36f);
             _mapBtn.name = "Btn_WORLD_MAP";
             WorldMapButton = _mapBtn.GetComponent<Button>();
             GameUIResources.SetAnchors(_mapBtn.GetComponent<RectTransform>(), 0.29f, 0.15f, 0.44f, 0.85f);
             _mapBtn.GetComponent<Image>().color = Color.clear;
-            _mapBtn.GetComponentInChildren<Text>().color = GameUIResources.TextColor;
+            var mapIconGo = new GameObject("IconImage", typeof(RectTransform), typeof(Image));
+            mapIconGo.transform.SetParent(_mapBtn.transform, false);
+            var mapIcon = mapIconGo.GetComponent<Image>();
+            mapIcon.sprite = GameUIResources.GetSprite("world_map");
+            mapIcon.preserveAspect = true;
+            GameUIResources.SetAnchors(mapIconGo.GetComponent<RectTransform>(), 0.15f, 0.15f, 0.85f, 0.85f);
 
             // Gift button inside footer
-            var giftBtn = GameUIResources.CreateIconButton("🎁", footer.transform, 36f);
+            var giftBtn = GameUIResources.CreateIconButton("", footer.transform, 36f);
             giftBtn.name = "Btn_GIFT";
             GameUIResources.SetAnchors(giftBtn.GetComponent<RectTransform>(), 0.06f, 0.15f, 0.21f, 0.85f);
             giftBtn.GetComponent<Image>().color = Color.clear;
-            giftBtn.GetComponentInChildren<Text>().color = GameUIResources.TextColor;
+            var giftIconGo = new GameObject("IconImage", typeof(RectTransform), typeof(Image));
+            giftIconGo.transform.SetParent(giftBtn.transform, false);
+            var giftIcon = giftIconGo.GetComponent<Image>();
+            giftIcon.sprite = GameUIResources.GetSprite("gift");
+            giftIcon.preserveAspect = true;
+            GameUIResources.SetAnchors(giftIconGo.GetComponent<RectTransform>(), 0.15f, 0.15f, 0.85f, 0.85f);
 
             // 7. VERSION & ADS AREA
             var verGo = GameUIResources.CreateText("v1.0", bgGo.transform, 11, TextAnchor.LowerCenter, GameUIResources.MutedText);
