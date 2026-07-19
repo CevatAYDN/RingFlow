@@ -354,7 +354,33 @@ namespace RingFlow.Editor
             return board;
         }
 
-        private void BuildBoardStateInScene(BoardState board, int[] portalTargets = null)
+        public static void BuildLevelInScene(LevelData level, GameConfigDatabaseSO database)
+        {
+            if (level == null) return;
+            int poleCount = level.Poles.Count;
+            int resolvedMaxCapacity = level.PoleCapacity > 0 ? level.PoleCapacity : (database != null ? database.GetMaxCapacityForLevel(level.LevelIndex) : 4);
+            var board = new BoardState { PoleCount = poleCount, MaxCapacity = resolvedMaxCapacity };
+            var portalTargets = new int[poleCount];
+            for (int i = 0; i < poleCount; i++) portalTargets[i] = -1;
+
+            for (int p = 0; p < poleCount; p++)
+            {
+                var poleData = level.Poles[p];
+                board.SetPoleLocked(p, poleData.IsLocked);
+                portalTargets[p] = poleData.PortalTargetId;
+                board.SetRingCount(p, poleData.Rings.Count);
+                for (int r = 0; r < poleData.Rings.Count; r++)
+                {
+                    board.SetRingColor(p, r, poleData.Rings[r].Color);
+                    board.SetRingType(p, r, poleData.Rings[r].Type);
+                    board.SetRingAdditional(p, r, poleData.Rings[r].AdditionalData);
+                }
+            }
+
+            BuildBoardStateInScene(board, portalTargets);
+        }
+
+        public static void BuildBoardStateInScene(BoardState board, int[] portalTargets = null)
         {
             ClearScene();
 
@@ -609,7 +635,7 @@ namespace RingFlow.Editor
                 board.AddRingSimple(targetPole, portalRing, true);
         }
 
-        private static void ClearScene()
+        public static void ClearScene()
         {
             var boardRoot = GameObject.Find(EditorPaths.VisualBoardName);
             if (boardRoot == null) return;

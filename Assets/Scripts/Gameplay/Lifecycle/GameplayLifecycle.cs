@@ -158,6 +158,7 @@ namespace RingFlow.Gameplay
             builder.Bind<SplashState>();
             builder.Bind<MainMenuState>();
             builder.Bind<LevelSelectState>();
+            builder.Bind<WorldMapState>();
             builder.Bind<PlayingState>();
             builder.Bind<PausedState>();
             builder.Bind<WinState>();
@@ -255,6 +256,7 @@ namespace RingFlow.Gameplay
             fsm.RegisterState(context.Resolve<SplashState>());
             fsm.RegisterState(context.Resolve<MainMenuState>());
             fsm.RegisterState(context.Resolve<LevelSelectState>());
+            fsm.RegisterState(context.Resolve<WorldMapState>());
             fsm.RegisterState(context.Resolve<PlayingState>());
             fsm.RegisterState(context.Resolve<PausedState>());
             fsm.RegisterState(context.Resolve<WinState>());

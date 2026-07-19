@@ -282,6 +282,12 @@ namespace RingFlow.Gameplay.UI
                 _subscriptions.Add(sb.Subscribe<OpenChestPopupSignal>(_ => OpenPopup(ScreenType.ChestPopup)));
                 _subscriptions.Add(sb.Subscribe<CloseChestPopupSignal>(_ => ClosePopup(ScreenType.ChestPopup)));
 
+                _subscriptions.Add(sb.Subscribe<WorldMapRequestedSignal>(_ =>
+                {
+                    CloseAllPopups();
+                    fsm.ChangeStateAsync<WorldMapState>();
+                }));
+
                 _subscriptions.Add(sb.Subscribe<QuitToMenuRequestedSignal>(_ =>
                 {
                     CloseAllPopups();

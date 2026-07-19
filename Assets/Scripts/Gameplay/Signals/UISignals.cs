@@ -41,6 +41,7 @@ namespace RingFlow.Gameplay
     public readonly struct ResumeRequestedSignal {}
     public readonly struct NextLevelRequestedSignal {}
     public readonly struct QuitToMenuRequestedSignal {}
+    public readonly struct WorldMapRequestedSignal {}
     public readonly struct OpenSettingsSignal {}
     public readonly struct CloseSettingsSignal {}
     public readonly struct OpenDailyRewardSignal {}

@@ -148,6 +148,7 @@ namespace RingFlow.Editor
             // must re-scan the filesystem so newly created levels appear green
             // and deleted/missing levels appear grey immediately.
             _generator.OnLevelAssetsChanged += _levelBrowser.InvalidateExistenceCache;
+            _generator.OnRequestBuildBoard = () => _visualBuilder.BuildFromDashboard();
 
             _generator.OnEnable();
             _selectedTab = Mathf.Clamp(EditorPrefs.GetInt(EditorPrefsKeys.SelectedTab, 0), 0, _tabs.Length - 1);
@@ -182,7 +183,10 @@ namespace RingFlow.Editor
             // Unsubscribe callback before clearing references to prevent leaks
             // if the window is re-opened (OnEnable re-subscribes fresh).
             if (_generator != null && _levelBrowser != null)
+            {
                 _generator.OnLevelAssetsChanged -= _levelBrowser.InvalidateExistenceCache;
+                _generator.OnRequestBuildBoard = null;
+            }
 
             _generator?.OnDisable();
             EditorPrefs.SetInt(EditorPrefsKeys.SelectedTab, _selectedTab);

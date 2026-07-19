@@ -25,10 +25,25 @@ namespace RingFlow.Gameplay.UI
         {
             if (View == null) return;
             View.Localize(_loc);
+
+            if (View.BackButton != null)
+            {
+                View.BackButton.onClick.AddListener(() =>
+                {
+                    SignalBus.Fire(new QuitToMenuRequestedSignal());
+                });
+            }
+
             NexusLog.Info("WorldMapMediator", nameof(OnBind), "UI",
                 $"Bound to {View.GetType().Name}. Awaiting user navigation.");
         }
 
-        protected override void OnUnbind() { }
+        protected override void OnUnbind()
+        {
+            if (View != null && View.BackButton != null)
+            {
+                View.BackButton.onClick.RemoveAllListeners();
+            }
+        }
     }
 }

@@ -46,6 +46,12 @@ namespace RingFlow.Editor
             CreateUIScreenPrefabs(recreateExisting: true);
         }
 
+        [MenuItem("Nexus/Recreate UI Screens (Silent)")]
+        public static void RecreateAllUIScreenPrefabsSilent()
+        {
+            CreateUIScreenPrefabs(recreateExisting: true, silent: true);
+        }
+
         public static IReadOnlyList<string> GetUIScreenPrefabPreviewLines()
         {
             var screens = new List<ScreenType>(GetRequiredUiScreens());
@@ -57,7 +63,7 @@ namespace RingFlow.Editor
             return lines;
         }
 
-        private static void CreateUIScreenPrefabs(bool recreateExisting)
+        private static void CreateUIScreenPrefabs(bool recreateExisting, bool silent = false)
         {
             try
             {
@@ -74,7 +80,7 @@ namespace RingFlow.Editor
                     ? $"This will delete and regenerate all base UI prefabs:\n{screenList}\n\nContinue?"
                     : $"This will generate missing base UI prefabs:\n{screenList}\n\nContinue?";
 
-                if (!EditorUtility.DisplayDialog(confirmTitle, confirmMessage, "Continue", "Cancel"))
+                if (!silent && !EditorUtility.DisplayDialog(confirmTitle, confirmMessage, "Continue", "Cancel"))
                     return;
 
                 var theme = new RingFlow.Gameplay.Services.ResourcesAssetService()
@@ -128,13 +134,15 @@ namespace RingFlow.Editor
                 if (skipped.Count > 0)
                     message += $"\nAlready present: {string.Join(", ", skipped)}";
 
-                EditorUtility.DisplayDialog(title, message, "OK");
+                if (!silent)
+                    EditorUtility.DisplayDialog(title, message, "OK");
             }
             catch (Exception ex)
             {
                 var label = recreateExisting ? "RecreateUiScreens" : "CreateMissingUiScreens";
                 NexusLog.Error("RingFlowEditorUiStudio", label, "CreateScreens", ex.ToString());
-                EditorUtility.DisplayDialog(recreateExisting ? "Recreate UI Screens" : "Create Missing UI Screens", ex.Message, "OK");
+                if (!silent)
+                    EditorUtility.DisplayDialog(recreateExisting ? "Recreate UI Screens" : "Create Missing UI Screens", ex.Message, "OK");
             }
         }
 

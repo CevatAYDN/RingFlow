@@ -197,6 +197,16 @@ namespace RingFlow.Editor
                     GUI.backgroundColor = prevBg;
                 }
 
+                EditorGUILayout.Space(2f);
+                if (GUILayout.Button("SAHNEYİ KUR VE GÖRSELLEŞTİR (BUILD BOARD IN SCENE)", GUILayout.Height(30)))
+                {
+                    if (IsUserEvent())
+                    {
+                        var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
+                        VisualBuilderSection.BuildLevelInScene(levelSO.Data, db);
+                    }
+                }
+
                 if (_stepMoves != null && _stepMoves.Count > 0)
                 {
                     EditorGUILayout.Space(2f);

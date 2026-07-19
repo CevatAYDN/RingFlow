@@ -15,6 +15,7 @@ namespace RingFlow.Gameplay.UI
         public Button SettingsButton { get; private set; }
         public Button DailyRewardButton { get; private set; }
         public Button ChestButton { get; private set; }
+        public Button WorldMapButton { get; private set; }
         public Text VersionLabel { get; private set; }
         public Text CoinsText { get; private set; }
         public Text DiamondsText { get; private set; }
@@ -24,7 +25,7 @@ namespace RingFlow.Gameplay.UI
         public Image PlayerLevelProgress { get; private set; }
         public CanvasGroup CardGroup { get; private set; }
 
-        private GameObject _continueBtn, _playBtn, _lvlBtn, _dailyBtn, _settingsBtn, _chestBtn;
+        private GameObject _continueBtn, _playBtn, _lvlBtn, _dailyBtn, _settingsBtn, _chestBtn, _mapBtn;
         private GameObject _backdrop;
         private ILocalizationService _locService;
         private Button[] _allButtons;
@@ -248,14 +249,22 @@ namespace RingFlow.Gameplay.UI
             // leaderboard button inside footer
             var leaderBtn = GameUIResources.CreateIconButton("🏆", footer.transform, 36f);
             leaderBtn.name = "Btn_LEADERBOARD";
-            GameUIResources.SetAnchors(leaderBtn.GetComponent<RectTransform>(), 0.42f, 0.15f, 0.58f, 0.85f);
+            GameUIResources.SetAnchors(leaderBtn.GetComponent<RectTransform>(), 0.52f, 0.15f, 0.67f, 0.85f);
             leaderBtn.GetComponent<Image>().color = Color.clear;
             leaderBtn.GetComponentInChildren<Text>().color = GameUIResources.TextColor;
+
+            // World Map button inside footer
+            _mapBtn = GameUIResources.CreateIconButton("🗺", footer.transform, 36f);
+            _mapBtn.name = "Btn_WORLD_MAP";
+            WorldMapButton = _mapBtn.GetComponent<Button>();
+            GameUIResources.SetAnchors(_mapBtn.GetComponent<RectTransform>(), 0.29f, 0.15f, 0.44f, 0.85f);
+            _mapBtn.GetComponent<Image>().color = Color.clear;
+            _mapBtn.GetComponentInChildren<Text>().color = GameUIResources.TextColor;
 
             // Gift button inside footer
             var giftBtn = GameUIResources.CreateIconButton("🎁", footer.transform, 36f);
             giftBtn.name = "Btn_GIFT";
-            GameUIResources.SetAnchors(giftBtn.GetComponent<RectTransform>(), 0.10f, 0.15f, 0.25f, 0.85f);
+            GameUIResources.SetAnchors(giftBtn.GetComponent<RectTransform>(), 0.06f, 0.15f, 0.21f, 0.85f);
             giftBtn.GetComponent<Image>().color = Color.clear;
             giftBtn.GetComponentInChildren<Text>().color = GameUIResources.TextColor;
 
@@ -270,7 +279,7 @@ namespace RingFlow.Gameplay.UI
             GameUIResources.SetAnchors(adsTextGo.GetComponent<RectTransform>(), 0f, 0f, 1f, 0.04f);
 
             // Cache buttons
-            _allButtons = new[] { ContinueButton, PlayButton, LevelSelectButton, DailyRewardButton, ChestButton, SettingsButton };
+            _allButtons = new[] { ContinueButton, PlayButton, LevelSelectButton, DailyRewardButton, ChestButton, SettingsButton, WorldMapButton };
         }
 
         private GameObject CreateMenuButton(Transform parent, string name, string label, float w, float h,
@@ -357,6 +366,7 @@ namespace RingFlow.Gameplay.UI
                 else if (upper.Contains("DAILY") || upper.Contains("REWARD")) { _dailyBtn = btn.gameObject; DailyRewardButton = btn; }
                 else if (upper.Contains("SETTINGS") || upper.Contains("⚙")) { _settingsBtn = btn.gameObject; SettingsButton = btn; }
                 else if (upper.Contains("CHEST")) { _chestBtn = btn.gameObject; ChestButton = btn; }
+                else if (upper.Contains("WORLD") || upper.Contains("MAP")) { _mapBtn = btn.gameObject; WorldMapButton = btn; }
             }
             _allButtons = buttons;
 

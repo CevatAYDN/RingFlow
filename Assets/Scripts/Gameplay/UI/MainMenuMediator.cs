@@ -37,6 +37,7 @@ namespace RingFlow.Gameplay.UI
             View.SettingsButton?.onClick.AddListener(OpenSettings);
             View.DailyRewardButton?.onClick.AddListener(OpenDailyReward);
             View.ChestButton?.onClick.AddListener(OpenChests);
+            View.WorldMapButton?.onClick.AddListener(GoToWorldMap);
 
             bool canClaim = _dailyReward != null && _dailyReward.CanClaimNow();
             View.SetDailyRewardAvailable(canClaim);
@@ -116,6 +117,11 @@ namespace RingFlow.Gameplay.UI
             SignalBus.Fire(new OpenChestPopupSignal());
         }
 
+        private void GoToWorldMap()
+        {
+            SignalBus.Fire(new WorldMapRequestedSignal());
+        }
+
         protected override void OnUnbind()
         {
             _tracker?.TrackViewUnbound(View?.GetType());
@@ -127,6 +133,7 @@ namespace RingFlow.Gameplay.UI
                 View.SettingsButton?.onClick.RemoveAllListeners();
                 View.DailyRewardButton?.onClick.RemoveAllListeners();
                 View.ChestButton?.onClick.RemoveAllListeners();
+                View.WorldMapButton?.onClick.RemoveAllListeners();
             }
             if (_progress != null)
             {

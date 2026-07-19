@@ -34,6 +34,7 @@ namespace RingFlow.Editor
         /// Wire this in RingFlowEditorWindow to invalidate the LevelBrowser cache.
         /// </summary>
         public System.Action OnLevelAssetsChanged;
+        public System.Action OnRequestBuildBoard;
 
         public LevelData GeneratedLevel => _generatedLevel;
 
@@ -195,6 +196,18 @@ namespace RingFlow.Editor
             }
 
             _autoSave = EditorGUILayout.Toggle("Üretileni Otomatik Kaydet", _autoSave);
+
+            if (_generatedLevel != null)
+            {
+                EditorGUILayout.Space(2f);
+                var prevCol = GUI.backgroundColor;
+                GUI.backgroundColor = EditorPaths.EditorColors.Success;
+                if (GUILayout.Button("Bu Seviyeyi Sahneye Kur (Build Board)", GUILayout.Height(24)))
+                {
+                    OnRequestBuildBoard?.Invoke();
+                }
+                GUI.backgroundColor = prevCol;
+            }
 
             RingFlowEditorUtils.EndSectionBox();
 

@@ -12,6 +12,7 @@ namespace RingFlow.Gameplay.UI
     [Mediator(typeof(WorldMapMediator))]
     public class WorldMapView : View, IAuthoredView
     {
+        public Button BackButton { get; private set; }
         private Text _titleText;
         private Text _bodyText;
 
@@ -49,6 +50,16 @@ namespace RingFlow.Gameplay.UI
             var bodyGo = GameUIResources.CreateText("Explore the kingdoms ahead.", card.transform, 22, TextAnchor.MiddleCenter, GameUIResources.MutedText);
             _bodyText = bodyGo.GetComponent<Text>();
             GameUIResources.SetAnchors(bodyGo.GetComponent<RectTransform>(), 0.10f, 0.30f, 0.90f, 0.52f);
+
+            // Back button
+            var backBtnGo = GameUIResources.CreateIconButton("◀", transform, 36f);
+            backBtnGo.name = "Btn_BACK";
+            BackButton = backBtnGo.GetComponent<Button>();
+            GameUIResources.SetAnchors(backBtnGo.GetComponent<RectTransform>(), 0.04f, 0.90f, 0.15f, 0.98f);
+            backBtnGo.GetComponent<Image>().color = GameUIResources.SurfaceColor;
+            backBtnGo.GetComponentInChildren<Text>().color = GameUIResources.TextColor;
+            backBtnGo.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.08f);
+            backBtnGo.GetComponent<Shadow>().effectDistance = new Vector2(0f, -2f);
         }
 
         private void BindReferencesFromChildren()
@@ -57,6 +68,8 @@ namespace RingFlow.Gameplay.UI
             foreach (var btn in buttons)
             {
                 GameUIResources.AddButtonEffects(btn);
+                var upperName = btn.name.ToUpperInvariant();
+                if (upperName.Contains("BACK")) BackButton = btn;
             }
             var texts = GetComponentsInChildren<Text>(true);
             foreach (var txt in texts)

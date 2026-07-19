@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dfd2bdb018374af4db34b9c6e5a16baf, type: 3}
+  m_Name: ScreenRegistry
+  m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.UI.ScreenRegistrySO
+  Mappings:
+  - Screen: 0
+    PrefabPath: UI/Splash
+    ViewTypeName: RingFlow.Gameplay.UI.SplashView, Assembly-CSharp
+  - Screen: 1
+    PrefabPath: UI/MainMenu
+    ViewTypeName: RingFlow.Gameplay.UI.MainMenuView, Assembly-CSharp
+  - Screen: 2
+    PrefabPath: UI/WorldMap
+    ViewTypeName: RingFlow.Gameplay.UI.WorldMapView, Assembly-CSharp
+  - Screen: 3
+    PrefabPath: UI/LevelSelect
+    ViewTypeName: RingFlow.Gameplay.UI.LevelSelectView, Assembly-CSharp
+  - Screen: 4
+    PrefabPath: UI/Gameplay
+    ViewTypeName: RingFlow.Gameplay.UI.HUDView, Assembly-CSharp
+  - Screen: 5
+    PrefabPath: UI/Pause
+    ViewTypeName: RingFlow.Gameplay.UI.PauseView, Assembly-CSharp
+  - Screen: 6
+    PrefabPath: UI/Win
+    ViewTypeName: RingFlow.Gameplay.UI.WinView, Assembly-CSharp
+  - Screen: 7
+    PrefabPath: UI/Settings
+    ViewTypeName: RingFlow.Gameplay.UI.SettingsView, Assembly-CSharp
+  - Screen: 8
+    PrefabPath: UI/DailyReward
+    ViewTypeName: RingFlow.Gameplay.UI.DailyRewardPopupView, Assembly-CSharp
+  - Screen: 9
+    PrefabPath: UI/Onboarding
+    ViewTypeName: RingFlow.Gameplay.UI.OnboardingView, Assembly-CSharp
+  - Screen: 10
+    PrefabPath: UI/GameOver
+    ViewTypeName: RingFlow.Gameplay.UI.GameOverView, Assembly-CSharp
+  - Screen: 11
+    PrefabPath: UI/ChestPopup
+    ViewTypeName: RingFlow.Gameplay.UI.ChestPopupView, Assembly-CSharp
+  - Screen: 12
+    PrefabPath: UI/ParentalGate
+    ViewTypeName: RingFlow.Gameplay.UI.ParentalGatePopupView, Assembly-CSharp
