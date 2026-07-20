@@ -216,7 +216,9 @@ namespace RingFlow.Editor
                 var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
                 if (db == null)
                 {
-                    throw new System.InvalidOperationException($"[RuntimeSection] GameConfigDatabaseSO '{EditorPaths.GameConfigDatabaseKey}' not found.");
+                    NexusLog.Error("RuntimeSection", "DrawEconomyRow", "UnlockAll",
+                        $"[Editor] GameConfigDatabaseSO '{EditorPaths.GameConfigDatabaseKey}' not found. Cannot unlock all levels.");
+                    return;
                 }
 
                 int totalLevels = db.LevelsPerWorld * db.TotalWorlds;

@@ -27,6 +27,8 @@ namespace RingFlow.Editor
         private Vector2 _scrollPos;
         private int _valStartLevel = 1;
         private int _valEndLevel = 50;
+        private int _metaStartLevel = 1;
+        private int _metaEndLevel = 50;
         private bool _fixTargetsEnabled;
         private List<BatchValidationResult> _validationResults = new();
 
@@ -318,7 +320,33 @@ namespace RingFlow.Editor
                 }
             }
 
-            // --- 4. TOPLU SEVİYE DOĞRULAYICI ---
+            // --- 4. TOPLU METADATA DÜZENLEME ---
+            EditorGUILayout.Space(15f);
+            RingFlowEditorUtils.BeginSectionBox("Toplu Seviye Metadata Düzenleme", "Seçilen seviye aralığındaki bölümlerin TargetMoves veya Seed değerlerini topluca değiştirin.");
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                _metaStartLevel = Mathf.Clamp(EditorGUILayout.IntField("Başlangıç Seviyesi", _metaStartLevel, GUILayout.Width(150f)), 1, _database.TotalLevels);
+                _metaEndLevel = Mathf.Clamp(EditorGUILayout.IntField("Bitiş Seviyesi", _metaEndLevel, GUILayout.Width(150f)), _metaStartLevel, _database.TotalLevels);
+            }
+
+            EditorGUILayout.Space(4f);
+
+            // --- Toplu TargetMoves Ayarla ---
+            EditorGUILayout.LabelField("Toplu TargetMoves Ayarla", EditorStyles.miniBoldLabel);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button(new GUIContent("🎯 Çözücü ile Ayarla", 
+                    "Seçili seviyeleri LevelSolver ile çözüp TargetMoves değerini solver sonucuna göre günceller."),
+                    GUILayout.Height(28)))
+                {
+                    BatchSetTargetMovesFromSolver();
+                }
+            }
+
+            RingFlowEditorUtils.EndSectionBox();
+
+            // --- 5. TOPLU SEVİYE DOĞRULAYICI ---
             EditorGUILayout.Space(15f);
             RingFlowEditorUtils.BeginSectionBox("Toplu Seviye Doğrulayıcı ve Çözücü Testi", "Seçilen seviye aralığındaki bölümleri tek tek üretir, çözücü ile doğrular, süre ve çözülebilirlik raporu sunar.");
 
@@ -493,6 +521,95 @@ namespace RingFlow.Editor
                                 $"Ort. Süre: {(solvedCount > 0 ? (totalTime / solvedCount) : 0):F1}ms\n" +
                                 $"Ort. Hamle: {(solvedCount > 0 ? (totalMoves / (float)solvedCount) : 0):F1}";
             EditorUtility.DisplayDialog("Doğrulama Tamamlandı", summaryMsg, "Tamam");
+        }
+
+        private void BatchSetTargetMovesFromSolver()
+        {
+            if (_database == null)
+            {
+                EditorUtility.DisplayDialog("Hata", "Veritabanı yüklenemedi!", "Tamam");
+                return;
+            }
+
+            int startLevel = Mathf.Max(1, _metaStartLevel);
+            int endLevel = Mathf.Min(_metaEndLevel, _database.TotalLevels);
+
+            if (!EditorUtility.DisplayDialog("Toplu TargetMoves Ayarla",
+                $"Seviye {startLevel} ile {endLevel} arasındaki tüm mevcut seviyelerin TargetMoves değeri " +
+                $"LevelSolver ile hesaplanarak güncellenecek.\n\nBu işlem geri alınamaz! Devam etmek istiyor musunuz?",
+                "Evet, Başlat", "İptal")) return;
+
+            EditorUtility.DisplayProgressBar("TargetMoves Hesaplanıyor", "Hazırlanıyor...", 0f);
+
+            int totalSolved = 0;
+            int totalLevels = 0;
+            var failedLevels = new List<int>();
+
+            for (int i = startLevel; i <= endLevel; i++)
+            {
+                float progress = (float)(i - startLevel + 1) / (endLevel - startLevel + 1);
+                EditorUtility.DisplayProgressBar("TargetMoves Hesaplanıyor",
+                    $"Seviye {i} / {endLevel} çözülüyor... (%{progress * 100:F0})", progress);
+
+                string assetPath = $"Assets/Resources/Levels/Level_{i}.asset";
+                var levelSO = AssetDatabase.LoadAssetAtPath<LevelDataSO>(assetPath);
+                if (levelSO == null || levelSO.Data == null) continue;
+
+                totalLevels++;
+
+                // Build board from level data
+                var data = levelSO.Data;
+                int maxCap = _database.GetMaxCapacityForLevel(i);
+                int colorCount = _database.GetColorCountForLevel(i);
+
+                var board = new BoardState { PoleCount = data.Poles.Count, MaxCapacity = maxCap };
+                for (int p = 0; p < data.Poles.Count; p++)
+                {
+                    board.SetPoleLocked(p, data.Poles[p].IsLocked);
+                    board.SetRingCount(p, data.Poles[p].Rings.Count);
+                    for (int r = 0; r < data.Poles[p].Rings.Count; r++)
+                    {
+                        board.SetRingColor(p, r, data.Poles[p].Rings[r].Color);
+                        board.SetRingType(p, r, data.Poles[p].Rings[r].Type);
+                        board.SetRingAdditional(p, r, data.Poles[p].Rings[r].AdditionalData);
+                    }
+                }
+
+                int solverLimit = GetSolverLimitFromBuckets(colorCount, _database.LevelGen.SolverLimitBuckets);
+                var solveResult = LevelSolver.Solve(board, maxCap, maxStatesLimit: solverLimit);
+
+                if (solveResult.IsSolvable)
+                {
+                    Undo.RecordObject(levelSO, "Toplu TargetMoves Düzelt");
+                    levelSO.Data.TargetMoves = solveResult.MoveCount;
+                    var portalTargets = new int[data.Poles.Count];
+                    for (int p = 0; p < data.Poles.Count; p++)
+                        portalTargets[p] = data.Poles[p].PortalTargetId;
+                    LevelGenerator.PopulateGddMetadata(levelSO.Data, _database, board, solveResult.MoveCount, maxCap, portalTargets);
+                    EditorUtility.SetDirty(levelSO);
+                    totalSolved++;
+                }
+                else
+                {
+                    failedLevels.Add(i);
+                }
+            }
+
+            EditorUtility.ClearProgressBar();
+
+            AssetDatabase.SaveAssets();
+
+            string msg = $"İşlem tamamlandı!\n\n" +
+                         $"Toplam seviye: {totalLevels}\n" +
+                         $"Başarıyla güncellenen TargetMoves: {totalSolved}\n" +
+                         $"Çözülemeyen seviyeler: {failedLevels.Count}";
+
+            if (failedLevels.Count > 0)
+                msg += $"\nÇözülemeyen seviye listesi: {string.Join(", ", failedLevels)}";
+
+            EditorUtility.DisplayDialog("Toplu TargetMoves Güncelleme", msg, "Tamam");
+
+            // LevelBrowser cache'i otomatik yenileme: sonraki açılışta güncellenir
         }
 
         private static int GetSolverLimitFromBuckets(int colorCount, List<SolverLimitBucket> buckets)

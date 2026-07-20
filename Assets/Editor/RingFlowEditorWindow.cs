@@ -30,9 +30,11 @@ namespace RingFlow.Editor
 
         private Vector2 _scroll;
         private int _selectedTab;
+        private int _pendingSelectedTab = -1;
         private readonly string[] _tabs = { "Ana Sayfa", "Seviye İşlemleri", "Arayüz Stüdyosu", "Veri & GDD Denetimi", "Ayarlar & Araçlar" };
 
         private int _selectedConfigSubTab = 0;
+        private int _pendingSelectedConfigSubTab = -1;
         private readonly string[] _configSubTabs = {
             "Oyun Modu & Çalışma",
             "Reklam Test Cihazı",
@@ -231,6 +233,16 @@ namespace RingFlow.Editor
 
             if (Event.current.type == EventType.Layout)
             {
+                if (_pendingSelectedTab >= 0)
+                {
+                    _selectedTab = _pendingSelectedTab;
+                    _pendingSelectedTab = -1;
+                }
+                if (_pendingSelectedConfigSubTab >= 0)
+                {
+                    _selectedConfigSubTab = _pendingSelectedConfigSubTab;
+                    _pendingSelectedConfigSubTab = -1;
+                }
                 _cachedWindowWidth = position.width;
                 _cachedCompactLayout = _cachedWindowWidth < 980f;
             }
@@ -341,9 +353,9 @@ namespace RingFlow.Editor
             
             if (Event.current.type == EventType.MouseDown && rect.Contains(Event.current.mousePosition))
             {
-                _selectedTab = tabIndex;
+                _pendingSelectedTab = tabIndex;
                 _scroll = Vector2.zero;
-                EditorPrefs.SetInt(EditorPrefsKeys.SelectedTab, _selectedTab);
+                EditorPrefs.SetInt(EditorPrefsKeys.SelectedTab, tabIndex);
                 if (_cachedAssetEditor != null)
                 {
                     DestroyImmediate(_cachedAssetEditor);
@@ -352,6 +364,7 @@ namespace RingFlow.Editor
                 }
                 GUI.FocusControl(null);
                 Event.current.Use();
+                Repaint();
             }
         }
 
@@ -388,9 +401,9 @@ namespace RingFlow.Editor
             
             if (Event.current.type == EventType.MouseDown && rect.Contains(Event.current.mousePosition))
             {
-                _selectedTab = tabIndex;
+                _pendingSelectedTab = tabIndex;
                 _scroll = Vector2.zero;
-                EditorPrefs.SetInt(EditorPrefsKeys.SelectedTab, _selectedTab);
+                EditorPrefs.SetInt(EditorPrefsKeys.SelectedTab, tabIndex);
                 if (_cachedAssetEditor != null)
                 {
                     DestroyImmediate(_cachedAssetEditor);
@@ -399,6 +412,7 @@ namespace RingFlow.Editor
                 }
                 GUI.FocusControl(null);
                 Event.current.Use();
+                Repaint();
             }
         }
 
@@ -636,9 +650,9 @@ namespace RingFlow.Editor
                             // handle click actions
                             if (Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseUp || Event.current.type == EventType.Used)
                             {
-                                if (index == 0) _selectedTab = 1;
-                                else if (index == 1) _selectedTab = 2;
-                                else if (index == 2) _selectedTab = 4; // Tools tab is 4
+                                if (index == 0) _pendingSelectedTab = 1;
+                                else if (index == 1) _pendingSelectedTab = 2;
+                                else if (index == 2) _pendingSelectedTab = 4; // Tools tab is 4
                                 else if (index == 3) _generator.GenerateFromDashboard();
                                 else if (index == 4) _visualBuilder.BuildFromDashboard();
                             }
@@ -923,7 +937,7 @@ namespace RingFlow.Editor
             
             if (Event.current.type == EventType.MouseDown && rect.Contains(Event.current.mousePosition))
             {
-                _selectedConfigSubTab = index;
+                _pendingSelectedConfigSubTab = index;
                 _scroll = Vector2.zero;
                 if (_cachedAssetEditor != null)
                 {
@@ -933,6 +947,7 @@ namespace RingFlow.Editor
                 }
                 GUI.FocusControl(null);
                 Event.current.Use();
+                Repaint();
             }
         }
 

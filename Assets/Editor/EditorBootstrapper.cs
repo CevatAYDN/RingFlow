@@ -102,7 +102,7 @@ namespace RingFlow.Editor
 
             var torusPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(EditorPaths.TorusPrefabPath);
             if (torusPrefab == null)
-                throw new System.InvalidOperationException("[EditorBootstrapper] Torus prefab is required.");
+                throw new System.InvalidOperationException("[EditorBootstrapper] Torus prefab is required at " + EditorPaths.TorusPrefabPath);
             boardView.SetTorusPrefab(torusPrefab);
 
             var lifecycle = rootObj.AddComponent<GameplayLifecycle>();
@@ -125,7 +125,7 @@ namespace RingFlow.Editor
 
             var inputModuleType = ResolveInputSystemUIInputModuleType();
             if (inputModuleType == null)
-                throw new System.InvalidOperationException("[EditorBootstrapper] Input System UI module type is required.");
+                throw new System.InvalidOperationException("[EditorBootstrapper] Input System UI module type could not be resolved. The Input System package may not be installed.");
 
             if (eventSystem.GetComponent<BaseInputModule>() == null)
             {
@@ -147,7 +147,7 @@ namespace RingFlow.Editor
 
             var feel = Resources.Load<Gameplay.GameFeelConfigSO>(EditorPaths.GameFeelConfigKey);
             if (feel == null)
-                throw new System.InvalidOperationException("[EditorBootstrapper] GameFeelConfigSO is required.");
+                throw new System.InvalidOperationException("[EditorBootstrapper] GameFeelConfigSO is required at " + EditorPaths.GameFeelConfigKey);
 
             camera.orthographic = true;
             camera.orthographicSize = feel.CameraBaseOrtho;

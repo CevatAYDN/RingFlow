@@ -271,8 +271,10 @@ namespace RingFlow.Editor
 
         private BoardState ReadBoardFromScene(out int[] portalTargets)
         {
+            portalTargets = System.Array.Empty<int>();
+
             var boardRoot = GameObject.Find(EditorPaths.VisualBoardName);
-                        if (boardRoot == null)
+            if (boardRoot == null)
             {
                 EditorUtility.DisplayDialog("Tahta Bulunamadı",
                     $"Sahnede '{EditorPaths.VisualBoardName}' bulunamadı. Lütfen önce sahneyi kurun (Build Board).",
@@ -296,11 +298,21 @@ namespace RingFlow.Editor
                     polesList.Add(child);
             }
 
-            int resolvedMaxCapacity = f.PoleSpacing > 0f
-                ? _generator.GeneratedLevel != null
-                    ? _generator.GeneratedLevel.Poles[0].RingCapacity
-                    : throw new System.InvalidOperationException("[VisualBuilderSection] Cannot infer max capacity from scene without generated level data.")
-                : throw new System.InvalidOperationException("[VisualBuilderSection] GameFeelConfigSO has invalid PoleSpacing.");
+            if (f.PoleSpacing <= 0f)
+            {
+                EditorUtility.DisplayDialog("GameFeelConfig Hatası",
+                    "GameFeelConfigSO PoleSpacing değeri geçersiz. Lütfen GameFeelConfig asset'ini kontrol edin.",
+                    "Tamam");
+                return new BoardState();
+            }
+            if (_generator.GeneratedLevel == null || _generator.GeneratedLevel.Poles == null || _generator.GeneratedLevel.Poles.Count == 0)
+            {
+                EditorUtility.DisplayDialog("Seviye Verisi Eksik",
+                    "Kapasite sahne verisinden çıkarılamıyor. Lütfen önce bir seviye üretin (Generator).",
+                    "Tamam");
+                return new BoardState();
+            }
+            int resolvedMaxCapacity = _generator.GeneratedLevel.Poles[0].RingCapacity;
 
             var board = new BoardState { PoleCount = polesList.Count, MaxCapacity = resolvedMaxCapacity };
             portalTargets = CreateEmptyPortalTargets(polesList.Count);

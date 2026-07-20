@@ -41,12 +41,12 @@ namespace RingFlow.Editor
         private void DrawInitControlsAndActions()
         {
             var uiRoot = EditorSceneContext.GetUIRoot();
-            string status = uiRoot switch
-            {
-                null => "EKSİK",
-                _ when uiRoot.Canvas != null => "Hazır",
-                _ => "Başlatma Bekliyor"
-            };
+            // UYARI: Unity'de yok edilmiş MonoBehaviour'lar == null ile yakalanır,
+            // switch pattern matching (is null) ile DEĞİL. Bu Unity gotcha'sıdır.
+            // Bu yüzden switch expression yerine if/else kullanıyoruz.
+            string status = uiRoot == null
+                ? "EKSİK"
+                : (uiRoot.Canvas != null ? "Hazır" : "Başlatma Bekliyor");
 
             RingFlowEditorUtils.BeginSectionBox("Arayüz Yönetim Kontrolleri", $"UIRoot: {(uiRoot != null ? uiRoot.name : "—")}  [{status}]");
 

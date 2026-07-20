@@ -2,6 +2,7 @@ using UnityEditor;
 using UnityEngine;
 using Nexus.Core.Services;
 using RingFlow.Gameplay;
+using System.Text;
 
 namespace RingFlow.Editor
 {
@@ -11,6 +12,7 @@ namespace RingFlow.Editor
     /// dashboard'dan ulaşılabilir kılmak. Düzenleme sorumluluğu var olan
     /// LevelDataSOEditor'a (Selection üzerinden) devredilir; bu bölüm yalnızca
     /// gezinme ve açma işini yapar.
+    /// Ayrıca seviyelerin JSON dışa/içe aktarımını da destekler.
     /// </summary>
     public sealed class LevelBrowserSection : EditorSection
     {
@@ -123,6 +125,16 @@ namespace RingFlow.Editor
                 }
             }
 
+            // ── Dışa / İçe Aktarım Butonları ──
+            RingFlowEditorUtils.BeginSectionBox("Seviye Dışa / İçe Aktarım (JSON)", "Seviyeleri JSON formatında dışa aktarın veya harici bir JSON'dan içe aktarın.");
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button(new GUIContent("📤 JSON Dışa Aktar", "Seçilen seviyeyi veya tüm üretilmiş seviyeleri JSON dosyasına aktarır."), GUILayout.Height(26)))
+                    ExportLevelsToJson();
+                if (GUILayout.Button(new GUIContent("📥 JSON İçe Aktar", "Bir JSON dosyasından seviye verilerini yükler."), GUILayout.Height(26)))
+                    ImportLevelsFromJson();
+            }
+            EditorGUILayout.HelpBox("Dışa aktarılan JSON dosyaları, seviye düzenini harici araçlarla paylaşmanızı veya yedeklemenizi sağlar.", MessageType.Info);
             RingFlowEditorUtils.EndSectionBox();
 
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionSpacing);
@@ -325,6 +337,97 @@ namespace RingFlow.Editor
                     $"(Batch aralığını {level}–{level} olarak ayarlayıp 'Toplu Üret'e tıklayın.)",
                     "Tamam");
             }
+        }
+
+        // ── JSON Dışa / İçe Aktarım ───────────────────────────────────────
+
+        private void ExportLevelsToJson()
+        {
+            string folder = EditorUtility.OpenFolderPanel("Dışa Aktarılacak Klasörü Seçin", Application.dataPath, "");
+            if (string.IsNullOrEmpty(folder)) return;
+
+            RefreshExistenceCache();
+
+            int exported = 0;
+            for (int i = 0; i < _cachedTotalLevels; i++)
+            {
+                if (!_cachedExistsFlags[i]) continue;
+
+                int levelNum = i + 1;
+                string assetPath = $"{EditorPaths.LevelsFolder}/Level_{levelNum}.asset";
+                var levelSO = AssetDatabase.LoadAssetAtPath<LevelDataSO>(assetPath);
+                if (levelSO == null || levelSO.Data == null) continue;
+
+                string json = JsonUtility.ToJson(levelSO.Data, prettyPrint: true);
+                string filePath = $"{folder}/Level_{levelNum}.json";
+                try
+                {
+                    System.IO.File.WriteAllText(filePath, json, Encoding.UTF8);
+                    exported++;
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"[LevelBrowser] Level {levelNum} JSON yazılamadı: {ex.Message}");
+                }
+            }
+
+            EditorUtility.DisplayDialog("JSON Dışa Aktarım Tamamlandı",
+                $"{exported} seviye JSON olarak dışa aktarıldı.\nHedef: {folder}", "Tamam");
+            EditorUtility.RevealInFinder(folder);
+        }
+
+        private void ImportLevelsFromJson()
+        {
+            string jsonFile = EditorUtility.OpenFilePanelWithFilters(
+                "JSON Seviye Dosyası Seçin", Application.dataPath,
+                new string[] { "JSON Dosyaları", "json" });
+
+            if (string.IsNullOrEmpty(jsonFile)) return;
+
+            int imported = 0;
+            int skipped = 0;
+
+            try
+            {
+                string json = System.IO.File.ReadAllText(jsonFile, Encoding.UTF8);
+                var levelData = JsonUtility.FromJson<LevelData>(json);
+                if (levelData == null || levelData.LevelIndex <= 0)
+                {
+                    skipped++;
+                }
+                else
+                {
+                    string assetPath = $"{EditorPaths.LevelsFolder}/Level_{levelData.LevelIndex}.asset";
+                    var levelSO = AssetDatabase.LoadAssetAtPath<LevelDataSO>(assetPath);
+
+                    if (levelSO == null)
+                    {
+                        levelSO = ScriptableObject.CreateInstance<LevelDataSO>();
+                        levelSO.Data = levelData;
+                        AssetDatabase.CreateAsset(levelSO, assetPath);
+                    }
+                    else
+                    {
+                        Undo.RecordObject(levelSO, "JSON Import");
+                        levelSO.Data = levelData;
+                        EditorUtility.SetDirty(levelSO);
+                    }
+
+                    imported++;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[LevelBrowser] JSON içe aktarma hatası: {jsonFile} — {ex.Message}");
+                skipped++;
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            InvalidateExistenceCache();
+
+            EditorUtility.DisplayDialog("JSON İçe Aktarım Tamamlandı",
+                $"{imported} seviye içe aktarıldı.\nAtlanan: {skipped}", "Tamam");
         }
     }
 }

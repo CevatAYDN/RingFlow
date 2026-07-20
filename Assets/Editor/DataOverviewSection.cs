@@ -94,6 +94,12 @@ namespace RingFlow.Editor
             // ── Asset Shortcuts ──
             RingFlowEditorUtils.FoldoutSection(EditorPrefsKeys.FoldDataAssets,
                 "Yapılandırma Varlıklarına Git (Config Assets)", DrawAssetJumps);
+
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionBreak);
+
+            // ── Localization Editor Quick Link ──
+            RingFlowEditorUtils.FoldoutSection(EditorPrefsKeys.FoldDataLocEditor,
+                "Yerelleştirme Düzenleyici (CSV Editor)", DrawLocalizationEditorLink);
         }
 
         private void EnsureCachedDatabase()
@@ -996,6 +1002,59 @@ namespace RingFlow.Editor
         }
 
         #endregion Cross-SO Validation
+
+        private void DrawLocalizationEditorLink()
+        {
+            var loc = LoadAsset<LocalizationConfigSO>(EditorPaths.LocalizationConfigKey);
+            if (loc != null)
+            {
+                EditorGUILayout.HelpBox(
+                    "Yerelleştirme Çeviri Düzenleyici (LocalizationConfigSO Custom Editor) kullanıma hazır.\n" +
+                    "Tüm dil anahtarlarını ve çevirileri doğrudan CSV tablosu üzerinde düzenleyin.",
+                    MessageType.Info);
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button(new GUIContent("📝 Yerelleştirme Düzenleyiciyi Aç",
+                        "LocalizationConfigSO asset seçilir ve Custom Editor (CSV Grid) Inspector'da açılır."),
+                        GUILayout.Height(30)))
+                    {
+                        Selection.activeObject = loc;
+                        EditorGUIUtility.PingObject(loc);
+                    }
+
+                    if (GUILayout.Button(new GUIContent("📄 CSV Dosyasını Harici Aç",
+                        "Localization.csv dosyasını varsayılan metin düzenleyicide açar."),
+                        GUILayout.Height(30)))
+                    {
+                        string csvPath = "Assets/Resources/Localization.csv";
+                        var csvAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(csvPath);
+                        if (csvAsset != null)
+                            AssetDatabase.OpenAsset(csvAsset);
+                        else
+                            EditorUtility.DisplayDialog("CSV Bulunamadı",
+                                "Localization.csv dosyası Assets/Resources/ klasöründe bulunamadı!", "Tamam");
+                    }
+                }
+
+                int langCount = loc.Languages?.Count ?? 0;
+                int csvLineCount = 0;
+                string csvPath2 = "Assets/Resources/Localization.csv";
+                if (System.IO.File.Exists(csvPath2))
+                {
+                    var lines = System.IO.File.ReadAllLines(csvPath2);
+                    csvLineCount = lines.Length >= 2 ? lines.Length - 1 : 0;
+                }
+
+                EditorGUILayout.LabelField(
+                    $"Durum: {langCount} dil, {csvLineCount} çeviri anahtarı",
+                    EditorStyles.miniLabel);
+            }
+            else
+            {
+                EditorGUILayout.HelpBox("LocalizationConfigSO.asset bulunamadı! Önce Config Assets sekmesinden oluşturun.", MessageType.Error);
+            }
+        }
 
         private void DrawAssetJumps()
         {

@@ -66,6 +66,16 @@ namespace RingFlow.Editor
 
         public static void Initialize()
         {
+            RefreshTheme();
+        }
+
+        /// <summary>
+        /// Force-refreshes the cached theme and sprite library from Resources.
+        /// Call this if the UIThemeConfigSO asset has changed on disk to ensure
+        /// fresh colors and sprites are used during prefab generation.
+        /// </summary>
+        public static void RefreshTheme()
+        {
             _theme = Resources.Load<UIThemeConfigSO>(GameplayAssetKeys.UIThemeConfig);
             if (_theme != null)
                 _spriteLib = _theme.SpriteLibrary;

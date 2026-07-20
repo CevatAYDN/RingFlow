@@ -247,6 +247,8 @@ namespace RingFlow.Editor
             return expanded;
         }
 
+        private static readonly System.Collections.Generic.Dictionary<string, bool> s_foldStates = new();
+
         /// <summary>
         /// Draws a persistent (EditorPrefs-backed) collapsible section. The
         /// fold state survives domain reloads and editor restarts, so large
@@ -254,9 +256,22 @@ namespace RingFlow.Editor
         /// </summary>
         public static void FoldoutSection(string foldKey, string title, System.Action drawContent)
         {
-            bool expanded = EditorPrefs.GetBool(foldKey, true);
-            expanded = DrawHeaderFoldout(title, expanded);
-            EditorPrefs.SetBool(foldKey, expanded);
+            if (Event.current.type == EventType.Layout)
+            {
+                s_foldStates[foldKey] = EditorPrefs.GetBool(foldKey, true);
+            }
+
+            if (!s_foldStates.TryGetValue(foldKey, out bool expanded))
+            {
+                expanded = EditorPrefs.GetBool(foldKey, true);
+                s_foldStates[foldKey] = expanded;
+            }
+
+            bool newExpanded = DrawHeaderFoldout(title, expanded);
+            if (newExpanded != expanded)
+            {
+                EditorPrefs.SetBool(foldKey, newExpanded);
+            }
             
             if (expanded)
             {

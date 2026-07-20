@@ -107,7 +107,10 @@ namespace RingFlow.Editor
 
             s_cachedPalette = Resources.Load<RingColorPaletteSO>(EditorPaths.RingColorPaletteKey);
             if (s_cachedPalette == null)
-                throw new System.InvalidOperationException("[LevelDataSOEditor] RingColorPaletteSO is required.");
+            {
+                EditorGUILayout.HelpBox("RingColorPaletteSO bulunamadı! Lütfen Resources klasöründe oluşturun.", MessageType.Error);
+                return null;
+            }
 
             s_paletteCacheTime = now;
             return s_cachedPalette;
@@ -289,7 +292,10 @@ namespace RingFlow.Editor
                     {
                         var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
                         if (db == null)
-                            throw new System.InvalidOperationException("[LevelDataSOEditor] GameConfigDatabaseSO is required to determine ring capacity.");
+                        {
+                            EditorGUILayout.HelpBox("GameConfigDatabaseSO bulunamadı. Ring kapasitesi belirlenemiyor.", MessageType.Error);
+                            return;
+                        }
                         int ringCapacity = levelSO.Data.Poles.Count > 0 
                             ? levelSO.Data.Poles[0].RingCapacity 
                             : db.GetMaxCapacityForLevel(levelSO.Data.LevelIndex);
@@ -323,7 +329,11 @@ namespace RingFlow.Editor
         private void VerifyAndSolve(LevelDataSO levelSO)
         {
             var database = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
-            if (database == null) throw new System.InvalidOperationException("GameConfigDatabase not found!");
+            if (database == null)
+            {
+                EditorUtility.DisplayDialog("Veritabanı Eksik", "GameConfigDatabaseSO bulunamadı. Lütfen önce oluşturun.", "Tamam");
+                return;
+            }
 
             var board = BuildBoardStateFromLevelData(levelSO.Data, database, out int maxCapacity, out int[] portalTargets);
             int levelIndex = levelSO.Data.LevelIndex;
@@ -393,7 +403,12 @@ namespace RingFlow.Editor
         private static BoardState BuildBoardStateFromLevelData(LevelData levelData, GameConfigDatabaseSO database, out int maxCapacity, out int[] portalTargets)
         {
             if (levelData == null)
-                throw new System.ArgumentNullException(nameof(levelData));
+            {
+                Debug.LogError("[LevelDataSOEditor] LevelData is null. Cannot build board state.");
+                maxCapacity = BoardState.MaxSupportedCapacity;
+                portalTargets = System.Array.Empty<int>();
+                return new BoardState();
+            }
 
             int poleCount = levelData.Poles?.Count ?? 0;
             maxCapacity = database != null ? database.GetMaxCapacityForLevel(levelData.LevelIndex) : GameplayAssetKeys.Tuning.MaxCapacity;
@@ -408,8 +423,9 @@ namespace RingFlow.Editor
 
                 if (pole.RingCapacity > BoardState.MaxSupportedCapacity)
                 {
-                    throw new System.InvalidOperationException(
-                        $"Level {levelData.LevelIndex} pole {p} capacity {pole.RingCapacity} exceeds BoardState.MaxSupportedCapacity={BoardState.MaxSupportedCapacity}.");
+                    Debug.LogError(
+                        $"[LevelDataSOEditor] Level {levelData.LevelIndex} pole {p} capacity {pole.RingCapacity} exceeds BoardState.MaxSupportedCapacity={BoardState.MaxSupportedCapacity}.");
+                    continue;
                 }
 
                 if (pole.RingCapacity > maxCapacity) maxCapacity = pole.RingCapacity;
@@ -420,8 +436,9 @@ namespace RingFlow.Editor
                 int count = pole.Rings?.Count ?? 0;
                 if (count > pole.RingCapacity)
                 {
-                    throw new System.InvalidOperationException(
-                        $"Level {levelData.LevelIndex} pole {p} has {count} rings but capacity is {pole.RingCapacity}.");
+                    Debug.LogError(
+                        $"[LevelDataSOEditor] Level {levelData.LevelIndex} pole {p} has {count} rings but capacity is {pole.RingCapacity}.");
+                    continue;
                 }
 
                 board.SetRingCount(p, count);
@@ -520,7 +537,10 @@ namespace RingFlow.Editor
 
             var database = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
             if (database == null)
-                throw new System.InvalidOperationException("[LevelDataSOEditor] GameConfigDatabaseSO is required.");
+            {
+                EditorGUILayout.HelpBox("GameConfigDatabaseSO bulunamadı. Zorluk ve mekanik önizlemesi gösterilemiyor.", MessageType.Warning);
+                return;
+            }
             int levelIndex = levelData.LevelIndex;
             var band = database.GetBandForLevel(levelIndex);
             var allowed = database.GetAllowedMechanicsForLevel(levelIndex);
