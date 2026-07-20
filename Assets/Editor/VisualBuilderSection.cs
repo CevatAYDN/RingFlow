@@ -176,9 +176,7 @@ namespace RingFlow.Editor
             int poleCount = polesToBuild != null ? polesToBuild.Count : _generator.GeneratedLevel.Poles.Count;
             NexusLog.Info("RingFlowEditor", nameof(BuildInScene), "", $"Building visual board with {poleCount} poles.");
 
-            var database = new RingFlow.Gameplay.Services.ResourcesAssetService()
-                    .LoadAsync<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey)
-                    .GetAwaiter().GetResult();
+            var database = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
             if (database == null)
             {
                 EditorUtility.DisplayDialog("Veritabanı Bulunamadı",
@@ -192,7 +190,10 @@ namespace RingFlow.Editor
                 : _generator.GeneratedLevel == null ? 0 : _generator.GeneratedLevel.LevelIndex;
             if (levelIndex <= 0)
             {
-                throw new System.InvalidOperationException("[VisualBuilderSection] GeneratedLevel is required to resolve capacity.");
+                EditorUtility.DisplayDialog("Seviye Verisi Eksik",
+                    "Kapasiteyi belirlemek için üretilmiş bir seviye gerekiyor. Lütfen önce bir seviye üretin.",
+                    "Tamam");
+                return;
             }
 
             int resolvedMaxCapacity = database.GetMaxCapacityForLevel(levelIndex);
@@ -232,7 +233,10 @@ namespace RingFlow.Editor
             var boardRoot = GameObject.Find(EditorPaths.VisualBoardName);
             if (boardRoot == null)
             {
-                throw new System.InvalidOperationException($"[VisualBuilderSection] Visual board root '{EditorPaths.VisualBoardName}' was not created.");
+                EditorUtility.DisplayDialog("Tahta Oluşturulamadı",
+                    $"'{EditorPaths.VisualBoardName}' GameObject'i sahneye eklenemedi. Şu an çalışma zamanında olmayabilir.",
+                    "Tamam");
+                return;
             }
 
             var selectedRoot = boardRoot;
@@ -270,15 +274,19 @@ namespace RingFlow.Editor
             var boardRoot = GameObject.Find(EditorPaths.VisualBoardName);
                         if (boardRoot == null)
             {
-                throw new System.InvalidOperationException($"[VisualBuilderSection] Visual board root '{EditorPaths.VisualBoardName}' was not found in the scene. Build the board first.");
+                EditorUtility.DisplayDialog("Tahta Bulunamadı",
+                    $"Sahnede '{EditorPaths.VisualBoardName}' bulunamadı. Lütfen önce sahneyi kurun (Build Board).",
+                    "Tamam");
+                return new BoardState();
             }
 
-            var f = new RingFlow.Gameplay.Services.ResourcesAssetService()
-                    .LoadAsync<GameFeelConfigSO>(EditorPaths.GameFeelConfigKey)
-                    .GetAwaiter().GetResult();
+            var f = Resources.Load<GameFeelConfigSO>(EditorPaths.GameFeelConfigKey);
             if (f == null)
             {
-                throw new System.InvalidOperationException($"[VisualBuilderSection] GameFeelConfigSO '{EditorPaths.GameFeelConfigKey}' not found.");
+                EditorUtility.DisplayDialog("Konfigürasyon Eksik",
+                    $"GameFeelConfigSO '{EditorPaths.GameFeelConfigKey}' bulunamadı. Lütfen önce Resources klasöründe oluşturun.",
+                    "Tamam");
+                return new BoardState();
             }
 
             var polesList = new List<Transform>();
@@ -388,12 +396,8 @@ namespace RingFlow.Editor
             Undo.RegisterCreatedObjectUndo(boardRoot, "Build Visual Board");
 
             var torusModel = AssetDatabase.LoadAssetAtPath<GameObject>(EditorPaths.TorusPrefabPath);
-            var f = new RingFlow.Gameplay.Services.ResourcesAssetService()
-                    .LoadAsync<GameFeelConfigSO>(EditorPaths.GameFeelConfigKey)
-                    .GetAwaiter().GetResult();
-            var palette = new RingFlow.Gameplay.Services.ResourcesAssetService()
-                    .LoadAsync<RingColorPaletteSO>(EditorPaths.RingColorPaletteKey)
-                    .GetAwaiter().GetResult();
+            var f = Resources.Load<GameFeelConfigSO>(EditorPaths.GameFeelConfigKey);
+            var palette = Resources.Load<RingColorPaletteSO>(EditorPaths.RingColorPaletteKey);
             if (f == null || palette == null)
             {
                 EditorUtility.DisplayDialog("Görsel Konfig Eksik",

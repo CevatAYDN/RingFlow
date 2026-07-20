@@ -19,7 +19,9 @@ namespace RingFlow.Gameplay.UI
     public class ScreenLoader
     {
         private readonly Transform _canvasTransform;
-        private readonly Dictionary<ScreenType, GameObject> _screens = new();
+        private readonly System.Func<Dictionary<ScreenType, GameObject>> _getScreens;
+        private readonly Dictionary<ScreenType, GameObject> _localScreens;
+        private Dictionary<ScreenType, GameObject> _screens => _getScreens != null ? _getScreens() : _localScreens;
 
         /// <summary>All registered screen types in default load order.</summary>
         private static readonly ScreenType[] s_allScreens =
@@ -41,9 +43,14 @@ namespace RingFlow.Gameplay.UI
 
         public IReadOnlyDictionary<ScreenType, GameObject> Screens => _screens;
 
-        public ScreenLoader(Transform canvasTransform)
+        public ScreenLoader(Transform canvasTransform, System.Func<Dictionary<ScreenType, GameObject>> getScreens = null)
         {
             _canvasTransform = canvasTransform ?? throw new ArgumentNullException(nameof(canvasTransform));
+            _getScreens = getScreens;
+            if (getScreens == null)
+            {
+                _localScreens = new Dictionary<ScreenType, GameObject>();
+            }
         }
 
         // ── Registry Loading ────────────────────────────────────────────────

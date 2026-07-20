@@ -15,6 +15,8 @@ namespace RingFlow.Gameplay.UI
     /// </summary>
     public static class GameUIResources
     {
+        private static IGameUIResourcesService _fallbackService;
+
         private static IGameUIResourcesService Service
         {
             get
@@ -27,15 +29,32 @@ namespace RingFlow.Gameplay.UI
                         return service;
                 }
 
-                throw new System.InvalidOperationException(
-                    "[GameUIResources] IGameUIResourcesService not available. " +
-                    "Ensure it is bound in GameplayLifecycle.OnConfigure() via " +
-                    "builder.BindService&lt;IGameUIResourcesService, GameUIResourcesService&gt;().");
+                if (_fallbackService == null)
+                {
+                    var theme = Resources.Load<UIThemeConfigSO>(GameplayAssetKeys.UIThemeConfig);
+                    if (theme != null)
+                    {
+                        _fallbackService = new Services.GameUIResourcesService(theme);
+                    }
+                    else
+                    {
+                        throw new System.InvalidOperationException(
+                            "[GameUIResources] IGameUIResourcesService not available and fallback UIThemeConfigSO not found in Resources. " +
+                            "Ensure it is bound in GameplayLifecycle.OnConfigure().");
+                    }
+                }
+                return _fallbackService;
             }
         }
 
-        // Backward compatibility binder (no-op kept for compilation)
-        public static void Bind(UIThemeConfigSO theme) { }
+        // Backward compatibility binder
+        public static void Bind(UIThemeConfigSO theme)
+        {
+            if (theme != null)
+            {
+                _fallbackService = new Services.GameUIResourcesService(theme);
+            }
+        }
 
         public static void SetReducedMotion(bool reduceMotion) => Service.SetReducedMotion(reduceMotion);
 

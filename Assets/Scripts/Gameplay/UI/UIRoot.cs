@@ -38,6 +38,7 @@ namespace RingFlow.Gameplay.UI
 
         private CanvasManager _canvasManager;
         private ScreenLoader _screenLoader;
+        private Dictionary<ScreenType, GameObject> _screens = new();
         private Root _root;
         private ISignalBus _signalBus;
         private SettingsModel _settings;
@@ -51,13 +52,24 @@ namespace RingFlow.Gameplay.UI
 
         [SerializeField] private float _screenFadeDuration = 0.35f;
 
+        private void EnsureScreenLoaderInitialized()
+        {
+            if (_canvasManager == null)
+            {
+                _canvasManager = new CanvasManager();
+                _canvasManager.EnsureCanvas(transform);
+            }
+            if (_screenLoader == null)
+            {
+                _screenLoader = new ScreenLoader(_canvasManager.Transform, () => _screens);
+            }
+        }
+
         // ── Lifecycle ─────────────────────────────────────────────────────
 
         private void Awake()
         {
-            _canvasManager = new CanvasManager();
-            _canvasManager.EnsureCanvas(transform);
-            _screenLoader = new ScreenLoader(_canvasManager.Transform);
+            EnsureScreenLoaderInitialized();
             _root = GetComponentInParent<Root>();
             if (_root == null)
                 NexusLog.Warn("UIRoot", nameof(Awake), "", "No Root found in parent hierarchy.");
@@ -68,6 +80,7 @@ namespace RingFlow.Gameplay.UI
 
         private void OnEnable()
         {
+            EnsureScreenLoaderInitialized();
             _screenLoader.BindExistingScreens();
             if (_screenLoader.Screens.Count == 0)
             {
@@ -85,6 +98,7 @@ namespace RingFlow.Gameplay.UI
 
         private void Start()
         {
+            EnsureScreenLoaderInitialized();
             NexusLog.Info("UIRoot", nameof(Start), "Lifecycle",
                 $"_root={(_root != null ? "set" : "null")}, _root.Context={(_root?.Context != null ? "set" : "null")}, _screensLoaded={_screensLoaded}");
             TrySubscribeNow();
@@ -99,6 +113,7 @@ namespace RingFlow.Gameplay.UI
 
         private void TrySubscribeNow()
         {
+            EnsureScreenLoaderInitialized();
             if (_root == null)
             {
                 NexusLog.Warn("UIRoot", nameof(TrySubscribeNow), "Subscription",
@@ -334,6 +349,7 @@ namespace RingFlow.Gameplay.UI
 
         private void OnShowScreen(ShowScreenSignal signal)
         {
+            EnsureScreenLoaderInitialized();
             NexusLog.Info("UIRoot", nameof(OnShowScreen), "Screen",
                 $"ShowScreenSignal: Screen={signal.Screen}");
 
@@ -379,6 +395,7 @@ namespace RingFlow.Gameplay.UI
 
         private void OnHideScreen(HideScreenSignal signal)
         {
+            EnsureScreenLoaderInitialized();
             ClosePopup(signal.Screen);
         }
 
@@ -386,6 +403,7 @@ namespace RingFlow.Gameplay.UI
 
         private void OpenPopup(ScreenType popup)
         {
+            EnsureScreenLoaderInitialized();
             var go = _screenLoader.EnsureScreenLoaded(popup);
             if (go == null) return;
 
@@ -411,6 +429,7 @@ namespace RingFlow.Gameplay.UI
 
         private void ClosePopup(ScreenType popup)
         {
+            EnsureScreenLoaderInitialized();
             var go = _screenLoader.GetScreen(popup);
             if (go == null) return;
 
@@ -439,6 +458,7 @@ namespace RingFlow.Gameplay.UI
 
         private void CloseAllPopups()
         {
+            EnsureScreenLoaderInitialized();
             foreach (var popup in PopupScreens)
             {
                 var go = _screenLoader.GetScreen(popup);
@@ -498,9 +518,30 @@ namespace RingFlow.Gameplay.UI
             }
             set { } // kept for editor compat
         }
-        public CanvasScaler Scaler => _canvasManager.Scaler;
-        public IReadOnlyDictionary<ScreenType, GameObject> Screens => _screenLoader.Screens;
-        public ScreenLoader ScreenLoader => _screenLoader;
+        public CanvasScaler Scaler
+        {
+            get
+            {
+                EnsureScreenLoaderInitialized();
+                return _canvasManager.Scaler;
+            }
+        }
+        public IReadOnlyDictionary<ScreenType, GameObject> Screens
+        {
+            get
+            {
+                EnsureScreenLoaderInitialized();
+                return _screenLoader.Screens;
+            }
+        }
+        public ScreenLoader ScreenLoader
+        {
+            get
+            {
+                EnsureScreenLoaderInitialized();
+                return _screenLoader;
+            }
+        }
         public ScreenType ActiveExclusiveScreen { get => _activeExclusiveScreen; set => _activeExclusiveScreen = value; }
         public Stack<ScreenType> PopupStack => _popupStack;
         public List<ISignalSubscription> Subscriptions => _subscriptions;
@@ -508,6 +549,7 @@ namespace RingFlow.Gameplay.UI
 
         public void ResetForEditor()
         {
+            EnsureScreenLoaderInitialized();
             _screenLoader.Clear();
             _canvasManager.Destroy();
             _subscribed = false;

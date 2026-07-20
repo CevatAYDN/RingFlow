@@ -35,6 +35,7 @@ namespace RingFlow.Gameplay
         // Handler classes (lazy-initialized by InitializeHandlers)
         private RingAnimationHandler _animationHandler;
         private BoardSelectionHandler _selectionHandler;
+        private int _lastSelectedPoleId = -1;
 
         // ── Delegates for handler access to internal state ──
         private GameObject GetSpawnedRing(int poleId)
@@ -287,6 +288,7 @@ namespace RingFlow.Gameplay
             InitializeHandlersIfNeeded();
             bool changed = _selectionHandler.SetSelectedPole(poleId,
                 id => _hapticService?.Vibrate(HapticType.Selection));
+            _lastSelectedPoleId = _selectionHandler.LastSelectedPoleId;
 
             if (changed)
             {

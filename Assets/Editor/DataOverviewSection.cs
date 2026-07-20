@@ -99,9 +99,7 @@ namespace RingFlow.Editor
         private void EnsureCachedDatabase()
         {
             if (_cachedDatabase == null)
-                _cachedDatabase = new RingFlow.Gameplay.Services.ResourcesAssetService()
-                    .LoadAsync<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey)
-                    .GetAwaiter().GetResult();
+                _cachedDatabase = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
         }
 
         private void EnsureCachedAssets()
@@ -223,9 +221,7 @@ namespace RingFlow.Editor
 
             // 2. Single Source of Truth check (GDD §2)
             // Verify RingMechanicDataSO fields are clean and in sync with GameConfigDatabaseSO.
-            var mechanicData = new RingFlow.Gameplay.Services.ResourcesAssetService()
-                .LoadAsync<RingMechanicDataSO>(EditorPaths.RingMechanicDataKey)
-                .GetAwaiter().GetResult();
+            var mechanicData = Resources.Load<RingMechanicDataSO>(EditorPaths.RingMechanicDataKey);
             if (mechanicData != null)
             {
                 bool hasDuplicateFields = false;
@@ -290,9 +286,7 @@ namespace RingFlow.Editor
             // 3. Localization Config Completeness (GDD §13 & §5)
             // DATA-2: GDD §66 hedefi 15 dil; bu sayı hardcode yerine LocalizationConfigSO'dan okunur.
             // MVP aşamasında daha az dil kabul edilebilir (Warning), eksik SO ise Fail.
-            var loc = new RingFlow.Gameplay.Services.ResourcesAssetService()
-                .LoadAsync<LocalizationConfigSO>(EditorPaths.LocalizationConfigKey)
-                .GetAwaiter().GetResult();
+            var loc = Resources.Load<LocalizationConfigSO>(EditorPaths.LocalizationConfigKey);
             const int gddTargetLanguages = 15; // GDD §66 targets 15 languages — single definition
             if (loc != null)
             {
@@ -482,9 +476,7 @@ namespace RingFlow.Editor
             AddAuditResult("Bomba Tick Modu", $"BombTickMode data-driven: {db.LevelGen.BombTickMode}.", AuditStatus.Pass);
 
             // E5: Localization CSV asset existence — verify the CSV localization table is accessible
-            var locCsv = new RingFlow.Gameplay.Services.ResourcesAssetService()
-                .LoadAsync<TextAsset>(GameplayAssetKeys.Localization)
-                .GetAwaiter().GetResult();
+            var locCsv = Resources.Load<TextAsset>(GameplayAssetKeys.Localization);
             if (locCsv != null)
             {
                 string[] csvLines = locCsv.text.Split(new[] { "\r\n", "\n" }, System.StringSplitOptions.RemoveEmptyEntries);
@@ -1032,9 +1024,7 @@ namespace RingFlow.Editor
 
         private static T LoadAsset<T>(string key) where T : ScriptableObject
         {
-            return new RingFlow.Gameplay.Services.ResourcesAssetService()
-                .LoadAsync<T>(key)
-                .GetAwaiter().GetResult();
+            return Resources.Load<T>(key);
         }
 
         private static readonly (string Label, System.Func<UnityEngine.Object> Load)[] AssetEntries =

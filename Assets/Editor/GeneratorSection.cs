@@ -58,9 +58,7 @@ namespace RingFlow.Editor
             else
             {
                 // First launch: default to TotalLevels from DB if available; otherwise keep a conservative editor default.
-                var db = new RingFlow.Gameplay.Services.ResourcesAssetService()
-                    .LoadAsync<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey)
-                    .GetAwaiter().GetResult();
+                var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
                 _batchEndLevel = db != null && db.TotalLevels > 0 ? db.TotalLevels : _batchEndLevel;
             }
 
@@ -82,9 +80,7 @@ namespace RingFlow.Editor
             if (!IsFoldedOut) return;
 
             if (_cachedDatabase == null)
-                _cachedDatabase = new RingFlow.Gameplay.Services.ResourcesAssetService()
-                    .LoadAsync<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey)
-                    .GetAwaiter().GetResult();
+                _cachedDatabase = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
             if (_cachedDatabase == null)
             {
                 // FIX-E1: throw in OnGUI() crashes the entire editor window and prevents
@@ -410,7 +406,12 @@ namespace RingFlow.Editor
             _generateInProgress = true;
             var db = _cachedDatabase;
             if (db == null)
-                throw new System.InvalidOperationException("[GeneratorSection.GenerateAllLevels] GameConfigDatabaseSO is required.");
+            {
+                EditorUtility.DisplayDialog("Veritabanı Eksik",
+                    "GameConfigDatabaseSO bulunamadı. Toplu üretim iptal edildi.", "Tamam");
+                _generateInProgress = false;
+                return;
+            }
 
             string folderPath = EditorPaths.LevelsFolder;
             EnsureLevelsFolder(folderPath);
@@ -429,13 +430,24 @@ namespace RingFlow.Editor
                     int minEmpty = db.GetMinEmptyPolesForLevel(level);
 
                     if (poles > db.LevelGen.PoleCountClamp)
-                        throw new System.InvalidOperationException(
-                            $"Pole count {poles} exceeds PoleCountClamp {db.LevelGen.PoleCountClamp} for level {level}. Update DB or adjust level config.");
+                    {
+                        EditorUtility.DisplayDialog("Toplu Üretim Durduruldu",
+                            $"Level {level}: Pole count {poles} exceeds PoleCountClamp {db.LevelGen.PoleCountClamp}.\n" +
+                            "DB PoleCountClamp değerini güncelleyin veya level config'i ayarlayın.",
+                            "Tamam");
+                        _generateInProgress = false;
+                        return;
+                    }
 
                     if (poles < colors + minEmpty)
-                        throw new System.InvalidOperationException(
-                            $"Pole count {poles} < colors ({colors}) + minEmptyPoles ({minEmpty}) for level {level}. " +
-                            "Update DB ColorCurve or DifficultyBands to ensure pole capacity.");
+                    {
+                        EditorUtility.DisplayDialog("Toplu Üretim Durduruldu",
+                            $"Level {level}: Pole count {poles} < colors ({colors}) + minEmptyPoles ({minEmpty}).\n" +
+                            "DB ColorCurve veya DifficultyBands değerlerini güncelleyin.",
+                            "Tamam");
+                        _generateInProgress = false;
+                        return;
+                    }
 
                     var levelData = LevelGenerator.GenerateLevel(db, level, LevelGenerator.GetDeterministicSeed(level), poles, colors, maxCap);
                     if (levelData == null)

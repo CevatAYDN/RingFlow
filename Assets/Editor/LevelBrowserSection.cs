@@ -139,9 +139,7 @@ namespace RingFlow.Editor
         private void EnsureCachedDatabase()
         {
             if (_cachedDatabase == null)
-                _cachedDatabase = new RingFlow.Gameplay.Services.ResourcesAssetService()
-                    .LoadAsync<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey)
-                    .GetAwaiter().GetResult();
+                _cachedDatabase = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
             if (_cachedDatabase == null) return;
 
             if (_cachedDatabase.TotalLevels != _cachedTotalLevels)

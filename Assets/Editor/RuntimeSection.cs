@@ -213,9 +213,7 @@ namespace RingFlow.Editor
 
             if (GUILayout.Button("Unlock All Levels"))
             {
-                var db = new RingFlow.Gameplay.Services.ResourcesAssetService()
-                    .LoadAsync<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey)
-                    .GetAwaiter().GetResult();
+                var db = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
                 if (db == null)
                 {
                     throw new System.InvalidOperationException($"[RuntimeSection] GameConfigDatabaseSO '{EditorPaths.GameConfigDatabaseKey}' not found.");

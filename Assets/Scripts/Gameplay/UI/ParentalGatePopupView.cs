@@ -33,6 +33,13 @@ namespace RingFlow.Gameplay.UI
             EnsureInitialized();
         }
 
+        private bool NeedsSelfBuild()
+        {
+            if (transform.childCount == 0) return true;
+            BindReferencesFromChildren();
+            return AcceptButton == null;
+        }
+
         /// <summary>
         /// Idempotently wires view references. Mediators can call this before adding listeners;
         /// this protects authored/inactive prefab flows where mediator binding may happen
@@ -42,7 +49,14 @@ namespace RingFlow.Gameplay.UI
         {
             if (_initialized && AcceptButton != null) return;
 
-            BindReferencesFromChildren();
+            if (NeedsSelfBuild())
+            {
+                BuildUI();
+            }
+            else
+            {
+                BindReferencesFromChildren();
+            }
             _initialized = true;
 
             if (AcceptButton == null)
@@ -62,9 +76,65 @@ namespace RingFlow.Gameplay.UI
 
         /// <summary>
         /// Satisfies IAuthoredView. UI hierarchy is now loaded from prefab;
-        /// this method is kept for interface compliance (Editor UI Studio tooling).
+        /// falls back to programmatic UI building if no children exist (e.g. in unit tests).
         /// </summary>
-        public void BuildUI() { }
+        public void BuildUI()
+        {
+            // ── Dimmed background overlay ──
+            var overlay = GetComponent<Image>();
+            if (overlay != null)
+            {
+                overlay.color = new Color(0, 0, 0, 0.80f);
+                overlay.raycastTarget = true;
+            }
+
+            // ── Centered panel card ──
+            var card = GameUIResources.CreatePanel("Card", transform);
+            GameUIResources.SetAnchors(card.GetComponent<RectTransform>(), 0.10f, 0.20f, 0.90f, 0.80f);
+            card.GetComponent<Image>().color = GameUIResources.PanelColor;
+            card.GetComponent<Image>().raycastTarget = true;
+
+            var titleGo = GameUIResources.CreateText("Parental Verification", card.transform, 34, TextAnchor.MiddleCenter, GameUIResources.TextColor);
+            TitleText = titleGo.GetComponent<TextMeshProUGUI>();
+            var titleRt = titleGo.GetComponent<RectTransform>();
+            GameUIResources.SetAnchors(titleRt, 0.05f, 0.72f, 0.95f, 0.88f);
+            if (TitleText != null) TitleText.fontStyle = FontStyles.Bold;
+            titleGo.name = "Title";
+
+            var questionGo = GameUIResources.CreateText("", card.transform, 22, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
+            QuestionText = questionGo.GetComponent<TextMeshProUGUI>();
+            if (QuestionText != null) QuestionText.fontStyle = FontStyles.Bold;
+            questionGo.name = "Question";
+            var questionRt = questionGo.GetComponent<RectTransform>();
+            GameUIResources.SetAnchors(questionRt, 0.08f, 0.44f, 0.92f, 0.64f);
+
+            var errorGo = GameUIResources.CreateText("", card.transform, 18, TextAnchor.MiddleCenter, GameUIResources.DangerColor);
+            ErrorText = errorGo.GetComponent<TextMeshProUGUI>();
+            errorGo.name = "Error";
+            var errorRt = errorGo.GetComponent<RectTransform>();
+            GameUIResources.SetAnchors(errorRt, 0.15f, 0.36f, 0.85f, 0.41f);
+
+            var acceptBtnGo = GameUIResources.CreateButton("ACCEPT & CONTINUE", card.transform, 320, 64);
+            AcceptButton = acceptBtnGo.GetComponent<Button>();
+            AcceptButton.name = "Accept";
+            GameUIResources.SetAnchors(acceptBtnGo.GetComponent<RectTransform>(), 0.20f, 0.22f, 0.80f, 0.34f);
+
+            var termsBtnGo = GameUIResources.CreateButton("Terms of Service", card.transform, 180, 40);
+            TermsButton = termsBtnGo.GetComponent<Button>();
+            TermsButton.name = "Terms";
+            GameUIResources.ApplySecondaryStyle(termsBtnGo);
+            var termsText = termsBtnGo.GetComponentInChildren<TextMeshProUGUI>();
+            if (termsText != null) termsText.fontSize = 14;
+            GameUIResources.SetAnchors(termsBtnGo.GetComponent<RectTransform>(), 0.08f, 0.10f, 0.48f, 0.18f);
+
+            var privacyBtnGo = GameUIResources.CreateButton("Privacy Policy", card.transform, 180, 40);
+            PrivacyButton = privacyBtnGo.GetComponent<Button>();
+            PrivacyButton.name = "Privacy";
+            GameUIResources.ApplySecondaryStyle(privacyBtnGo);
+            var privacyText = privacyBtnGo.GetComponentInChildren<TextMeshProUGUI>();
+            if (privacyText != null) privacyText.fontSize = 14;
+            GameUIResources.SetAnchors(privacyBtnGo.GetComponent<RectTransform>(), 0.52f, 0.10f, 0.92f, 0.18f);
+        }
 
         private void ApplyConsentOnlyMode()
         {

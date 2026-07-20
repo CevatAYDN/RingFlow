@@ -376,9 +376,7 @@ namespace RingFlow.Editor
             int totalMoves = 0;
 
             if (_database == null)
-                _database = new RingFlow.Gameplay.Services.ResourcesAssetService()
-                    .LoadAsync<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey)
-                    .GetAwaiter().GetResult();
+                _database = Resources.Load<GameConfigDatabaseSO>(EditorPaths.GameConfigDatabaseKey);
             if (_database == null)
             {
                 NexusLog.Error("DatabaseSection", "ValidateAllLevels", "LoadDatabase", "[DatabaseSection] GameConfigDatabase not loaded!");

@@ -53,9 +53,7 @@ namespace RingFlow.Editor
 
         private void DrawRow<T>(string label, string resourceKey, string assetPath, int rowIndex) where T : ScriptableObject
         {
-            var asset = new RingFlow.Gameplay.Services.ResourcesAssetService()
-                .LoadAsync<T>(resourceKey)
-                .GetAwaiter().GetResult();
+            var asset = Resources.Load<T>(resourceKey);
             bool exists = asset != null;
 
             Rect rect = EditorGUILayout.BeginHorizontal(GUILayout.Height(22f));

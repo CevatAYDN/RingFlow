@@ -1283,8 +1283,11 @@ namespace RingFlow.Tests
 
     public class MockAnalyticsService : Nexus.Core.Services.IAnalyticsService
     {
-        public void LogEvent(string eventName) { }
-        public void LogEvent(string eventName, System.Collections.Generic.Dictionary<string, object> parameters) { }
+        public System.Collections.Generic.List<string> EventNames { get; } = new System.Collections.Generic.List<string>();
+
+        public void LogEvent(string eventName) => EventNames.Add(eventName);
+        public void LogEvent(string eventName, System.Collections.Generic.Dictionary<string, object> parameters) =>
+            EventNames.Add(eventName);
         public void SetUserProperty(string key, string value) { }
     }
 }

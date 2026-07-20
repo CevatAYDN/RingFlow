@@ -145,9 +145,7 @@ namespace RingFlow.Editor
                 camera.tag = "MainCamera";
             }
 
-            var feel = new RingFlow.Gameplay.Services.ResourcesAssetService()
-                .LoadAsync<Gameplay.GameFeelConfigSO>(EditorPaths.GameFeelConfigKey)
-                .GetAwaiter().GetResult();
+            var feel = Resources.Load<Gameplay.GameFeelConfigSO>(EditorPaths.GameFeelConfigKey);
             if (feel == null)
                 throw new System.InvalidOperationException("[EditorBootstrapper] GameFeelConfigSO is required.");
 
