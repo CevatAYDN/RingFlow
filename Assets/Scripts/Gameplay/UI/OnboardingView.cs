@@ -1,6 +1,7 @@
 using System;
 using Nexus.Core;
 using Nexus.Core.Services;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
@@ -44,12 +45,12 @@ namespace RingFlow.Gameplay.UI
         public event Action NextClicked;
         public event Action SkipClicked;
 
-        private Text _titleText;
-        private Text _bodyText;
+        private TextMeshProUGUI _titleText;
+        private TextMeshProUGUI _bodyText;
         private GameObject[] _dots;
         private Button _nextButton;
         private Button _skipButton;
-        private Text _nextLabel;
+        private TextMeshProUGUI _nextLabel;
         private CanvasGroup _cardFader;
         private GameObject _root;
 
@@ -174,7 +175,7 @@ namespace RingFlow.Gameplay.UI
 
         private void BindReferencesFromChildren()
         {
-            var texts = GetComponentsInChildren<Text>(true);
+            var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
             foreach (var txt in texts)
             {
                 var upper = txt.name.ToUpperInvariant();

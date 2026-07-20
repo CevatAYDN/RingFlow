@@ -27,6 +27,8 @@ namespace RingFlow.Gameplay.Services
         AudioClip GetOrCreatePaintClip();
         AudioClip GetOrCreateIceBreakClip();
         AudioClip GetOrCreateStoneImpactClip();
+        AudioClip GetOrCreateBombExplosionClip();
+        AudioClip GetOrCreatePortalClip();
         void ClearCache();
     }
 }

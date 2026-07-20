@@ -1,5 +1,6 @@
 using Nexus.Core;
 using Nexus.Core.Services;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,13 +17,13 @@ namespace RingFlow.Gameplay.UI
         public Toggle BigButtonsToggle { get; private set; }
         public Slider ColorBlindSlider { get; private set; }
         public Dropdown LanguageDropdown { get; private set; }
-        public Text TitleText { get; private set; }
+        public TextMeshProUGUI TitleText { get; private set; }
         public Button RemoveAdsButton { get; private set; }
         public Button RestoreButton { get; private set; }
         public CanvasGroup CardGroup { get; private set; }
 
         private GameObject _closeBtn, _removeAdsBtn, _restoreBtn;
-        private Text _musicLabel, _sfxLabel, _hapticLabel, _motionLabel, _bigLabel, _cbLabel, _langLabel;
+        private TextMeshProUGUI _musicLabel, _sfxLabel, _hapticLabel, _motionLabel, _bigLabel, _cbLabel, _langLabel;
 
         private void Awake()
         {
@@ -77,7 +78,7 @@ namespace RingFlow.Gameplay.UI
             ColorBlindSlider = GetComponentInChildren<Slider>(true);
             LanguageDropdown = GetComponentInChildren<Dropdown>(true);
 
-            var texts = GetComponentsInChildren<Text>(true);
+            var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
             foreach (var txt in texts)
             {
                 var upper = txt.name.ToUpperInvariant();

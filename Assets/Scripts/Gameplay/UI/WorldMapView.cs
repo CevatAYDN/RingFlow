@@ -1,5 +1,6 @@
 using Nexus.Core;
 using Nexus.Core.Services;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -13,8 +14,8 @@ namespace RingFlow.Gameplay.UI
     public class WorldMapView : View, IAuthoredView
     {
         public Button BackButton { get; private set; }
-        private Text _titleText;
-        private Text _bodyText;
+        private TextMeshProUGUI _titleText;
+        private TextMeshProUGUI _bodyText;
 
         private void Awake()
         {
@@ -43,7 +44,7 @@ namespace RingFlow.Gameplay.UI
                 var upperName = btn.name.ToUpperInvariant();
                 if (upperName.Contains("BACK")) BackButton = btn;
             }
-            var texts = GetComponentsInChildren<Text>(true);
+            var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
             foreach (var txt in texts)
             {
                 var upper = txt.name.ToUpperInvariant();

@@ -1,5 +1,6 @@
 using Nexus.Core;
 using Nexus.Core.Services;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,12 +16,12 @@ namespace RingFlow.Gameplay.UI
     {
         public Button ClaimButton { get; private set; }
         public Button CloseButton { get; private set; }
-        public Text TitleText { get; private set; }
-        public Text BronzeText { get; private set; }
-        public Text SilverText { get; private set; }
-        public Text GoldText { get; private set; }
-        public Text DiamondText { get; private set; }
-        public Text TotalXpText { get; private set; }
+        public TextMeshProUGUI TitleText { get; private set; }
+        public TextMeshProUGUI BronzeText { get; private set; }
+        public TextMeshProUGUI SilverText { get; private set; }
+        public TextMeshProUGUI GoldText { get; private set; }
+        public TextMeshProUGUI DiamondText { get; private set; }
+        public TextMeshProUGUI TotalXpText { get; private set; }
         private GameObject _claimBtn, _closeBtn;
         private ILocalizationService _locService;
 
@@ -56,7 +57,7 @@ namespace RingFlow.Gameplay.UI
                 else if (upper.Contains("CLOSE")) { _closeBtn = btn.gameObject; CloseButton = btn; }
             }
 
-            var texts = GetComponentsInChildren<Text>(true);
+            var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
             foreach (var txt in texts)
             {
                 var upper = txt.name.ToUpperInvariant();

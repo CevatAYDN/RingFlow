@@ -1,6 +1,7 @@
 using Nexus.Core;
 using Nexus.Core.Services;
 using RingFlow.Gameplay.Services;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
@@ -12,17 +13,17 @@ namespace RingFlow.Gameplay.UI
     {
         public Button NextLevelButton { get; private set; }
         public Button QuitButton { get; private set; }
-        public Text MovesText { get; private set; }
-        public Text RewardText { get; private set; }
+        public TextMeshProUGUI MovesText { get; private set; }
+        public TextMeshProUGUI RewardText { get; private set; }
         // Stars are now Image components for proper sprite rendering
         public Image[] StarImages { get; private set; } = new Image[3];
-        public Text TitleText { get; private set; }
-        public Text LevelText { get; private set; }
-        public Text BestScoreText { get; private set; }
+        public TextMeshProUGUI TitleText { get; private set; }
+        public TextMeshProUGUI LevelText { get; private set; }
+        public TextMeshProUGUI BestScoreText { get; private set; }
         public GameObject[] Stars { get; private set; } = new GameObject[3];
         public CanvasGroup CardGroup { get; private set; }
-        private Text _coinsValueText;
-        private Text _xpValueText;
+        private TextMeshProUGUI _coinsValueText;
+        private TextMeshProUGUI _xpValueText;
 
         private GameObject _nextBtn, _quitBtn;
         private ILocalizationService _loc;
@@ -135,7 +136,7 @@ namespace RingFlow.Gameplay.UI
                 else if (upper.Contains("MAIN MENU") || upper.Contains("QUIT")) { _quitBtn = btn.gameObject; QuitButton = btn; }
             }
 
-            var texts = GetComponentsInChildren<Text>(true);
+            var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
             foreach (var txt in texts)
             {
                 var upper = txt.name.ToUpperInvariant();
@@ -159,7 +160,7 @@ namespace RingFlow.Gameplay.UI
                 }
             }
             // Reward text sub-items
-            foreach (var txt in GetComponentsInChildren<Text>(true))
+            foreach (var txt in GetComponentsInChildren<TextMeshProUGUI>(true))
             {
                 if (txt.name == "CoinsValue") _coinsValueText = txt;
                 else if (txt.name == "XPValue") _xpValueText = txt;

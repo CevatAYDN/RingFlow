@@ -2,6 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Nexus.Core;
 using Nexus.Core.Services;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
@@ -23,7 +24,7 @@ namespace RingFlow.Gameplay.Services
         private bool _reduceMotion;
 
         // Cached assets
-        private Font _font;
+        private TMP_FontAsset _tmpFont;
         private Sprite _roundedSprite;
         private Texture2D _roundedTexture;
 
@@ -114,13 +115,21 @@ namespace RingFlow.Gameplay.Services
 
         public Font GetFont()
         {
-            if (_font == null)
-            {
-                _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-                if (_font == null)
-                    _font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-            }
-            return _font;
+            // Legacy compatibility — UIThemeConfigSO should provide TMP font via GetTMPFont() for new code.
+            return Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
+                   ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
+        }
+
+        public TMP_FontAsset GetTMPFont()
+        {
+            if (_tmpFont != null) return _tmpFont;
+            // Attempt to load from resources or TMP settings default
+            _tmpFont = Resources.Load<TMP_FontAsset>("Fonts & Materials/LiberationSans SDF");
+            if (_tmpFont == null)
+                _tmpFont = Resources.Load<TMP_FontAsset>("Fonts & Materials/ARIAL SDF");
+            if (_tmpFont == null && TMPro.TMP_Settings.defaultFontAsset != null)
+                _tmpFont = TMPro.TMP_Settings.defaultFontAsset;
+            return _tmpFont;
         }
 
         public Sprite GetRoundedSprite()
@@ -201,6 +210,23 @@ namespace RingFlow.Gameplay.Services
             button.colors = colors;
         }
 
+        private static TextAlignmentOptions TextAnchorToAlignment(TextAnchor anchor)
+        {
+            return anchor switch
+            {
+                TextAnchor.UpperLeft => TextAlignmentOptions.TopLeft,
+                TextAnchor.UpperCenter => TextAlignmentOptions.Top,
+                TextAnchor.UpperRight => TextAlignmentOptions.TopRight,
+                TextAnchor.MiddleLeft => TextAlignmentOptions.MidlineLeft,
+                TextAnchor.MiddleCenter => TextAlignmentOptions.Center,
+                TextAnchor.MiddleRight => TextAlignmentOptions.MidlineRight,
+                TextAnchor.LowerLeft => TextAlignmentOptions.BottomLeft,
+                TextAnchor.LowerCenter => TextAlignmentOptions.Bottom,
+                TextAnchor.LowerRight => TextAlignmentOptions.BottomRight,
+                _ => TextAlignmentOptions.Center
+            };
+        }
+
         public GameObject CreateButton(string label, Transform parent, float width, float height)
         {
             var go = new GameObject($"Btn_{label}", typeof(RectTransform), typeof(Image), typeof(Button));
@@ -228,10 +254,9 @@ namespace RingFlow.Gameplay.Services
             textRect.anchorMax = Vector2.one;
             textRect.offsetMin = new Vector2(16f, 8f);
             textRect.offsetMax = new Vector2(-16f, -8f);
-            var text = textGo.GetComponent<Text>();
+            var text = textGo.GetComponent<TextMeshProUGUI>();
             text.text = label;
-            text.fontStyle = FontStyle.Bold;
-            text.supportRichText = true;
+            text.fontStyle = FontStyles.Bold;
 
             return go;
         }
@@ -257,7 +282,7 @@ namespace RingFlow.Gameplay.Services
             textRect.anchorMax = Vector2.one;
             textRect.offsetMin = Vector2.zero;
             textRect.offsetMax = Vector2.zero;
-            textGo.GetComponent<Text>().text = iconText;
+            textGo.GetComponent<TextMeshProUGUI>().text = iconText;
 
             return go;
         }
@@ -265,39 +290,37 @@ namespace RingFlow.Gameplay.Services
         public GameObject CreateText(string content, Transform parent, int fontSize, TextAnchor align, Color color)
         {
             var go = CreateChildText("Text", parent, fontSize, align, color);
-            var text = go.GetComponent<Text>();
+            var text = go.GetComponent<TextMeshProUGUI>();
             text.text = content;
             return go;
         }
 
         private GameObject CreateChildText(string name, Transform parent, int fontSize, TextAnchor align, Color color)
         {
-            var go = new GameObject(name, typeof(RectTransform), typeof(Text));
+            var go = new GameObject(name, typeof(RectTransform), typeof(TextMeshProUGUI));
             go.transform.SetParent(parent, false);
             var rect = go.GetComponent<RectTransform>();
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
-            var text = go.GetComponent<Text>();
-            text.font = GetFont();
+            var text = go.GetComponent<TextMeshProUGUI>();
+            if (GetTMPFont() != null)
+                text.font = GetTMPFont();
             text.fontSize = fontSize;
-            text.alignment = align;
+            text.alignment = TextAnchorToAlignment(align);
             text.color = color;
-            text.horizontalOverflow = HorizontalWrapMode.Wrap;
-            text.verticalOverflow = VerticalWrapMode.Overflow;
-            text.supportRichText = true;
             return go;
         }
 
         public GameObject CreateDisplayText(string content, Transform parent, int fontSize, Color color)
         {
             var go = CreateText(content, parent, fontSize, TextAnchor.MiddleCenter, color);
-            var text = go.GetComponent<Text>();
-            text.fontStyle = FontStyle.Bold;
-            var outline = go.AddComponent<Outline>();
-            outline.effectColor = new Color(0f, 0f, 0f, 0.45f);
-            outline.effectDistance = new Vector2(2f, -2f);
+            var text = go.GetComponent<TextMeshProUGUI>();
+            text.fontStyle = FontStyles.Bold;
+            // TMPro outline is handled via material properties; enable a subtle outline
+            text.outlineWidth = 0.15f;
+            text.outlineColor = new Color32(0, 0, 0, 115);
             return go;
         }
 
@@ -375,7 +398,7 @@ namespace RingFlow.Gameplay.Services
             if (image != null) { image.color = PrimaryColor; image.sprite = GetRoundedSprite(); image.type = Image.Type.Sliced; }
             var button = btn.GetComponent<Button>();
             if (button != null) SetButtonColors(button, _theme.PrimaryButtonColors);
-            var text = btn.GetComponentInChildren<Text>();
+            var text = btn.GetComponentInChildren<TextMeshProUGUI>();
             if (text != null) text.color = TextOnPrimary;
         }
 
@@ -385,7 +408,7 @@ namespace RingFlow.Gameplay.Services
             if (image != null) { image.color = AccentColor; image.sprite = GetRoundedSprite(); image.type = Image.Type.Sliced; }
             var button = btn.GetComponent<Button>();
             if (button != null) SetButtonColors(button, _theme.AccentButtonColors);
-            var text = btn.GetComponentInChildren<Text>();
+            var text = btn.GetComponentInChildren<TextMeshProUGUI>();
             if (text != null) text.color = TextOnPrimary;
         }
 
@@ -395,7 +418,7 @@ namespace RingFlow.Gameplay.Services
             if (image != null) { image.color = SuccessColor; image.sprite = GetRoundedSprite(); image.type = Image.Type.Sliced; }
             var button = btn.GetComponent<Button>();
             if (button != null) SetButtonColors(button, _theme.SuccessButtonColors);
-            var text = btn.GetComponentInChildren<Text>();
+            var text = btn.GetComponentInChildren<TextMeshProUGUI>();
             if (text != null) text.color = TextOnPrimary;
         }
 
@@ -405,7 +428,7 @@ namespace RingFlow.Gameplay.Services
             if (image != null) { image.color = SurfaceColor; image.sprite = GetRoundedSprite(); image.type = Image.Type.Sliced; }
             var button = btn.GetComponent<Button>();
             if (button != null) SetButtonColors(button, _theme.OutlineButtonColors);
-            var text = btn.GetComponentInChildren<Text>();
+            var text = btn.GetComponentInChildren<TextMeshProUGUI>();
             if (text != null) text.color = TextColor;
         }
 
@@ -415,7 +438,7 @@ namespace RingFlow.Gameplay.Services
             if (image != null) { image.color = PanelColor; image.sprite = GetRoundedSprite(); image.type = Image.Type.Sliced; }
             var button = btn.GetComponent<Button>();
             if (button != null) SetButtonColors(button, _theme.OutlineButtonColors);
-            var text = btn.GetComponentInChildren<Text>();
+            var text = btn.GetComponentInChildren<TextMeshProUGUI>();
             if (text != null) text.color = TextColor;
         }
 
@@ -425,7 +448,7 @@ namespace RingFlow.Gameplay.Services
             if (image != null) { image.color = SurfaceDark; image.sprite = GetRoundedSprite(); image.type = Image.Type.Sliced; }
             var button = btn.GetComponent<Button>();
             if (button != null) SetButtonColors(button, _theme.DarkButtonColors);
-            var text = btn.GetComponentInChildren<Text>();
+            var text = btn.GetComponentInChildren<TextMeshProUGUI>();
             if (text != null) text.color = TextOnDark;
         }
 
@@ -435,7 +458,7 @@ namespace RingFlow.Gameplay.Services
             if (image != null) { image.color = DangerColor; image.sprite = GetRoundedSprite(); image.type = Image.Type.Sliced; }
             var button = btn.GetComponent<Button>();
             if (button != null) SetButtonColors(button, _theme.DangerButtonColors);
-            var text = btn.GetComponentInChildren<Text>();
+            var text = btn.GetComponentInChildren<TextMeshProUGUI>();
             if (text != null) text.color = TextOnPrimary;
         }
 
@@ -445,7 +468,7 @@ namespace RingFlow.Gameplay.Services
             if (image != null) image.color = Color.clear;
             var button = btn.GetComponent<Button>();
             if (button != null) SetButtonColors(button, _theme.TextButtonColors);
-            var text = btn.GetComponentInChildren<Text>();
+            var text = btn.GetComponentInChildren<TextMeshProUGUI>();
             if (text != null) text.color = TextColor;
         }
 
@@ -457,27 +480,27 @@ namespace RingFlow.Gameplay.Services
         public void LocalizeButtonText(GameObject btn, string key, ILocalizationService loc)
         {
             if (loc == null || btn == null) return;
-            var text = btn.GetComponentInChildren<Text>();
+            var text = btn.GetComponentInChildren<TextMeshProUGUI>();
             if (text != null)
             {
                 text.text = loc.GetString(key, text.text);
-                if (loc.IsRTL && text.alignment == TextAnchor.MiddleLeft)
-                    text.alignment = TextAnchor.MiddleRight;
+                if (loc.IsRTL && text.alignment == TextAlignmentOptions.MidlineLeft)
+                    text.alignment = TextAlignmentOptions.MidlineRight;
             }
         }
 
         public void LocalizeText(GameObject go, string key, ILocalizationService loc)
         {
             if (loc == null || go == null) return;
-            var text = go.GetComponent<Text>();
+            var text = go.GetComponent<TextMeshProUGUI>();
             if (text != null)
             {
                 text.text = loc.GetString(key, text.text);
                 if (loc.IsRTL)
                 {
-                    if (text.alignment == TextAnchor.MiddleLeft) text.alignment = TextAnchor.MiddleRight;
-                    else if (text.alignment == TextAnchor.UpperLeft) text.alignment = TextAnchor.UpperRight;
-                    else if (text.alignment == TextAnchor.LowerLeft) text.alignment = TextAnchor.LowerRight;
+                    if (text.alignment == TextAlignmentOptions.MidlineLeft) text.alignment = TextAlignmentOptions.MidlineRight;
+                    else if (text.alignment == TextAlignmentOptions.TopLeft) text.alignment = TextAlignmentOptions.TopRight;
+                    else if (text.alignment == TextAlignmentOptions.BottomLeft) text.alignment = TextAlignmentOptions.BottomRight;
                 }
             }
         }
@@ -620,14 +643,16 @@ namespace RingFlow.Gameplay.Services
         }
 
         /// <summary>
-        /// Returns a sprite by name. Resolution order:
-        /// 1. UISpriteLibrarySO.GetSprite(name)  — Inspector-assigned, swappable at runtime
-        /// 2. Resources.Load&lt;Sprite&gt;("UI/Sprites/{name}")  — file-system fallback
-        /// Returns null if neither source has the sprite.
+        /// Returns a sprite by name from the UIThemeConfigSO's SpriteLibrary.
+        /// No Resources.Load fallback — all sprites must be assigned via the
+        /// UISpriteLibrarySO on the UIThemeConfigSO. This ensures all sprite
+        /// references are authorable and validated, not silently resolved from
+        /// Resources folders that may not exist in production builds.
+        /// Returns null if the SpriteLibrary is not configured or the sprite
+        /// is not found.
         /// </summary>
         public Sprite GetSprite(string name)
         {
-            // 1. Try the SO sprite library first (swappable via Inspector)
             if (_theme.SpriteLibrary != null)
             {
                 var fromLibrary = _theme.SpriteLibrary.GetSprite(name);
@@ -635,8 +660,8 @@ namespace RingFlow.Gameplay.Services
                     return fromLibrary;
             }
 
-            // 2. Fallback: load directly from Resources/UI/Sprites/{name}
-            return Resources.Load<Sprite>($"UI/Sprites/{name}");
+            // No Resources.Load fallback — add the sprite to UISpriteLibrarySO instead.
+            return null;
         }
     }
 }

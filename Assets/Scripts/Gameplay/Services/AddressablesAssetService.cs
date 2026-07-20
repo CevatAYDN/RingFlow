@@ -55,22 +55,25 @@ namespace RingFlow.Gameplay.Services
         }
 #else
         // Stub: Addressables package not yet installed.
-        // Delegates to ResourcesAssetService so swapping the DI binding in
-        // GameplayLifecycle is the ONLY required change after adding the package.
-        private readonly ResourcesAssetService _fallback = new();
-
+        // Throw immediately to force migration — silent fallback to Resources.Load
+        // hides missing Addressables setup and defeats the purpose of the asset service.
+        // Add com.unity.addressables to Packages/manifest.json and define
+        // UNITY_ADDRESSABLES in Player Settings > Scripting Define Symbols.
         public Task<T> LoadAsync<T>(string key) where T : Object
         {
-            UnityEngine.Debug.LogWarning(
-                $"[AddressablesAssetService] Addressables not installed — " +
-                $"falling back to Resources.Load for key '{key}'. " +
-                "Add com.unity.addressables to Packages/manifest.json.");
-            return _fallback.LoadAsync<T>(key);
+            throw new System.InvalidOperationException(
+                $"[AddressablesAssetService] Addressables package is not installed. " +
+                $"Cannot load asset '{key}'. Add com.unity.addressables to Packages/manifest.json " +
+                "and define UNITY_ADDRESSABLES in Scripting Define Symbols.");
         }
 
         public Task<T> LoadAssetAsync<T>(string key) where T : Object => LoadAsync<T>(key);
 
-        public void Release(object asset) { /* no-op in Resources mode */ }
+        public void Release(object asset)
+        {
+            throw new System.InvalidOperationException(
+                "[AddressablesAssetService] Addressables package is not installed.");
+        }
 #endif
     }
 }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Nexus.Core;
 using Nexus.Core.Services;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
@@ -12,9 +13,9 @@ namespace RingFlow.Gameplay.UI
     {
         public List<Button> LevelButtons { get; } = new();
         public Button BackButton { get; private set; }
-        public Text TitleText { get; private set; }
-        public Text WorldLabel { get; private set; }
-        public Text ProgressLabel { get; private set; }
+        public TextMeshProUGUI TitleText { get; private set; }
+        public TextMeshProUGUI WorldLabel { get; private set; }
+        public TextMeshProUGUI ProgressLabel { get; private set; }
         public Image ProgressBar { get; private set; }
         public CanvasGroup CardGroup { get; private set; }
 
@@ -37,7 +38,7 @@ namespace RingFlow.Gameplay.UI
 
             btn.interactable = unlocked;
             var img = btn.GetComponent<Image>();
-            var label = btn.GetComponentInChildren<Text>();
+            var label = btn.GetComponentInChildren<TextMeshProUGUI>();
 
             if (unlocked)
             {
@@ -98,7 +99,7 @@ namespace RingFlow.Gameplay.UI
                 }
             }
 
-            var texts = GetComponentsInChildren<Text>(true);
+            var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
             foreach (var txt in texts)
             {
                 var upper = txt.name.ToUpperInvariant();

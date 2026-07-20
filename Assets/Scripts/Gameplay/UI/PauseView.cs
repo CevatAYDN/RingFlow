@@ -1,5 +1,6 @@
 using Nexus.Core;
 using Nexus.Core.Services;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
@@ -13,9 +14,9 @@ namespace RingFlow.Gameplay.UI
         public Button RestartButton { get; private set; }
         public Button QuitButton { get; private set; }
         public Button SettingsButton { get; private set; }
-        public Text TitleText { get; private set; }
-        public Text SubtitleText { get; private set; }
-        public Text ProgressLabel { get; private set; }
+        public TextMeshProUGUI TitleText { get; private set; }
+        public TextMeshProUGUI SubtitleText { get; private set; }
+        public TextMeshProUGUI ProgressLabel { get; private set; }
         public CanvasGroup CardGroup { get; private set; }
 
         private GameObject _resumeBtn, _restartBtn, _quitBtn, _settingsBtn;
@@ -67,7 +68,7 @@ namespace RingFlow.Gameplay.UI
                 else if (upper.Contains("SETTINGS")) { _settingsBtn = btn.gameObject; SettingsButton = btn; }
             }
 
-            var texts = GetComponentsInChildren<Text>(true);
+            var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
             foreach (var txt in texts)
             {
                 if (txt.fontSize >= 30 || txt.name.ToUpperInvariant().Contains("TITLE")) TitleText = txt;

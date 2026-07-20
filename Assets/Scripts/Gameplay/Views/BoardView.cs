@@ -3,6 +3,8 @@ using DG.Tweening;
 using Nexus.Core;
 using Nexus.Core.Services;
 using RingFlow.Gameplay.Services;
+using RingFlow.Gameplay.Views;
+using TMPro;
 using UnityEngine;
 
 namespace RingFlow.Gameplay
@@ -30,28 +32,55 @@ namespace RingFlow.Gameplay
         [Inject] private Camera _mainCamera;
         private GameFeelConfigSO F => _feelConfig;
 
+        // Handler classes (lazy-initialized by InitializeHandlers)
+        private RingAnimationHandler _animationHandler;
+        private BoardSelectionHandler _selectionHandler;
 
-        // Reused across ApplySelection calls to avoid per-ring MaterialPropertyBlock allocations.
-        // NOT a field initializer: creating engine objects in a MonoBehaviour constructor / field
-        // initializer is forbidden (Unity throws "CreateImpl is not allowed from a MonoBehaviour
-        // constructor"), and the resulting abort would also skip _spawnedPoles initialization and
-        // surface as a NullReferenceException at BuildBoard. Lazily initialized instead.
-        private MaterialPropertyBlock _selectionPropBlock;
+        // ── Delegates for handler access to internal state ──
+        private GameObject GetSpawnedRing(int poleId)
+        {
+            if (poleId < 0 || poleId >= _spawnedRings.Count || _spawnedRings[poleId].Count == 0) return null;
+            return _spawnedRings[poleId][^1];
+        }
+
+        private GameObject GetSpawnedRingAt(int poleId, int ringIndex)
+        {
+            if (poleId < 0 || poleId >= _spawnedRings.Count) return null;
+            var list = _spawnedRings[poleId];
+            if (ringIndex < 0 || ringIndex >= list.Count) return null;
+            return list[ringIndex];
+        }
+
+        private int GetRingCountOnPole(int poleId)
+        {
+            if (poleId < 0 || poleId >= _spawnedRings.Count) return 0;
+            return _spawnedRings[poleId].Count;
+        }
+
+        private GameObject GetPoleObject(int poleId)
+        {
+            if (poleId < 0 || poleId >= _spawnedPoles.Count || _spawnedPoles[poleId] == null) return null;
+            return _spawnedPoles[poleId].gameObject;
+        }
+
+        private void InitializeHandlersIfNeeded()
+        {
+            if (_animationHandler != null) return;
+            _animationHandler = new RingAnimationHandler(
+                this, F, _settingsModel, _hapticService, _audioService,
+                _proceduralAudio, _objectPoolService, _vfxRegistry, _ringMaterialManager);
+            _selectionHandler = new BoardSelectionHandler(F, _settingsModel);
+            _selectionHandler.GetAnimatingTargetPoleId = () => _animationHandler.AnimatingTargetPoleId;
+        }
 
         private readonly List<PoleView> _spawnedPoles = new();
         private readonly List<List<GameObject>> _spawnedRings = new();
-        // Pre-allocated buffers for celebration animation (avoids GC during gameplay)
-        private readonly List<Transform> _celebrationRingBuffer = new(8);
-        private static readonly System.Comparison<Transform> _ringYComparer =
-            (a, b) => a.localPosition.y.CompareTo(b.localPosition.y);
-        private int _lastSelectedPoleId = -1;
-        private int _animatingTargetPoleId = -1;
         private bool _ringPrewarmed;
         private Mesh _proceduralTorusMesh;
         private GameObject _floorPlane;
         private GameObject _tutorialArrowGo;
         private GameObject _tutorialCanvasGo;
-        private UnityEngine.UI.Text _tutorialLabelText;
+        private TextMeshProUGUI _tutorialLabelText;
 
         private BloomPulseController _bloomPulseController;
 
@@ -77,8 +106,9 @@ namespace RingFlow.Gameplay
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             int totalRings = 0;
             for (int dbg = 0; dbg < poles.Count; dbg++) totalRings += poles[dbg]?.Rings.Count ?? 0;
+            int animPoleId = _animationHandler != null ? _animationHandler.AnimatingTargetPoleId : -1;
             NexusLog.Info("BoardView", nameof(BuildBoard), poles.Count.ToString(),
-                $"Rebuilding board: {poles.Count} poles, {totalRings} total rings, _animatingTargetPoleId={_animatingTargetPoleId}.");
+                $"Rebuilding board: {poles.Count} poles, {totalRings} total rings, animatingPoleId={animPoleId}.");
 #endif
             // Incremental sync: return previously spawned poles/rings to their pool
             // before re-spawning from the current pole data. Preserves pool integrity
@@ -88,7 +118,7 @@ namespace RingFlow.Gameplay
 
             EnsureRingPoolPrewarmed();
             EnsureFloorPlaneCreated();
-
+            InitializeHandlersIfNeeded();
             int backRowCount = Mathf.CeilToInt(poles.Count / 2.0f);
             for (int p = 0; p < poles.Count; p++)
             {
@@ -185,7 +215,7 @@ namespace RingFlow.Gameplay
                     ringObj.name = $"Ring_{r}_{ringData.Color}_{ringData.Type}";
 
                     float targetWorldY = (0.22f + (r * (F.RingStackSpacing * F.PoleScale.y))) * scaleFactor;
-                    if (p == _lastSelectedPoleId && r == neededRingCount - 1)
+                    if (p == _selectionHandler.LastSelectedPoleId && r == neededRingCount - 1)
                     {
                         bool reduceMotion = _settingsModel != null && _settingsModel.ReduceMotion.Value;
                         if (!reduceMotion) targetWorldY += F.RingSelectionLift * scaleFactor;
@@ -226,311 +256,24 @@ namespace RingFlow.Gameplay
 
         public void AnimateRingMove(int fromPoleId, int toPoleId, List<PoleState> poles)
         {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            NexusLog.Info("BoardView", nameof(AnimateRingMove), $"{fromPoleId}->{toPoleId}",
-                $"Move animation started. reduceMotion={_settingsModel?.ReduceMotion.Value}");
-#endif
-            bool reduceMotion = _settingsModel != null && _settingsModel.ReduceMotion.Value;
-            bool slowMode = _settingsModel != null && _settingsModel.SlowMode.Value;
-            float speed = slowMode ? F.SlowModeMultiplier : 1f;
-            float duration = F.MoveDuration * speed;
-
-            Vector3 oldRingWorldPos = Vector3.zero;
-            RingColor movedColor = RingColor.None;
-            if (fromPoleId >= 0 && fromPoleId < _spawnedRings.Count && _spawnedRings[fromPoleId].Count > 0)
-            {
-                var topRing = _spawnedRings[fromPoleId][^1];
-                if (topRing != null)
-                {
-                    oldRingWorldPos = topRing.transform.position;
-                    if (fromPoleId < poles.Count && poles[fromPoleId].Rings.Count > 0)
-                        movedColor = poles[fromPoleId].Rings[^1].Color;
-                }
-                else
-                {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    NexusLog.Warn("BoardView", nameof(AnimateRingMove), $"{fromPoleId}->{toPoleId}",
-                        $"Top ring on fromPole {fromPoleId} is null — cannot capture start position. Animation will jump from origin.");
-#endif
-                }
-            }
-            else
-            {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                NexusLog.Warn("BoardView", nameof(AnimateRingMove), $"{fromPoleId}->{toPoleId}",
-                    $"fromPoleId {fromPoleId} out of _spawnedRings range ({_spawnedRings.Count}) or empty. No start position captured.");
-#endif
-            }
-
-            // FIX-U1: Set _animatingTargetPoleId BEFORE BuildBoard so ApplySelection
-            // (called inside BuildBoard) skips the destination pole's top ring tween.
-            // Without this, ApplySelection would launch a DOLocalMoveY on toPole's top
-            // ring the instant it is placed — fighting the jump tween and causing a stutter
-            // on that pole as well as incorrectly lifting rings on all other poles.
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            NexusLog.Info("BoardView", nameof(AnimateRingMove), $"{fromPoleId}->{toPoleId}",
-                $"Setting _animatingTargetPoleId={toPoleId} before BuildBoard.");
-#endif
-            _animatingTargetPoleId = toPoleId;
-
-            BuildBoard(poles);
-
-            if (toPoleId >= 0 && toPoleId < _spawnedRings.Count && _spawnedRings[toPoleId].Count > 0)
-            {
-                var movedRing = _spawnedRings[toPoleId][^1];
-                if (movedRing != null)
-                {
-                    int toBackRowCount = Mathf.CeilToInt(poles.Count / 2.0f);
-                    float toScaleFactor = (poles.Count > 5 && toPoleId < toBackRowCount) ? 0.85f : 1.0f;
-
-                    DOTween.Kill(movedRing.transform);
-                    movedRing.transform.position = oldRingWorldPos;
-                    int ringIndex = _spawnedRings[toPoleId].Count - 1;
-                    var toPoleObj = _spawnedPoles[toPoleId].gameObject;
-                    var toPoleScale = toPoleObj.transform.localScale;
-                    float targetWorldY = (0.22f + (ringIndex * (F.RingStackSpacing * F.PoleScale.y))) * toScaleFactor;
-                    var targetLocal = new Vector3(0f, targetWorldY / toPoleScale.y, 0f);
-
-                    if (reduceMotion)
-                    {
-                        movedRing.transform.localPosition = targetLocal;
-                        _animatingTargetPoleId = -1;
-                        TriggerMoveEffects(movedRing.transform.position, movedColor);
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                        NexusLog.Info("BoardView", nameof(AnimateRingMove), $"{fromPoleId}->{toPoleId}",
-                            "ReduceMotion: snap complete, _animatingTargetPoleId reset.");
-#endif
-                        ApplySelection();
-                    }
-                    else
-                    {
-                        float localX = (F.RingTargetWidth * toScaleFactor) / toPoleScale.x;
-                        float localY = ((F.RingTargetHeight / F.RingMeshHeight) * toScaleFactor) / toPoleScale.y;
-                        float localZ = (F.RingTargetWidth * toScaleFactor) / toPoleScale.z;
-                        Vector3 normalScale = new Vector3(localX, localY, localZ);
-
-                        // BUG-4 FIX: Guard fromPoleId before accessing _spawnedPoles list.
-                        // Without this, a negative or out-of-range fromPoleId causes ArgumentOutOfRangeException.
-                        // Animation is visual-only — early return has no gameplay impact.
-                        if (fromPoleId < 0 || fromPoleId >= _spawnedPoles.Count)
-                        {
-                            NexusLog.Error("BoardView", nameof(AnimateRingMove), $"{fromPoleId}->{toPoleId}",
-                                $"fromPoleId {fromPoleId} out of _spawnedPoles range ({_spawnedPoles.Count}) — animation aborted, _animatingTargetPoleId reset.");
-                            _animatingTargetPoleId = -1;
-                            return;
-                        }
-
-                        var fromPoleObj = _spawnedPoles[fromPoleId].gameObject;
-                        float dist = Vector3.Distance(fromPoleObj.transform.position, toPoleObj.transform.position);
-                        float worldJumpPower = F.MoveJumpPower + (dist * 0.35f);
-                        float localJumpPower = worldJumpPower / toPoleScale.y;
-
-                        var movedRingTransform = movedRing.transform;
-                        var movedRingGameObject = movedRing.gameObject;
-
-                        movedRingTransform.DOLocalJump(targetLocal, localJumpPower, 1, duration)
-                            .SetEase(DG.Tweening.Ease.InOutQuad)
-                            .SetAutoKill(true)
-                            .OnComplete(() =>
-                            {
-                                if (movedRingGameObject == null || movedRingTransform == null) return;
-
-                                _animatingTargetPoleId = -1;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                                NexusLog.Info("BoardView", nameof(AnimateRingMove), $"{fromPoleId}->{toPoleId}",
-                                    "Jump complete, _animatingTargetPoleId reset.");
-#endif
-                                TriggerMoveEffects(movedRingTransform.position, movedColor);
-                                _hapticService?.Vibrate(HapticType.Light);
-
-                                DOTween.Kill(movedRingTransform);
-                                movedRingTransform.DOScale(new Vector3(localX * 1.25f, localY * 0.6f, localZ * 1.25f), 0.08f)
-                                    .SetEase(DG.Tweening.Ease.OutQuad)
-                                    .SetAutoKill(true)
-                                    .OnComplete(() =>
-                                    {
-                                        if (movedRingGameObject == null || movedRingTransform == null) return;
-                                        movedRingTransform.DOScale(normalScale, 0.18f).SetEase(DG.Tweening.Ease.OutBack).SetAutoKill(true);
-                                    });
-
-                                ApplySelection();
-                            });
-
-                        movedRingTransform.DOScale(new Vector3(localX * 0.85f, localY * 1.35f, localZ * 0.85f), duration * 0.4f)
-                            .SetEase(DG.Tweening.Ease.OutQuad)
-                            .SetAutoKill(true)
-                            .OnComplete(() =>
-                            {
-                                if (movedRingGameObject == null || movedRingTransform == null) return;
-                                movedRingTransform.DOScale(normalScale, duration * 0.4f).SetEase(DG.Tweening.Ease.InQuad).SetAutoKill(true);
-                            });
-                    }
-                }
-            }
-            else
-            {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                NexusLog.Warn("BoardView", nameof(AnimateRingMove), $"{fromPoleId}->{toPoleId}",
-                    $"toPoleId {toPoleId} out of _spawnedRings range or empty after BuildBoard. _animatingTargetPoleId reset.");
-#endif
-                _animatingTargetPoleId = -1;
-            }
+            InitializeHandlersIfNeeded();
+            _animationHandler.AnimateRingMove(
+                fromPoleId, toPoleId, poles,
+                GetSpawnedRing,
+                GetPoleObject,
+                GetRingCountOnPole,
+                () => ApplySelection());
         }
 
         public void AnimateRingUndo(int fromPoleId, int toPoleId, List<PoleState> poles)
         {
-            if (fromPoleId < 0 || toPoleId < 0) return;
-            if (poles == null) return;
-            if (fromPoleId >= poles.Count || toPoleId >= poles.Count) return;
-            // BUG-4 FIX: Also guard against out-of-range _spawnedPoles access.
-            // poles.Count check above is insufficient when _spawnedPoles is shorter than poles
-            // (e.g. board not yet built). Animation is visual-only — early return has no gameplay impact.
-            if (fromPoleId >= _spawnedPoles.Count || toPoleId >= _spawnedPoles.Count)
-            {
-                NexusLog.Warn("BoardView", nameof(AnimateRingUndo), $"{toPoleId}->{fromPoleId}",
-                    $"fromPoleId {fromPoleId} or toPoleId {toPoleId} out of _spawnedPoles range ({_spawnedPoles.Count}) — undo animation aborted.");
-                return;
-            }
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            NexusLog.Info("BoardView", nameof(AnimateRingUndo), $"{toPoleId}->{fromPoleId}",
-                $"Undo animation started. Original move was {fromPoleId}->{toPoleId}. reduceMotion={_settingsModel?.ReduceMotion.Value}");
-#endif
-
-            bool reduceMotion = _settingsModel != null && _settingsModel.ReduceMotion.Value;
-            bool slowMode = _settingsModel != null && _settingsModel.SlowMode.Value;
-            float speed = slowMode ? F.SlowModeMultiplier : 1f;
-            float duration = F.MoveDuration * speed;
-
-            // The original move was from→to. Undo reverses it: to→from.
-            // Capture the ring's current visual position on toPole BEFORE rebuilding.
-            Vector3 oldRingWorldPos = Vector3.zero;
-            RingColor movedColor = RingColor.None;
-            if (toPoleId < _spawnedRings.Count && _spawnedRings[toPoleId].Count > 0)
-            {
-                var topRing = _spawnedRings[toPoleId][^1];
-                if (topRing != null)
-                {
-                    oldRingWorldPos = topRing.transform.position;
-                    // Best-effort: find the ring color from the model snapshot on fromPole
-                    // (the ring is now on fromPole after board revert).
-                    if (fromPoleId < poles.Count && poles[fromPoleId].Rings.Count > 0)
-                        movedColor = poles[fromPoleId].TopRing.Color;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    NexusLog.Info("BoardView", nameof(AnimateRingUndo), $"{toPoleId}->{fromPoleId}",
-                        $"Captured ring world pos={oldRingWorldPos}, color={movedColor} from toPole {toPoleId}.");
-#endif
-                }
-                else
-                {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    NexusLog.Warn("BoardView", nameof(AnimateRingUndo), $"{toPoleId}->{fromPoleId}",
-                        $"Top ring on toPole {toPoleId} is null before rebuild — cannot capture start position.");
-#endif
-                }
-            }
-            else
-            {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                NexusLog.Warn("BoardView", nameof(AnimateRingUndo), $"{toPoleId}->{fromPoleId}",
-                    $"toPoleId {toPoleId} has no visual rings before rebuild — undo animation will snap without jump.");
-#endif
-            }
-
-            // FIX: Set _animatingTargetPoleId BEFORE BuildBoard so that ApplySelection
-            // (called inside BuildBoard) correctly skips the undo-animating pole.
-            // Previously this was set AFTER BuildBoard, causing ApplySelection to
-            // launch a DOLocalMoveY tween on fromPole's top ring before the undo
-            // jump tween started — producing a visible stutter on all other poles.
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            NexusLog.Info("BoardView", nameof(AnimateRingUndo), $"{toPoleId}->{fromPoleId}",
-                $"Setting _animatingTargetPoleId={fromPoleId} before BuildBoard.");
-#endif
-            _animatingTargetPoleId = fromPoleId;
-
-            // Rebuild board to match reverted model state (ring now on fromPole).
-            BuildBoard(poles);
-
-            // After rebuild, ring is at fromPole. Move it back to old visual position
-            // on toPole, then animate to its correct position on fromPole.
-            if (fromPoleId < _spawnedRings.Count && _spawnedRings[fromPoleId].Count > 0)
-            {
-                var movedRing = _spawnedRings[fromPoleId][^1];
-                if (movedRing == null)
-                {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    NexusLog.Warn("BoardView", nameof(AnimateRingUndo), $"{toPoleId}->{fromPoleId}",
-                        $"Top ring on fromPole {fromPoleId} is null after BuildBoard — undo animation aborted, _animatingTargetPoleId reset.");
-#endif
-                    _animatingTargetPoleId = -1;
-                    return;
-                }
-
-                var movedRingTransform = movedRing.transform;
-                var movedRingGameObject = movedRing.gameObject;
-
-                DOTween.Kill(movedRingTransform);
-                movedRingTransform.position = oldRingWorldPos;
-
-                int ringIndex = _spawnedRings[fromPoleId].Count - 1;
-                var fromPoleObj = _spawnedPoles[fromPoleId].gameObject;
-                var fromPoleScale = fromPoleObj.transform.localScale;
-                
-                int fromBackRowCount = Mathf.CeilToInt(poles.Count / 2.0f);
-                float fromScaleFactor = (poles.Count > 5 && fromPoleId < fromBackRowCount) ? 0.85f : 1.0f;
-                
-                float targetWorldY = (0.22f + (ringIndex * (F.RingStackSpacing * F.PoleScale.y))) * fromScaleFactor;
-                var targetLocal = new Vector3(0f, targetWorldY / fromPoleScale.y, 0f);
-
-                #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                NexusLog.Info("BoardView", nameof(AnimateRingUndo), $"{toPoleId}->{fromPoleId}",
-                    $"Calculated targetLocal={targetLocal} for fromPoleId={fromPoleId} (scaleFactor={fromScaleFactor})");
-                #endif
-
-                if (reduceMotion)
-                {
-                    movedRing.transform.localPosition = targetLocal;
-                    _animatingTargetPoleId = -1;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    NexusLog.Info("BoardView", nameof(AnimateRingUndo), $"{toPoleId}->{fromPoleId}",
-                        "ReduceMotion: undo snap complete, _animatingTargetPoleId reset.");
-#endif
-                    TriggerMoveEffects(movedRing.transform.position, movedColor);
-                    _hapticService?.Vibrate(HapticType.Light);
-                    ApplySelection();
-                    return;
-                }
-
-                var toPoleObj = _spawnedPoles[toPoleId].gameObject;
-                float dist = Vector3.Distance(toPoleObj.transform.position, fromPoleObj.transform.position);
-                float worldJumpPower = F.MoveJumpPower + (dist * 0.35f);
-                float localJumpPower = worldJumpPower / fromPoleScale.y;
-
-                movedRingTransform.DOLocalJump(targetLocal, localJumpPower, 1, duration)
-                    .SetEase(DG.Tweening.Ease.InOutQuad)
-                    .SetAutoKill(true)
-                    .OnComplete(() =>
-                    {
-                        if (movedRingGameObject == null || movedRingTransform == null) return;
-
-                        _animatingTargetPoleId = -1;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                        NexusLog.Info("BoardView", nameof(AnimateRingUndo), $"{toPoleId}->{fromPoleId}",
-                            "Undo jump complete, _animatingTargetPoleId reset.");
-#endif
-                        TriggerMoveEffects(movedRingTransform.position, movedColor);
-                        _hapticService?.Vibrate(HapticType.Light);
-                        ApplySelection();
-                    });
-            }
-            else
-            {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                NexusLog.Warn("BoardView", nameof(AnimateRingUndo), $"{toPoleId}->{fromPoleId}",
-                    $"fromPoleId {fromPoleId} out of _spawnedRings range or empty after BuildBoard. _animatingTargetPoleId reset.");
-#endif
-                _animatingTargetPoleId = -1;
-            }
+            InitializeHandlersIfNeeded();
+            _animationHandler.AnimateRingUndo(
+                fromPoleId, toPoleId, poles,
+                GetSpawnedRing,
+                GetPoleObject,
+                GetRingCountOnPole,
+                () => ApplySelection());
         }
 
         public PoleView GetPoleView(int poleId)
@@ -541,219 +284,44 @@ namespace RingFlow.Gameplay
 
         public void SetSelectedPole(int poleId)
         {
-            if (_lastSelectedPoleId != poleId)
+            InitializeHandlersIfNeeded();
+            bool changed = _selectionHandler.SetSelectedPole(poleId,
+                id => _hapticService?.Vibrate(HapticType.Selection));
+
+            if (changed)
             {
-                _lastSelectedPoleId = poleId;
-                if (poleId >= 0)
-                {
-                    _hapticService?.Vibrate(HapticType.Selection);
-                }
                 // FIX-U4: Do not call ApplySelection while a ring is mid-animation.
-                // If _animatingTargetPoleId is set, BuildBoard's internal ApplySelection
-                // already ran with the correct skip, and the OnComplete callback will
-                // call ApplySelection again once the animation finishes. Calling it here
-                // a second time would fight the jump tween with a DOLocalMoveY on the
-                // animating pole's rings — causing the visual jitter on all other poles.
-                if (_animatingTargetPoleId < 0)
+                if (_animationHandler.AnimatingTargetPoleId < 0)
                 {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    NexusLog.Info("BoardView", nameof(SetSelectedPole), poleId.ToString(),
-                        $"Selection changed to {poleId}. Calling ApplySelection.");
-#endif
                     ApplySelection();
                 }
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                else
-                {
-                    NexusLog.Info("BoardView", nameof(SetSelectedPole), poleId.ToString(),
-                        $"Selection changed to {poleId} but _animatingTargetPoleId={_animatingTargetPoleId} — deferring ApplySelection to OnComplete.");
-                }
-#endif
             }
         }
 
         public void FlashPoleError(int poleId)
         {
-            var pv = GetPoleView(poleId);
-            if (pv == null)
-            {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                NexusLog.Warn("BoardView", nameof(FlashPoleError), poleId.ToString(),
-                    $"FlashPoleError: poleId {poleId} has no PoleView — error flash skipped.");
-#endif
-                return;
-            }
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            NexusLog.Info("BoardView", nameof(FlashPoleError), poleId.ToString(), "Error flash triggered.");
-#endif
-            pv.FlashError();
-            _hapticService?.Vibrate(HapticType.Warning);
-            if (_audioService != null)
-                _audioService.PlaySfx(_proceduralAudio.GetOrCreateErrorClip(), 1.0f);
+            InitializeHandlersIfNeeded();
+            var poleObj = GetPoleObject(poleId);
+            if (poleObj == null) return;
+            _animationHandler.FlashPoleError(poleObj);
         }
 
         public void CelebratePoleComplete(int poleId, int ringCount, int completedCount, bool isFinalPole)
         {
-            var pv = GetPoleView(poleId);
-            if (pv == null)
-            {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                NexusLog.Warn("BoardView", nameof(CelebratePoleComplete), poleId.ToString(),
-                    $"CelebratePoleComplete: poleId {poleId} has no PoleView — celebration skipped.");
-#endif
-                return;
-            }
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            NexusLog.Info("BoardView", nameof(CelebratePoleComplete), poleId.ToString(),
-                $"Celebrating pole {poleId}. ringCount={ringCount}, completedCount={completedCount}, isFinalPole={isFinalPole}.");
-#endif
+            InitializeHandlersIfNeeded();
+            _animationHandler.CelebratePoleComplete(
+                poleId, ringCount, completedCount, isFinalPole,
+                GetPoleObject,
+                GetSpawnedRingAt,
+                () => _spawnedPoles.Count);
 
-            // --- 3-Tier Feedback System ---
-            int tier = isFinalPole ? 2 : (completedCount >= F.MediumTierThreshold ? 1 : 0);
-
-            // ----- Tier 0/1: Flash pole with success color -----
-            float flashDuration = isFinalPole ? F.PoleSuccessFlashDuration * 1.5f : F.PoleSuccessFlashDuration;
-            // Use colorblind-safe success color (gold → warm amber that works for all vision types)
-            Color successColor = F.PoleSuccessFlashColor;
-            if (_settingsModel != null && _settingsModel.ColorBlindMode.Value > 0)
-                successColor = Color.Lerp(successColor, Color.cyan, 0.4f);
-            pv.FlashSuccess(flashDuration, successColor);
-
-            // ----- Tier 0/1/2: Haptic feedback -----
-            HapticType hapticType = isFinalPole ? HapticType.Success : HapticType.Medium;
-            _hapticService?.Vibrate(hapticType);
-
-            // ----- Tier 0/1: Audio feedback -----
-            if (_audioService != null)
-            {
-                if (isFinalPole)
-                    _audioService.PlaySfx(_proceduralAudio.GetOrCreateFinalPoleClip(), 1.0f);
-                else
-                    _audioService.PlaySfx(_proceduralAudio.GetOrCreateRichPoleCompleteClip(ringCount), 1.0f);
-            }
-
-            // ----- Tier 0/1: Camera micro-shake -----
-            float shakeIntensity = isFinalPole ? F.CompleteShakeIntensity * 2f : F.CompleteShakeIntensity;
-            float shakeDuration = isFinalPole ? F.CompleteShakeDuration * 2f : F.CompleteShakeDuration;
-            ShakeCamera(shakeIntensity, shakeDuration);
-
-            // ----- Tier 0/1: Staggered ring bounce animation -----
-            // Reuse pre-allocated list to avoid GC pressure during gameplay.
-            _celebrationRingBuffer.Clear();
-            int childCount = pv.transform.childCount;
-            for (int c = 0; c < childCount; c++)
-            {
-                var child = pv.transform.GetChild(c);
-                if (child.name.Length > 5 && child.name[0] == 'R' && child.name[4] == '_')
-                    _celebrationRingBuffer.Add(child);
-            }
-            _celebrationRingBuffer.Sort(_ringYComparer);
-
-            for (int i = 0; i < _celebrationRingBuffer.Count; i++)
-            {
-                var ringTrans = _celebrationRingBuffer[i];
-                float originalY = ringTrans.localPosition.y;
-                float originalScaleY = ringTrans.localScale.y;
-                float bounceHeight = isFinalPole ? 0.5f : 0.35f;
-
-                // Use DOTween Sequence to avoid nested OnComplete lambda closures (zero GC).
-                // FIX-U5: SetTarget(ringTrans) so DOTween.Kill(ringTrans) — called in
-                // RecycleRing and KillTweens — also kills this sequence. Without SetTarget
-                // the sequence is not associated with the transform, so Kill(ringTrans) only
-                // kills standalone tweens, leaving the sequence running on a recycled/pooled
-                // ring object and causing visual corruption on the next undo or level load.
-                var seq = DOTween.Sequence().SetTarget(ringTrans).SetAutoKill(true);
-                seq.AppendInterval(i * 0.04f);
-                seq.Append(ringTrans.DOLocalMoveY(originalY + bounceHeight, 0.15f).SetEase(DG.Tweening.Ease.OutQuad));
-                seq.Append(ringTrans.DOLocalMoveY(originalY, 0.20f).SetEase(DG.Tweening.Ease.InQuad));
-                seq.Append(ringTrans.DOScaleY(originalScaleY * 0.7f, 0.08f).SetEase(DG.Tweening.Ease.OutQuad));
-                seq.Append(ringTrans.DOScaleY(originalScaleY, 0.12f).SetEase(DG.Tweening.Ease.OutBack));
-            }
-
-            // ----- Tier 0/1: Merge effect (replaces legacy RingPop burst) -----
-            Vector3 poleTopPos = pv.transform.position + Vector3.up * 1.5f;
-            Color mergeColor = isFinalPole ? _ringMaterialManager.GetRingColor(RingColor.Yellow) : Color.white;
-            SpawnMergeEffect(poleTopPos, mergeColor, ringCount, isFinalPole);
-
-            // ----- Tier 1: Extra sparkle for medium-tier completions -----
-            if (tier >= 1)
-            {
-                SpawnConfettiBurst(poleTopPos + Vector3.up * 0.3f, 8);
-            }
-
-            // ----- Tier 2 (Final Pole): Full-screen celebration -----
-            if (isFinalPole)
-            {
-                // Large confetti burst
-                SpawnConfettiBurst(poleTopPos + Vector3.up * 1f, 24);
-
-                // Reward particles across the board
-                if (_vfxRegistry != null && _objectPoolService != null)
-                {
-                    var mergePrefab = _vfxRegistry.GetMergeEffectPrefab();
-                    if (mergePrefab != null)
-                    {
-                        for (int i = 0; i < _spawnedPoles.Count; i++)
-                        {
-                            if (i == poleId) continue;
-                            var otherPv = GetPoleView(i);
-                            if (otherPv != null)
-                            {
-                                var dp = otherPv.transform.position + Vector3.up * 2f;
-                                var mergeInstance = _objectPoolService.Spawn(mergePrefab, dp, Quaternion.identity);
-                                mergeInstance?.GetComponent<MergeEffectVfx>()?.InitializeBurstOnly(dp, Color.Lerp(mergeColor, Color.white, 0.3f));
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ----- Bloom pulse -----
+            // Bloom pulse still handled in BoardView
             var bloom = GetOrFindBloomPulseController();
             if (bloom != null)
             {
                 float bloomMultiplier = isFinalPole ? F.FinalBloomIntensityMultiplier : F.BloomIntensityMultiplier;
                 float bloomDuration = isFinalPole ? F.FinalBloomPulseDuration : F.BloomPulseDuration;
                 bloom.Pulse(bloomMultiplier, bloomDuration, isFinalPole);
-            }
-        }
-
-        private void SpawnMergeEffect(Vector3 position, Color color, int ringCount, bool isFinalPole)
-        {
-            if (_vfxRegistry == null || _objectPoolService == null) return;
-            var prefab = _vfxRegistry.GetMergeEffectPrefab();
-            if (prefab == null)
-            {
-                // Fallback to legacy RingPop if MergeEffect not available
-                var popPrefab = _vfxRegistry.GetRingPopPrefab();
-                if (popPrefab != null)
-                {
-                    var popInstance = _objectPoolService.Spawn(popPrefab, position, Quaternion.identity);
-                    popInstance?.GetComponent<RingPopVfx>()?.Initialize(color);
-                }
-                return;
-            }
-            var mergeInstance = _objectPoolService.Spawn(prefab, position, Quaternion.identity);
-            mergeInstance?.GetComponent<MergeEffectVfx>()?.Initialize(position, color, ringCount, isFinalPole);
-        }
-
-        private void SpawnConfettiBurst(Vector3 position, int count)
-        {
-            if (_vfxRegistry == null || _objectPoolService == null) return;
-            var prefab = _vfxRegistry.GetConfettiPrefab();
-            if (prefab == null) return;
-
-            // Spawn multiple confetti bursts for a larger effect
-            int bursts = Mathf.Max(1, count / 8);
-            for (int i = 0; i < bursts; i++)
-            {
-                Vector3 offset = new Vector3(
-                    UnityEngine.Random.Range(-0.5f, 0.5f),
-                    UnityEngine.Random.Range(0f, 0.3f),
-                    UnityEngine.Random.Range(-0.5f, 0.5f)
-                );
-                var confettiInstance = _objectPoolService.Spawn(prefab, position + offset, Quaternion.identity);
-                confettiInstance?.GetComponent<ConfettiVfx>()?.Initialize();
             }
         }
 
@@ -768,167 +336,15 @@ namespace RingFlow.Gameplay
             return _bloomPulseController;
         }
 
-        private MaterialPropertyBlock GetSelectionPropBlock()
-        {
-            if (_selectionPropBlock == null) _selectionPropBlock = new MaterialPropertyBlock();
-            return _selectionPropBlock;
-        }
-
-        // FIX-P1: ApplySelection previously called DOTween.Kill + a new tween on EVERY ring
-        // on EVERY selection change, even for rings that haven't changed state. With 12 poles
-        // each having 4 rings that's up to 48 Kill+tween pairs per tap — well above the GDD
-        // §75 GC budget. Fix: track the last selection state per-pole and only animate the
-        // top ring of poles whose selection status actually changed this call.
-        //
-        // FIX-P2: Glow Light child was created with `new GameObject` and destroyed with
-        // `Destroy()` each time a ring was selected/deselected. Creating/destroying engine
-        // objects inside a tight selection loop generates GC and draw-call overhead.
-        // Fix: reuse the existing light child; toggle its enabled state instead of
-        // destroy/recreate. The light is created lazily on first selection and persists.
         private void ApplySelection()
         {
-            bool reduceMotion = _settingsModel != null && _settingsModel.ReduceMotion.Value;
-            bool slowMode = _settingsModel != null && _settingsModel.SlowMode.Value;
-            float speed = slowMode ? F.SlowModeMultiplier : 1f;
-            float duration = F.SelectionLiftDuration * speed;
-
-            for (int i = 0; i < _spawnedPoles.Count; i++)
-            {
-                if (_spawnedPoles[i] == null) continue;
-                bool isSelected = i == _lastSelectedPoleId;
-                _spawnedPoles[i].SetSelected(isSelected);
-
-                // FIX-U2: Skip ALL rings on a pole that is currently being animated by
-                // AnimateRingMove or AnimateRingUndo. Previously only the animating pole's
-                // top ring tween was skipped, but ALL rings on that pole were still tweened
-                // by ApplySelection, causing the other rings on the same pole to jump to
-                // their resting Y and then visually snap when the animation completed.
-                if (i == _animatingTargetPoleId)
-                {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    NexusLog.Info("BoardView", nameof(ApplySelection), i.ToString(),
-                        $"Skipping pole {i} — currently animating (_animatingTargetPoleId={_animatingTargetPoleId}).");
-#endif
-                    continue;
-                }
-
-                if (i < _spawnedRings.Count && _spawnedRings[i].Count > 0)
-                {
-                    var ringList = _spawnedRings[i];
-                    int topRingIndex = ringList.Count - 1;
-                    var topRing = ringList[topRingIndex];
-                    if (topRing == null) continue;
-
-                    // FIX-U3: Only animate the top ring for selection lift/drop.
-                    // Non-top rings should snap to their resting position without tweening
-                    // because CelebratePoleComplete may have launched bounce sequences on
-                    // them; launching another tween here fights those sequences and produces
-                    // the visible jitter on all poles during undo.
-                    var poleObj = _spawnedPoles[i].gameObject;
-                    float poleScaleY = poleObj.transform.localScale.y;
-                    
-                    int backRowCount = Mathf.CeilToInt(_spawnedPoles.Count / 2.0f);
-                    float scaleFactor = (_spawnedPoles.Count > 5 && i < backRowCount) ? 0.85f : 1.0f;
-
-                    for (int r = 0; r < topRingIndex; r++)
-                    {
-                        var ring = ringList[r];
-                        if (ring == null) continue;
-                        float restY = ((0.22f + (r * (F.RingStackSpacing * F.PoleScale.y))) * scaleFactor) / poleScaleY;
-                        // Only snap if the ring is significantly out of place (not mid-celebrate).
-                        // We intentionally do NOT kill celebrate tweens here — just let them finish.
-                        // We skip DOTween.Kill so celebration bounce sequences are not interrupted.
-                        ring.transform.localPosition = new Vector3(0f, restY, 0f);
-                    }
-
-                    int ringIndex = topRingIndex;
-                    float targetWorldY = (0.22f + (ringIndex * (F.RingStackSpacing * F.PoleScale.y))) * scaleFactor + (isSelected ? F.RingSelectionLift * scaleFactor : 0f);
-                    float targetY = targetWorldY / poleScaleY;
-
-                    #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    NexusLog.Info("BoardView", nameof(ApplySelection), i.ToString(),
-                        $"Pole {i} isSelected={isSelected} targetY={targetY} scaleFactor={scaleFactor}");
-                    #endif
-
-                    DOTween.Kill(topRing.transform);
-                    if (reduceMotion)
-                    {
-                        topRing.transform.localPosition = new Vector3(0f, targetY, 0f);
-                    }
-                    else
-                    {
-                        // Capture loop variable for closure — avoids stale reference after loop iteration.
-                        float capturedY = targetY;
-                        bool capturedSelected = isSelected;
-                        var capturedRing = topRing;
-                        topRing.transform.DOLocalMoveY(targetY, duration).SetEase(DG.Tweening.Ease.OutQuad)
-                            .SetAutoKill(true)
-                            .OnComplete(() =>
-                            {
-                                if (capturedSelected && capturedRing != null)
-                                {
-                                    DOTween.Kill(capturedRing.transform);
-                                    float bobOffset = (F.TutorialArrowBobHeight * 0.4f * scaleFactor) / poleScaleY;
-                                    capturedRing.transform.DOLocalMoveY(capturedY + bobOffset, 0.6f)
-                                        .SetEase(DG.Tweening.Ease.InOutSine)
-                                        .SetLoops(-1, LoopType.Yoyo)
-                                        .SetAutoKill(true);
-                                }
-                            });
-                    }
-
-                    // --- Warm Selection Glow (FIX-P2: reuse light, no Destroy/new) ---
-                    var ringRenderer = topRing.GetComponentInChildren<Renderer>();
-                    var propBlock = GetSelectionPropBlock();
-                    propBlock.Clear();
-
-                    // Find or lazily create a persistent glow light under this ring.
-                    var lightChildTransform = topRing.transform.Find("SelectionGlowLight");
-
-                    if (isSelected)
-                    {
-                        if (lightChildTransform == null)
-                        {
-                            // Create once; reuse on subsequent selections.
-                            var lightGo = new GameObject("SelectionGlowLight");
-                            lightGo.transform.SetParent(topRing.transform, false);
-                            lightGo.transform.localPosition = Vector3.zero;
-                            var light = lightGo.AddComponent<Light>();
-                            light.type = LightType.Point;
-                            light.color = F.SelectionGlowColor;
-                            light.range = F.SelectionGlowRange;
-                            light.intensity = F.SelectionGlowIntensity;
-                            light.shadows = LightShadows.None;
-                            lightChildTransform = lightGo.transform;
-                        }
-                        else
-                        {
-                            // Re-enable if it was disabled by a previous deselect.
-                            lightChildTransform.gameObject.SetActive(true);
-                        }
-
-                        if (ringRenderer != null)
-                        {
-                            ringRenderer.GetPropertyBlock(propBlock);
-                            propBlock.SetColor("_EmissionColor", F.SelectionEmissionColor);
-                            ringRenderer.SetPropertyBlock(propBlock);
-                        }
-                    }
-                    else
-                    {
-                        // FIX-P2: Disable instead of Destroy — keeps the object in pool-friendly state.
-                        if (lightChildTransform != null)
-                            lightChildTransform.gameObject.SetActive(false);
-
-                        if (ringRenderer != null)
-                        {
-                            ringRenderer.GetPropertyBlock(propBlock);
-                            propBlock.SetColor("_EmissionColor", Color.black);
-                            ringRenderer.SetPropertyBlock(propBlock);
-                        }
-                    }
-                }
-            }
+            InitializeHandlersIfNeeded();
+            _selectionHandler.ApplySelection(
+                _spawnedPoles.Count,
+                GetPoleObject,
+                GetRingCountOnPole,
+                GetSpawnedRingAt,
+                GetPoleView);
         }
 
         public void ClearBoard()
@@ -1040,8 +456,8 @@ namespace RingFlow.Gameplay
             canvasRt.sizeDelta = F.TutorialLabelCanvasSize;
             canvasRt.localScale = F.TutorialLabelCanvasScale;
 
-            var labelGo = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer),
-                typeof(UnityEngine.UI.Text), typeof(UnityEngine.UI.Outline));
+            var labelGo = new GameObject("Label", typeof(RectTransform),
+                typeof(TextMeshProUGUI));
             labelGo.transform.SetParent(_tutorialCanvasGo.transform, false);
             var labelRt = labelGo.GetComponent<RectTransform>();
             labelRt.anchorMin = Vector2.zero;
@@ -1049,18 +465,14 @@ namespace RingFlow.Gameplay
             labelRt.offsetMin = Vector2.zero;
             labelRt.offsetMax = Vector2.zero;
 
-            _tutorialLabelText = labelGo.GetComponent<UnityEngine.UI.Text>();
-            _tutorialLabelText.alignment = TextAnchor.MiddleCenter;
+            _tutorialLabelText = labelGo.GetComponent<TextMeshProUGUI>();
+            _tutorialLabelText.alignment = TextAlignmentOptions.Center;
             _tutorialLabelText.fontSize = F.TutorialLabelFontSize;
-            _tutorialLabelText.fontStyle = FontStyle.Bold;
+            _tutorialLabelText.fontStyle = FontStyles.Bold;
             _tutorialLabelText.color = Color.white;
-            _tutorialLabelText.horizontalOverflow = HorizontalWrapMode.Overflow;
-            _tutorialLabelText.verticalOverflow = VerticalWrapMode.Overflow;
-            _tutorialLabelText.font = _ringMaterialManager.GetBuiltinLabelFont();
-
-            var labelOutline = labelGo.GetComponent<UnityEngine.UI.Outline>();
-            labelOutline.effectColor = F.TutorialLabelOutlineColor;
-            labelOutline.effectDistance = F.TutorialLabelOutlineDistance;
+            _tutorialLabelText.overflowMode = TextOverflowModes.Overflow;
+            _tutorialLabelText.outlineWidth = 0.2f;
+            _tutorialLabelText.outlineColor = F.TutorialLabelOutlineColor;
 
             // Subtle dark backing panel behind the label for readability on any background.
             var panelGo = new GameObject("Panel", typeof(RectTransform), typeof(CanvasRenderer),
@@ -1303,48 +715,16 @@ namespace RingFlow.Gameplay
 
 
 
-        private void TriggerMoveEffects(Vector3 position, RingColor color)
-        {
-            if (_audioService != null)
-                _audioService.PlaySfx(_proceduralAudio.GetOrCreateMoveClip(), 1.0f, 0.92f, 1.08f);
-            if (_vfxRegistry != null && _objectPoolService != null)
-            {
-                var prefab = _vfxRegistry.GetRingPopPrefab();
-                if (prefab != null)
-                {
-                    var popInstance = _objectPoolService.Spawn(prefab, position, Quaternion.identity);
-                    popInstance?.GetComponent<RingPopVfx>()?.Initialize(_ringMaterialManager.GetRingColor(color));
-                }
-            }
-        }
-
         /// <summary>
         /// Chain-link VFX/SFX: metallic clink sound + ring-shaped burst VFX at both 
         /// the source partner pole and target pole. Called by BoardMediator on ChainLinkSignal.
         /// </summary>
         public void PlayChainLinkVfx(int fromPoleId, int toPoleId, Color color, List<PoleState> poles)
         {
-            if (_audioService != null)
-                _audioService.PlaySfx(_proceduralAudio.GetOrCreateChainClip(), 1.0f, 0.9f, 1.1f);
-
-            // Spawn burst VFX at both poles using the MergeEffectVfx burst-only mode
-            if (_vfxRegistry != null && _objectPoolService != null)
-            {
-                var mergePrefab = _vfxRegistry.GetMergeEffectPrefab();
-                if (mergePrefab != null)
-                {
-                    Vector3 fromPos = GetPoleWorldPosition(fromPoleId);
-                    Vector3 toPos = GetPoleWorldPosition(toPoleId);
-
-                    var fromInstance = _objectPoolService.Spawn(mergePrefab, fromPos, Quaternion.identity);
-                    fromInstance?.GetComponent<MergeEffectVfx>()?.InitializeBurstOnly(fromPos, color);
-
-                    var toInstance = _objectPoolService.Spawn(mergePrefab, toPos, Quaternion.identity);
-                    toInstance?.GetComponent<MergeEffectVfx>()?.InitializeBurstOnly(toPos, color);
-                }
-            }
-
-            _hapticService?.Vibrate(HapticType.Light);
+            InitializeHandlersIfNeeded();
+            Vector3 fromPos = GetPoleWorldPosition(fromPoleId);
+            Vector3 toPos = GetPoleWorldPosition(toPoleId);
+            _animationHandler.PlayChainLinkVfx(fromPos, toPos, color);
         }
 
         /// <summary>
@@ -1353,30 +733,9 @@ namespace RingFlow.Gameplay
         /// </summary>
         public void PlayMagnetPullVfx(int targetPoleId, int pulledCount, Color color, List<PoleState> poles)
         {
-            if (_audioService != null)
-                _audioService.PlaySfx(_proceduralAudio.GetOrCreateMagnetClip(), 1.0f, 0.9f, 1.1f);
-
-            // Spawn burst VFX at the target pole — intensity scales with pulled count
-            if (_vfxRegistry != null && _objectPoolService != null)
-            {
-                var mergePrefab = _vfxRegistry.GetMergeEffectPrefab();
-                if (mergePrefab != null)
-                {
-                    Vector3 targetPos = GetPoleWorldPosition(targetPoleId);
-                    for (int i = 0; i < Mathf.Min(pulledCount, 3); i++)
-                    {
-                        Vector3 offset = new Vector3(
-                            UnityEngine.Random.Range(-0.3f, 0.3f),
-                            UnityEngine.Random.Range(0f, 0.5f),
-                            UnityEngine.Random.Range(-0.3f, 0.3f)
-                        );
-                        var instance = _objectPoolService.Spawn(mergePrefab, targetPos + offset, Quaternion.identity);
-                        instance?.GetComponent<MergeEffectVfx>()?.InitializeBurstOnly(targetPos + offset, color);
-                    }
-                }
-            }
-
-            _hapticService?.Vibrate(HapticType.Medium);
+            InitializeHandlersIfNeeded();
+            Vector3 targetPos = GetPoleWorldPosition(targetPoleId);
+            _animationHandler.PlayMagnetPullVfx(targetPos, pulledCount, color);
         }
 
         /// <summary>
@@ -1385,19 +744,8 @@ namespace RingFlow.Gameplay
         /// </summary>
         public void PlayPaintSplashVfx(Vector3 position, Color color)
         {
-            if (_audioService != null)
-                _audioService.PlaySfx(_proceduralAudio.GetOrCreatePaintClip(), 1.0f, 0.92f, 1.08f);
-
-            // Spawn paint-splash burst VFX
-            if (_vfxRegistry != null && _objectPoolService != null)
-            {
-                var mergePrefab = _vfxRegistry.GetMergeEffectPrefab();
-                if (mergePrefab != null)
-                {
-                    var instance = _objectPoolService.Spawn(mergePrefab, position, Quaternion.identity);
-                    instance?.GetComponent<MergeEffectVfx>()?.InitializeBurstOnly(position, color);
-                }
-            }
+            InitializeHandlersIfNeeded();
+            _animationHandler.PlayPaintSplashVfx(position, color);
         }
 
         /// <summary>
@@ -1406,22 +754,9 @@ namespace RingFlow.Gameplay
         /// </summary>
         public void PlayIceBreakVfx(int poleId, Color color)
         {
-            if (_audioService != null)
-                _audioService.PlaySfx(_proceduralAudio.GetOrCreateIceBreakClip(), 1.0f, 0.88f, 1.12f);
-
-            // Spawn ice-colored burst VFX at the pole
-            if (_vfxRegistry != null && _objectPoolService != null)
-            {
-                var mergePrefab = _vfxRegistry.GetMergeEffectPrefab();
-                if (mergePrefab != null)
-                {
-                    Vector3 pos = GetPoleWorldPosition(poleId);
-                    var instance = _objectPoolService.Spawn(mergePrefab, pos, Quaternion.identity);
-                    instance?.GetComponent<MergeEffectVfx>()?.InitializeBurstOnly(pos, color);
-                }
-            }
-
-            _hapticService?.Vibrate(HapticType.Medium);
+            InitializeHandlersIfNeeded();
+            Vector3 pos = GetPoleWorldPosition(poleId);
+            _animationHandler.PlayIceBreakVfx(pos, color);
         }
 
         /// <summary>
@@ -1430,24 +765,9 @@ namespace RingFlow.Gameplay
         /// </summary>
         public void PlayStoneThudVfx(int poleId, Color color)
         {
-            if (_audioService != null)
-                _audioService.PlaySfx(_proceduralAudio.GetOrCreateStoneImpactClip(), 0.8f, 0.95f, 1.05f);
-
-            // Spawn subtle impact burst at the pole
-            if (_vfxRegistry != null && _objectPoolService != null)
-            {
-                var mergePrefab = _vfxRegistry.GetMergeEffectPrefab();
-                if (mergePrefab != null)
-                {
-                    Vector3 pos = GetPoleWorldPosition(poleId);
-                    var instance = _objectPoolService.Spawn(mergePrefab, pos, Quaternion.identity);
-                    // Use a darker, desaturated color for stone impact feel
-                    Color stoneColor = Color.Lerp(color, Color.gray, 0.5f);
-                    instance?.GetComponent<MergeEffectVfx>()?.InitializeBurstOnly(pos, stoneColor);
-                }
-            }
-
-            _hapticService?.Vibrate(HapticType.Light);
+            InitializeHandlersIfNeeded();
+            Vector3 pos = GetPoleWorldPosition(poleId);
+            _animationHandler.PlayStoneThudVfx(pos, color);
         }
 
         /// <summary>

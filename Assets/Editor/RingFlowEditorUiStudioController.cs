@@ -221,14 +221,7 @@ namespace RingFlow.Editor
             var screens = uiRoot.Screens;
             if (screens == null) return;
 
-            var toDestroy = new List<GameObject>();
-            foreach (var pair in screens)
-            {
-                if (pair.Value is GameObject go && go != null)
-                    toDestroy.Add(go);
-            }
-            screens.Clear();
-            foreach (var go in toDestroy) Object.DestroyImmediate(go);
+            uiRoot.ScreenLoader.Clear();
 
             var missingScreens = new List<string>();
             var allScreens = System.Enum.GetValues(typeof(ScreenType));
@@ -253,7 +246,7 @@ namespace RingFlow.Editor
                 {
                     instance.name = screen.ToString();
                     instance.SetActive(screen == ScreenType.Splash);
-                    screens[screen] = instance;
+                    uiRoot.ScreenLoader.SetScreen(screen, instance);
                     loadedCount++;
                 }
             }

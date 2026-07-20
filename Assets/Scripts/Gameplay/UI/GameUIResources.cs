@@ -1,6 +1,7 @@
 using Nexus.Core.Services;
 using RingFlow.Gameplay;
 using RingFlow.Gameplay.Services;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -88,6 +89,7 @@ namespace RingFlow.Gameplay.UI
         public static float CardPadding           => Service.CardPadding;
 
         public static Font GetFont() => Service.GetFont();
+        public static TMP_FontAsset GetTMPFont() => Service.GetTMPFont();
         public static Sprite GetRoundedSprite() => Service.GetRoundedSprite();
 
         /// <summary>

@@ -1,5 +1,6 @@
 using Nexus.Core;
 using Nexus.Core.Services;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -41,9 +42,9 @@ namespace RingFlow.Gameplay.UI
             if (loc == null) return;
 
             var resolved = loc.GetString(_key, _fallback);
-            var text = GetComponent<Text>();
+            var text = GetComponent<TextMeshProUGUI>();
             if (text == null)
-                text = GetComponentInChildren<Text>(true);
+                text = GetComponentInChildren<TextMeshProUGUI>(true);
             if (text == null) return;
 
             if (string.IsNullOrEmpty(resolved))
@@ -52,9 +53,9 @@ namespace RingFlow.Gameplay.UI
 
             if (loc.IsRTL)
             {
-                if (text.alignment == TextAnchor.MiddleLeft) text.alignment = TextAnchor.MiddleRight;
-                else if (text.alignment == TextAnchor.UpperLeft) text.alignment = TextAnchor.UpperRight;
-                else if (text.alignment == TextAnchor.LowerLeft) text.alignment = TextAnchor.LowerRight;
+                if (text.alignment == TextAlignmentOptions.MidlineLeft) text.alignment = TextAlignmentOptions.MidlineRight;
+                else if (text.alignment == TextAlignmentOptions.TopLeft) text.alignment = TextAlignmentOptions.TopRight;
+                else if (text.alignment == TextAlignmentOptions.BottomLeft) text.alignment = TextAlignmentOptions.BottomRight;
             }
         }
     }

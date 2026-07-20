@@ -391,44 +391,40 @@ namespace RingFlow.Gameplay
             VfxMeshCache.Initialize();
 
             var vfxRegistry = context.TryResolve<VfxPrefabRegistry>();
-            if (vfxRegistry != null)
-            {
-                if (vfxRegistry.RingPopPrefab == null)
-                {
-                    var ringPopObj = new GameObject("RingPopVfxPrefab", typeof(RingPopVfx));
-                    Object.DontDestroyOnLoad(ringPopObj);
-                    vfxRegistry.RingPopPrefab = ringPopObj;
-                }
-                if (vfxRegistry.ConfettiPrefab == null)
-                {
-                    var confettiObj = new GameObject("ConfettiVfxPrefab", typeof(ConfettiVfx));
-                    Object.DontDestroyOnLoad(confettiObj);
-                    vfxRegistry.ConfettiPrefab = confettiObj;
-                }
-                if (vfxRegistry.MergeEffectPrefab == null)
-                {
-                    var mergeObj = new GameObject("MergeEffectVfxPrefab", typeof(MergeEffectVfx));
-                    Object.DontDestroyOnLoad(mergeObj);
-                    vfxRegistry.MergeEffectPrefab = mergeObj;
-                }
-
-                vfxRegistry.Validate();
-
-                var pool = context.TryResolve<IObjectPoolService>();
-                var feelConfig = context.Resolve<GameFeelConfigSO>();
-                if (pool != null)
-                {
-                    if (feelConfig == null)
-                        throw new System.InvalidOperationException("[GameplayLifecycle] GameFeelConfigSO is required for pool prewarming.");
-                    pool.Prewarm(vfxRegistry.RingPopPrefab, feelConfig.RingPopPoolSize);
-                    pool.Prewarm(vfxRegistry.ConfettiPrefab, feelConfig.ConfettiPoolSize);
-                    pool.Prewarm(vfxRegistry.MergeEffectPrefab, feelConfig.MergeEffectPoolSize);
-                }
-            }
-            else
+            if (vfxRegistry == null)
             {
                 NexusLog.Error("GameplayLifecycle", nameof(OnInitializeAsync), "", 
                     "VfxPrefabRegistry not bound. VFX system will be non-functional.");
+                return;
+            }
+
+            // Validate all required prefab references before proceeding.
+            // Runtime GameObject creation for missing prefabs is forbidden —
+            // all VFX prefabs must be assigned via the Inspector SerializeField.
+            if (vfxRegistry.RingPopPrefab == null)
+                throw new System.InvalidOperationException(
+                    "[GameplayLifecycle] RingPopPrefab is null. Assign the RingPopVfx prefab " +
+                    "to GameplayLifecycle._ringPopPrefab in the Inspector.");
+            if (vfxRegistry.ConfettiPrefab == null)
+                throw new System.InvalidOperationException(
+                    "[GameplayLifecycle] ConfettiPrefab is null. Assign the ConfettiVfx prefab " +
+                    "to GameplayLifecycle._confettiPrefab in the Inspector.");
+            if (vfxRegistry.MergeEffectPrefab == null)
+                throw new System.InvalidOperationException(
+                    "[GameplayLifecycle] MergeEffectPrefab is null. Assign the MergeEffectVfx prefab " +
+                    "to GameplayLifecycle._mergeEffectPrefab in the Inspector.");
+
+            vfxRegistry.Validate();
+
+            var pool = context.TryResolve<IObjectPoolService>();
+            var feelConfig = context.Resolve<GameFeelConfigSO>();
+            if (pool != null)
+            {
+                if (feelConfig == null)
+                    throw new System.InvalidOperationException("[GameplayLifecycle] GameFeelConfigSO is required for pool prewarming.");
+                pool.Prewarm(vfxRegistry.RingPopPrefab, feelConfig.RingPopPoolSize);
+                pool.Prewarm(vfxRegistry.ConfettiPrefab, feelConfig.ConfettiPoolSize);
+                pool.Prewarm(vfxRegistry.MergeEffectPrefab, feelConfig.MergeEffectPoolSize);
             }
         }
 

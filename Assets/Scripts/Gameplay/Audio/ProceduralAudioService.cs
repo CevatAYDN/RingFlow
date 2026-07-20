@@ -27,6 +27,7 @@ namespace RingFlow.Gameplay
         private AudioClip _paintClip;
         private AudioClip _iceBreakClip;
         private AudioClip _stoneImpactClip;
+        private AudioClip _portalClip;
         private readonly System.Collections.Generic.Dictionary<int, AudioClip> _bgmClips = new();
 
         public ProceduralAudioService(AudioConfigSO config)
@@ -389,6 +390,38 @@ namespace RingFlow.Gameplay
             return _iceBreakClip;
         }
 
+        public AudioClip GetOrCreateBombExplosionClip()
+        {
+            // Reuse explosion clip for bomb explosions
+            return GetOrCreateExplosionClip();
+        }
+
+        public AudioClip GetOrCreatePortalClip()
+        {
+            if (_portalClip == null)
+            {
+                int sr = SampleRate;
+                float dur = 0.35f;
+                int samplesCount = (int)(sr * dur);
+                float[] samples = new float[samplesCount];
+                for (int i = 0; i < samplesCount; i++)
+                {
+                    float t = (float)i / sr;
+                    float progress = t / dur;
+                    float vol = Mathf.Sin(progress * Mathf.PI);
+                    // Ethereal whoosh: rising pitch with harmonics
+                    float baseFreq = Mathf.Lerp(200f, 600f, progress);
+                    float val = Mathf.Sin(2f * Mathf.PI * baseFreq * t) * 0.25f * vol;
+                    val += Mathf.Sin(2f * Mathf.PI * baseFreq * 1.5f * t) * 0.15f * vol;
+                    val += Mathf.Sin(2f * Mathf.PI * baseFreq * 2f * t) * 0.10f * vol;
+                    samples[i] = val;
+                }
+                _portalClip = AudioClip.Create("PortalSFX", samplesCount, 1, sr, false);
+                _portalClip.SetData(samples, 0);
+            }
+            return _portalClip;
+        }
+
         public AudioClip GetOrCreateStoneImpactClip()
         {
             if (_stoneImpactClip == null)
@@ -498,6 +531,7 @@ namespace RingFlow.Gameplay
             _paintClip = null;
             _iceBreakClip = null;
             _stoneImpactClip = null;
+            _portalClip = null;
             _richPoleClips.Clear();
             _finalPoleCompleteClip = null;
             _bgmClips.Clear();

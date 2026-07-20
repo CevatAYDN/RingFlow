@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Nexus.Core;
 using Nexus.Core.Services;
 using RingFlow.Gameplay.Strategies;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -88,7 +89,7 @@ namespace RingFlow.Gameplay.UI
             if (loc == null) return;
 
             // Localize title
-            var title = _card?.transform.Find("Title")?.GetComponent<Text>();
+            var title = _card?.transform.Find("Title")?.GetComponent<TextMeshProUGUI>();
             if (title != null)
                 title.text = loc.GetString("mechanic_guide_title", "MECHANICS GUIDE");
 
@@ -98,11 +99,11 @@ namespace RingFlow.Gameplay.UI
                 var row = _card?.transform.Find($"ScrollView/Viewport/Content/Entry_{i}");
                 if (row == null) continue;
 
-                var nameText = row.Find("Name")?.GetComponent<Text>();
+                var nameText = row.Find("Name")?.GetComponent<TextMeshProUGUI>();
                 if (nameText != null)
                     nameText.text = loc.GetString(AllMechanics[i].NameKey, AllMechanics[i].NameFallback);
 
-                var descText = row.Find("Desc")?.GetComponent<Text>();
+                var descText = row.Find("Desc")?.GetComponent<TextMeshProUGUI>();
                 if (descText != null)
                     descText.text = loc.GetString(AllMechanics[i].DescKey, AllMechanics[i].DescFallback);
             }

@@ -1,5 +1,6 @@
 using Nexus.Core;
 using Nexus.Core.Services;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
@@ -11,10 +12,10 @@ namespace RingFlow.Gameplay.UI
     {
         public Button ClaimButton { get; private set; }
         public Button CloseButton { get; private set; }
-        public Text TitleText { get; private set; }
-        public Text DayText { get; private set; }
-        public Text RewardText { get; private set; }
-        public Text StreakText { get; private set; }
+        public TextMeshProUGUI TitleText { get; private set; }
+        public TextMeshProUGUI DayText { get; private set; }
+        public TextMeshProUGUI RewardText { get; private set; }
+        public TextMeshProUGUI StreakText { get; private set; }
         public CanvasGroup CardGroup { get; private set; }
         public Image RewardIcon { get; private set; }
 
@@ -74,7 +75,7 @@ namespace RingFlow.Gameplay.UI
                 if (btn.name.ToUpperInvariant().Contains("CLAIM")) { _claimBtn = btn.gameObject; ClaimButton = btn; }
                 else if (btn.name.ToUpperInvariant().Contains("CLOSE")) { _closeBtn = btn.gameObject; CloseButton = btn; }
             }
-            var texts = GetComponentsInChildren<Text>(true);
+            var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
             foreach (var txt in texts)
             {
                 var upper = txt.name.ToUpperInvariant();

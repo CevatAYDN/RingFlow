@@ -1,5 +1,6 @@
 using Nexus.Core;
 using Nexus.Core.Services;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,9 +9,9 @@ namespace RingFlow.Gameplay.UI
     [Mediator(typeof(SplashMediator))]
     public class SplashView : View, IAuthoredView
     {
-        public Text LogoText { get; private set; }
-        public Text TaglineText { get; private set; }
-        public Text ProgressText { get; private set; }
+        public TextMeshProUGUI LogoText { get; private set; }
+        public TextMeshProUGUI TaglineText { get; private set; }
+        public TextMeshProUGUI ProgressText { get; private set; }
         public Image ProgressBar { get; private set; }
         public CanvasGroup CardGroup { get; private set; }
 
@@ -47,7 +48,7 @@ namespace RingFlow.Gameplay.UI
 
         private void BindReferencesFromChildren()
         {
-            var texts = GetComponentsInChildren<Text>(true);
+            var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
             foreach (var txt in texts)
             {
                 if (txt.name.Contains("Logo")) LogoText = txt;

@@ -1,5 +1,6 @@
 using Nexus.Core;
 using Nexus.Core.Services;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
@@ -9,11 +10,11 @@ namespace RingFlow.Gameplay.UI
     [Mediator(typeof(HUDMediator))]
     public class HUDView : View, IAuthoredView
     {
-        public Text MovesText { get; private set; }
-        public Text LevelText { get; private set; }
-        public Text CoinsText { get; private set; }
-        public Text DiamondsText { get; private set; }
-        public Text TimerText { get; private set; }
+        public TextMeshProUGUI MovesText { get; private set; }
+        public TextMeshProUGUI LevelText { get; private set; }
+        public TextMeshProUGUI CoinsText { get; private set; }
+        public TextMeshProUGUI DiamondsText { get; private set; }
+        public TextMeshProUGUI TimerText { get; private set; }
         public Button UndoButton { get; private set; }
         public Button RestartButton { get; private set; }
         public Button PauseButton { get; private set; }
@@ -84,21 +85,21 @@ namespace RingFlow.Gameplay.UI
             // Localize the labels under the circular buttons
             if (_undoBtn != null && _undoBtn.transform.parent != null)
             {
-                var text = _undoBtn.transform.parent.Find("Label")?.GetComponent<Text>();
+                var text = _undoBtn.transform.parent.Find("Label")?.GetComponent<TextMeshProUGUI>();
                 if (text != null) text.text = loc.GetString("game_undo", "Undo");
             }
             if (_restartBtn != null && _restartBtn.transform.parent != null)
             {
-                var text = _restartBtn.transform.parent.Find("Label")?.GetComponent<Text>();
+                var text = _restartBtn.transform.parent.Find("Label")?.GetComponent<TextMeshProUGUI>();
                 if (text != null) text.text = loc.GetString("game_restart", "Restart");
             }
             if (_hintBtn != null && _hintBtn.transform.parent != null)
             {
-                var text = _hintBtn.transform.parent.Find("Label")?.GetComponent<Text>();
+                var text = _hintBtn.transform.parent.Find("Label")?.GetComponent<TextMeshProUGUI>();
                 if (text != null) text.text = loc.GetString("game_hint", "Hint");
             }
 
-            var instr = transform.Find("InstructionText")?.GetComponent<Text>();
+            var instr = transform.Find("InstructionText")?.GetComponent<TextMeshProUGUI>();
             if (instr != null) instr.text = loc.GetString("hud_instruction", "Make each rod a single color");
         }
 
@@ -115,7 +116,7 @@ namespace RingFlow.Gameplay.UI
                 else if (btn.name.ToUpper().Contains("GUIDE")) { GuideButton = btn; }
             }
 
-            var texts = GetComponentsInChildren<Text>(true);
+            var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
             foreach (var txt in texts)
             {
                 var upper = txt.name.ToUpperInvariant();

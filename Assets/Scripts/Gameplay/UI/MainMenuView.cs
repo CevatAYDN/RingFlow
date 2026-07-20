@@ -1,5 +1,6 @@
 using Nexus.Core;
 using Nexus.Core.Services;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
@@ -16,12 +17,12 @@ namespace RingFlow.Gameplay.UI
         public Button DailyRewardButton { get; private set; }
         public Button ChestButton { get; private set; }
         public Button WorldMapButton { get; private set; }
-        public Text VersionLabel { get; private set; }
-        public Text CoinsText { get; private set; }
-        public Text DiamondsText { get; private set; }
-        public Text TitleText { get; private set; }
-        public Text SubtitleText { get; private set; }
-        public Text PlayerLevelText { get; private set; }
+        public TextMeshProUGUI VersionLabel { get; private set; }
+        public TextMeshProUGUI CoinsText { get; private set; }
+        public TextMeshProUGUI DiamondsText { get; private set; }
+        public TextMeshProUGUI TitleText { get; private set; }
+        public TextMeshProUGUI SubtitleText { get; private set; }
+        public TextMeshProUGUI PlayerLevelText { get; private set; }
         public Image PlayerLevelProgress { get; private set; }
         public CanvasGroup CardGroup { get; private set; }
 
@@ -63,7 +64,7 @@ namespace RingFlow.Gameplay.UI
         public void UpdateContinueButtonText(int level)
         {
             if (_continueBtn == null) return;
-            var label = _continueBtn.GetComponentInChildren<Text>();
+            var label = _continueBtn.GetComponentInChildren<TextMeshProUGUI>();
             if (label != null)
             {
                 string baseText = _locService != null ? _locService.GetString("menu_continue", "PLAY") : "PLAY";
@@ -88,7 +89,7 @@ namespace RingFlow.Gameplay.UI
         {
             if (DailyRewardButton == null) return;
             DailyRewardButton.interactable = available;
-            var label = DailyRewardButton.GetComponentInChildren<Text>();
+            var label = DailyRewardButton.GetComponentInChildren<TextMeshProUGUI>();
             if (label != null)
             {
                 string baseText = _locService?.GetString("menu_daily_reward", "DAILY REWARD") ?? "DAILY REWARD";
@@ -113,7 +114,7 @@ namespace RingFlow.Gameplay.UI
                 else if (upper.Contains("WORLD") || upper.Contains("MAP")) { _mapBtn = btn.gameObject; WorldMapButton = btn; }
             }
 
-            var texts = GetComponentsInChildren<Text>(true);
+            var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
             foreach (var txt in texts)
             {
                 if (txt.transform.parent != transform && txt.transform.parent?.parent?.parent != transform) continue;

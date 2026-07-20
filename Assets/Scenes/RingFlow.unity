@@ -1432,9 +1432,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a227e07fba85a2b469b5419792def1b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.GameplayLifecycle
-  _ringPopPrefab: {fileID: 0}
-  _confettiPrefab: {fileID: 0}
-  _mergeEffectPrefab: {fileID: 0}
+  _ringPopPrefab: {fileID: 100000, guid: a1b2c3d4e5f612345678901234567890, type: 3}
+  _confettiPrefab: {fileID: 200000, guid: b2c3d4e5f6a712345678901234567891, type: 3}
+  _mergeEffectPrefab: {fileID: 300000, guid: c3d4e5f6a7b812345678901234567892, type: 3}
   _visualBoardToDestroy: {fileID: 0}
 --- !u!114 &1337792317
 MonoBehaviour:

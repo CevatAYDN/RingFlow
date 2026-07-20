@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Nexus.Core.Services;
@@ -68,6 +69,7 @@ namespace RingFlow.Gameplay.Services
         /// <summary>Access to the bound sprite library (may be null if SpriteLibrary not assigned on UIThemeConfigSO).</summary>
         UISpriteLibrarySO SpriteLibrary { get; }
         Font GetFont();
+        TMP_FontAsset GetTMPFont();
         Sprite GetRoundedSprite();
         GameObject CreatePanel(string name, Transform parent);
         GameObject CreateSafeAreaPanel(string name, Transform parent);

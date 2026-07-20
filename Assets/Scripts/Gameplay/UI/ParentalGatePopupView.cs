@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Nexus.Core;
@@ -19,10 +20,10 @@ namespace RingFlow.Gameplay.UI
         public Button TermsButton;
         public Button PrivacyButton;
 
-        public Text TitleText;
+        public TextMeshProUGUI TitleText;
         public InputField AgeInputField; // Deprecated: old math gate input. Hidden in consent-only mode.
-        public Text QuestionText; // Used as consent/body text in the current flow.
-        public Text ErrorText;
+        public TextMeshProUGUI QuestionText; // Used as consent/body text in the current flow.
+        public TextMeshProUGUI ErrorText;
 
         private ILocalizationService _loc;
         private bool _initialized;
@@ -136,7 +137,7 @@ namespace RingFlow.Gameplay.UI
 
             AgeInputField = GetComponentInChildren<InputField>(true);
 
-            var texts = GetComponentsInChildren<Text>(true);
+            var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
             foreach (var txt in texts)
             {
                 if (txt.name.ToUpper().Contains("TITLE")) TitleText = txt;

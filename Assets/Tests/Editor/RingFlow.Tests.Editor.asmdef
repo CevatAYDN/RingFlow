@@ -3,7 +3,8 @@
     "rootNamespace": "RingFlow.Tests",
     "references": [
         "RingFlow",
-        "com.nexus.core"
+        "com.nexus.core",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [
         "Editor"

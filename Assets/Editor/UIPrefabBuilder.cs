@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 using UnityEditor;
 using RingFlow.Gameplay;
 using RingFlow.Gameplay.UI;
@@ -115,7 +116,7 @@ namespace RingFlow.Editor
             card.AddComponent<CanvasGroup>();
 
             CreateDisplayText(card.transform, "RING FLOW", DfS, Tod, "LogoText", new Rect(0.12f, 0.62f, 0.76f, 0.16f));
-            var tag = CreateText(card.transform, "", 18, TextAnchor.MiddleCenter, Mtd, "TaglineText");
+            var tag = CreateText(card.transform, "", 18, TextAlignmentOptions.Center, Mtd, "TaglineText");
             SetAnchors(tag, 0.15f, 0.54f, 0.85f, 0.60f);
 
             var barBg = CreatePanel("ProgressBarBg", card.transform, null);
@@ -126,10 +127,10 @@ namespace RingFlow.Editor
             SetAnchors(barFill, 0f, 0f, 0f, 1f);
             SetImageColor(barFill, Ac);
 
-            var progText = CreateText(card.transform, "", 14, TextAnchor.MiddleCenter, Mtd, "ProgressText");
+            var progText = CreateText(card.transform, "", 14, TextAlignmentOptions.Center, Mtd, "ProgressText");
             SetAnchors(progText, 0.20f, 0.26f, 0.80f, 0.30f);
 
-            var verText = CreateText(card.transform, "v1.0", 12, TextAnchor.LowerCenter, Mtd, "VersionLabel");
+            var verText = CreateText(card.transform, "v1.0", 12, TextAlignmentOptions.Bottom, Mtd, "VersionLabel");
             SetAnchors(verText, 0.30f, 0.04f, 0.70f, 0.08f);
         }
 
@@ -145,8 +146,8 @@ namespace RingFlow.Editor
 
             var avatar = CreateCard("Avatar", topBar.transform, Sc);
             SetAnchors(avatar, 0.04f, 0.15f, 0.14f, 0.85f);
-            var avText = CreateText(avatar.transform, "C", 18, TextAnchor.MiddleCenter, Tc, "AvatarText");
-            avText.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var avText = CreateText(avatar.transform, "C", 18, TextAlignmentOptions.Center, Tc, "AvatarText");
+            avText.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
 
             // Level pill
             var lvlBtn = CreatePanel("Btn_LEVEL_SELECT", topBar.transform);
@@ -155,8 +156,8 @@ namespace RingFlow.Editor
             lvlBtn.AddComponent<Button>();
             lvlBtn.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.08f);
             lvlBtn.GetComponent<Shadow>().effectDistance = new Vector2(0f, -2f);
-            var pLevel = CreateText(lvlBtn.transform, "Lv 1", 14, TextAnchor.MiddleLeft, Tc, "LvText");
-            pLevel.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var pLevel = CreateText(lvlBtn.transform, "Lv 1", 14, TextAlignmentOptions.MidlineLeft, Tc, "LvText");
+            pLevel.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
             SetAnchors(pLevel, 0.08f, 0f, 0.35f, 1f);
 
             var lvlBarBg = CreatePanel("LevelBarBg", lvlBtn.transform, GetSprite("HUDProgressBackground"));
@@ -170,23 +171,23 @@ namespace RingFlow.Editor
             var coinsPill = CreateCard("CoinsPill", topBar.transform, Sc);
             SetAnchors(coinsPill, 0.52f, 0.15f, 0.73f, 0.85f);
             CreateSpriteImage(coinsPill.transform, "CoinIcon", GetSprite("IconCoin"), new Rect(0.05f, 0.15f, 0.30f, 0.85f));
-            var coinsText = CreateText(coinsPill.transform, "0", 14, TextAnchor.MiddleLeft, Tc, "CoinsText");
-            coinsText.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var coinsText = CreateText(coinsPill.transform, "0", 14, TextAlignmentOptions.MidlineLeft, Tc, "CoinsText");
+            coinsText.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
             SetAnchors(coinsText, 0.40f, 0f, 0.95f, 1f);
 
             // Gems pill
             var gemsPill = CreateCard("GemsPill", topBar.transform, Sc);
             SetAnchors(gemsPill, 0.76f, 0.15f, 0.97f, 0.85f);
             CreateSpriteImage(gemsPill.transform, "GemIcon", GetSprite("IconGem"), new Rect(0.05f, 0.15f, 0.30f, 0.85f));
-            var gemsText = CreateText(gemsPill.transform, "0", 14, TextAnchor.MiddleLeft, Tc, "DiamondsText");
-            gemsText.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var gemsText = CreateText(gemsPill.transform, "0", 14, TextAlignmentOptions.MidlineLeft, Tc, "DiamondsText");
+            gemsText.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
             SetAnchors(gemsText, 0.40f, 0f, 0.95f, 1f);
 
             // Title + logo
             var titleGo = CreateDisplayText(bgGo.transform, "", 56, Color.clear, "Title", new Rect(0.15f, 0.75f, 0.70f, 0.13f));
             CreateSpriteImage(titleGo.transform, "LogoImage", GetSprite("BackgroundMain"), new Rect(0f, 0f, 1f, 1f));
 
-            var subtitle = CreateText(bgGo.transform, "Sort the rings, relax your mind", 18, TextAnchor.MiddleCenter, Mt, "Subtitle");
+            var subtitle = CreateText(bgGo.transform, "Sort the rings, relax your mind", 18, TextAlignmentOptions.Center, Mt, "Subtitle");
             SetAnchors(subtitle, 0.05f, 0.73f, 0.95f, 0.77f);
 
             // Board preview card
@@ -225,8 +226,8 @@ namespace RingFlow.Editor
             dailyBtn.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.08f);
             dailyBtn.GetComponent<Shadow>().effectDistance = new Vector2(0f, -2f);
             CreateSpriteImage(dailyBtn.transform, "IconImage", GetSprite("IconDaily"), new Rect(0.08f, 0.2f, 0.27f, 0.8f));
-            var dailyLabel = CreateText(dailyBtn.transform, "DAILY\nCHALLENGE", 11, TextAnchor.MiddleLeft, Tc, "DailyLabel");
-            dailyLabel.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var dailyLabel = CreateText(dailyBtn.transform, "DAILY\nCHALLENGE", 11, TextAlignmentOptions.MidlineLeft, Tc, "DailyLabel");
+            dailyLabel.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
             SetAnchors(dailyLabel, 0.40f, 0f, 0.95f, 1f);
 
             // Chest button
@@ -237,8 +238,8 @@ namespace RingFlow.Editor
             chestBtn.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.08f);
             chestBtn.GetComponent<Shadow>().effectDistance = new Vector2(0f, -2f);
             CreateSpriteImage(chestBtn.transform, "IconImage", GetSprite("IconChest"), new Rect(0.08f, 0.2f, 0.27f, 0.8f));
-            var chestLabel = CreateText(chestBtn.transform, "CHESTS", 11, TextAnchor.MiddleLeft, Tc, "ChestLabel");
-            chestLabel.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var chestLabel = CreateText(chestBtn.transform, "CHESTS", 11, TextAlignmentOptions.MidlineLeft, Tc, "ChestLabel");
+            chestLabel.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
             SetAnchors(chestLabel, 0.40f, 0f, 0.95f, 1f);
 
             // Footer
@@ -249,7 +250,7 @@ namespace RingFlow.Editor
             CreateIconButton(footer.transform, "Btn_WORLD_MAP", GetSprite("IconWorld"), new Rect(0.29f, 0.15f, 0.44f, 0.85f));
             CreateIconButton(footer.transform, "Btn_GIFT", GetSprite("IconChest"), new Rect(0.06f, 0.15f, 0.21f, 0.85f));
 
-            var verText = CreateText(bgGo.transform, "v1.0", 11, TextAnchor.LowerCenter, Mt, "VersionLabel");
+            var verText = CreateText(bgGo.transform, "v1.0", 11, TextAlignmentOptions.Bottom, Mt, "VersionLabel");
             SetAnchors(verText, 0.30f, 0.04f, 0.70f, 0.07f);
         }
 
@@ -264,17 +265,17 @@ namespace RingFlow.Editor
             SetAnchors(card, 0.04f, 0.06f, 0.96f, 0.94f);
             card.AddComponent<CanvasGroup>();
 
-            var title = CreateText(card.transform, "SELECT LEVEL", 40, TextAnchor.MiddleCenter, Tod, "Title");
-            title.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var title = CreateText(card.transform, "SELECT LEVEL", 40, TextAlignmentOptions.Center, Tod, "Title");
+            title.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
             SetAnchors(title, 0.10f, 0.88f, 0.90f, 0.96f);
 
             var infoPanel = CreatePanel("InfoPanel", card.transform);
             SetImageColor(infoPanel, new Color(0.08f, 0.10f, 0.14f));
             SetAnchors(infoPanel, 0.06f, 0.80f, 0.94f, 0.86f);
 
-            var worldLabel = CreateText(infoPanel.transform, "WORLD 1", 16, TextAnchor.MiddleLeft, Ac, "WorldLabel");
+            var worldLabel = CreateText(infoPanel.transform, "WORLD 1", 16, TextAlignmentOptions.MidlineLeft, Ac, "WorldLabel");
             SetAnchors(worldLabel, 0.04f, 0f, 0.30f, 1f);
-            var progLabel = CreateText(infoPanel.transform, "0 / 0", 16, TextAnchor.MiddleRight, Mtd, "ProgressLabel");
+            var progLabel = CreateText(infoPanel.transform, "0 / 0", 16, TextAlignmentOptions.MidlineRight, Mtd, "ProgressLabel");
             SetAnchors(progLabel, 0.70f, 0f, 0.96f, 1f);
 
             var barBg = CreatePanel("ProgressBarBg", infoPanel.transform, GetSprite("HUDProgressBackground"));
@@ -312,29 +313,29 @@ namespace RingFlow.Editor
 
             var lvlPill = CreateCard("LevelPill", topBar.transform, Sc);
             SetAnchors(lvlPill, 0.04f, 0.15f, 0.32f, 0.85f);
-            var lvlText = CreateText(lvlPill.transform, "Level 1", 14, TextAnchor.MiddleCenter, Tc, "LevelText");
-            lvlText.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var lvlText = CreateText(lvlPill.transform, "Level 1", 14, TextAlignmentOptions.Center, Tc, "LevelText");
+            lvlText.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
 
             var movesPill = CreateCard("MovesPill", topBar.transform, Sc);
             SetAnchors(movesPill, 0.35f, 0.15f, 0.58f, 0.85f);
-            var movesText = CreateText(movesPill.transform, "Moves: 0", 13, TextAnchor.MiddleCenter, Tc, "MovesText");
-            movesText.GetComponent<Text>().fontStyle = FontStyle.Bold;
-            var timerText = CreateText(movesPill.transform, "", 13, TextAnchor.MiddleCenter, Wc, "TimerText");
-            timerText.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var movesText = CreateText(movesPill.transform, "Moves: 0", 13, TextAlignmentOptions.Center, Tc, "MovesText");
+            movesText.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
+            var timerText = CreateText(movesPill.transform, "", 13, TextAlignmentOptions.Center, Wc, "TimerText");
+            timerText.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
             timerText.SetActive(false);
 
             var coinsPill = CreateCard("CoinsPill", topBar.transform, Sc);
             SetAnchors(coinsPill, 0.61f, 0.15f, 0.82f, 0.85f);
             CreateSpriteImage(coinsPill.transform, "CoinIcon", GetSprite("IconCoin"), new Rect(0.05f, 0.15f, 0.30f, 0.85f));
-            var coinText = CreateText(coinsPill.transform, "0", 14, TextAnchor.MiddleLeft, Tc, "CoinsText");
-            coinText.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var coinText = CreateText(coinsPill.transform, "0", 14, TextAlignmentOptions.MidlineLeft, Tc, "CoinsText");
+            coinText.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
             SetAnchors(coinText, 0.40f, 0f, 0.95f, 1f);
 
             var pauseBtn = CreateIconButton(topBar.transform, "Btn_PAUSE", GetSprite("IconPause"), new Rect(0.85f, 0.15f, 0.96f, 0.85f));
             SetImageColor(pauseBtn, Sc);
 
-            var instr = CreateText(root.transform, "", 14, TextAnchor.MiddleCenter, Tc, "InstructionText");
-            instr.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var instr = CreateText(root.transform, "", 14, TextAlignmentOptions.Center, Tc, "InstructionText");
+            instr.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
             SetAnchors(instr, 0.05f, 0.82f, 0.95f, 0.88f);
 
             var actionBar = CreatePanel("ActionBar", root.transform);
@@ -365,8 +366,8 @@ namespace RingFlow.Editor
 
             if (isGuide)
             {
-                var gl = CreateText(btn.transform, "?", 24, TextAnchor.MiddleCenter, Tc, "GuideIconText");
-                gl.GetComponent<Text>().fontStyle = FontStyle.Bold;
+                var gl = CreateText(btn.transform, "?", 24, TextAlignmentOptions.Center, Tc, "GuideIconText");
+                gl.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
                 SetAnchors(gl, 0.15f, 0.15f, 0.85f, 0.85f);
             }
             else if (icon != null)
@@ -374,8 +375,8 @@ namespace RingFlow.Editor
                 var iconGo = CreateSpriteImage(btn.transform, "IconImage", icon, new Rect(0.2f, 0.2f, 0.8f, 0.8f));
             }
 
-            var label = CreateText(container.transform, name.Replace("Btn_", ""), 11, TextAnchor.UpperCenter, Tc, "Label");
-            label.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var label = CreateText(container.transform, name.Replace("Btn_", ""), 11, TextAlignmentOptions.Top, Tc, "Label");
+            label.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
             SetAnchors(label, 0f, 0f, 1f, 0.28f);
 
             btn.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.08f);
@@ -390,12 +391,12 @@ namespace RingFlow.Editor
             SetAnchors(card, 0.12f, 0.22f, 0.88f, 0.78f);
             if (card.GetComponent<CanvasGroup>() == null) card.AddComponent<CanvasGroup>();
 
-            var title = CreateText(card.transform, "PAUSED", 30, TextAnchor.MiddleCenter, Tc, "Title");
-            title.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var title = CreateText(card.transform, "PAUSED", 30, TextAlignmentOptions.Center, Tc, "Title");
+            title.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
             SetAnchors(title, 0.05f, 0.80f, 0.95f, 0.92f);
-            var sub = CreateText(card.transform, "Take a moment", 16, TextAnchor.MiddleCenter, Mt, "Subtitle");
+            var sub = CreateText(card.transform, "Take a moment", 16, TextAlignmentOptions.Center, Mt, "Subtitle");
             SetAnchors(sub, 0.05f, 0.70f, 0.95f, 0.78f);
-            var prog = CreateText(card.transform, "", 14, TextAnchor.MiddleCenter, Mt, "ProgressLabel");
+            var prog = CreateText(card.transform, "", 14, TextAlignmentOptions.Center, Mt, "ProgressLabel");
             SetAnchors(prog, 0.05f, 0.62f, 0.95f, 0.68f);
 
             var resumeBtn = CreateButton("RESUME", card.transform, 240f, 52f, "Btn_RESUME", GetSprite("ButtonPrimary"));
@@ -451,9 +452,9 @@ namespace RingFlow.Editor
                 si.preserveAspect = true;
             }
 
-            var movesText = CreateText(card.transform, "", 20, TextAnchor.MiddleCenter, Mtd, "MovesText");
+            var movesText = CreateText(card.transform, "", 20, TextAlignmentOptions.Center, Mtd, "MovesText");
             SetAnchors(movesText, 0.12f, 0.30f, 0.88f, 0.36f);
-            var bestText = CreateText(card.transform, "", 16, TextAnchor.MiddleCenter, Mtd, "BestScoreText");
+            var bestText = CreateText(card.transform, "", 16, TextAlignmentOptions.Center, Mtd, "BestScoreText");
             SetAnchors(bestText, 0.12f, 0.26f, 0.88f, 0.30f);
 
             var rewardRow = new GameObject("RewardRow", typeof(RectTransform), typeof(HorizontalLayoutGroup));
@@ -464,13 +465,13 @@ namespace RingFlow.Editor
             rhlg.childControlWidth = false; rhlg.childControlHeight = false;
 
             CreateSpriteImage(rewardRow.transform, "CoinIcon", GetSprite("IconCoin"), new Rect(0, 0, 28, 28));
-            var coinVal = CreateText(rewardRow.transform, "+0", 18, TextAnchor.MiddleLeft, CoinC, "CoinsValue");
-            coinVal.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var coinVal = CreateText(rewardRow.transform, "+0", 18, TextAlignmentOptions.MidlineLeft, CoinC, "CoinsValue");
+            coinVal.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
             coinVal.GetComponent<RectTransform>().sizeDelta = new Vector2(60f, 32f);
 
             CreateSpriteImage(rewardRow.transform, "XPIcon", GetSprite("IconXP"), new Rect(0, 0, 28, 28));
-            var xpVal = CreateText(rewardRow.transform, "+0", 18, TextAnchor.MiddleLeft, Scs, "XPValue");
-            xpVal.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var xpVal = CreateText(rewardRow.transform, "+0", 18, TextAlignmentOptions.MidlineLeft, Scs, "XPValue");
+            xpVal.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
             xpVal.GetComponent<RectTransform>().sizeDelta = new Vector2(60f, 32f);
 
             var nextBtn = CreateButton("NEXT LEVEL", card.transform, 300, 60, "Btn_NEXT LEVEL", GetSprite("ButtonSuccess"));
@@ -495,11 +496,11 @@ namespace RingFlow.Editor
             SetImageColor(accent, Dc);
 
             CreateDisplayText(card.transform, "GAME OVER", 52, Dc, "Title", new Rect(0.12f, 0.62f, 0.76f, 0.12f));
-            var lvlText = CreateText(card.transform, "", 20, TextAnchor.MiddleCenter, Mtd, "LevelText");
+            var lvlText = CreateText(card.transform, "", 20, TextAlignmentOptions.Center, Mtd, "LevelText");
             SetAnchors(lvlText, 0.12f, 0.54f, 0.88f, 0.60f);
-            var msgText = CreateText(card.transform, "Keep trying — you'll get it!", 18, TextAnchor.MiddleCenter, Tod, "Message");
+            var msgText = CreateText(card.transform, "Keep trying — you'll get it!", 18, TextAlignmentOptions.Center, Tod, "Message");
             SetAnchors(msgText, 0.12f, 0.42f, 0.88f, 0.50f);
-            var progText = CreateText(card.transform, "", 16, TextAnchor.MiddleCenter, Mtd, "ProgressText");
+            var progText = CreateText(card.transform, "", 16, TextAlignmentOptions.Center, Mtd, "ProgressText");
             SetAnchors(progText, 0.12f, 0.36f, 0.88f, 0.40f);
 
             var restartBtn = CreateButton("TRY AGAIN", card.transform, 280, 60, "Btn_RESTART", GetSprite("ButtonPrimary"));
@@ -519,8 +520,8 @@ namespace RingFlow.Editor
             SetAnchors(card, 0.06f, 0.06f, 0.94f, 0.94f);
             card.AddComponent<CanvasGroup>();
 
-            var title = CreateText(card.transform, "SETTINGS", 40, TextAnchor.MiddleCenter, Tod, "Title");
-            title.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var title = CreateText(card.transform, "SETTINGS", 40, TextAlignmentOptions.Center, Tod, "Title");
+            title.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
             SetAnchors(title, 0.10f, 0.90f, 0.90f, 0.98f);
 
             float rowY = 0.82f;
@@ -528,7 +529,7 @@ namespace RingFlow.Editor
 
             void CreateToggleRow(string name, string label)
             {
-                var lbl = CreateText(card.transform, label, 16, TextAnchor.MiddleLeft, Tod, $"{name}Label");
+                var lbl = CreateText(card.transform, label, 16, TextAlignmentOptions.MidlineLeft, Tod, $"{name}Label");
                 SetAnchors(lbl, 0.08f, rowY - 0.025f, 0.46f, rowY + 0.025f);
 
                 // Proper Toggle with Background + Checkmark
@@ -570,7 +571,7 @@ namespace RingFlow.Editor
             CreateToggleRow("Big", "BIG BUTTONS");
 
             rowY -= rowStep * 0.8f;
-            var cbLabel = CreateText(card.transform, "COLOR BLIND MODE", 16, TextAnchor.MiddleLeft, Tod, "CbLabel");
+            var cbLabel = CreateText(card.transform, "COLOR BLIND MODE", 16, TextAlignmentOptions.MidlineLeft, Tod, "CbLabel");
             SetAnchors(cbLabel, 0.08f, rowY - 0.02f, 0.44f, rowY + 0.02f);
             var sliderGo = new GameObject("ColorBlindSlider", typeof(RectTransform), typeof(Image), typeof(Slider));
             sliderGo.transform.SetParent(card.transform, false);
@@ -578,7 +579,7 @@ namespace RingFlow.Editor
             sliderGo.GetComponent<Image>().color = new Color(0.20f, 0.22f, 0.28f);
 
             rowY -= rowStep;
-            var langLabel = CreateText(card.transform, "LANGUAGE", 16, TextAnchor.MiddleLeft, Tod, "LangLabel");
+            var langLabel = CreateText(card.transform, "LANGUAGE", 16, TextAlignmentOptions.MidlineLeft, Tod, "LangLabel");
             SetAnchors(langLabel, 0.08f, rowY - 0.02f, 0.40f, rowY + 0.02f);
             var ddGo = new GameObject("LanguageDropdown", typeof(RectTransform), typeof(Image), typeof(Dropdown));
             ddGo.transform.SetParent(card.transform, false);
@@ -617,9 +618,9 @@ namespace RingFlow.Editor
             SetImageColor(dayBg, new Color(0.12f, 0.14f, 0.20f));
 
             CreateDisplayText(card.transform, "Day 1", 52, Tod, "Day", new Rect(0.20f, 0.46f, 0.60f, 0.18f));
-            var streakText = CreateText(card.transform, "", 14, TextAnchor.MiddleCenter, Mtd, "Streak");
+            var streakText = CreateText(card.transform, "", 14, TextAlignmentOptions.Center, Mtd, "Streak");
             SetAnchors(streakText, 0.15f, 0.38f, 0.85f, 0.42f);
-            var rewardText = CreateText(card.transform, "", 22, TextAnchor.MiddleCenter, Ac, "Reward");
+            var rewardText = CreateText(card.transform, "", 22, TextAlignmentOptions.Center, Ac, "Reward");
             SetAnchors(rewardText, 0.12f, 0.30f, 0.88f, 0.36f);
 
             var claimBtn = CreateButton("CLAIM", card.transform, 300, 60, "Btn_CLAIM", GetSprite("ButtonPrimary"));
@@ -641,16 +642,16 @@ namespace RingFlow.Editor
 
             CreateDisplayText(card.transform, "CHEST REWARDS", 34, Ac, "Title", new Rect(0.05f, 0.80f, 0.90f, 0.12f));
 
-            var bronze = CreateText(card.transform, "Bronze: x0  (+0 XP)", 20, TextAnchor.MiddleLeft, new Color(0.8f, 0.5f, 0.2f), "Bronze");
+            var bronze = CreateText(card.transform, "Bronze: x0  (+0 XP)", 20, TextAlignmentOptions.MidlineLeft, new Color(0.8f, 0.5f, 0.2f), "Bronze");
             SetAnchors(bronze, 0.08f, 0.62f, 0.92f, 0.70f);
-            var silver = CreateText(card.transform, "Silver: x0  (+0 XP)", 20, TextAnchor.MiddleLeft, new Color(0.75f, 0.75f, 0.80f), "Silver");
+            var silver = CreateText(card.transform, "Silver: x0  (+0 XP)", 20, TextAlignmentOptions.MidlineLeft, new Color(0.75f, 0.75f, 0.80f), "Silver");
             SetAnchors(silver, 0.08f, 0.52f, 0.92f, 0.60f);
-            var gold = CreateText(card.transform, "Gold: x0  (+0 XP)", 20, TextAnchor.MiddleLeft, new Color(1f, 0.84f, 0f), "Gold");
+            var gold = CreateText(card.transform, "Gold: x0  (+0 XP)", 20, TextAlignmentOptions.MidlineLeft, new Color(1f, 0.84f, 0f), "Gold");
             SetAnchors(gold, 0.08f, 0.42f, 0.92f, 0.50f);
-            var diamond = CreateText(card.transform, "Diamond: x0  (+0 XP)", 20, TextAnchor.MiddleLeft, DiamC, "Diamond");
+            var diamond = CreateText(card.transform, "Diamond: x0  (+0 XP)", 20, TextAlignmentOptions.MidlineLeft, DiamC, "Diamond");
             SetAnchors(diamond, 0.08f, 0.32f, 0.92f, 0.40f);
-            var totalXp = CreateText(card.transform, "Total XP: +0", 22, TextAnchor.MiddleCenter, Ac, "TotalXp");
-            totalXp.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var totalXp = CreateText(card.transform, "Total XP: +0", 22, TextAlignmentOptions.Center, Ac, "TotalXp");
+            totalXp.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
             SetAnchors(totalXp, 0.15f, 0.22f, 0.85f, 0.30f);
 
             var claimBtn = CreateButton("CLAIM ALL", card.transform, 280, 60, "ClaimAll", GetSprite("ButtonPrimary"));
@@ -694,11 +695,11 @@ namespace RingFlow.Editor
                 dot.GetComponent<Image>().color = i == 0 ? Ac : new Color(0.60f, 0.62f, 0.68f);
             }
 
-            var title = CreateText(card.transform, "", 36, TextAnchor.MiddleCenter, Tc, "Title");
-            title.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var title = CreateText(card.transform, "", 36, TextAlignmentOptions.Center, Tc, "Title");
+            title.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
             SetAnchors(title, 0.08f, 0.72f, 0.60f, 0.88f);
-            var body = CreateText(card.transform, "", 22, TextAnchor.MiddleCenter, Mt, "Body");
-            body.GetComponent<Text>().horizontalOverflow = HorizontalWrapMode.Wrap;
+            var body = CreateText(card.transform, "", 22, TextAlignmentOptions.Center, Mt, "Body");
+            body.GetComponent<TextMeshProUGUI>().overflowMode = TextOverflowModes.Overflow;
             SetAnchors(body, 0.10f, 0.24f, 0.90f, 0.58f);
 
             var buttonRow = CreatePanel("ButtonRow", card.transform);
@@ -725,13 +726,13 @@ namespace RingFlow.Editor
             SetAnchors(card, 0.10f, 0.20f, 0.90f, 0.80f);
             SetImageColor(card, Pnl);
 
-            var title = CreateText(card.transform, "Parental Verification", 34, TextAnchor.MiddleCenter, Tc, "Title");
-            title.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var title = CreateText(card.transform, "Parental Verification", 34, TextAlignmentOptions.Center, Tc, "Title");
+            title.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
             SetAnchors(title, 0.05f, 0.72f, 0.95f, 0.88f);
-            var question = CreateText(card.transform, "", 22, TextAnchor.MiddleCenter, Ac, "Question");
-            question.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var question = CreateText(card.transform, "", 22, TextAlignmentOptions.Center, Ac, "Question");
+            question.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
             SetAnchors(question, 0.08f, 0.44f, 0.92f, 0.64f);
-            var error = CreateText(card.transform, "", 18, TextAnchor.MiddleCenter, Dc, "Error");
+            var error = CreateText(card.transform, "", 18, TextAlignmentOptions.Center, Dc, "Error");
             SetAnchors(error, 0.15f, 0.36f, 0.85f, 0.41f);
 
             var acceptBtn = CreateButton("ACCEPT & CONTINUE", card.transform, 320, 64, "Accept", GetSprite("ButtonPrimary"));
@@ -750,10 +751,10 @@ namespace RingFlow.Editor
             SetAnchors(card, 0.08f, 0.18f, 0.92f, 0.82f);
             SetImageColor(card, Pnl);
 
-            var title = CreateText(card.transform, "WORLD MAP", 40, TextAnchor.MiddleCenter, Tc, "Title");
-            title.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var title = CreateText(card.transform, "WORLD MAP", 40, TextAlignmentOptions.Center, Tc, "Title");
+            title.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
             SetAnchors(title, 0.08f, 0.68f, 0.92f, 0.84f);
-            var body = CreateText(card.transform, "Explore the kingdoms ahead.", 22, TextAnchor.MiddleCenter, Mt, "Body");
+            var body = CreateText(card.transform, "Explore the kingdoms ahead.", 22, TextAlignmentOptions.Center, Mt, "Body");
             SetAnchors(body, 0.10f, 0.30f, 0.90f, 0.52f);
 
             CreateIconButton(root.transform, "Btn_BACK", GetSprite("ButtonBack"), new Rect(0.04f, 0.90f, 0.15f, 0.98f));
@@ -769,8 +770,8 @@ namespace RingFlow.Editor
             SetAnchors(card, 0.05f, 0.08f, 0.95f, 0.88f);
             SetImageColor(card, Pnl);
 
-            var title = CreateText(card.transform, "MECHANICS GUIDE", 28, TextAnchor.MiddleCenter, Ac, "Title");
-            title.GetComponent<Text>().fontStyle = FontStyle.Bold;
+            var title = CreateText(card.transform, "MECHANICS GUIDE", 28, TextAlignmentOptions.Center, Ac, "Title");
+            title.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
             SetAnchors(title, 0.08f, 0.88f, 0.92f, 0.97f);
 
             var scrollGo = new GameObject("ScrollView", typeof(RectTransform), typeof(ScrollRect), typeof(Image));
@@ -817,12 +818,12 @@ namespace RingFlow.Editor
                 symGo.GetComponent<Image>().color = new Color(0.15f, 0.15f, 0.20f, 1f);
                 symGo.GetComponent<Image>().sprite = GetSprite("PanelCard");
 
-                CreateText(symGo.transform, entry.Symbol, 26, TextAnchor.MiddleCenter, entry.SymbolColor, "SymbolText");
-                var nameText = CreateText(row.transform, entry.NameFallback, 18, TextAnchor.MiddleLeft, Tc, "Name");
-                nameText.GetComponent<Text>().fontStyle = FontStyle.Bold;
+                CreateText(symGo.transform, entry.Symbol, 26, TextAlignmentOptions.Center, entry.SymbolColor, "SymbolText");
+                var nameText = CreateText(row.transform, entry.NameFallback, 18, TextAlignmentOptions.MidlineLeft, Tc, "Name");
+                nameText.GetComponent<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
                 SetAnchors(nameText, 0.14f, 0.55f, 0.96f, 0.95f);
-                var descText = CreateText(row.transform, entry.DescFallback, 13, TextAnchor.UpperLeft, Mt, "Desc");
-                descText.GetComponent<Text>().horizontalOverflow = HorizontalWrapMode.Wrap;
+                var descText = CreateText(row.transform, entry.DescFallback, 13, TextAlignmentOptions.TopLeft, Mt, "Desc");
+                descText.GetComponent<TextMeshProUGUI>().overflowMode = TextOverflowModes.Overflow;
                 SetAnchors(descText, 0.14f, 0.05f, 0.96f, 0.55f);
             }
 
@@ -899,25 +900,23 @@ namespace RingFlow.Editor
         }
 
         private static GameObject CreateText(Transform parent, string content, int fontSize,
-            TextAnchor align, Color color, string objName)
+            TextAlignmentOptions align, Color color, string objName)
         {
-            var go = new GameObject(objName, typeof(RectTransform), typeof(Text));
+            var go = new GameObject(objName, typeof(RectTransform), typeof(TextMeshProUGUI));
             go.transform.SetParent(parent, false);
-            var text = go.GetComponent<Text>();
+            var text = go.GetComponent<TextMeshProUGUI>();
             text.text = content;
             text.fontSize = fontSize;
             text.alignment = align;
             text.color = color;
-            text.horizontalOverflow = HorizontalWrapMode.Overflow;
-            text.verticalOverflow = VerticalWrapMode.Overflow;
-            // Font left as default (null → Unity's built-in Arial)
+            text.overflowMode = TextOverflowModes.Overflow;
             return go;
         }
 
         private static GameObject CreateDisplayText(Transform parent, string content, int fontSize,
             Color color, string objName, Rect anchors)
         {
-            var go = CreateText(parent, content, fontSize, TextAnchor.MiddleCenter, color, objName);
+            var go = CreateText(parent, content, fontSize, TextAlignmentOptions.Center, color, objName);
             var rt = go.GetComponent<RectTransform>();
             rt.anchorMin = new Vector2(anchors.xMin, anchors.yMin);
             rt.anchorMax = new Vector2(anchors.xMax, anchors.yMax);
@@ -946,17 +945,16 @@ namespace RingFlow.Editor
             colors.disabledColor = _theme.PrimaryButtonColors.DisabledColor;
             btn.colors = colors;
 
-            var labelGo = new GameObject("Label", typeof(RectTransform), typeof(Text));
+            var labelGo = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
             labelGo.transform.SetParent(go.transform, false);
             var labelRt = labelGo.GetComponent<RectTransform>();
             labelRt.anchorMin = Vector2.zero; labelRt.anchorMax = Vector2.one;
             labelRt.offsetMin = Vector2.zero; labelRt.offsetMax = Vector2.zero;
-            var lblText = labelGo.GetComponent<Text>();
+            var lblText = labelGo.GetComponent<TextMeshProUGUI>();
             lblText.text = label;
             lblText.fontSize = BfS;
-            lblText.alignment = TextAnchor.MiddleCenter;
+            lblText.alignment = TextAlignmentOptions.Center;
             lblText.color = Top;
-            // Font left as default (null → Unity's built-in Arial)
 
             return go;
         }
@@ -1006,7 +1004,7 @@ namespace RingFlow.Editor
             ApplyButtonColors(go, _theme.PrimaryButtonColors);
             var img = go.GetComponent<Image>();
             if (img != null) img.color = Pc;
-            var label = go.GetComponentInChildren<Text>();
+            var label = go.GetComponentInChildren<TextMeshProUGUI>();
             if (label != null) label.color = Top;
         }
 
@@ -1022,7 +1020,7 @@ namespace RingFlow.Editor
             ApplyButtonColors(go, _theme.SuccessButtonColors);
             var img = go.GetComponent<Image>();
             if (img != null) img.color = Scs;
-            var label = go.GetComponentInChildren<Text>();
+            var label = go.GetComponentInChildren<TextMeshProUGUI>();
             if (label != null) label.color = Top;
         }
 
@@ -1031,7 +1029,7 @@ namespace RingFlow.Editor
             ApplyButtonColors(go, _theme.OutlineButtonColors);
             var img = go.GetComponent<Image>();
             if (img != null) img.color = _theme.OutlineButtonColors.NormalColor;
-            var label = go.GetComponentInChildren<Text>();
+            var label = go.GetComponentInChildren<TextMeshProUGUI>();
             if (label != null) label.color = Tc;
         }
 
@@ -1047,7 +1045,7 @@ namespace RingFlow.Editor
             ApplyButtonColors(go, _theme.TextButtonColors);
             var img = go.GetComponent<Image>();
             if (img != null) img.color = _theme.TextButtonColors.NormalColor;
-            var label = go.GetComponentInChildren<Text>();
+            var label = go.GetComponentInChildren<TextMeshProUGUI>();
             if (label != null) label.color = Tc;
         }
 

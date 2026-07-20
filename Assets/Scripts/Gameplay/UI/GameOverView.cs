@@ -1,5 +1,6 @@
 using Nexus.Core;
 using Nexus.Core.Services;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
@@ -11,10 +12,10 @@ namespace RingFlow.Gameplay.UI
     {
         public Button RestartButton { get; private set; }
         public Button QuitButton { get; private set; }
-        public Text TitleText { get; private set; }
-        public Text MessageText { get; private set; }
-        public Text LevelText { get; private set; }
-        public Text ProgressText { get; private set; }
+        public TextMeshProUGUI TitleText { get; private set; }
+        public TextMeshProUGUI MessageText { get; private set; }
+        public TextMeshProUGUI LevelText { get; private set; }
+        public TextMeshProUGUI ProgressText { get; private set; }
         public CanvasGroup CardGroup { get; private set; }
 
         private GameObject _restartBtn, _quitBtn;
@@ -68,7 +69,7 @@ namespace RingFlow.Gameplay.UI
                 else if (upper.Contains("MAIN MENU") || upper.Contains("QUIT")) { _quitBtn = btn.gameObject; QuitButton = btn; }
             }
 
-            var texts = GetComponentsInChildren<Text>(true);
+            var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
             foreach (var txt in texts)
             {
                 var upper = txt.name.ToUpperInvariant();
