@@ -72,10 +72,20 @@ namespace RingFlow.Editor
                 padding = new RectOffset(10, 10, 8, 8),
                 margin = new RectOffset(0, 0, 4, 4)
             };
+        private static float s_cachedLayoutWidth = -1f;
+
+        public static void UpdateLayoutWidth()
+        {
+            if (Event.current != null && Event.current.type == EventType.Layout)
+            {
+                s_cachedLayoutWidth = EditorGUIUtility.currentViewWidth;
+            }
+        }
 
         public static float GetResponsiveWidth(float minWidth, float maxWidth, float fraction = 0.4f)
         {
-            return Mathf.Clamp(EditorGUIUtility.currentViewWidth * fraction, minWidth, maxWidth);
+            float w = s_cachedLayoutWidth > 0f ? s_cachedLayoutWidth : EditorGUIUtility.currentViewWidth;
+            return Mathf.Clamp(w * fraction, minWidth, maxWidth);
         }
 
         public static float GetResponsiveLabelWidth(float minWidth = 120f, float maxWidth = 240f, float fraction = 0.38f)
@@ -85,12 +95,13 @@ namespace RingFlow.Editor
 
         public static bool IsNarrowWidth(float threshold = 520f)
         {
-            return EditorGUIUtility.currentViewWidth < threshold;
+            float w = s_cachedLayoutWidth > 0f ? s_cachedLayoutWidth : EditorGUIUtility.currentViewWidth;
+            return w < threshold;
         }
 
         public static int GetResponsiveColumns(float targetCellWidth, int minColumns = 1, int maxColumns = 6, float availableWidth = -1f)
         {
-            float w = availableWidth > 0f ? availableWidth : EditorGUIUtility.currentViewWidth;
+            float w = availableWidth > 0f ? availableWidth : (s_cachedLayoutWidth > 0f ? s_cachedLayoutWidth : EditorGUIUtility.currentViewWidth);
             float usableWidth = Mathf.Max(1f, w - 24f);
             int columns = Mathf.Max(minColumns, Mathf.FloorToInt(usableWidth / Mathf.Max(1f, targetCellWidth)));
             return Mathf.Clamp(columns, minColumns, maxColumns);

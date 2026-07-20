@@ -27,6 +27,7 @@ namespace RingFlow.Editor
         private DataOverviewSection _dataOverview;
         private RingFlowEditorUiStudioController _uiStudio;
         private UnityEditor.Editor _cachedActiveLevelEditor;
+        private LevelDataSO _cachedActiveLevel;
 
         private Vector2 _scroll;
         private int _selectedTab;
@@ -229,6 +230,7 @@ namespace RingFlow.Editor
 
         private void OnGUI()
         {
+            RingFlowEditorUtils.UpdateLayoutWidth();
             RefreshValidationCache();
 
             if (Event.current.type == EventType.Layout)
@@ -243,6 +245,7 @@ namespace RingFlow.Editor
                     _selectedConfigSubTab = _pendingSelectedConfigSubTab;
                     _pendingSelectedConfigSubTab = -1;
                 }
+                _cachedActiveLevel = Selection.activeObject as LevelDataSO;
                 _cachedWindowWidth = position.width;
                 _cachedCompactLayout = _cachedWindowWidth < 980f;
             }
@@ -746,7 +749,7 @@ namespace RingFlow.Editor
             RingFlowEditorUtils.FoldoutSection(EditorPrefsKeys.FoldLevelBrowser, "Seviye Tarayıcı (Level Browser)", _levelBrowser.OnGUI);
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionBreak);
 
-            var activeLevel = Selection.activeObject as LevelDataSO;
+            var activeLevel = _cachedActiveLevel;
             if (activeLevel != null)
             {
                 RingFlowEditorUtils.FoldoutSection(EditorPrefsKeys.FoldActiveLevelEditor, $"Aktif Seviye Düzenleyici (Seviye {activeLevel.Data.LevelIndex})", () =>
