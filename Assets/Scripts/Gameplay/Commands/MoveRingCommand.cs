@@ -151,6 +151,10 @@ namespace RingFlow.Gameplay
                 }
                 // FIX-R1 (RainbowRingStrategy Case 2): another ring landed on a Rainbow
                 // that was previously placed on an empty pole — trigger delayed conversion.
+                else if (ringBelowType == RingType.Stone)
+                {
+                    _signalBus.Fire(new StoneImpactSignal(context.ToPoleId, ring.Color));
+                }
                 else if (ringBelowType == RingType.Rainbow)
                 {
                     _strategyManager.ExecutePostMoveExecution(RingType.Rainbow, ref context);
@@ -258,10 +262,6 @@ namespace RingFlow.Gameplay
             record.ToPoleId = context.ToPoleId;
             record.Ring = context.MovingRing;
             record.WasMysteryRevealedOnFrom = context.WasMysteryRevealed;
-            // Consume the ghost-reveal flag set by SelectPoleCommand.
-            // Clear it immediately so stale flags never leak into subsequent moves.
-            _model.PendingGhostRevealPoleId = -1;
-            record.WasGhostRevealedOnFrom = false;
             if (context.WasIceBroken)
             {
                 record.IceBrokenRingIndices.Add(context.ToPole.Rings.Count - 2);

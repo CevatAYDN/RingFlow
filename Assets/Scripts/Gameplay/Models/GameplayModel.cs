@@ -20,20 +20,6 @@ namespace RingFlow.Gameplay
         public ObservableProperty<long> LevelStartUtcTicks { get; } = new(0);
         public ObservableProperty<bool> HasChallengeFailed { get; } = new(false);
 
-        /// <summary>
-        /// Pole id whose top Ghost ring was revealed on selection (Ghost → Standard).
-        /// MoveRingCommand consumes this id only if the following move starts from the same pole.
-        /// -1 means no pending reveal.
-        /// </summary>
-        public int PendingGhostRevealPoleId = -1;
-
-        /// <summary>Backward-compatible convenience flag used by older tests/tools.</summary>
-        public bool PendingGhostRevealOnFrom
-        {
-            get => PendingGhostRevealPoleId >= 0;
-            set => PendingGhostRevealPoleId = value ? SelectedPoleId.Value : -1;
-        }
-
         public UndoStack<MoveRecord> MoveHistory { get; } = new(1000);
 
         public ValueTask OnBind(CancellationToken ct)
@@ -61,7 +47,6 @@ namespace RingFlow.Gameplay
             ChallengeTimeLimitSeconds.Value = 0;
             LevelStartUtcTicks.Value = 0;
             HasChallengeFailed.Value = false;
-            PendingGhostRevealPoleId = -1;
         }
     }
 
@@ -131,9 +116,6 @@ namespace RingFlow.Gameplay
         public int ToPoleId;
         public RingData Ring;
         public bool WasMysteryRevealedOnFrom;
-        /// <summary>True if the top ring on the FROM pole was Ghost-revealed (type changed
-        /// from Ghost→Standard) when this move was selected. Undo must restore it to Ghost.</summary>
-        public bool WasGhostRevealedOnFrom;
         public readonly List<int> IceBrokenRingIndices = new(4); // Indices of rings whose ice was broken (from bottom upward).
         public bool WasIceBrokenOnTarget => IceBrokenRingIndices.Count > 0;
         public bool WasTargetPoleUnlocked;
@@ -208,7 +190,6 @@ namespace RingFlow.Gameplay
             ToPoleId = -1;
             Ring = default;
             WasMysteryRevealedOnFrom = false;
-            WasGhostRevealedOnFrom = false;
             IceBrokenRingIndices.Clear();
             WasTargetPoleUnlocked = false;
             WasPainted = false;

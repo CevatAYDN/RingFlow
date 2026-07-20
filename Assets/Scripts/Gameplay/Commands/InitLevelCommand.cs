@@ -164,11 +164,7 @@ namespace RingFlow.Gameplay
                     poleState.PortalPartnerId = pData.PortalTargetId;
                 for (int r = 0; r < pData.Rings.Count; r++)
                 {
-                    var ringData = pData.Rings[r].Clone();
-                    // Ghost is deprecated — convert to Glass at load time
-                    if (ringData.Type == RingType.Ghost)
-                        ringData.Type = RingType.Glass;
-                    poleState.AddRing(ringData);
+                    poleState.AddRing(pData.Rings[r].Clone());
                 }
                 _model.Poles.Add(poleState);
             }

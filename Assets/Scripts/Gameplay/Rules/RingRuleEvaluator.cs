@@ -33,7 +33,7 @@ namespace RingFlow.Gameplay.Rules
         ///   3. Stone restriction
         ///   4. Frozen acceptance
         ///   5. Moving Rainbow/Paint/Glass joker
-        ///   6. Top Rainbow/Paint/Ghost/Glass joker acceptance
+        ///   6. Top Rainbow/Paint/Glass joker acceptance
         ///   7. Standard color match
         /// </summary>
         public static bool CanAddRing(RingData movingRing, RingData topRing, bool isPoleFull, bool isPoleLocked)

@@ -27,6 +27,7 @@ namespace RingFlow.Gameplay.UI
             ScreenType.Pause,
             ScreenType.ChestPopup,
             ScreenType.ParentalGate,
+            ScreenType.MechanicGuide,
         };
 
         private static readonly HashSet<ScreenType> OverlayScreens = new()
@@ -281,6 +282,8 @@ namespace RingFlow.Gameplay.UI
                 _subscriptions.Add(sb.Subscribe<CloseSettingsSignal>(_ => ClosePopup(ScreenType.Settings)));
                 _subscriptions.Add(sb.Subscribe<OpenChestPopupSignal>(_ => OpenPopup(ScreenType.ChestPopup)));
                 _subscriptions.Add(sb.Subscribe<CloseChestPopupSignal>(_ => ClosePopup(ScreenType.ChestPopup)));
+                _subscriptions.Add(sb.Subscribe<OpenMechanicGuideSignal>(_ => OpenPopup(ScreenType.MechanicGuide)));
+                _subscriptions.Add(sb.Subscribe<CloseMechanicGuideSignal>(_ => ClosePopup(ScreenType.MechanicGuide)));
 
                 _subscriptions.Add(sb.Subscribe<WorldMapRequestedSignal>(_ =>
                 {

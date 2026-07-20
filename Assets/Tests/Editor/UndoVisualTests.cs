@@ -25,7 +25,6 @@ namespace RingFlow.Tests
             _model.Poles.Add(new PoleState { Id = 1, MaxCapacity = 4 });
             _model.MovesCount.Value = 0;
             _model.SelectedPoleId.Value = -1;
-            _model.PendingGhostRevealPoleId = -1;
             _signalBus = new MockSignalBusCompat();
         }
 

@@ -18,10 +18,11 @@ namespace RingFlow.Gameplay.UI
         public Button RestartButton { get; private set; }
         public Button PauseButton { get; private set; }
         public Button HintButton { get; private set; }
+        public Button GuideButton { get; private set; }
         public Image MovesIcon { get; private set; }
         public CanvasGroup HudGroup { get; private set; }
 
-        private GameObject _undoBtn, _restartBtn, _hintBtn, _pauseBtn, _topBar;
+        private GameObject _undoBtn, _restartBtn, _hintBtn, _guideBtn, _pauseBtn, _topBar;
 
         private void Awake()
         {
@@ -131,6 +132,21 @@ namespace RingFlow.Gameplay.UI
 
             _restartBtn = CreateCircularActionButton(botBar.transform, "Btn_RESTART", "restart", "Yeniden", 48f, new Vector2(0.78f, 0.5f));
             RestartButton = _restartBtn.GetComponent<Button>();
+
+            // Guide button (?)
+            var guideBtn = CreateCircularActionButton(botBar.transform, "Btn_GUIDE", "hint", "Rehber", 44f, new Vector2(0.06f, 0.5f));
+            GuideButton = guideBtn.GetComponent<Button>();
+            // Override icon to show "?" text instead of sprite
+            var guideIconText = guideBtn.transform.Find("IconImage")?.GetComponentInChildren<Image>();
+            if (guideIconText != null)
+            {
+                guideIconText.gameObject.SetActive(false);
+                var guideLabel = GameUIResources.CreateText("?", guideBtn.transform,
+                    24, TextAnchor.MiddleCenter, GameUIResources.TextColor);
+                guideLabel.name = "GuideIconText";
+                guideLabel.GetComponent<Text>().fontStyle = FontStyle.Bold;
+                GameUIResources.SetAnchors(guideLabel.GetComponent<RectTransform>(), 0.15f, 0.15f, 0.85f, 0.85f);
+            }
         }
 
         private GameObject CreateCircularActionButton(Transform parent, string name, string iconSpriteName, string labelText, float size, Vector2 anchor)
@@ -252,6 +268,7 @@ namespace RingFlow.Gameplay.UI
                 else if (btn.name.ToUpper().Contains("RESTART")) { _restartBtn = btn.gameObject; RestartButton = btn; }
                 else if (btn.name.ToUpper().Contains("HINT")) { _hintBtn = btn.gameObject; HintButton = btn; }
                 else if (btn.name.ToUpper().Contains("PAUSE")) { _pauseBtn = btn.gameObject; PauseButton = btn; }
+                else if (btn.name.ToUpper().Contains("GUIDE")) { _guideBtn = btn.gameObject; GuideButton = btn; }
             }
 
             var texts = GetComponentsInChildren<Text>(true);

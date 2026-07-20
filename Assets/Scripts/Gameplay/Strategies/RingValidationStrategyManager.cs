@@ -11,9 +11,9 @@ namespace RingFlow.Gameplay.Strategies
     /// ring types just implement <see cref="IRingValidationStrategy"/> and
     /// call RegisterStrategy(). No edits to this class are required.
     ///
-    /// NOTE (FIX-V1): Glass, Ghost and Mystery are intentionally mapped to the
-    /// Standard strategy here — their separate strategy files (GlassValidationStrategy,
-    /// GhostValidationStrategy) exist only for pattern-completeness but are NOT
+    /// NOTE (FIX-V1): Glass and Mystery are intentionally mapped to the
+    /// Standard strategy here — their separate strategy files (GlassValidationStrategy)
+    /// exist only for pattern-completeness but are NOT
     /// registered, since their logic is identical to Standard. If that ever diverges,
     /// replace the alias lines with RegisterStrategy(new GlassValidationStrategy()) etc.
     /// </summary>
@@ -103,8 +103,7 @@ namespace RingFlow.Gameplay.Strategies
         /// Returns true if the top ring of a pole can be picked up.
         ///
         /// FIX-V1: The previous implementation used `topRing.Color == RingColor.None`
-        /// as a proxy for "pole is empty", which is WRONG: a Ghost ring's color can be
-        /// a valid game color even though it is visually hidden. The correct check is
+        /// as a proxy for "pole is empty", which is WRONG. The correct check is
         /// whether the pole has any rings at all (ringCount == 0).  We accept ringCount
         /// as a parameter so callers don't need to expose the full pole object.
         /// </summary>

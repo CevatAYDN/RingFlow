@@ -4,7 +4,8 @@ using System.Collections.Generic;
 namespace RingFlow.Gameplay
 {
     /// <summary>
-    /// Ring type enum. Values are serialized — never reorder or remove existing values.
+    /// Ring type enum. Values are serialized — add new values at the end.
+    /// Removing is allowed only for deprecated/unused entries (Ghost was removed in refactor).
     /// </summary>
     public enum RingType
     {
@@ -25,8 +26,7 @@ namespace RingFlow.Gameplay
         Bomb,
         Chain,
         Magnet,
-        Paint,
-        Ghost
+        Paint
     }
 
     [Serializable]

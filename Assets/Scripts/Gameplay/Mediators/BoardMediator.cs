@@ -18,6 +18,7 @@ namespace RingFlow.Gameplay
         [Inject] private Diagnostics.IGameDiagnostics _diag;
         [Inject] private Diagnostics.IViewMediatorTracker _tracker;
         [Inject] private GameFeelConfigSO _feelConfig;
+        [Inject] private RingMaterialManager _ringMaterialManager;
         [Inject] private GameConfigDatabaseSO _dbConfig;
 
         private Action<int, int> _selectedPoleHandler;
@@ -30,6 +31,9 @@ namespace RingFlow.Gameplay
         private Action<RevealMysterySignal> _revealMysteryHandler;
         private Action<BreakIceSignal> _breakIceHandler;
         private Action<UnlockPoleSignal> _unlockPoleHandler;
+        private Action<StoneImpactSignal> _stoneImpactHandler;
+        private Action<ChainLinkSignal> _chainLinkHandler;
+        private Action<MagnetPullSignal> _magnetPullHandler;
         private Action<PaintRingSignal> _paintRingHandler;
         private Action<BombExplodedSignal> _bombExplodedHandler;
         private Action<HintResolvedSignal> _hintResolvedHandler;
@@ -60,9 +64,12 @@ namespace RingFlow.Gameplay
             _undoHandler ??= OnUndoVisualRestore;
             _undoRequestedHandler ??= OnUndoRequested;
             _revealMysteryHandler ??= _ => RebuildBoard();
-            _breakIceHandler ??= _ => RebuildBoard();
+            _breakIceHandler ??= OnIceBreak;
             _unlockPoleHandler ??= _ => RebuildBoard();
-            _paintRingHandler ??= _ => RebuildBoard();
+            _stoneImpactHandler ??= OnStoneImpact;
+            _chainLinkHandler ??= OnChainLink;
+            _magnetPullHandler ??= OnMagnetPull;
+            _paintRingHandler ??= OnPaintRing;
             _bombExplodedHandler ??= OnBombExploded;
             _hintResolvedHandler ??= OnHintResolved;
             _moveBlockedHandler ??= OnMoveBlocked;
@@ -75,7 +82,10 @@ namespace RingFlow.Gameplay
             Subscribe<UndoRequestedSignal>(_undoRequestedHandler);
             Subscribe<RevealMysterySignal>(_revealMysteryHandler);
             Subscribe<BreakIceSignal>(_breakIceHandler);
+            Subscribe<StoneImpactSignal>(_stoneImpactHandler);
             Subscribe<UnlockPoleSignal>(_unlockPoleHandler);
+            Subscribe<ChainLinkSignal>(_chainLinkHandler);
+            Subscribe<MagnetPullSignal>(_magnetPullHandler);
             Subscribe<PaintRingSignal>(_paintRingHandler);
             Subscribe<BombExplodedSignal>(_bombExplodedHandler);
             Subscribe<HintResolvedSignal>(_hintResolvedHandler);
@@ -154,6 +164,65 @@ namespace RingFlow.Gameplay
 
             View?.SetSelectedPole(_model?.SelectedPoleId.Value ?? -1);
             UpdateTutorialStateAsync();
+        }
+
+        private void OnChainLink(ChainLinkSignal signal)
+        {
+            _logger?.Log($"[BoardMediator] Chain link: {signal.FromPoleId} → {signal.ToPoleId}. Playing VFX/SFX.");
+            if (View != null)
+            {
+                Color ringColor = _ringMaterialManager?.GetRingColor(signal.Color) ?? Color.white;
+                View.PlayChainLinkVfx(signal.FromPoleId, signal.ToPoleId, ringColor, _model?.Poles);
+            }
+        }
+
+        private void OnMagnetPull(MagnetPullSignal signal)
+        {
+            _logger?.Log($"[BoardMediator] Magnet pull: {signal.PulledCount} ring(s) → pole {signal.TargetPoleId}. Playing VFX/SFX.");
+            if (View != null)
+            {
+                Color ringColor = _ringMaterialManager?.GetRingColor(signal.Color) ?? Color.white;
+                View.PlayMagnetPullVfx(signal.TargetPoleId, signal.PulledCount, ringColor, _model?.Poles);
+            }
+        }
+
+        private void OnIceBreak(BreakIceSignal signal)
+        {
+            _logger?.Log($"[BoardMediator] Ice broken on pole {signal.PoleId}. Playing VFX/SFX.");
+            if (View != null)
+            {
+                // Use icy cyan color for ice break VFX
+                Color iceColor = new Color(0.3f, 0.7f, 1.0f, 1f);
+                View.PlayIceBreakVfx(signal.PoleId, iceColor);
+            }
+            RebuildBoard();
+        }
+
+        private void OnStoneImpact(StoneImpactSignal signal)
+        {
+            _logger?.Log($"[BoardMediator] Stone impact on pole {signal.PoleId}. Playing thud VFX/SFX.");
+            if (View != null)
+            {
+                Color stoneColor = _ringMaterialManager?.GetRingColor(signal.Color) ?? Color.gray;
+                View.PlayStoneThudVfx(signal.PoleId, stoneColor);
+            }
+            // Stone impact doesn't change board state — no RebuildBoard needed.
+        }
+
+        private void OnPaintRing(PaintRingSignal signal)
+        {
+            _logger?.Log($"[BoardMediator] Paint applied on pole {signal.PoleId} with color {signal.NewColor}. Rebuilding + VFX/SFX.");
+            if (View != null && _model != null)
+            {
+                Color paintColor = _ringMaterialManager?.GetRingColor(signal.NewColor) ?? Color.white;
+                int poleId = signal.PoleId;
+                Vector3 poleTopPos = Vector3.zero;
+                var pv = View.GetPoleView(poleId);
+                if (pv != null)
+                    poleTopPos = pv.transform.position + Vector3.up * 1.5f;
+                View.PlayPaintSplashVfx(poleTopPos, paintColor);
+            }
+            RebuildBoard();
         }
 
         private void OnPoleCompleted(PoleCompletedSignal signal)

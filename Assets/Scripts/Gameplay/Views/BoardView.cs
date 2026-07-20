@@ -1318,6 +1318,149 @@ namespace RingFlow.Gameplay
             }
         }
 
+        /// <summary>
+        /// Chain-link VFX/SFX: metallic clink sound + ring-shaped burst VFX at both 
+        /// the source partner pole and target pole. Called by BoardMediator on ChainLinkSignal.
+        /// </summary>
+        public void PlayChainLinkVfx(int fromPoleId, int toPoleId, Color color, List<PoleState> poles)
+        {
+            if (_audioService != null)
+                _audioService.PlaySfx(_proceduralAudio.GetOrCreateChainClip(), 1.0f, 0.9f, 1.1f);
+
+            // Spawn burst VFX at both poles using the MergeEffectVfx burst-only mode
+            if (_vfxRegistry != null && _objectPoolService != null)
+            {
+                var mergePrefab = _vfxRegistry.GetMergeEffectPrefab();
+                if (mergePrefab != null)
+                {
+                    Vector3 fromPos = GetPoleWorldPosition(fromPoleId);
+                    Vector3 toPos = GetPoleWorldPosition(toPoleId);
+
+                    var fromInstance = _objectPoolService.Spawn(mergePrefab, fromPos, Quaternion.identity);
+                    fromInstance?.GetComponent<MergeEffectVfx>()?.InitializeBurstOnly(fromPos, color);
+
+                    var toInstance = _objectPoolService.Spawn(mergePrefab, toPos, Quaternion.identity);
+                    toInstance?.GetComponent<MergeEffectVfx>()?.InitializeBurstOnly(toPos, color);
+                }
+            }
+
+            _hapticService?.Vibrate(HapticType.Light);
+        }
+
+        /// <summary>
+        /// Magnet pull VFX/SFX: magnetic hum sound + burst VFX at the target pole.
+        /// Called by BoardMediator on MagnetPullSignal.
+        /// </summary>
+        public void PlayMagnetPullVfx(int targetPoleId, int pulledCount, Color color, List<PoleState> poles)
+        {
+            if (_audioService != null)
+                _audioService.PlaySfx(_proceduralAudio.GetOrCreateMagnetClip(), 1.0f, 0.9f, 1.1f);
+
+            // Spawn burst VFX at the target pole — intensity scales with pulled count
+            if (_vfxRegistry != null && _objectPoolService != null)
+            {
+                var mergePrefab = _vfxRegistry.GetMergeEffectPrefab();
+                if (mergePrefab != null)
+                {
+                    Vector3 targetPos = GetPoleWorldPosition(targetPoleId);
+                    for (int i = 0; i < Mathf.Min(pulledCount, 3); i++)
+                    {
+                        Vector3 offset = new Vector3(
+                            UnityEngine.Random.Range(-0.3f, 0.3f),
+                            UnityEngine.Random.Range(0f, 0.5f),
+                            UnityEngine.Random.Range(-0.3f, 0.3f)
+                        );
+                        var instance = _objectPoolService.Spawn(mergePrefab, targetPos + offset, Quaternion.identity);
+                        instance?.GetComponent<MergeEffectVfx>()?.InitializeBurstOnly(targetPos + offset, color);
+                    }
+                }
+            }
+
+            _hapticService?.Vibrate(HapticType.Medium);
+        }
+
+        /// <summary>
+        /// Paint splash VFX/SFX: wet splat sound + paint-colored burst at the pole.
+        /// Called by BoardMediator on PaintRingSignal.
+        /// </summary>
+        public void PlayPaintSplashVfx(Vector3 position, Color color)
+        {
+            if (_audioService != null)
+                _audioService.PlaySfx(_proceduralAudio.GetOrCreatePaintClip(), 1.0f, 0.92f, 1.08f);
+
+            // Spawn paint-splash burst VFX
+            if (_vfxRegistry != null && _objectPoolService != null)
+            {
+                var mergePrefab = _vfxRegistry.GetMergeEffectPrefab();
+                if (mergePrefab != null)
+                {
+                    var instance = _objectPoolService.Spawn(mergePrefab, position, Quaternion.identity);
+                    instance?.GetComponent<MergeEffectVfx>()?.InitializeBurstOnly(position, color);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Ice break VFX/SFX: cracking sound + cyan ice-shard burst at the pole.
+        /// Called by BoardMediator on BreakIceSignal.
+        /// </summary>
+        public void PlayIceBreakVfx(int poleId, Color color)
+        {
+            if (_audioService != null)
+                _audioService.PlaySfx(_proceduralAudio.GetOrCreateIceBreakClip(), 1.0f, 0.88f, 1.12f);
+
+            // Spawn ice-colored burst VFX at the pole
+            if (_vfxRegistry != null && _objectPoolService != null)
+            {
+                var mergePrefab = _vfxRegistry.GetMergeEffectPrefab();
+                if (mergePrefab != null)
+                {
+                    Vector3 pos = GetPoleWorldPosition(poleId);
+                    var instance = _objectPoolService.Spawn(mergePrefab, pos, Quaternion.identity);
+                    instance?.GetComponent<MergeEffectVfx>()?.InitializeBurstOnly(pos, color);
+                }
+            }
+
+            _hapticService?.Vibrate(HapticType.Medium);
+        }
+
+        /// <summary>
+        /// Stone impact VFX/SFX: heavy thud sound + gray impact burst at the pole.
+        /// Called by BoardMediator on StoneImpactSignal.
+        /// </summary>
+        public void PlayStoneThudVfx(int poleId, Color color)
+        {
+            if (_audioService != null)
+                _audioService.PlaySfx(_proceduralAudio.GetOrCreateStoneImpactClip(), 0.8f, 0.95f, 1.05f);
+
+            // Spawn subtle impact burst at the pole
+            if (_vfxRegistry != null && _objectPoolService != null)
+            {
+                var mergePrefab = _vfxRegistry.GetMergeEffectPrefab();
+                if (mergePrefab != null)
+                {
+                    Vector3 pos = GetPoleWorldPosition(poleId);
+                    var instance = _objectPoolService.Spawn(mergePrefab, pos, Quaternion.identity);
+                    // Use a darker, desaturated color for stone impact feel
+                    Color stoneColor = Color.Lerp(color, Color.gray, 0.5f);
+                    instance?.GetComponent<MergeEffectVfx>()?.InitializeBurstOnly(pos, stoneColor);
+                }
+            }
+
+            _hapticService?.Vibrate(HapticType.Light);
+        }
+
+        /// <summary>
+        /// Helper: gets the approximate world-space position of a pole's top area.
+        /// </summary>
+        private Vector3 GetPoleWorldPosition(int poleId)
+        {
+            var pv = GetPoleView(poleId);
+            if (pv != null)
+                return pv.transform.position + Vector3.up * 1.2f;
+            return Vector3.zero;
+        }
+
         private bool TryGetMainCamera(out Camera cam)
         {
             cam = _mainCamera;

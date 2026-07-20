@@ -132,25 +132,6 @@ namespace RingFlow.Gameplay
         }
     }
 
-    /// <summary>Fired when a Ghost ring is revealed (type changed Ghost→Standard) on selection.</summary>
-    public readonly struct GhostRevealedSignal
-    {
-        public readonly int PoleId;
-        public readonly RingData RevealedRing;
-        public GhostRevealedSignal(int poleId, RingData revealedRing)
-        {
-            PoleId = poleId;
-            RevealedRing = revealedRing;
-        }
-    }
-
-    /// <summary>Fired during Undo to restore a Standard ring back to Ghost state.</summary>
-    public readonly struct GhostRestoredSignal
-    {
-        public readonly int PoleId;
-        public GhostRestoredSignal(int poleId) => PoleId = poleId;
-    }
-
     public readonly struct PaintRingSignal
     {
         public readonly int PoleId;
@@ -159,6 +140,55 @@ namespace RingFlow.Gameplay
         {
             PoleId = poleId;
             NewColor = newColor;
+        }
+    }
+
+    /// <summary>
+    /// Fired when a ring lands on top of a Stone ring.
+    /// BoardMediator listens to trigger a stone impact thud sound + VFX.
+    /// </summary>
+    public readonly struct StoneImpactSignal
+    {
+        public readonly int PoleId;
+        public readonly RingColor Color;
+        public StoneImpactSignal(int poleId, RingColor color)
+        {
+            PoleId = poleId;
+            Color = color;
+        }
+    }
+
+    /// <summary>
+    /// Fired when a Chain mechanic pulls its partner ring to the target pole.
+    /// BoardMediator listens to trigger VFX (chain-link burst) and SFX (metallic clink).
+    /// </summary>
+    public readonly struct ChainLinkSignal
+    {
+        public readonly int FromPoleId;
+        public readonly int ToPoleId;
+        public readonly RingColor Color;
+        public ChainLinkSignal(int fromPoleId, int toPoleId, RingColor color)
+        {
+            FromPoleId = fromPoleId;
+            ToPoleId = toPoleId;
+            Color = color;
+        }
+    }
+
+    /// <summary>
+    /// Fired when a Magnet mechanic pulls same-color rings to the target pole.
+    /// BoardMediator listens to trigger VFX (magnetic whoosh) and SFX (magnetic hum).
+    /// </summary>
+    public readonly struct MagnetPullSignal
+    {
+        public readonly int TargetPoleId;
+        public readonly int PulledCount;
+        public readonly RingColor Color;
+        public MagnetPullSignal(int targetPoleId, int pulledCount, RingColor color)
+        {
+            TargetPoleId = targetPoleId;
+            PulledCount = pulledCount;
+            Color = color;
         }
     }
 

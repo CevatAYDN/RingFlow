@@ -43,6 +43,10 @@ namespace RingFlow.Gameplay.Strategies
                 }
                 context.ToPole.AddRing(topR);
 
+                // Fire signal for VFX/SFX (chain-link burst + metallic clink).
+                // Fires before sub-record to ensure mediator sees the signal in time.
+                context.SignalBus?.Fire(new ChainLinkSignal(pole.Id, context.ToPoleId, topR.Color));
+
                 // Record the sub-move so Undo can reverse it.
                 if (context.MainRecord != null)
                 {

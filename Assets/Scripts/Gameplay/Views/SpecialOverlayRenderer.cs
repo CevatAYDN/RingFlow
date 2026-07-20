@@ -20,6 +20,49 @@ namespace RingFlow.Gameplay
         // ── DI dependencies ─────────────────────────────────────────────
         [Inject] private GameFeelConfigSO _feelConfig;
 
+        // Shared background mesh and material (lazily created, cached for pooling)
+        private static Mesh _bgMesh;
+        private static Material _bgMaterial;
+
+        private static Mesh GetBgMesh()
+        {
+            if (_bgMesh == null)
+            {
+                _bgMesh = new Mesh { name = "OverlayBgDisc" };
+                _bgMesh.vertices = new Vector3[]
+                {
+                    new Vector3(-1f, -1f, 0f),
+                    new Vector3( 1f, -1f, 0f),
+                    new Vector3( 1f,  1f, 0f),
+                    new Vector3(-1f,  1f, 0f),
+                };
+                _bgMesh.triangles = new int[] { 0, 1, 2, 0, 2, 3 };
+                _bgMesh.RecalculateNormals();
+                _bgMesh.RecalculateBounds();
+            }
+            return _bgMesh;
+        }
+
+        private static Material GetBgMaterial()
+        {
+            if (_bgMaterial == null)
+            {
+                var shader = Shader.Find("Universal Render Pipeline/Lit")
+                          ?? Shader.Find("Universal Render Pipeline/Simple Lit")
+                          ?? Shader.Find("Sprites/Default");
+                if (shader != null)
+                {
+                    _bgMaterial = new Material(shader) { name = "OverlayBg" };
+                    _bgMaterial.color = new Color(0f, 0f, 0f, 0.55f);
+                    if (_bgMaterial.HasProperty("_BaseColor"))
+                        _bgMaterial.SetColor("_BaseColor", new Color(0f, 0f, 0f, 0.55f));
+                    _bgMaterial.SetFloat("_Metallic", 0f);
+                    _bgMaterial.SetFloat("_Smoothness", 0f);
+                }
+            }
+            return _bgMaterial;
+        }
+
         /// <summary>
         /// Adds a special overlay and/or RainbowCycle component to the given
         /// ring GameObject based on the ring's special type.
@@ -81,7 +124,7 @@ namespace RingFlow.Gameplay
                 overlayGo.transform.SetParent(ringObj.transform, false);
 
                 textMesh = overlayGo.AddComponent<TextMesh>();
-                textMesh.fontSize = 72;
+                textMesh.fontSize = 96;
                 textMesh.anchor = TextAnchor.MiddleCenter;
                 textMesh.alignment = TextAlignment.Center;
                 textMesh.fontStyle = FontStyle.Bold;
@@ -90,12 +133,38 @@ namespace RingFlow.Gameplay
                 overlayGo.transform.localPosition = new Vector3(0f, 0.22f, 0f);
                 float tilt = _feelConfig != null ? _feelConfig.CameraRotation.x : 30f;
                 overlayGo.transform.localRotation = Quaternion.Euler(tilt, 0f, 0f);
-                overlayGo.transform.localScale = new Vector3(0.06f, 0.06f, 0.06f);
+                overlayGo.transform.localScale = new Vector3(0.08f, 0.08f, 0.08f);
+
+                // Dark background disc for better readability
+                var bgGo = new GameObject("Bg");
+                bgGo.transform.SetParent(overlayGo.transform, false);
+                bgGo.transform.localPosition = new Vector3(0f, -0.01f, -0.005f);
+                bgGo.transform.localRotation = Quaternion.identity;
+                bgGo.transform.localScale = new Vector3(0.25f, 0.25f, 0.01f);
+                var bgRenderer = bgGo.AddComponent<MeshRenderer>();
+                bgRenderer.sharedMaterial = GetBgMaterial();
+                bgRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                bgRenderer.receiveShadows = false;
+                var bgFilter = bgGo.AddComponent<MeshFilter>();
+                bgFilter.sharedMesh = GetBgMesh();
             }
 
             textMesh.text = text;
             textMesh.color = color;
             overlayGo.SetActive(true);
+
+            // Attach subtle animation for Chain, Magnet, Paint, Frozen, Stone overlays
+            // so players can visually distinguish them at a glance.
+            if (ringData.Type == RingType.Chain || ringData.Type == RingType.Magnet || ringData.Type == RingType.Paint
+                || ringData.Type == RingType.Frozen || ringData.Type == RingType.Stone)
+            {
+                var animator = overlayGo.GetComponent<MechanicOverlayAnimator>();
+                if (animator == null)
+                {
+                    animator = overlayGo.AddComponent<MechanicOverlayAnimator>();
+                }
+                animator.Initialize(ringData.Type);
+            }
 
             // Share the font's material across all overlays so they batch.
             var mr = overlayGo.GetComponent<MeshRenderer>();

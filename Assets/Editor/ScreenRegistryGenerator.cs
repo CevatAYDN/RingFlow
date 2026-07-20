@@ -28,7 +28,8 @@ namespace RingFlow.Editor
                 new ScreenRegistrySO.ScreenMapping { Screen = ScreenType.Onboarding, PrefabPath = "UI/Onboarding", ViewTypeName = "RingFlow.Gameplay.UI.OnboardingView, Assembly-CSharp" },
                 new ScreenRegistrySO.ScreenMapping { Screen = ScreenType.GameOver, PrefabPath = "UI/GameOver", ViewTypeName = "RingFlow.Gameplay.UI.GameOverView, Assembly-CSharp" },
                 new ScreenRegistrySO.ScreenMapping { Screen = ScreenType.ChestPopup, PrefabPath = "UI/ChestPopup", ViewTypeName = "RingFlow.Gameplay.UI.ChestPopupView, Assembly-CSharp" },
-                new ScreenRegistrySO.ScreenMapping { Screen = ScreenType.ParentalGate, PrefabPath = "UI/ParentalGate", ViewTypeName = "RingFlow.Gameplay.UI.ParentalGatePopupView, Assembly-CSharp" }
+                new ScreenRegistrySO.ScreenMapping { Screen = ScreenType.ParentalGate, PrefabPath = "UI/ParentalGate", ViewTypeName = "RingFlow.Gameplay.UI.ParentalGatePopupView, Assembly-CSharp" },
+                new ScreenRegistrySO.ScreenMapping { Screen = ScreenType.MechanicGuide, PrefabPath = "UI/MechanicGuide", ViewTypeName = "RingFlow.Gameplay.UI.MechanicGuideView, Assembly-CSharp" }
             };
 
             AssetDatabase.CreateAsset(registry, path);

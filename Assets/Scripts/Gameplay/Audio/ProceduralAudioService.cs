@@ -22,6 +22,11 @@ namespace RingFlow.Gameplay
         private AudioClip _poleCompleteClip;
         private readonly System.Collections.Generic.Dictionary<int, AudioClip> _richPoleClips = new();
         private AudioClip _finalPoleCompleteClip;
+        private AudioClip _chainClip;
+        private AudioClip _magnetClip;
+        private AudioClip _paintClip;
+        private AudioClip _iceBreakClip;
+        private AudioClip _stoneImpactClip;
         private readonly System.Collections.Generic.Dictionary<int, AudioClip> _bgmClips = new();
 
         public ProceduralAudioService(AudioConfigSO config)
@@ -304,6 +309,140 @@ namespace RingFlow.Gameplay
             return _finalPoleCompleteClip;
         }
 
+        public AudioClip GetOrCreateChainClip()
+        {
+            if (_chainClip == null)
+            {
+                int sr = SampleRate;
+                float dur = 0.15f;
+                int samplesCount = (int)(sr * dur);
+                float[] samples = new float[samplesCount];
+                for (int i = 0; i < samplesCount; i++)
+                {
+                    float t = (float)i / sr;
+                    float vol = Mathf.Cos((t / dur) * Mathf.PI * 0.5f);
+                    // Two metallic tones: high clink + low resonance
+                    float freq1 = Mathf.Lerp(1200f, 800f, t / dur);
+                    float freq2 = 400f;
+                    float val = Mathf.Sin(2f * Mathf.PI * freq1 * t) * 0.30f * vol;
+                    val += Mathf.Sin(2f * Mathf.PI * freq2 * t) * 0.15f * vol * Mathf.Sin(t * 30f);
+                    samples[i] = val;
+                }
+                _chainClip = AudioClip.Create("ChainSFX", samplesCount, 1, sr, false);
+                _chainClip.SetData(samples, 0);
+            }
+            return _chainClip;
+        }
+
+        public AudioClip GetOrCreateMagnetClip()
+        {
+            if (_magnetClip == null)
+            {
+                int sr = SampleRate;
+                float dur = 0.25f;
+                int samplesCount = (int)(sr * dur);
+                float[] samples = new float[samplesCount];
+                for (int i = 0; i < samplesCount; i++)
+                {
+                    float t = (float)i / sr;
+                    float progress = t / dur;
+                    float vol = Mathf.Sin(progress * Mathf.PI);
+                    // Low hum with harmonic sweep
+                    float baseFreq = Mathf.Lerp(150f, 80f, progress);
+                    float val = Mathf.Sin(2f * Mathf.PI * baseFreq * t) * 0.25f * vol;
+                    val += Mathf.Sin(2f * Mathf.PI * baseFreq * 2f * t) * 0.12f * vol;
+                    val += Mathf.Sin(2f * Mathf.PI * baseFreq * 3f * t) * 0.08f * vol;
+                    samples[i] = val;
+                }
+                _magnetClip = AudioClip.Create("MagnetSFX", samplesCount, 1, sr, false);
+                _magnetClip.SetData(samples, 0);
+            }
+            return _magnetClip;
+        }
+
+        public AudioClip GetOrCreateIceBreakClip()
+        {
+            if (_iceBreakClip == null)
+            {
+                int sr = SampleRate;
+                float dur = 0.3f;
+                int samplesCount = (int)(sr * dur);
+                float[] samples = new float[samplesCount];
+                var seededRng = new System.Random(8888);
+                for (int i = 0; i < samplesCount; i++)
+                {
+                    float t = (float)i / sr;
+                    float progress = t / dur;
+                    float vol = Mathf.Sin(progress * Mathf.PI) * (1f - progress * 0.5f);
+                    // Ice crackle: high-frequency noise with resonant pitch
+                    float noise = (float)(seededRng.NextDouble() * 2.0 - 1.0);
+                    float crackleFreq = Mathf.Lerp(3000f, 500f, progress);
+                    float val = noise * 0.30f * vol;
+                    val += Mathf.Sin(2f * Mathf.PI * crackleFreq * t) * 0.20f * vol;
+                    // Add a metallic shimmer
+                    val += Mathf.Sin(2f * Mathf.PI * crackleFreq * 1.5f * t) * 0.10f * vol;
+                    samples[i] = val;
+                }
+                _iceBreakClip = AudioClip.Create("IceBreakSFX", samplesCount, 1, sr, false);
+                _iceBreakClip.SetData(samples, 0);
+            }
+            return _iceBreakClip;
+        }
+
+        public AudioClip GetOrCreateStoneImpactClip()
+        {
+            if (_stoneImpactClip == null)
+            {
+                int sr = SampleRate;
+                float dur = 0.2f;
+                int samplesCount = (int)(sr * dur);
+                float[] samples = new float[samplesCount];
+                var seededRng = new System.Random(4444);
+                for (int i = 0; i < samplesCount; i++)
+                {
+                    float t = (float)i / sr;
+                    float progress = t / dur;
+                    float vol = Mathf.Cos((t / dur) * Mathf.PI * 0.5f);
+                    // Heavy thud: low-frequency impact with noise
+                    float noise = (float)(seededRng.NextDouble() * 2.0 - 1.0) * 0.20f * vol;
+                    float thudFreq = Mathf.Lerp(200f, 60f, progress);
+                    float val = Mathf.Sin(2f * Mathf.PI * thudFreq * t) * 0.35f * vol;
+                    val += Mathf.Sin(2f * Mathf.PI * thudFreq * 0.5f * t) * 0.20f * vol;
+                    val += noise;
+                    samples[i] = val;
+                }
+                _stoneImpactClip = AudioClip.Create("StoneImpactSFX", samplesCount, 1, sr, false);
+                _stoneImpactClip.SetData(samples, 0);
+            }
+            return _stoneImpactClip;
+        }
+
+        public AudioClip GetOrCreatePaintClip()
+        {
+            if (_paintClip == null)
+            {
+                int sr = SampleRate;
+                float dur = 0.2f;
+                int samplesCount = (int)(sr * dur);
+                float[] samples = new float[samplesCount];
+                var seededRng = new System.Random(3407);
+                for (int i = 0; i < samplesCount; i++)
+                {
+                    float t = (float)i / sr;
+                    float vol = Mathf.Cos((t / dur) * Mathf.PI * 0.5f);
+                    // Wet splat: noise burst with low resonance
+                    float noise = (float)(seededRng.NextDouble() * 2.0 - 1.0);
+                    float freq = 250f;
+                    float val = noise * 0.25f * vol;
+                    val += Mathf.Sin(2f * Mathf.PI * freq * t) * 0.15f * vol;
+                    samples[i] = val;
+                }
+                _paintClip = AudioClip.Create("PaintSFX", samplesCount, 1, sr, false);
+                _paintClip.SetData(samples, 0);
+            }
+            return _paintClip;
+        }
+
         public AudioClip GetOrCreateBgmClip(int worldIndex)
         {
             if (!_bgmClips.TryGetValue(worldIndex, out var clip) || clip == null)
@@ -354,6 +493,11 @@ namespace RingFlow.Gameplay
             _errorClip = null;
             _explosionClip = null;
             _poleCompleteClip = null;
+            _chainClip = null;
+            _magnetClip = null;
+            _paintClip = null;
+            _iceBreakClip = null;
+            _stoneImpactClip = null;
             _richPoleClips.Clear();
             _finalPoleCompleteClip = null;
             _bgmClips.Clear();

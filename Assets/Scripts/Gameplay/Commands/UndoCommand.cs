@@ -26,7 +26,7 @@ namespace RingFlow.Gameplay
                 {
                     // MoveRingCommand.CaptureBoardSnapshot always populates BoardBefore, so the
                     // snapshot-restore path above is canonical and fully reverses the move —
-                    // including bombs, special rings, portals, ice, ghost, chain and magnet pulls.
+                    // including bombs, special rings, portals, ice, chain and magnet pulls.
                     // The field-by-field undo path was dead code and has been removed.
                     if (lastMove.BoardBefore.Count > 0)
                     {
@@ -112,7 +112,6 @@ namespace RingFlow.Gameplay
             }
 
             _model.SelectedPoleId.Value = -1;
-            _model.PendingGhostRevealPoleId = -1;
 #if DEVELOPMENT_BUILD
             NexusLog.Info("UndoCommand", "Execute", $"{lastMove.FromPoleId}->{lastMove.ToPoleId}",
                 $"Undo complete. Moves now: {_model.MovesCount.Value}");

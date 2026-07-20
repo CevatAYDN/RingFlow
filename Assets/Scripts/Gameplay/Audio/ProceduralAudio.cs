@@ -44,6 +44,11 @@ namespace RingFlow.Gameplay
         public static AudioClip GetOrCreateRichPoleCompleteClip(int ringCount)=> Service.GetOrCreateRichPoleCompleteClip(ringCount);
         public static AudioClip GetOrCreateFinalPoleClip()                   => Service.GetOrCreateFinalPoleClip();
         public static AudioClip GetOrCreateBgmClip(int worldIndex)           => Service.GetOrCreateBgmClip(worldIndex);
+        public static AudioClip GetOrCreateChainClip()                       => Service.GetOrCreateChainClip();
+        public static AudioClip GetOrCreateMagnetClip()                      => Service.GetOrCreateMagnetClip();
+        public static AudioClip GetOrCreatePaintClip()                       => Service.GetOrCreatePaintClip();
+        public static AudioClip GetOrCreateIceBreakClip()                    => Service.GetOrCreateIceBreakClip();
+        public static AudioClip GetOrCreateStoneImpactClip()                  => Service.GetOrCreateStoneImpactClip();
         public static void ClearCache()                                      => Service.ClearCache();
     }
 }

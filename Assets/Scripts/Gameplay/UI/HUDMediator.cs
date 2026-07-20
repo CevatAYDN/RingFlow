@@ -40,6 +40,7 @@ namespace RingFlow.Gameplay.UI
             View.RestartButton?.onClick.AddListener(OnRestart);
             View.PauseButton?.onClick.AddListener(() => SignalBus.Fire(new PauseRequestedSignal()));
             View.HintButton?.onClick.AddListener(() => SignalBus.FireAsyncAndForget(new HintRequestedSignal()));
+            View.GuideButton?.onClick.AddListener(() => SignalBus.Fire(new OpenMechanicGuideSignal()));
         }
 
         private void OnRestart()
@@ -107,6 +108,7 @@ namespace RingFlow.Gameplay.UI
             View.RestartButton?.onClick.RemoveAllListeners();
             View.PauseButton?.onClick.RemoveAllListeners();
             View.HintButton?.onClick.RemoveAllListeners();
+            View.GuideButton?.onClick.RemoveAllListeners();
 
             if (_model != null)
             {

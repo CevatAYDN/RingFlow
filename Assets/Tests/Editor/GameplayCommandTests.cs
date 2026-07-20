@@ -190,21 +190,6 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void SelectPoleCommand_GhostRingBecomesStandardWhenSelected()
-        {
-            var command = new SelectPoleCommand();
-            InjectDependencies(command);
-
-            var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };
-            pole0.AddRing(new RingData(RingColor.Green, RingType.Ghost));
-            _gameplayModel.Poles.Add(pole0);
-
-            command.Execute(new SelectPoleSignal(0));
-
-            Assert.AreEqual(RingType.Standard, pole0.TopRing.Type);
-        }
-
-        [Test]
         public void UndoRequestedCommand_AppliesAdAndCoinCostsCorrectly()
         {
             var command = new UndoRequestedCommand();
@@ -593,22 +578,6 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void SelectPoleCommand_GhostRingSolidificationFiresRevealSignal()
-        {
-            var command = new SelectPoleCommand();
-            InjectDependencies(command);
-
-            var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };
-            pole0.AddRing(new RingData(RingColor.Green, RingType.Ghost));
-            _gameplayModel.Poles.Add(pole0);
-
-            command.Execute(new SelectPoleSignal(0));
-
-            Assert.AreEqual(RingType.Standard, pole0.TopRing.Type);
-            Assert.IsTrue(_signalBus.HasFiredGhostRevealed);
-        }
-
-        [Test]
         public void MoveRingCommand_PaintRingCanBePlacedOnDifferentColor()
         {
             var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };
@@ -903,45 +872,6 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void UndoCommand_RestoresGhostRevealOnFromPole()
-        {
-            var selectCommand = new SelectPoleCommand();
-            InjectDependencies(selectCommand);
-            var moveCommand = new MoveRingCommand();
-            InjectDependencies(moveCommand);
-            var undoCommand = new UndoCommand();
-            InjectDependencies(undoCommand);
-
-            var pole0 = new PoleState { Id = 0, MaxCapacity = 4 };
-            var pole1 = new PoleState { Id = 1, MaxCapacity = 4 };
-
-            pole0.AddRing(new RingData(RingColor.Green, RingType.Ghost));
-
-            _gameplayModel.Poles.Add(pole0);
-            _gameplayModel.Poles.Add(pole1);
-
-            selectCommand.Execute(new SelectPoleSignal(0));
-            Assert.AreEqual(RingType.Standard, pole0.Rings[0].Type);
-            Assert.IsTrue(_gameplayModel.PendingGhostRevealOnFrom);
-
-            moveCommand.Execute(new MoveRingSignal(0, 1));
-
-            Assert.AreEqual(0, pole0.Rings.Count);
-            Assert.AreEqual(1, pole1.Rings.Count);
-            Assert.AreEqual(RingType.Standard, pole1.Rings[0].Type);
-            Assert.IsFalse(_gameplayModel.PendingGhostRevealOnFrom);
-            Assert.AreEqual(1, _gameplayModel.MoveHistory.Count);
-
-            undoCommand.Execute(new UndoSignal());
-
-            Assert.AreEqual(1, pole0.Rings.Count);
-            Assert.AreEqual(RingType.Ghost, pole0.Rings[0].Type);
-            Assert.AreEqual(RingColor.Green, pole0.Rings[0].Color);
-            Assert.AreEqual(0, pole1.Rings.Count);
-            Assert.AreEqual(0, _gameplayModel.MoveHistory.Count);
-        }
-
-        [Test]
         public void UndoCommand_RestoresChainSubMove()
         {
             var moveCommand = new MoveRingCommand();
@@ -1136,9 +1066,7 @@ namespace RingFlow.Tests
     public class MockSignalBus : ISignalBus
     {
         public bool HasFiredUndo { get; private set; }
-        public bool HasFiredRevealMystery { get; private set; }
-        public bool HasFiredGhostRevealed { get; private set; }
-        public bool HasFiredBombExploded { get; private set; }
+        public bool HasFiredRevealMystery { get; private set; }            public bool HasFiredBombExploded { get; private set; }
         public bool HasFiredLevelLost { get; private set; }
         public string FiredLevelLostReason { get; private set; }
         public bool HasFiredBreakIce { get; private set; }
@@ -1173,8 +1101,6 @@ namespace RingFlow.Tests
                 HasFiredUndo = true;
             else if (typeof(T) == typeof(RevealMysterySignal))
                 HasFiredRevealMystery = true;
-            else if (typeof(T) == typeof(GhostRevealedSignal))
-                HasFiredGhostRevealed = true;
             else if (typeof(T) == typeof(BombExplodedSignal))
                 HasFiredBombExploded = true;
             else if (typeof(T) == typeof(LevelLostSignal))

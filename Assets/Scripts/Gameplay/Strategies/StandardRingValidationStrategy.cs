@@ -4,8 +4,8 @@ namespace RingFlow.Gameplay.Strategies
     /// Validation strategy for standard rings (GDD §17 movement rules).
     /// Standard rings can be placed on empty poles or on poles with matching color top rings.
     ///
-    /// This strategy is also aliased for Glass, Ghost, and Mystery ring types in
-    /// RingValidationStrategyManager, since all three follow identical placement rules.
+    /// This strategy is also aliased for Glass and Mystery ring types in
+    /// RingValidationStrategyManager, since both follow identical placement rules.
     /// </summary>
     public sealed class StandardRingValidationStrategy : IRingValidationStrategy
     {

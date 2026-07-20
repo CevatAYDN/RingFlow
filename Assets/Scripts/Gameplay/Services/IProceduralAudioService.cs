@@ -22,6 +22,11 @@ namespace RingFlow.Gameplay.Services
         AudioClip GetOrCreateRichPoleCompleteClip(int ringCount);
         AudioClip GetOrCreateFinalPoleClip();
         AudioClip GetOrCreateBgmClip(int worldIndex);
+        AudioClip GetOrCreateChainClip();
+        AudioClip GetOrCreateMagnetClip();
+        AudioClip GetOrCreatePaintClip();
+        AudioClip GetOrCreateIceBreakClip();
+        AudioClip GetOrCreateStoneImpactClip();
         void ClearCache();
     }
 }

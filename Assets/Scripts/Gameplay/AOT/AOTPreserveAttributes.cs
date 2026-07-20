@@ -159,12 +159,15 @@ namespace RingFlow.Gameplay.AOT
             typeof(ChestClaimAllSignal).ToString();
             typeof(OpenChestPopupSignal).ToString();
             typeof(CloseChestPopupSignal).ToString();
+            typeof(OpenMechanicGuideSignal).ToString();
+            typeof(CloseMechanicGuideSignal).ToString();
             // FIX-OPEN3: New signals added in recent ring mechanic / ghost / portal work
             typeof(LevelLostSignal).ToString();
-            typeof(GhostRevealedSignal).ToString();
-            typeof(GhostRestoredSignal).ToString();
             typeof(PortalTeleportSignal).ToString();
             typeof(BombCounterRestoredSignal).ToString();
+            typeof(ChainLinkSignal).ToString();
+            typeof(MagnetPullSignal).ToString();
+            typeof(StoneImpactSignal).ToString();
             typeof(BombTickSignal).ToString();
         }
 
@@ -218,6 +221,9 @@ namespace RingFlow.Gameplay.AOT
             typeof(UI.SettingsView).ToString();
             typeof(UI.DailyRewardPopupView).ToString();
             typeof(UI.ChestPopupView).ToString();
+            typeof(UI.ChestPopupMediator).ToString();
+            typeof(UI.MechanicGuideView).ToString();
+            typeof(UI.MechanicGuideMediator).ToString();
             typeof(UI.GameOverView).ToString();
             typeof(UI.SplashView).ToString();
             typeof(UI.ParentalGatePopupView).ToString();

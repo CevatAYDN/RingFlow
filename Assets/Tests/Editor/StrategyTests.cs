@@ -174,7 +174,6 @@ namespace RingFlow.Tests
             Assert.IsNotNull(manager.GetStrategy(RingType.Bomb));
             Assert.IsNotNull(manager.GetStrategy(RingType.Chain));
             Assert.IsNotNull(manager.GetStrategy(RingType.Magnet));
-            Assert.IsNotNull(manager.GetStrategy(RingType.Ghost));
             Assert.IsNotNull(manager.GetStrategy(RingType.Mystery));
             Assert.IsNotNull(manager.GetStrategy(RingType.Rainbow));
             Assert.IsNotNull(manager.GetStrategy(RingType.Paint));
@@ -318,20 +317,6 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void GhostValidation_CanHandle_Ghost_ReturnsTrue()
-        {
-            var strategy = new GhostValidationStrategy();
-            Assert.IsTrue(strategy.CanHandle(RingType.Ghost));
-        }
-
-        [Test]
-        public void GhostValidation_CanPopRing_ReturnsTrue()
-        {
-            var strategy = new GhostValidationStrategy();
-            Assert.IsTrue(strategy.CanPopRing(new RingData(RingColor.Red, RingType.Ghost), isPoleLocked: false));
-        }
-
-        [Test]
         public void MysteryValidation_CanHandle_Mystery_ReturnsTrue()
         {
             var strategy = new MysteryValidationStrategy();
@@ -385,7 +370,6 @@ namespace RingFlow.Tests
                 new BombValidationStrategy(),
                 new ChainValidationStrategy(),
                 new MagnetValidationStrategy(),
-                new GhostValidationStrategy(),
                 new MysteryValidationStrategy(),
                 new RainbowValidationStrategy(),
                 new PaintValidationStrategy()
@@ -448,13 +432,6 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void GhostMoveStrategy_CanHandle_Ghost_ReturnsTrue()
-        {
-            var strategy = new GhostMoveStrategy();
-            Assert.IsTrue(strategy.CanHandle(RingType.Ghost));
-        }
-
-        [Test]
         public void GlassMoveStrategy_CanHandle_Glass_ReturnsTrue()
         {
             var strategy = new GlassMoveStrategy();
@@ -485,7 +462,6 @@ namespace RingFlow.Tests
                 new MagnetMoveStrategy(),
                 new FrozenMoveStrategy(),
                 new StoneMoveStrategy(),
-                new GhostMoveStrategy(),
                 new GlassMoveStrategy(),
                 new LockedRingMoveStrategy()
             };
@@ -515,7 +491,6 @@ namespace RingFlow.Tests
             Assert.IsNotNull(manager.GetStrategy(RingType.Magnet));
             Assert.IsNotNull(manager.GetStrategy(RingType.Frozen));
             Assert.IsNotNull(manager.GetStrategy(RingType.Stone));
-            Assert.IsNotNull(manager.GetStrategy(RingType.Ghost));
             Assert.IsNotNull(manager.GetStrategy(RingType.Glass));
             Assert.IsNotNull(manager.GetStrategy(RingType.Locked));
             Assert.IsNotNull(manager.GetStrategy(RingType.Key));

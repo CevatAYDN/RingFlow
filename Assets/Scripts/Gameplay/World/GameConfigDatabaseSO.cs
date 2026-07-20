@@ -16,7 +16,6 @@ namespace RingFlow.Gameplay
         Chain = 8,
         Magnet = 9,
         Paint = 10,
-        Ghost = 11,
         Portal = 15, // Portal pole pairs — ring placed on portal teleports to linked partner
         RandomPool1 = 12, // 1 random type from advanced pool
         RandomPool2 = 13, // 2 random types from advanced pool

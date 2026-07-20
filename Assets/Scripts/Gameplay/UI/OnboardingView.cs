@@ -63,7 +63,6 @@ namespace RingFlow.Gameplay.UI
 
         private int _currentIndex;
         private bool _reduceMotion;
-        private bool _uiBuilt;
 
         private void Awake()
         {
@@ -157,7 +156,6 @@ namespace RingFlow.Gameplay.UI
 
         public void BuildUI()
         {
-            _uiBuilt = true;
             _root = new GameObject("OnboardingRoot", typeof(RectTransform), typeof(CanvasGroup));
             _root.transform.SetParent(transform, false);
             var rootRect = _root.GetComponent<RectTransform>();

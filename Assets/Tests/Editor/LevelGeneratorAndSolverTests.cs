@@ -42,7 +42,6 @@ namespace RingFlow.Tests
                     else if (ring.Type == RingType.Chain && allowedMechanics.Contains(WorldMechanicType.Chain)) allowed = true;
                     else if (ring.Type == RingType.Magnet && allowedMechanics.Contains(WorldMechanicType.Magnet)) allowed = true;
                     else if (ring.Type == RingType.Paint && allowedMechanics.Contains(WorldMechanicType.Paint)) allowed = true;
-                    else if (ring.Type == RingType.Ghost && allowedMechanics.Contains(WorldMechanicType.Ghost)) allowed = true;
 
                     // World-assigned mechanics bypass band gating
                     if (!allowed && allowedWorldMechanics != null)
@@ -57,7 +56,6 @@ namespace RingFlow.Tests
                         else if (ring.Type == RingType.Chain && allowedWorldMechanics.Contains(WorldMechanicType.Chain)) allowed = true;
                         else if (ring.Type == RingType.Magnet && allowedWorldMechanics.Contains(WorldMechanicType.Magnet)) allowed = true;
                         else if (ring.Type == RingType.Paint && allowedWorldMechanics.Contains(WorldMechanicType.Paint)) allowed = true;
-                        else if (ring.Type == RingType.Ghost && allowedWorldMechanics.Contains(WorldMechanicType.Ghost)) allowed = true;
                     }
 
                     Assert.IsTrue(allowed, $"Disallowed mechanic ring found: {ring.Type} at world/level. Band allows: [{string.Join(", ", allowedMechanics)}]");
@@ -715,17 +713,6 @@ namespace RingFlow.Tests
             Assert.IsFalse(board.IsTopRingFrozen(0));
         }
 
-        [Test]
-        public void BoardState_Pop_Ghost_GhostBecomesStandard()
-        {
-            var board = new BoardState { PoleCount = 2 };
-            board.AddRing(0, new RingData(RingColor.Red, RingType.Ghost));
-            var popped = board.PopRing(0);
-            // Popped Ghost should become Standard (not Ghost anymore)
-            Assert.AreEqual(RingType.Standard, popped.Type);
-            Assert.AreEqual(RingColor.Red, popped.Color);
-        }
-
         // ── LevelSolver.IsSolved Tests ──────────────────────────────────
 
         [Test]
@@ -1115,7 +1102,6 @@ namespace RingFlow.Tests
             board.AddRing(1, new RingData(RingColor.Blue, RingType.Chain));
             board.AddRing(2, new RingData(RingColor.Green, RingType.Magnet));
             board.AddRing(3, new RingData(RingColor.Yellow, RingType.Paint));
-            board.AddRing(4, new RingData(RingColor.Purple, RingType.Ghost));
             board.SetPoleLocked(0, true);
 
             var method = typeof(LevelGenerator).GetMethod("EnforceMaxMechanicsLimit",

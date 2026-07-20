@@ -56,6 +56,12 @@ namespace RingFlow.Gameplay.Strategies
                 pullCount++;
             }
 
+            // Fire signal for VFX/SFX (magnetic whoosh + hum) after all pulls.
+            if (pullCount > 0)
+            {
+                context.SignalBus?.Fire(new MagnetPullSignal(context.ToPoleId, pullCount, context.MovingRing.Color));
+            }
+
 #if DEVELOPMENT_BUILD
             if (pullCount > 0)
             {

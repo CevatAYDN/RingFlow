@@ -15,7 +15,8 @@ namespace RingFlow.Gameplay
         Onboarding,
         GameOver,
         ChestPopup,
-        ParentalGate
+        ParentalGate,
+        MechanicGuide
     }
 
     public readonly struct ShowScreenSignal
@@ -51,6 +52,10 @@ namespace RingFlow.Gameplay
         public readonly int WorldIndex;
         public WorldSelectedSignal(int worldIndex) => WorldIndex = worldIndex;
     }
+
+    // ── Mechanic Guide ─────────────────────────────────────
+    public readonly struct OpenMechanicGuideSignal {}
+    public readonly struct CloseMechanicGuideSignal {}
 
     // ── Chest & Popup Signals (GDD §9) ────────────────────
     public readonly struct OpenChestPopupSignal {}
