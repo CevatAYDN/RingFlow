@@ -60,6 +60,7 @@ namespace RingFlow.Gameplay
             public const string Achievements = "RF_Achievements";
             public const string RemoveAds = "RF_RemoveAds";
             public const string HintCount = "RF_HintCount";
+            public const string ThemeCount = "RF_ThemeCount";
 
             // Save system
             public const string FirstLaunchTime = "RF_FirstLaunchTime";

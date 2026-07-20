@@ -14,7 +14,6 @@ namespace RingFlow.Gameplay.UI
     /// </summary>
     public static class GameUIResources
     {
-        private static IGameUIResourcesService _fallbackService;
         private static IGameUIResourcesService Service
         {
             get
@@ -22,33 +21,20 @@ namespace RingFlow.Gameplay.UI
                 var context = Nexus.Core.NexusRuntime.CurrentContext;
                 if (context != null)
                 {
-                    var service = context.Resolve<IGameUIResourcesService>();
+                    var service = context.TryResolve<IGameUIResourcesService>();
                     if (service != null)
                         return service;
                 }
 
-                if (_fallbackService == null)
-                {
-                    var theme = Resources.Load<UIThemeConfigSO>("Configs/UIThemeConfig");
-                    if (theme != null)
-                    {
-                        _fallbackService = new Services.GameUIResourcesService(theme);
-                    }
-                }
-
-                if (_fallbackService != null)
-                    return _fallbackService;
-
-                throw new System.InvalidOperationException("[GameUIResources] CurrentContext is null and fallback theme Configs/UIThemeConfig could not be loaded.");
+                throw new System.InvalidOperationException(
+                    "[GameUIResources] IGameUIResourcesService not available. " +
+                    "Ensure it is bound in GameplayLifecycle.OnConfigure() via " +
+                    "builder.BindService&lt;IGameUIResourcesService, GameUIResourcesService&gt;().");
             }
         }
 
-        // Backward compatibility binders
-        public static void Bind(UIThemeConfigSO theme)
-        {
-            // The service is now instantiated and bound in the lifecycle builder directly.
-            // This method remains as a no-op to prevent compilation failures.
-        }
+        // Backward compatibility binder (no-op kept for compilation)
+        public static void Bind(UIThemeConfigSO theme) { }
 
         public static void SetReducedMotion(bool reduceMotion) => Service.SetReducedMotion(reduceMotion);
 

@@ -4,6 +4,7 @@ using Nexus.Core;
 using Nexus.Core.FSM;
 using Nexus.Core.Services;
 using RingFlow.Gameplay.Diagnostics;
+using RingFlow.Gameplay.Services;
 
 namespace RingFlow.Gameplay
 {
@@ -16,6 +17,7 @@ namespace RingFlow.Gameplay
         [Inject] private IGameDiagnostics _diag;
         [Inject] private GameConfigDatabaseSO _dbConfig;
         [Inject] private AudioConfigSO _audioConfig;
+        [Inject] private IProceduralAudioService _proceduralAudio;
         [Inject] private Services.IGameTimeService _time;
 
         public async ValueTask OnEnterAsync(object args, CancellationToken ct)
@@ -68,7 +70,7 @@ namespace RingFlow.Gameplay
                 _audio.BgmStateMultiplier = isBoss ? _audioConfig.Bgm.BossBgmMultiplier : _audioConfig.Bgm.NormalBgmMultiplier;
 
                 int worldIdx = _dbConfig.GetWorldForLevel(targetLevel);
-                var bgm = ProceduralAudio.GetOrCreateBgmClip(worldIdx);
+                var bgm = _proceduralAudio.GetOrCreateBgmClip(worldIdx);
                 _audio.PlayBgm(bgm, true);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 NexusLog.Info("PlayingState", nameof(OnEnterAsync), targetLevel.ToString(),

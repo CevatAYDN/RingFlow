@@ -113,9 +113,15 @@ namespace RingFlow.Gameplay.UI
             if (RewardText != null) RewardText.text = rewardText;
             if (StreakText != null)
             {
-                StreakText.text = streak > 1
-                    ? $"{streak}-day streak! 🔥"
-                    : "";
+                if (streak > 1)
+                {
+                    string streakFormat = _locService?.GetString("daily_reward_streak", "{0}-day streak!") ?? "{0}-day streak!";
+                    StreakText.text = string.Format(streakFormat, streak);
+                }
+                else
+                {
+                    StreakText.text = string.Empty;
+                }
             }
             if (ClaimButton != null) ClaimButton.interactable = true;
         }

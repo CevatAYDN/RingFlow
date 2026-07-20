@@ -1,0 +1,68 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 983f58829e320be408c4d8f1faafd25d, type: 3}
+  m_Name: UISpriteLibrary
+  m_EditorClassIdentifier: RingFlow::RingFlow.Gameplay.UISpriteLibrarySO
+  ButtonPrimary: {fileID: 0}
+  ButtonPrimaryPressed: {fileID: 0}
+  ButtonSecondary: {fileID: 0}
+  ButtonDanger: {fileID: 0}
+  ButtonSuccess: {fileID: 0}
+  ButtonIcon: {fileID: 0}
+  ButtonBack: {fileID: 0}
+  ButtonClose: {fileID: 0}
+  PanelCard: {fileID: 0}
+  PanelPopup: {fileID: 0}
+  PanelHUD: {fileID: 0}
+  PanelTooltip: {fileID: 0}
+  IconCoin: {fileID: 0}
+  IconGem: {fileID: 0}
+  IconXP: {fileID: 0}
+  IconStar: {fileID: 0}
+  IconStarEmpty: {fileID: 0}
+  IconChest: {fileID: 0}
+  IconTrophy: {fileID: 0}
+  IconDaily: {fileID: 0}
+  IconSettings: {fileID: 0}
+  IconPause: {fileID: 0}
+  IconUndo: {fileID: 0}
+  IconHint: {fileID: 0}
+  IconPlay: {fileID: 0}
+  IconLock: {fileID: 0}
+  IconCheck: {fileID: 0}
+  IconClose: {fileID: 0}
+  IconHome: {fileID: 0}
+  IconSoundOn: {fileID: 0}
+  IconSoundOff: {fileID: 0}
+  IconMusicOn: {fileID: 0}
+  IconMusicOff: {fileID: 0}
+  IconVibration: {fileID: 0}
+  IconColorblind: {fileID: 0}
+  IconWorld: {fileID: 0}
+  HUDTopBar: {fileID: 0}
+  HUDCurrencyPill: {fileID: 0}
+  HUDProgressFill: {fileID: 0}
+  HUDProgressBackground: {fileID: 0}
+  BackgroundMain: {fileID: 0}
+  BackgroundGameplay: {fileID: 0}
+  BackgroundBlurOverlay: {fileID: 0}
+  RewardStar1: {fileID: 0}
+  RewardStar2: {fileID: 0}
+  RewardStar3: {fileID: 0}
+  RewardChestCommon: {fileID: 0}
+  RewardChestRare: {fileID: 0}
+  RewardChestEpic: {fileID: 0}
+  RewardCoinBurst: {fileID: 0}
+  BadgeNotification: {fileID: 0}
+  BadgeNew: {fileID: 0}
+  BadgeHot: {fileID: 0}
+  BadgeSale: {fileID: 0}

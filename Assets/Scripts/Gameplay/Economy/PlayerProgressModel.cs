@@ -31,6 +31,7 @@ namespace RingFlow.Gameplay
         public const string KeyAchieves      = GameplayAssetKeys.PlayerPrefs.Achievements;
         public const string KeyRemoveAds     = GameplayAssetKeys.PlayerPrefs.RemoveAds;
         public const string KeyHintCount     = GameplayAssetKeys.PlayerPrefs.HintCount;
+        public const string KeyThemeCount    = GameplayAssetKeys.PlayerPrefs.ThemeCount;
 
         internal static void WriteSchemaVersion(IPlayerPrefsService prefs, int version)
         {
@@ -87,6 +88,8 @@ namespace RingFlow.Gameplay
         public ObservableProperty<int> FreeUndosUsedThisSession { get; } = new(0);
 
         public ObservableProperty<int> HintCount { get; } = new(0);
+
+        public ObservableProperty<int> ThemeCount { get; } = new(0);
 
         public ObservableProperty<bool> RemoveAds { get; } = new(false);
 
@@ -171,6 +174,7 @@ namespace RingFlow.Gameplay
             BestMovesPerLevel.Clear();
             FreeUndosUsedThisSession.Value = 0;
             HintCount.Value = 0;
+            ThemeCount.Value = 0;
             RemoveAds.Value = false;
             UnlockedWorlds.Clear();
             for (int i = 0; i < TotalWorldCount; i++) UnlockedWorlds.Add(i == 0);
@@ -211,6 +215,7 @@ namespace RingFlow.Gameplay
             SaveBestMoves(prefs, PlayerProgressModel.KeyBestMoves, m.BestMovesPerLevel);
             prefs.SetInt(PlayerProgressModel.KeyUndoUsed, m.FreeUndosUsedThisSession.Value);
             prefs.SetInt(PlayerProgressModel.KeyHintCount, m.HintCount.Value);
+            prefs.SetInt(PlayerProgressModel.KeyThemeCount, m.ThemeCount.Value);
             prefs.SetBool(PlayerProgressModel.KeyRemoveAds, m.RemoveAds.Value);
 
             SaveBoolList(prefs, PlayerProgressModel.KeyWorlds, m.UnlockedWorlds);
@@ -285,6 +290,7 @@ namespace RingFlow.Gameplay
 
             m.FreeUndosUsedThisSession.Value = prefs.GetInt(PlayerProgressModel.KeyUndoUsed, 0);
             m.HintCount.Value = prefs.GetInt(PlayerProgressModel.KeyHintCount, 0);
+            m.ThemeCount.Value = prefs.GetInt(PlayerProgressModel.KeyThemeCount, 0);
             m.RemoveAds.Value = prefs.GetBool(PlayerProgressModel.KeyRemoveAds, false);
 
             m.UnlockedWorlds.Clear();
@@ -431,6 +437,7 @@ namespace RingFlow.Gameplay
                 hash = hash * 31 + Djb2Hash(prefs.GetString(PlayerProgressModel.KeyBestMoves, ""));
                 hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyUndoUsed, 0);
                 hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyHintCount, 0);
+                hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyThemeCount, 0);
                 hash = hash * 31 + (prefs.GetBool(PlayerProgressModel.KeyRemoveAds, false) ? 1 : 0);
                 hash = hash * 31 + Djb2Hash(prefs.GetString(PlayerProgressModel.KeyWorlds, ""));
                 hash = hash * 31 + Djb2Hash(prefs.GetString(PlayerProgressModel.KeyThemes, ""));
@@ -458,6 +465,7 @@ namespace RingFlow.Gameplay
             public string BestMoves;
             public int UndoUsed;
             public int HintCount;
+            public int ThemeCount;
             public bool RemoveAds;
             public string DailyStamp;
             public string Worlds;
@@ -488,6 +496,7 @@ namespace RingFlow.Gameplay
                 BestMoves = prefs.GetString(PlayerProgressModel.KeyBestMoves, ""),
                 UndoUsed = prefs.GetInt(PlayerProgressModel.KeyUndoUsed, 0),
                 HintCount = prefs.GetInt(PlayerProgressModel.KeyHintCount, 0),
+                ThemeCount = prefs.GetInt(PlayerProgressModel.KeyThemeCount, 0),
                 RemoveAds = prefs.GetBool(PlayerProgressModel.KeyRemoveAds, false),
                 DailyStamp = prefs.GetString(PlayerProgressModel.KeyDailyStamp, ""),
                 Worlds = prefs.GetString(PlayerProgressModel.KeyWorlds, ""),
@@ -540,6 +549,7 @@ namespace RingFlow.Gameplay
             prefs.SetString(PlayerProgressModel.KeyBestMoves, snapshot.BestMoves ?? "");
             prefs.SetInt(PlayerProgressModel.KeyUndoUsed, snapshot.UndoUsed);
             prefs.SetInt(PlayerProgressModel.KeyHintCount, snapshot.HintCount);
+            prefs.SetInt(PlayerProgressModel.KeyThemeCount, snapshot.ThemeCount);
             prefs.SetBool(PlayerProgressModel.KeyRemoveAds, snapshot.RemoveAds);
             prefs.SetString(PlayerProgressModel.KeyDailyStamp, snapshot.DailyStamp ?? "0");
             prefs.SetString(PlayerProgressModel.KeyWorlds, snapshot.Worlds ?? "");
@@ -564,7 +574,7 @@ namespace RingFlow.Gameplay
             if (snapshot.PlayerLevel < 1) return false;
             if (snapshot.Coins < 0 || snapshot.Diamonds < 0 || snapshot.Xp < 0) return false;
             if (snapshot.ChestBronze < 0 || snapshot.ChestSilver < 0 || snapshot.ChestGold < 0 || snapshot.ChestDiamond < 0) return false;
-            if (snapshot.UndoUsed < 0 || snapshot.HintCount < 0) return false;
+            if (snapshot.UndoUsed < 0 || snapshot.HintCount < 0 || snapshot.ThemeCount < 0) return false;
             if (snapshot.SnapshotChecksum != ComputeSnapshotChecksum(snapshot)) return false;
             return true;
         }
@@ -590,6 +600,7 @@ namespace RingFlow.Gameplay
                 hash = hash * 31 + Djb2Hash(s.BestMoves ?? "");
                 hash = hash * 31 + s.UndoUsed;
                 hash = hash * 31 + s.HintCount;
+                hash = hash * 31 + s.ThemeCount;
                 hash = hash * 31 + (s.RemoveAds ? 1 : 0);
                 hash = hash * 31 + Djb2Hash(s.DailyStamp ?? "");
                 hash = hash * 31 + Djb2Hash(s.Worlds ?? "");

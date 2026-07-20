@@ -92,7 +92,6 @@ namespace RingFlow.Gameplay.AOT
             typeof(BombMoveStrategy).ToString();
             typeof(ChainMoveStrategy).ToString();
             typeof(FrozenMoveStrategy).ToString();
-            typeof(GhostMoveStrategy).ToString();
             typeof(GlassMoveStrategy).ToString();
 
             // Ring validation strategies
@@ -103,7 +102,6 @@ namespace RingFlow.Gameplay.AOT
             // FIX-OPEN3: New validation strategies added in recent ring mechanic work
             typeof(BombValidationStrategy).ToString();
             typeof(ChainValidationStrategy).ToString();
-            typeof(GhostValidationStrategy).ToString();
             typeof(GlassValidationStrategy).ToString();
             typeof(MagnetValidationStrategy).ToString();
             typeof(RainbowValidationStrategy).ToString();

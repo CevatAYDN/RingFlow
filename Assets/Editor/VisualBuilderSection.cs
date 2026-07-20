@@ -593,7 +593,6 @@ namespace RingFlow.Editor
                     case RingType.Glass:
                         mat.color = new Color(1f, 1f, 1f, 0.25f);
                         mat.SetFloat("_Metallic", 0f); mat.SetFloat("_Smoothness", 0.95f); break;
-                    case RingType.Ghost:
                         mat.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0.15f);
                         mat.SetFloat("_Metallic", 0.3f); mat.SetFloat("_Smoothness", 0.3f); break;
                 }

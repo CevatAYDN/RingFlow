@@ -82,8 +82,9 @@ namespace RingFlow.Gameplay
             ApplyTint();
         }
 
-        public void FlashError(float duration = 0.35f)
+        public void FlashError(float duration = -1f)
         {
+            if (duration <= 0f) duration = _feelConfig != null ? _feelConfig.ErrorFlashDuration : 0.35f;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             NexusLog.Info("PoleView", nameof(FlashError), PoleId.ToString(), $"Error flash triggered. duration={duration:F2}s.");
 #endif
@@ -106,9 +107,11 @@ namespace RingFlow.Gameplay
             _flashRoutine = null;
         }
 
-        public void FlashSuccess(float duration = 0.8f)
+        public void FlashSuccess(float duration = -1f)
         {
-            FlashSuccess(duration, new Color(1f, 0.82f, 0f, 1f));
+            float dur = duration > 0f ? duration : (_feelConfig != null ? _feelConfig.PoleSuccessFlashDuration : 0.8f);
+            Color col = _feelConfig != null ? _feelConfig.PoleSuccessFlashColor : new Color(1f, 0.82f, 0f, 1f);
+            FlashSuccess(dur, col);
         }
 
         public void FlashSuccess(float duration, Color color)

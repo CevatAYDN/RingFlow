@@ -79,13 +79,13 @@ namespace RingFlow.Gameplay
         private void BuildParticles()
         {
             int count = Feel?.ConfettiPoolSize ?? 30;
-            float sizeMin = 0.08f;
-            float sizeMax = 0.22f;
-            float spawnW = 36f;
-            float spawnH = 24f;
-            float twinkleMin = 0.5f;
-            float twinkleMax = 2.0f;
-            Color pColor = new(1.0f, 1.0f, 1.0f, 0.15f);
+            float sizeMin = Feel?.AmbientParticleSizeMin ?? 0.08f;
+            float sizeMax = Feel?.AmbientParticleSizeMax ?? 0.22f;
+            float spawnW = Feel?.AmbientSpawnWidth ?? 36f;
+            float spawnH = Feel?.AmbientSpawnHeight ?? 24f;
+            float twinkleMin = Feel?.AmbientTwinkleMin ?? 0.5f;
+            float twinkleMax = Feel?.AmbientTwinkleMax ?? 2.0f;
+            Color pColor = Feel?.AmbientParticleColor ?? new(1.0f, 1.0f, 1.0f, 0.15f);
 
             _particles = new GameObject[count];
             _twinklePhases = new float[count];
@@ -109,12 +109,13 @@ namespace RingFlow.Gameplay
                 var col = go.GetComponent<SphereCollider>();
                 if (col != null) Destroy(col);
 
-                var renderer = go.GetComponent<MeshRenderer>();
-                renderer.sharedMaterial = CreateParticleMaterial(pColor);
-                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                renderer.receiveShadows = false;
-                _renderers[i] = renderer;
-
+                var mr = go.GetComponent<MeshRenderer>();
+                mr.sharedMaterial = CreateParticleMaterial(pColor);
+                mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                mr.receiveShadows = false;
+                
+                _particles[i] = go;
+                _renderers[i] = mr;
                 _twinklePhases[i] = Random.Range(0f, Mathf.PI * 2f);
                 _twinkleSpeeds[i] = Random.Range(twinkleMin, twinkleMax);
             }
@@ -153,8 +154,9 @@ namespace RingFlow.Gameplay
         {
             if (_particles == null) return;
 
-            float driftMin = 0.05f;
-            float driftMax = 0.25f;
+            float driftMin = Feel?.AmbientDriftMin ?? 0.05f;
+            float driftMax = Feel?.AmbientDriftMax ?? 0.25f;
+            Color pColor = Feel?.AmbientParticleColor ?? new(1.0f, 1.0f, 1.0f, 0.15f);
 
             for (int i = 0; i < _particles.Length; i++)
             {
@@ -170,7 +172,7 @@ namespace RingFlow.Gameplay
 
                 float alpha = (Mathf.Sin(Time.time * _twinkleSpeeds[i] + _twinklePhases[i]) + 0.5f) * 0.5f;
                 _renderers[i].GetPropertyBlock(_propBlock);
-                var c = new Color(1.0f, 1.0f, 1.0f, alpha * 0.15f);
+                var c = new Color(pColor.r, pColor.g, pColor.b, alpha * pColor.a);
                 _propBlock.SetColor("_Color", c);
                 _propBlock.SetColor("_BaseColor", c);
                 _renderers[i].SetPropertyBlock(_propBlock);

@@ -36,7 +36,6 @@ namespace RingFlow.Gameplay.Strategies
             RegisterStrategy(new MagnetMoveStrategy());
             RegisterStrategy(new FrozenMoveStrategy());
             RegisterStrategy(new StoneMoveStrategy());
-            RegisterStrategy(new GhostMoveStrategy());
             RegisterStrategy(new GlassMoveStrategy());
             RegisterStrategy(new LockedRingMoveStrategy());
 

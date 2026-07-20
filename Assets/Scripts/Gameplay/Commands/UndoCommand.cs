@@ -31,7 +31,6 @@ namespace RingFlow.Gameplay
                     if (lastMove.BoardBefore.Count > 0)
                     {
                         RestoreBoardSnapshot(lastMove);
-                        RestoreGhostReveal(lastMove, fromPole);
                         FinishUndo(lastMove);
                         return;
                     }
@@ -70,7 +69,6 @@ namespace RingFlow.Gameplay
         ///   • Portal partner IDs
         ///   • Ring capacity
         ///   • All ring data (color, type, additional data including Bomb counters)
-        ///   • Ghost ring type (handled separately by RestoreGhostReveal for pre-selection state)
         ///   • CompletedPoles is cleared and recomputed by CheckWinSignal that FinishUndo fires
         ///
         /// IMPORTANT: Because the snapshot includes ring data with Bomb counters,
@@ -99,21 +97,6 @@ namespace RingFlow.Gameplay
 
             // Completed-pole flags are recomputed by the win-check fired in FinishUndo.
             _model.CompletedPoles.Clear();
-        }
-
-        /// <summary>
-        /// Re-applies the Ghost type to the restored from-pole top ring. The board snapshot is
-        /// captured at move time, after SelectPoleCommand already revealed the ghost (Ghost→Standard),
-        /// so the restored ring comes back as Standard. Per the MoveRecord contract a move whose
-        /// selection revealed a ghost must undo back to the pre-selection Ghost state.
-        /// </summary>
-        private void RestoreGhostReveal(MoveRecord record, PoleState fromPole)
-        {
-            if (!record.WasGhostRevealedOnFrom || fromPole == null || fromPole.Rings.Count == 0)
-                return;
-
-            var top = fromPole.TopRing;
-            fromPole.Rings[fromPole.Rings.Count - 1] = new RingData(top.Color, RingType.Ghost);
         }
 
         private void FinishUndo(MoveRecord lastMove)

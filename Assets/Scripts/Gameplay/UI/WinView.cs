@@ -1,5 +1,6 @@
 using Nexus.Core;
 using Nexus.Core.Services;
+using RingFlow.Gameplay.Services;
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
@@ -26,6 +27,7 @@ namespace RingFlow.Gameplay.UI
         private GameObject _nextBtn, _quitBtn;
         private ILocalizationService _loc;
         [Inject] private IAudioService _audio;
+        [Inject] private IProceduralAudioService _proceduralAudio;
 
         private void Awake()
         {
@@ -178,7 +180,7 @@ namespace RingFlow.Gameplay.UI
         public void SetLevel(int level, ILocalizationService loc = null)
         {
             if (LevelText == null || level < 0) return;
-            string format = loc != null ? loc.GetString("format_level", "LEVEL {0}") : "LEVEL {0}";
+            string format = loc != null ? loc.GetString("format_level", "Level {0}") : "Level {0}";
             LevelText.text = string.Format(format, level);
 
             DOTween.Kill(LevelText.transform);
@@ -238,7 +240,7 @@ namespace RingFlow.Gameplay.UI
                         }
                         if (_audio != null)
                         {
-                            var chime = ProceduralAudio.GetOrCreateMoveClip();
+                            var chime = _proceduralAudio.GetOrCreateMoveClip();
                             _audio.PlaySfx(chime, 1.0f, 1.0f + index * 0.12f, 1.0f + index * 0.12f);
                         }
                     });

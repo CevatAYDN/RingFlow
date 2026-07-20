@@ -178,7 +178,7 @@ The RING FLOW codebase has a **solid foundation**: Nexus MVCS framework is used 
 **File:** `BoardView.cs:30`
 **Status:** ⚠️ Not changed
 - BoardView searches the scene for EventSystem and Camera. This is a runtime fallback for test environments. Production should have EventSystem created by the bootstrapper.
-- **TODO:** Make EventSystem/camera injection points explicit on `BoardView`; fall back to search only if injection failed.
+- **TODO:** Make EventSystem/camera injection points explicit on `BoardView`; fall back to search only if injection failed. This should remain a test-only escape hatch, not a gameplay dependency.
 
 ---
 

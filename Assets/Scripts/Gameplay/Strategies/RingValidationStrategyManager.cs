@@ -35,12 +35,10 @@ namespace RingFlow.Gameplay.Strategies
             RegisterStrategy(new MagnetValidationStrategy());
             RegisterStrategy(new RainbowValidationStrategy());
             RegisterStrategy(new PaintValidationStrategy());
+            RegisterStrategy(new GlassValidationStrategy());
 
-            // Glass, Ghost, and Mystery use standard movement rules (identical logic).
-            // Map them to the Standard strategy instead of maintaining duplicate classes.
+            // Mystery uses standard movement rules (identical logic).
             var standardStrategy = _strategies[RingType.Standard];
-            _strategies[RingType.Glass]   = standardStrategy;
-            _strategies[RingType.Ghost]   = standardStrategy;
             _strategies[RingType.Mystery] = standardStrategy;
 
             _defaultStrategy = standardStrategy;
@@ -48,7 +46,7 @@ namespace RingFlow.Gameplay.Strategies
 #if DEVELOPMENT_BUILD
             NexusLog.Info("RingValidationStrategyManager", ".ctor", "init",
                 $"Initialized with {_strategies.Count} ring-type mappings. " +
-                "Glass/Ghost/Mystery aliased to Standard strategy.");
+                "Mystery aliased to Standard strategy.");
 #endif
         }
 

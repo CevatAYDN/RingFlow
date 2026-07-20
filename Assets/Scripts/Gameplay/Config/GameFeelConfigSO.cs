@@ -280,5 +280,71 @@ namespace RingFlow.Gameplay
         public float DefaultSfxPitchMin = 0.92f;
         [Tooltip("Default SFX pitch variation max.")]
         public float DefaultSfxPitchMax = 1.08f;
+
+        [Header("Ambient Background Visuals")]
+        public float AmbientParticleSizeMin = 0.08f;
+        public float AmbientParticleSizeMax = 0.22f;
+        public float AmbientSpawnWidth = 36f;
+        public float AmbientSpawnHeight = 24f;
+        public float AmbientTwinkleMin = 0.5f;
+        public float AmbientTwinkleMax = 2.0f;
+        public float AmbientDriftMin = 0.05f;
+        public float AmbientDriftMax = 0.25f;
+        public Color AmbientParticleColor = new(1.0f, 1.0f, 1.0f, 0.15f);
+
+        [Header("Merge Effect VFX Timings")]
+        public float MergeGlowExpandDuration = 0.2f;
+        public float MergeGlowShrinkDuration = 0.2f;
+        public float MergeBurstAnimDuration = 0.35f;
+        public float FinalPoleMergeBurstDuration = 0.6f;
+        public float MergeBurstScale = 1.0f;
+        public float FinalPoleMergeBurstScale = 1.5f;
+
+        [Header("Board View Extra Layout")]
+        public float WorldBaseFromBottom = 0.22f;
+
+        [Header("Ring Materials Per Type")]
+        public System.Collections.Generic.List<RingTypeMaterialConfig> RingTypeMaterials = new();
+
+        public RingTypeMaterialConfig GetMaterialConfig(RingType type)
+        {
+            if (RingTypeMaterials != null)
+            {
+                for (int i = 0; i < RingTypeMaterials.Count; i++)
+                {
+                    if (RingTypeMaterials[i].Type == type)
+                        return RingTypeMaterials[i];
+                }
+            }
+            return GetDefaultMaterialConfig(type);
+        }
+
+        public static RingTypeMaterialConfig GetDefaultMaterialConfig(RingType type) => type switch
+        {
+            RingType.Frozen => new RingTypeMaterialConfig { Type = type, OverrideColor = Color.clear, Metallic = 0.1f, Smoothness = 0.9f, EnableEmission = true, EmissionColor = new Color(0.3f, 0.6f, 0.8f, 1f), UseFadeMode = false, Alpha = 1f },
+            RingType.Key or RingType.Locked => new RingTypeMaterialConfig { Type = type, OverrideColor = new Color(1f, 0.84f, 0f, 1f), Metallic = 0.8f, Smoothness = 0.6f, EnableEmission = true, EmissionColor = new Color(0.5f, 0.4f, 0f, 1f), UseFadeMode = false, Alpha = 1f },
+            RingType.Stone => new RingTypeMaterialConfig { Type = type, OverrideColor = new Color(0.4f, 0.38f, 0.35f, 1f), Metallic = 0f, Smoothness = 0.1f, EnableEmission = false, EmissionColor = Color.black, UseFadeMode = false, Alpha = 1f },
+            RingType.Glass => new RingTypeMaterialConfig { Type = type, OverrideColor = new Color(1f, 1f, 1f, 0.45f), Metallic = 0.1f, Smoothness = 0.95f, EnableEmission = true, EmissionColor = new Color(0.15f, 0.15f, 0.15f, 1f), UseFadeMode = true, Alpha = 0.45f },
+            RingType.Rainbow => new RingTypeMaterialConfig { Type = type, OverrideColor = Color.clear, Metallic = 0.5f, Smoothness = 0.8f, EnableEmission = true, EmissionColor = Color.white, UseFadeMode = false, Alpha = 1f },
+            RingType.Bomb => new RingTypeMaterialConfig { Type = type, OverrideColor = Color.clear, Metallic = 0.1f, Smoothness = 0.85f, EnableEmission = true, EmissionColor = new Color(0.8f, 0.2f, 0f, 1f), UseFadeMode = false, Alpha = 1f },
+            RingType.Chain => new RingTypeMaterialConfig { Type = type, OverrideColor = Color.clear, Metallic = 0.7f, Smoothness = 0.3f, EnableEmission = false, EmissionColor = Color.black, UseFadeMode = false, Alpha = 1f },
+            RingType.Magnet => new RingTypeMaterialConfig { Type = type, OverrideColor = Color.clear, Metallic = 0.9f, Smoothness = 0.5f, EnableEmission = true, EmissionColor = new Color(0.5f, 0f, 0.5f, 1f), UseFadeMode = false, Alpha = 1f },
+            RingType.Paint => new RingTypeMaterialConfig { Type = type, OverrideColor = Color.clear, Metallic = 0.1f, Smoothness = 0.9f, EnableEmission = false, EmissionColor = Color.black, UseFadeMode = false, Alpha = 1f },
+            RingType.Mystery => new RingTypeMaterialConfig { Type = type, OverrideColor = new Color(0.3f, 0.3f, 0.3f, 1f), Metallic = 0.4f, Smoothness = 0.6f, EnableEmission = true, EmissionColor = new Color(0.2f, 0.2f, 0.2f, 1f), UseFadeMode = false, Alpha = 1f },
+            _ => new RingTypeMaterialConfig { Type = type, OverrideColor = Color.clear, Metallic = 0.1f, Smoothness = 0.85f, EnableEmission = false, EmissionColor = Color.black, UseFadeMode = false, Alpha = 1f }
+        };
+    }
+
+    [System.Serializable]
+    public struct RingTypeMaterialConfig
+    {
+        public RingType Type;
+        public Color OverrideColor;     // Color.clear (alpha=0) means keep base color
+        public float Metallic;
+        public float Smoothness;
+        public bool EnableEmission;
+        public Color EmissionColor;
+        public bool UseFadeMode;
+        public float Alpha;             // 1.0f = opaque, < 1.0f = transparent
     }
 }

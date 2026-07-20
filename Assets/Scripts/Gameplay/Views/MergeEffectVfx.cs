@@ -142,10 +142,14 @@ namespace RingFlow.Gameplay
             _glowOrb.localScale = Vector3.zero;
             _glowOrb.localRotation = Quaternion.identity;
 
-            float glowExpand = 0.2f;
-            float glowShrink = 0.2f;
-            float burstDuration = isFinalPole ? 0.6f : 0.4f;
-            float burstScale = isFinalPole ? 1.5f : 1.0f;
+            float glowExpand = _feelConfig != null ? _feelConfig.MergeGlowExpandDuration : 0.2f;
+            float glowShrink = _feelConfig != null ? _feelConfig.MergeGlowShrinkDuration : 0.2f;
+            float burstDuration = isFinalPole
+                ? (_feelConfig != null ? _feelConfig.FinalPoleMergeBurstDuration : 0.6f)
+                : (_feelConfig != null ? _feelConfig.MergeBurstDuration : 0.4f);
+            float burstScale = isFinalPole
+                ? (_feelConfig != null ? _feelConfig.FinalPoleMergeBurstScale : 1.5f)
+                : (_feelConfig != null ? _feelConfig.MergeBurstScale : 1.0f);
             float finalDespawnAt = glowExpand + glowShrink + burstDuration;
 
             _glowOrb.DOScale(Vector3.one * 0.5f * intensityScale, glowExpand)
@@ -229,7 +233,7 @@ namespace RingFlow.Gameplay
 
             _mpb.SetColor("_BaseColor", color);
 
-            float burstDuration = 0.35f;
+            float burstDuration = _feelConfig != null ? _feelConfig.MergeBurstAnimDuration : 0.35f;
 
             for (int i = 0; i < _particleCount; i++)
             {

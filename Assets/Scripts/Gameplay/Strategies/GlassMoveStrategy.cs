@@ -1,8 +1,8 @@
 namespace RingFlow.Gameplay.Strategies
 {
     /// <summary>
-    /// Move strategy for Glass rings. Glass rings follow standard movement rules
-    /// with no special post-move behavior. This strategy exists for pattern completeness.
+    /// Move strategy for Glass rings. Glass rings are transparent — they can be
+    /// placed on any pole regardless of top color. No special post-move effects.
     /// </summary>
     public sealed class GlassMoveStrategy : IRingMoveStrategy
     {

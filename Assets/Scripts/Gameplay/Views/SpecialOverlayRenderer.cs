@@ -60,7 +60,6 @@ namespace RingFlow.Gameplay
                 RingType.Chain => ("C", Color.white),
                 RingType.Magnet => ("M", Color.magenta),
                 RingType.Paint => ("P", Color.green),
-                RingType.Ghost => ("~", new Color(1f, 1f, 1f, 0.3f)),
                 _ => (string.Empty, Color.white)
             };
 

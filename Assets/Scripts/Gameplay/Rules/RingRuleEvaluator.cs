@@ -23,20 +23,17 @@ namespace RingFlow.Gameplay.Rules
         ///   • Frozen top: any ring may land on it (color-matching breaks ice in MoveRingCommand).
         ///   • Rainbow / Paint moving: joker — lands anywhere.
         ///   • Rainbow / Paint on top: accepts any incoming ring.
-        ///   • Ghost on top: accepts any incoming ring (Ghost is Standard-like for placement).
-        ///   • Glass on top: accepts any same-color incoming ring (Glass is Standard-like).
+        ///   • Glass moving: joker — lands anywhere (transparent, accepts any color match).
+        ///   • Glass on top: accepts any incoming ring (transparent, acts as empty).
         ///   • Otherwise: color must match.
         ///
-        /// FIX-C2: Added explicit handling for Ghost and Glass top rings to ensure the
-        /// RingRuleEvaluator is the single source of truth. Previously these relied on
-        /// the Standard fallthrough which worked but was not explicitly documented.
-        /// Also, sequential joker conditions are now ordered by priority for clarity:
+        /// Sequential joker conditions ordered by priority:
         ///   1. Locked/Full guards
         ///   2. Empty acceptance
         ///   3. Stone restriction
         ///   4. Frozen acceptance
-        ///   5. Moving Rainbow/Paint joker
-        ///   6. Top Rainbow/Paint/Ghost joker acceptance
+        ///   5. Moving Rainbow/Paint/Glass joker
+        ///   6. Top Rainbow/Paint/Ghost/Glass joker acceptance
         ///   7. Standard color match
         /// </summary>
         public static bool CanAddRing(RingData movingRing, RingData topRing, bool isPoleFull, bool isPoleLocked)
@@ -67,14 +64,13 @@ namespace RingFlow.Gameplay.Rules
             if (topRing.Type == RingType.Rainbow || topRing.Type == RingType.Paint)
                 return true;
 
-            // FIX-C2: Ghost on top accepts any incoming ring (placement rules same as Standard)
-            if (topRing.Type == RingType.Ghost)
+            // Glass moving: joker — can be placed anywhere (transparent, no color)
+            if (movingRing.Type == RingType.Glass)
                 return true;
 
-            // FIX-C2: Glass on top — standard color-match rule applies
-            // (Glass is transparent, not a joker)
+            // Glass on top: accepts any incoming ring (transparent, acts as empty)
             if (topRing.Type == RingType.Glass)
-                return topRing.Color == movingRing.Color;
+                return true;
 
             // Standard color-match rule
             return topRing.Color == movingRing.Color;
@@ -112,9 +108,10 @@ namespace RingFlow.Gameplay.Rules
             if (topRing.Type == RingType.Stone && topRing.Color != movingRing.Color)
                 return $"Stone color mismatch: stone={topRing.Color}, moving={movingRing.Color}";
             if (topRing.Color != RingColor.None && topRing.Color != movingRing.Color
-                && movingRing.Type != RingType.Rainbow && movingRing.Type != RingType.Paint
+                && movingRing.Type != RingType.Rainbow && movingRing.Type != RingType.Paint && movingRing.Type != RingType.Glass
                 && topRing.Type  != RingType.Rainbow && topRing.Type  != RingType.Paint
-                && topRing.Type  != RingType.Frozen)
+                && topRing.Type  != RingType.Frozen
+                && topRing.Type  != RingType.Glass)
                 return $"Color mismatch: top={topRing.Color}, moving={movingRing.Color}";
             return "Unknown";
         }

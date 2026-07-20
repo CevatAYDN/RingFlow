@@ -37,7 +37,8 @@ namespace RingFlow.Gameplay
                 case CurrencyIds.Hint:
                     _economy?.Earn(CurrencyIds.Hint, reward.Amount, "Daily Reward");
                     break;
-                case "Theme":
+                case CurrencyIds.Theme:
+                    _economy?.Earn(CurrencyIds.Theme, reward.Amount, "Daily Reward");
                     if (_progress != null && _progress.OwnedThemes != null)
                     {
                         string themeId = $"daily_theme_{_progress.OwnedThemes.Count + 1}";

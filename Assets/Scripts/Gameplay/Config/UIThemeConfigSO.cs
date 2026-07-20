@@ -127,7 +127,9 @@ namespace RingFlow.Gameplay
 
         [Header("💫 Animations")]
         public float ScreenFadeDuration = 0.35f;
+        public float ScreenExitDuration = 0.25f;
         public float PopupScaleDuration = 0.30f;
+        public float PopupExitDuration = 0.20f;
         public float PopupScaleEnter = 0.85f;
         public float ButtonHoverScale = 1.04f;
         public float ButtonPressScale = 0.96f;

@@ -78,13 +78,11 @@ namespace RingFlow.Gameplay
             var theme = assetService.LoadAsync<UIThemeConfigSO>(GameplayAssetKeys.UIThemeConfig).GetAwaiter().GetResult();
             if (theme == null)
                 throw new System.InvalidOperationException($"[GameplayLifecycle] UIThemeConfigSO '{GameplayAssetKeys.UIThemeConfig}' not found.");
-            GameUIResources.Bind(theme);
             builder.BindInstance<UIThemeConfigSO>(theme);
 
             var audioConfig = assetService.LoadAsync<AudioConfigSO>(GameplayAssetKeys.AudioConfig).GetAwaiter().GetResult();
             if (audioConfig == null)
                 throw new System.InvalidOperationException($"[GameplayLifecycle] AudioConfigSO '{GameplayAssetKeys.AudioConfig}' not found.");
-            ProceduralAudio.Initialize(audioConfig);
             builder.BindInstance<AudioConfigSO>(audioConfig);
 
             var storeCatalog = assetService.LoadAsync<StoreCatalogSO>(GameplayAssetKeys.StoreCatalog).GetAwaiter().GetResult();
@@ -128,7 +126,6 @@ namespace RingFlow.Gameplay
             builder.BindService<IFeedbackService, FeedbackService>();
             builder.BindService<ILocalizationService, LocalizationService>();
             // C3+C4: DI-injectable replacements for static GameUIResources and ProceduralAudio.
-            // Existing static call-sites continue working during migration period.
             builder.BindService<IGameUIResourcesService, GameUIResourcesService>();
             builder.BindService<IProceduralAudioService, ProceduralAudioService>();
             builder.BindService<Services.IGameTimeService, Services.GameTimeService>();
@@ -440,9 +437,10 @@ namespace RingFlow.Gameplay
             if (audio != null)
             {
                 var db = context.Resolve<GameConfigDatabaseSO>();
+                var procAudio = context.TryResolve<IProceduralAudioService>();
                 int currentLvl = progress?.CurrentLevel.Value ?? 1;
                 int worldIdx = db.GetWorldForLevel(currentLvl);
-                var bgm = ProceduralAudio.GetOrCreateBgmClip(worldIdx);
+                var bgm = procAudio?.GetOrCreateBgmClip(worldIdx);
                 audio.PlayBgm(bgm, true);
             }
         }

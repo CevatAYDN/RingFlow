@@ -32,7 +32,10 @@ namespace RingFlow.Gameplay.UI
             View.SetProgress(maxUnlocked, levelsInWorld);
 
             if (View.WorldLabel != null)
-                View.WorldLabel.text = $"WORLD {currentWorld}";
+            {
+                string worldFormat = _loc?.GetString("format_world", "WORLD {0}") ?? "WORLD {0}";
+                View.WorldLabel.text = string.Format(worldFormat, currentWorld);
+            }
 
             for (int i = 0; i < View.LevelButtons.Count; i++)
             {

@@ -129,7 +129,6 @@ namespace RingFlow.Editor
                         WorldMechanicType.Chain,
                         WorldMechanicType.Magnet,
                         WorldMechanicType.Paint,
-                        WorldMechanicType.Ghost,
                         WorldMechanicType.RandomPool1,
                         WorldMechanicType.RandomPool2,
                         WorldMechanicType.RandomPool3

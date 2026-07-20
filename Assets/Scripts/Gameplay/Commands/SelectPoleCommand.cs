@@ -17,10 +17,6 @@ namespace RingFlow.Gameplay
 
             if (_model.IsGameWon.Value) return;
 
-            // NOTE: Tutorial guided-input restriction has been removed.
-            // Tutorial guidance is now handled by TutorialService + HintCommand (async),
-            // which does not block the main thread. (Resolved: IHL-03)
-
             int currentSelected = _model.SelectedPoleId.Value;
 
             if (currentSelected == -1)
@@ -29,40 +25,13 @@ namespace RingFlow.Gameplay
                 if (pole != null && CanPopRing(pole))
                 {
                     _model.SelectedPoleId.Value = signal.PoleId;
-                    TryRevealGhost(pole, signal.PoleId, _signalBus);
                 }
             }
             else
             {
                 if (currentSelected == signal.PoleId)
                 {
-                    NexusLog.Info("SelectPoleCommand", "Execute", signal.PoleId.ToString(), "Deselecting same pole.");
-
-                    // FIX-G1: If a Ghost ring was revealed when this pole was first selected
-                    // (Ghost→Standard mutation in TryRevealGhost), we must revert it to Ghost
-                    // when the player deselects the same pole WITHOUT making a move.
-                    // Without this revert the ring stays visually Standard but logically Ghost,
-                    // breaking the "can't see hidden ring" mechanic until the next rebuild.
-                    if (_model.PendingGhostRevealPoleId == signal.PoleId)
-                    {
-                        var pole = _model.Poles.GetPoleById(signal.PoleId);
-                        if (pole != null && pole.Rings.Count > 0)
-                        {
-                            var top = pole.TopRing;
-                            // Restore Ghost only if the ring is currently Standard
-                            // (guard against concurrent reveal from a different path).
-                            if (top.Type == RingType.Standard)
-                            {
-                                pole.Rings[pole.Rings.Count - 1] = new RingData(top.Color, RingType.Ghost);
-                                _signalBus?.Fire(new GhostRestoredSignal(signal.PoleId));
-                                NexusLog.Info("SelectPoleCommand", "Execute", signal.PoleId.ToString(),
-                                    "Ghost ring reverted to hidden on deselect (no move was made).");
-                            }
-                        }
-                    }
-
                     _model.SelectedPoleId.Value = -1;
-                    _model.PendingGhostRevealPoleId = -1;
                 }
                 else
                 {
@@ -84,7 +53,6 @@ namespace RingFlow.Gameplay
                         if (CanPopRing(toPole))
                         {
                             _model.SelectedPoleId.Value = toId;
-                            TryRevealGhost(toPole, toId, _signalBus);
                             return;
                         }
 
@@ -101,28 +69,6 @@ namespace RingFlow.Gameplay
                     _signalBus.Fire(new MoveRingSignal(fromId, toId));
                 }
             }
-        }
-
-        /// <summary>
-        /// Ghost reveal: changes the top Ghost ring to Standard on selection.
-        /// The move that follows will record this in MoveRecord.WasGhostRevealedOnFrom
-        /// so UndoCommand can restore it. Only fires GhostRevealedSignal — no game-state
-        /// mutation here beyond the ring type change (which is deliberate game design).
-        /// Also stores the revealed pole id so MoveRingCommand can capture it
-        /// for undo only when the next move starts from the same pole.
-        /// </summary>
-        private void TryRevealGhost(PoleState pole, int poleId, ISignalBus signalBus)
-        {
-            if (pole.TopRing.Type != RingType.Ghost)
-            {
-                _model.PendingGhostRevealPoleId = -1;
-                return;
-            }
-            var ghostCopy = pole.Rings[^1];
-            ghostCopy.Type = RingType.Standard;
-            pole.Rings[^1] = ghostCopy;
-            _model.PendingGhostRevealPoleId = poleId;
-            signalBus?.Fire(new GhostRevealedSignal(poleId, ghostCopy));
         }
 
         // ── Validation delegation ─────────────────────────────────────────────

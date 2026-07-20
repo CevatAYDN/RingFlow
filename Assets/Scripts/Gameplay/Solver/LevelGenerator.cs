@@ -299,6 +299,14 @@ namespace RingFlow.Gameplay
         {
             data.PoleCount = board.PoleCount;
             data.PoleCapacity = maxCapacity;
+            data.PortalCount = 0;
+            if (portalTargets != null)
+            {
+                for (int i = 0; i < portalTargets.Length; i++)
+                {
+                    if (portalTargets[i] >= 0) data.PortalCount++;
+                }
+            }
 
             // Calculate colors count
             var colorsList = new HashSet<RingColor>();
@@ -340,7 +348,13 @@ namespace RingFlow.Gameplay
             data.IsTutorial = db.GetBandForLevel(data.LevelIndex) == DifficultyBand.Tutorial;
             data.IsChallenge = db.ChallengeMode.Enabled && (data.LevelIndex % db.ChallengeMode.LevelInterval == 0);
             data.RuleReferences = new List<string> { "StandardMove", "ColorMatch" };
-            data.ProgressionFlags = "";
+            data.ProgressionFlags = string.Empty;
+        }
+
+        private static string BuildContentFingerprint(LevelData data)
+        {
+            if (data == null) return string.Empty;
+            return $"{data.LevelType}|{data.LevelIndex}|{data.Seed}|{data.PoleCount}|{data.PoleCapacity}|{data.ColorCount}|{data.EmptyPoleCount}|{data.TargetMoves}|{data.DifficultyScore}|{data.IsTutorial}|{data.IsChallenge}|{data.ProgressionFlags}|{string.Join(",", data.RuleReferences ?? new List<string>())}";
         }
 
         private static int GetSmoothedIntensity(GameConfigDatabaseSO db, int levelIndex, int rawIntensity)
@@ -431,8 +445,6 @@ namespace RingFlow.Gameplay
                 InjectSingleType(ref board, RingType.Magnet, mechanicCount, rand, bombCountdown);
             else if (mechanic == WorldMechanicType.Paint)
                 InjectSingleType(ref board, RingType.Paint, mechanicCount, rand, bombCountdown);
-            else if (mechanic == WorldMechanicType.Ghost)
-                InjectSingleType(ref board, RingType.Ghost, mechanicCount, rand, bombCountdown);
             else if (mechanic == WorldMechanicType.RandomPool1 ||
                      mechanic == WorldMechanicType.RandomPool2 ||
                      mechanic == WorldMechanicType.RandomPool3)
@@ -448,7 +460,6 @@ namespace RingFlow.Gameplay
                 if (allowedMechanics.Contains(WorldMechanicType.Chain))   _availableTypesBuffer.Add(RingType.Chain);
                 if (allowedMechanics.Contains(WorldMechanicType.Magnet))  _availableTypesBuffer.Add(RingType.Magnet);
                 if (allowedMechanics.Contains(WorldMechanicType.Paint))   _availableTypesBuffer.Add(RingType.Paint);
-                if (allowedMechanics.Contains(WorldMechanicType.Ghost))   _availableTypesBuffer.Add(RingType.Ghost);
 
                 if (_availableTypesBuffer.Count == 0) return;
 

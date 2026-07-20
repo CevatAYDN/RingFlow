@@ -158,7 +158,7 @@ namespace RingFlow.Gameplay.UI
             logoRt.offsetMin = Vector2.zero;
             logoRt.offsetMax = Vector2.zero;
 
-            var subGo = GameUIResources.CreateText("Renkleri Ayır, Zihni Dinlendir", bgGo.transform, 18, TextAnchor.MiddleCenter, GameUIResources.MutedText);
+            var subGo = GameUIResources.CreateText("Sort the rings, relax your mind", bgGo.transform, 18, TextAnchor.MiddleCenter, GameUIResources.MutedText);
             subGo.name = "Subtitle";
             SubtitleText = subGo.GetComponent<Text>();
             GameUIResources.SetAnchors(subGo.GetComponent<RectTransform>(), 0.05f, 0.73f, 0.95f, 0.77f);
@@ -211,7 +211,7 @@ namespace RingFlow.Gameplay.UI
             }
 
             // 4. MAIN PLAY BUTTON (▶ OYNA - Bölüm X)
-            _continueBtn = GameUIResources.CreateButton("OYNA", bgGo.transform, 320f, 60f);
+            _continueBtn = GameUIResources.CreateButton("PLAY", bgGo.transform, 320f, 60f);
             _continueBtn.name = "Btn_CONTINUE";
             GameUIResources.SetAnchors(_continueBtn.GetComponent<RectTransform>(), 0.12f, 0.33f, 0.88f, 0.41f);
             ContinueButton = _continueBtn.GetComponent<Button>();
@@ -252,7 +252,7 @@ namespace RingFlow.Gameplay.UI
             dailyIcon.preserveAspect = true;
             GameUIResources.SetAnchors(dailyIconGo.GetComponent<RectTransform>(), 0.08f, 0.2f, 0.35f, 0.8f);
 
-            var dailyLabel = GameUIResources.CreateText("GÜNLÜK\nMeydan Okuma", _dailyBtn.transform, 11, TextAnchor.MiddleLeft, GameUIResources.TextColor);
+            var dailyLabel = GameUIResources.CreateText("DAILY\nCHALLENGE", _dailyBtn.transform, 11, TextAnchor.MiddleLeft, GameUIResources.TextColor);
             dailyLabel.GetComponent<Text>().fontStyle = FontStyle.Bold;
             GameUIResources.SetAnchors(dailyLabel.GetComponent<RectTransform>(), 0.40f, 0f, 0.95f, 1f);
 
@@ -276,7 +276,7 @@ namespace RingFlow.Gameplay.UI
             eventIcon.preserveAspect = true;
             GameUIResources.SetAnchors(eventIconGo.GetComponent<RectTransform>(), 0.08f, 0.2f, 0.35f, 0.8f);
 
-            var eventLabel = GameUIResources.CreateText("ETKİNLİK\n2g 14s kaldı", _chestBtn.transform, 11, TextAnchor.MiddleLeft, GameUIResources.TextColor);
+            var eventLabel = GameUIResources.CreateText("CHESTS", _chestBtn.transform, 11, TextAnchor.MiddleLeft, GameUIResources.TextColor);
             eventLabel.GetComponent<Text>().fontStyle = FontStyle.Bold;
             GameUIResources.SetAnchors(eventLabel.GetComponent<RectTransform>(), 0.40f, 0f, 0.95f, 1f);
 
@@ -341,7 +341,7 @@ namespace RingFlow.Gameplay.UI
             VersionLabel = verGo.GetComponent<Text>();
             GameUIResources.SetAnchors(verGo.GetComponent<RectTransform>(), 0.30f, 0.04f, 0.70f, 0.07f);
 
-            var adsTextGo = GameUIResources.CreateText("BANNER REKLAM ALANI", bgGo.transform, 10, TextAnchor.MiddleCenter, GameUIResources.MutedText);
+            var adsTextGo = GameUIResources.CreateText("AD PLACEMENT", bgGo.transform, 10, TextAnchor.MiddleCenter, GameUIResources.MutedText);
             adsTextGo.name = "AdsAreaText";
             GameUIResources.SetAnchors(adsTextGo.GetComponent<RectTransform>(), 0f, 0f, 1f, 0.04f);
 
@@ -399,7 +399,7 @@ namespace RingFlow.Gameplay.UI
             _locService = loc;
             if (loc == null) return;
             if (TitleText != null) GameUIResources.LocalizeText(TitleText.gameObject, "game_title", loc);
-            if (SubtitleText != null) GameUIResources.LocalizeText(SubtitleText.gameObject, "game_tagline", loc);
+            if (SubtitleText != null) GameUIResources.LocalizeText(SubtitleText.gameObject, "menu_subtitle", loc);
             if (_continueBtn != null) GameUIResources.LocalizeButtonText(_continueBtn, "menu_continue", loc);
             if (_playBtn != null) GameUIResources.LocalizeButtonText(_playBtn, "menu_quick_play", loc);
             if (_lvlBtn != null) GameUIResources.LocalizeButtonText(_lvlBtn, "menu_levels", loc);

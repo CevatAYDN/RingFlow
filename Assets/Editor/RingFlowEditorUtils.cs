@@ -116,7 +116,6 @@ namespace RingFlow.Editor
                 RingType.Chain => "CHN",
                 RingType.Magnet => "MAG",
                 RingType.Paint => "PNT",
-                RingType.Ghost => "GHS",
                 _ => "???"
             };
         }

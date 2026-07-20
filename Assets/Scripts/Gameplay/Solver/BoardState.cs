@@ -574,12 +574,6 @@ namespace RingFlow.Gameplay
             }
             SetTopRingFrozen(poleIndex, false);
 
-            // Ghost Kontrolü: Pop edilen halka Ghost ise standartlaşır (oyun içi seçilince standartlaşmasıyla uyumlu)
-            if (ring.Type == RingType.Ghost)
-            {
-                ring.Type = RingType.Standard;
-            }
-
             // Mystery Kontrolü: Yeni en üstte kalan halka Mystery ise açığa çıkar (Standartlaşır)
             if (newCount > 0 && GetRingType(poleIndex, newCount - 1) == RingType.Mystery)
             {

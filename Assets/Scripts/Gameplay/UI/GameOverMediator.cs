@@ -1,5 +1,6 @@
 using Nexus.Core;
 using Nexus.Core.Services;
+using RingFlow.Gameplay.Services;
 
 namespace RingFlow.Gameplay.UI
 {
@@ -8,6 +9,7 @@ namespace RingFlow.Gameplay.UI
         [Inject] private IProgressionService _progression;
         [Inject] private ILocalizationService _loc;
         [Inject] private IAudioService _audio;
+        [Inject] private IProceduralAudioService _proceduralAudio;
 
         private ISignalSubscription _showScreenSub;
 
@@ -42,7 +44,7 @@ namespace RingFlow.Gameplay.UI
             {
                 if (_audio != null)
                 {
-                    var failClip = ProceduralAudio.GetOrCreateExplosionClip();
+                    var failClip = _proceduralAudio.GetOrCreateExplosionClip();
                     _audio.PlaySfx(failClip, 0.8f);
                 }
             }

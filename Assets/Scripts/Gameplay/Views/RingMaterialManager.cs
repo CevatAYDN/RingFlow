@@ -179,66 +179,36 @@ namespace RingFlow.Gameplay
 
         private void ApplySpecialRingMaterial(Material mat, Color baseColor, RingType type)
         {
-            switch (type)
+            var cfg = F != null ? F.GetMaterialConfig(type) : GameFeelConfigSO.GetDefaultMaterialConfig(type);
+
+            if (type == RingType.Frozen)
             {
-                case RingType.Frozen:
-                    mat.color = Color.Lerp(baseColor, Color.cyan, 0.5f);
-                    mat.SetFloat("_Metallic", 0.1f); mat.SetFloat("_Smoothness", 0.9f);
-                    mat.EnableKeyword("_EMISSION");
-                    mat.SetColor("_EmissionColor", new Color(0.3f, 0.6f, 0.8f, 1f));
-                    break;
-                case RingType.Key:
-                case RingType.Locked:
-                    mat.color = new Color(1f, 0.84f, 0f);
-                    mat.SetFloat("_Metallic", 0.8f); mat.SetFloat("_Smoothness", 0.6f);
-                    mat.EnableKeyword("_EMISSION");
-                    mat.SetColor("_EmissionColor", new Color(0.5f, 0.4f, 0f, 1f));
-                    break;
-                case RingType.Stone:
-                    mat.color = new Color(0.4f, 0.38f, 0.35f);
-                    mat.SetFloat("_Metallic", 0f); mat.SetFloat("_Smoothness", 0.1f);
-                    break;
-                case RingType.Glass:
-                    mat.color = new Color(1f, 1f, 1f, 0.45f);
-                    mat.SetFloat("_Metallic", 0.1f); mat.SetFloat("_Smoothness", 0.95f);
-                    mat.EnableKeyword("_EMISSION");
-                    mat.SetColor("_EmissionColor", new Color(0.15f, 0.15f, 0.15f, 1f));
-                    SetFadeMode(mat);
-                    break;
-                case RingType.Rainbow:
-                    mat.SetFloat("_Metallic", 0.5f); mat.SetFloat("_Smoothness", 0.8f);
-                    mat.EnableKeyword("_EMISSION");
-                    mat.SetColor("_EmissionColor", Color.Lerp(baseColor, Color.white, 0.3f));
-                    break;
-                case RingType.Ghost:
-                    mat.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0.45f);
-                    mat.SetFloat("_Metallic", 0.3f); mat.SetFloat("_Smoothness", 0.3f);
-                    mat.EnableKeyword("_EMISSION");
-                    mat.SetColor("_EmissionColor", new Color(baseColor.r * 0.2f, baseColor.g * 0.2f, baseColor.b * 0.2f, 1f));
-                    SetFadeMode(mat);
-                    break;
-                case RingType.Bomb:
-                    mat.EnableKeyword("_EMISSION");
-                    mat.SetColor("_EmissionColor", new Color(0.8f, 0.2f, 0f, 1f));
-                    break;
-                case RingType.Chain:
-                    mat.SetFloat("_Metallic", 0.7f); mat.SetFloat("_Smoothness", 0.3f);
-                    break;
-                case RingType.Magnet:
-                    mat.SetFloat("_Metallic", 0.9f); mat.SetFloat("_Smoothness", 0.5f);
-                    mat.EnableKeyword("_EMISSION");
-                    mat.SetColor("_EmissionColor", new Color(0.5f, 0f, 0.5f, 1f));
-                    break;
-                case RingType.Paint:
-                    mat.SetFloat("_Smoothness", 0.9f);
-                    break;
-                case RingType.Mystery:
-                    mat.color = new Color(0.3f, 0.3f, 0.3f);
-                    mat.SetFloat("_Metallic", 0.4f); mat.SetFloat("_Smoothness", 0.6f);
-                    mat.EnableKeyword("_EMISSION");
-                    mat.SetColor("_EmissionColor", new Color(0.2f, 0.2f, 0.2f, 1f));
-                    break;
+                mat.color = Color.Lerp(baseColor, Color.cyan, 0.5f);
             }
+            else if (cfg.OverrideColor.a > 0.001f)
+            {
+                mat.color = cfg.OverrideColor;
+            }
+
+            mat.SetFloat("_Metallic", cfg.Metallic);
+            mat.SetFloat("_Smoothness", cfg.Smoothness);
+
+            if (cfg.EnableEmission)
+            {
+                mat.EnableKeyword("_EMISSION");
+                Color emission = cfg.EmissionColor;
+                if (type == RingType.Rainbow)
+                {
+                    emission = Color.Lerp(baseColor, Color.white, 0.3f);
+                }
+                mat.SetColor("_EmissionColor", emission);
+            }
+
+            if (cfg.UseFadeMode)
+            {
+                SetFadeMode(mat);
+            }
+
             if (mat.HasProperty("_BaseColor"))
                 mat.SetColor("_BaseColor", mat.color);
         }

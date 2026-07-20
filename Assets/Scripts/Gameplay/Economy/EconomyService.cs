@@ -24,13 +24,15 @@ namespace RingFlow.Gameplay
             if (_progress == null) return default;
 
             // Initialize Observables from Model (one-way sync: Model -> Service)
-            var coinsObs = GetObservableBalance("Coins");
-            var diamondsObs = GetObservableBalance("Diamonds");
-            var hintsObs = GetObservableBalance("Hint");
+            var coinsObs = GetObservableBalance(CurrencyIds.Coins);
+            var diamondsObs = GetObservableBalance(CurrencyIds.Diamonds);
+            var hintsObs = GetObservableBalance(CurrencyIds.Hint);
+            var themesObs = GetObservableBalance(CurrencyIds.Theme);
 
             coinsObs.Value = _progress.Coins.Value;
             diamondsObs.Value = _progress.Diamonds.Value;
             hintsObs.Value = _progress.HintCount.Value;
+            themesObs.Value = _progress.ThemeCount.Value;
 
             // Nexus Reactive Pattern: Model -> Service (read-only sync)
             // This ensures save-game is single source of truth
@@ -45,6 +47,10 @@ namespace RingFlow.Gameplay
             _progress.HintCount.OnChanged((_, newVal) =>
             {
                 if (hintsObs.Value != newVal) hintsObs.Value = newVal;
+            });
+            _progress.ThemeCount.OnChanged((_, newVal) =>
+            {
+                if (themesObs.Value != newVal) themesObs.Value = newVal;
             });
 
             // Note: We do NOT hook Service -> Model back to avoid infinite loops
@@ -191,14 +197,17 @@ namespace RingFlow.Gameplay
 
             switch (currencyId)
             {
-                case "Coins":
+                case CurrencyIds.Coins:
                     _progress.Coins.Value = clampedValue;
                     break;
-                case "Diamonds":
+                case CurrencyIds.Diamonds:
                     _progress.Diamonds.Value = clampedValue;
                     break;
-                case "Hint":
+                case CurrencyIds.Hint:
                     _progress.HintCount.Value = clampedValue;
+                    break;
+                case CurrencyIds.Theme:
+                    _progress.ThemeCount.Value = clampedValue;
                     break;
                 default:
                     NexusLog.Warn("EconomyService", nameof(WriteToModel), currencyId,

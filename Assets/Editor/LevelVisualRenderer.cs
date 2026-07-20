@@ -145,12 +145,6 @@ namespace RingFlow.Editor
                 borderColor = new Color(0.9f, 0.7f, 0.1f);
                 ringLabel = "🔒" + ringLabel;
             }
-            else if (ring.Type == RingType.Ghost)
-            {
-                ringColor.a = 0.5f;
-                borderColor = new Color(0.8f, 0.8f, 0.9f, 0.5f);
-                ringLabel = "👻" + ringLabel;
-            }
             else if (ring.Type == RingType.Bomb)
             {
                 borderColor = new Color(0.85f, 0.2f, 0.2f);

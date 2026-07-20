@@ -155,12 +155,7 @@ namespace RingFlow.Gameplay
                 {
                     _strategyManager.ExecutePostMoveExecution(RingType.Rainbow, ref context);
                 }
-                else if (ringBelowType == RingType.Ghost)
-                {
-                    // GDD §40: a Ghost ring becomes visible when another ring lands on it.
-                    // Reveal is visual only — no gameplay state mutation, so no undo handling needed.
-                    _signalBus.Fire(new GhostRevealedSignal(context.ToPoleId, toPole.Rings[toPole.Rings.Count - 2]));
-                }
+                
             }
 
             if (fromPole.Rings.Count > 0 && fromPole.TopRing.Type == RingType.Mystery)
@@ -265,9 +260,8 @@ namespace RingFlow.Gameplay
             record.WasMysteryRevealedOnFrom = context.WasMysteryRevealed;
             // Consume the ghost-reveal flag set by SelectPoleCommand.
             // Clear it immediately so stale flags never leak into subsequent moves.
-            bool ghostRevealed = _model.PendingGhostRevealPoleId == context.FromPoleId;
             _model.PendingGhostRevealPoleId = -1;
-            record.WasGhostRevealedOnFrom = ghostRevealed;
+            record.WasGhostRevealedOnFrom = false;
             if (context.WasIceBroken)
             {
                 record.IceBrokenRingIndices.Add(context.ToPole.Rings.Count - 2);

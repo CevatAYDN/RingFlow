@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Nexus.Core;
 using Nexus.Core.FSM;
 using Nexus.Core.Services;
+using RingFlow.Gameplay.Services;
 
 namespace RingFlow.Gameplay
 {
@@ -11,6 +12,7 @@ namespace RingFlow.Gameplay
     {
         [Inject] private ISignalBus _signalBus;
         [Inject] private IAudioService _audio;
+        [Inject] private IProceduralAudioService _proceduralAudio;
         [Inject] private IObjectPoolService _objectPoolService;
         [Inject] private VfxPrefabRegistry _vfxRegistry;
         [Inject] private GameFeelConfigSO _feelConfig;
@@ -65,7 +67,7 @@ namespace RingFlow.Gameplay
             // Play win sound procedurally
             if (_audio != null)
             {
-                var winClip = ProceduralAudio.GetOrCreateWinClip();
+                var winClip = _proceduralAudio.GetOrCreateWinClip();
                 _audio.PlaySfx(winClip, 1.0f);
             }
 

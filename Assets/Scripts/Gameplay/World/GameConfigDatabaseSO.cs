@@ -294,7 +294,6 @@ namespace RingFlow.Gameplay
                 new() { MechanicType = WorldMechanicType.Chain,     FirstAppearanceWorldIndex = 8,  DisplayNameKey = "mechanic.chain" },
                 new() { MechanicType = WorldMechanicType.Magnet,    FirstAppearanceWorldIndex = 9,  DisplayNameKey = "mechanic.magnet" },
                 new() { MechanicType = WorldMechanicType.Paint,     FirstAppearanceWorldIndex = 10, DisplayNameKey = "mechanic.paint" },
-                new() { MechanicType = WorldMechanicType.Ghost,     FirstAppearanceWorldIndex = 11, DisplayNameKey = "mechanic.ghost" },
                 new() { MechanicType = WorldMechanicType.Portal,    FirstAppearanceWorldIndex = 12, DisplayNameKey = "mechanic.portal" }
             };
 
@@ -327,13 +326,13 @@ namespace RingFlow.Gameplay
                 MinClaimIntervalMinutes = 5,
                 DailyRewards = new List<DailyRewardEntry>
                 {
-                    new() { CurrencyId = "Coins", Amount = 100 },
-                    new() { CurrencyId = "Coins", Amount = 150 },
-                    new() { CurrencyId = "Coins", Amount = 200 },
-                    new() { CurrencyId = "Hint", Amount = 1 },
-                    new() { CurrencyId = "Coins", Amount = 300 },
-                    new() { CurrencyId = "Theme", Amount = 1 },
-                    new() { CurrencyId = "Diamonds", Amount = 25 }
+                    new() { CurrencyId = CurrencyIds.Coins, Amount = 100 },
+                    new() { CurrencyId = CurrencyIds.Coins, Amount = 150 },
+                    new() { CurrencyId = CurrencyIds.Coins, Amount = 200 },
+                    new() { CurrencyId = CurrencyIds.Hint, Amount = 1 },
+                    new() { CurrencyId = CurrencyIds.Coins, Amount = 300 },
+                    new() { CurrencyId = CurrencyIds.Theme, Amount = 1 },
+                    new() { CurrencyId = CurrencyIds.Diamonds, Amount = 25 }
                 },
                 InterstitialAdInterval = 3
             };
@@ -413,7 +412,7 @@ namespace RingFlow.Gameplay
                           WorldMechanicType.Glass, WorldMechanicType.Rainbow,
                           WorldMechanicType.Bomb, WorldMechanicType.Chain,
                           WorldMechanicType.Magnet, WorldMechanicType.Paint,
-                          WorldMechanicType.Ghost, WorldMechanicType.Portal,
+                          WorldMechanicType.Portal,
                           WorldMechanicType.RandomPool1, WorldMechanicType.RandomPool2,
                           WorldMechanicType.RandomPool3 }
                 }
@@ -459,7 +458,6 @@ namespace RingFlow.Gameplay
                 else if (i == 8) w.MechanicType = WorldMechanicType.Chain;
                 else if (i == 9) w.MechanicType = WorldMechanicType.Magnet;
                 else if (i == 10) w.MechanicType = WorldMechanicType.Paint;
-                else if (i == 11) w.MechanicType = WorldMechanicType.Ghost;
                 else if (i == 12) w.MechanicType = WorldMechanicType.Portal;
                 else if (i >= 26) w.MechanicType = WorldMechanicType.RandomPool3;
                 else if (i >= 19) w.MechanicType = WorldMechanicType.RandomPool2;

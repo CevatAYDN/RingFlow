@@ -70,9 +70,9 @@ namespace RingFlow.Editor
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("► Sesi Önizle (Play)", GUILayout.Width(130f), GUILayout.Height(18f)))
                 {
-                    ProceduralAudio.Initialize(config);
-                    ProceduralAudio.ClearCache();
-                    PlayClip(ProceduralAudio.GetOrCreateMoveClip());
+                    var svc = new Gameplay.ProceduralAudioService(config);
+                    svc.ClearCache();
+                    PlayClip(svc.GetOrCreateMoveClip());
                 }
             }
             EditorGUILayout.Space(2f);
@@ -93,9 +93,9 @@ namespace RingFlow.Editor
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("► Sesi Önizle (Play)", GUILayout.Width(130f), GUILayout.Height(18f)))
                 {
-                    ProceduralAudio.Initialize(config);
-                    ProceduralAudio.ClearCache();
-                    PlayClip(ProceduralAudio.GetOrCreateWinClip());
+                    var svc = new Gameplay.ProceduralAudioService(config);
+                    svc.ClearCache();
+                    PlayClip(svc.GetOrCreateWinClip());
                 }
             }
             EditorGUILayout.Space(2f);
@@ -118,9 +118,9 @@ namespace RingFlow.Editor
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("► Sesi Önizle (Play)", GUILayout.Width(130f), GUILayout.Height(18f)))
                 {
-                    ProceduralAudio.Initialize(config);
-                    ProceduralAudio.ClearCache();
-                    PlayClip(ProceduralAudio.GetOrCreateErrorClip());
+                    var svc = new Gameplay.ProceduralAudioService(config);
+                    svc.ClearCache();
+                    PlayClip(svc.GetOrCreateErrorClip());
                 }
             }
             EditorGUILayout.Space(2f);
@@ -140,9 +140,9 @@ namespace RingFlow.Editor
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("► Sesi Önizle (Play)", GUILayout.Width(130f), GUILayout.Height(18f)))
                 {
-                    ProceduralAudio.Initialize(config);
-                    ProceduralAudio.ClearCache();
-                    PlayClip(ProceduralAudio.GetOrCreateExplosionClip());
+                    var svc = new Gameplay.ProceduralAudioService(config);
+                    svc.ClearCache();
+                    PlayClip(svc.GetOrCreateExplosionClip());
                 }
             }
             EditorGUILayout.Space(2f);
@@ -161,9 +161,9 @@ namespace RingFlow.Editor
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("► Sesi Önizle (Play)", GUILayout.Width(130f), GUILayout.Height(18f)))
                 {
-                    ProceduralAudio.Initialize(config);
-                    ProceduralAudio.ClearCache();
-                    PlayClip(ProceduralAudio.GetOrCreatePoleCompleteClip());
+                    var svc = new Gameplay.ProceduralAudioService(config);
+                    svc.ClearCache();
+                    PlayClip(svc.GetOrCreatePoleCompleteClip());
                 }
             }
             EditorGUILayout.Space(2f);
@@ -184,9 +184,9 @@ namespace RingFlow.Editor
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("► Sesi Önizle (Play)", GUILayout.Width(130f), GUILayout.Height(18f)))
                 {
-                    ProceduralAudio.Initialize(config);
-                    ProceduralAudio.ClearCache();
-                    PlayClip(ProceduralAudio.GetOrCreateRichPoleCompleteClip(4));
+                    var svc = new Gameplay.ProceduralAudioService(config);
+                    svc.ClearCache();
+                    PlayClip(svc.GetOrCreateRichPoleCompleteClip(4));
                 }
             }
             EditorGUILayout.Space(2f);
@@ -239,9 +239,9 @@ namespace RingFlow.Editor
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("► Sesi Önizle (Play)", GUILayout.Width(130f), GUILayout.Height(18f)))
                 {
-                    ProceduralAudio.Initialize(config);
-                    ProceduralAudio.ClearCache();
-                    PlayClip(ProceduralAudio.GetOrCreateFinalPoleClip());
+                    var svc = new Gameplay.ProceduralAudioService(config);
+                    svc.ClearCache();
+                    PlayClip(svc.GetOrCreateFinalPoleClip());
                 }
             }
             EditorGUILayout.Space(2f);
@@ -263,9 +263,9 @@ namespace RingFlow.Editor
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("► Sesi Önizle (Play)", GUILayout.Width(130f), GUILayout.Height(18f)))
                 {
-                    ProceduralAudio.Initialize(config);
-                    ProceduralAudio.ClearCache();
-                    PlayClip(ProceduralAudio.GetOrCreateBgmClip(0));
+                    var svc = new Gameplay.ProceduralAudioService(config);
+                    svc.ClearCache();
+                    PlayClip(svc.GetOrCreateBgmClip(0));
                 }
             }
             EditorGUILayout.Space(2f);

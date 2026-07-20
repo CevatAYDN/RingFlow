@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using DG.Tweening;
 using Nexus.Core;
 using Nexus.Core.Services;
+using RingFlow.Gameplay.Services;
 using UnityEngine;
 
 namespace RingFlow.Gameplay
@@ -19,6 +20,7 @@ namespace RingFlow.Gameplay
         [Inject] private IObjectPoolService _objectPoolService;
         [Inject] private VfxPrefabRegistry _vfxRegistry;
         [Inject] private IAudioService _audioService;
+        [Inject] private IProceduralAudioService _proceduralAudio;
         [Inject] private IHapticService _hapticService;
         [Inject] private SettingsModel _settingsModel;
         [Inject] private GameFeelConfigSO _feelConfig;
@@ -123,7 +125,7 @@ namespace RingFlow.Gameplay
                         $"[BoardView] Pole {p} has RingCapacity={poleCap}. Data must have a positive RingCapacity value. " +
                         "Check LevelData or pole configuration.");
                 
-                float worldBaseFromBottom = 0.22f;
+                float worldBaseFromBottom = F != null ? F.WorldBaseFromBottom : 0.22f;
                 float worldSpacing = F.RingStackSpacing * F.PoleScale.y;
                 float totalHeight = worldBaseFromBottom + (poleCap * worldSpacing) + 0.15f;
                 poleScale.y = (totalHeight * scaleFactor) / 2.0f;
@@ -587,7 +589,7 @@ namespace RingFlow.Gameplay
             pv.FlashError();
             _hapticService?.Vibrate(HapticType.Warning);
             if (_audioService != null)
-                _audioService.PlaySfx(ProceduralAudio.GetOrCreateErrorClip(), 1.0f);
+                _audioService.PlaySfx(_proceduralAudio.GetOrCreateErrorClip(), 1.0f);
         }
 
         public void CelebratePoleComplete(int poleId, int ringCount, int completedCount, bool isFinalPole)
@@ -625,9 +627,9 @@ namespace RingFlow.Gameplay
             if (_audioService != null)
             {
                 if (isFinalPole)
-                    _audioService.PlaySfx(ProceduralAudio.GetOrCreateFinalPoleClip(), 1.0f);
+                    _audioService.PlaySfx(_proceduralAudio.GetOrCreateFinalPoleClip(), 1.0f);
                 else
-                    _audioService.PlaySfx(ProceduralAudio.GetOrCreateRichPoleCompleteClip(ringCount), 1.0f);
+                    _audioService.PlaySfx(_proceduralAudio.GetOrCreateRichPoleCompleteClip(ringCount), 1.0f);
             }
 
             // ----- Tier 0/1: Camera micro-shake -----
@@ -972,7 +974,7 @@ namespace RingFlow.Gameplay
             // Position above the pole cap, offset along +Z so it sits in front of the pole
             // facing the camera (camera looks down -Z).
             float startY = F.PoleScale.y + 0.55f;
-            float forwardOffset = 0.35f;
+            float forwardOffset = F.TutorialForwardOffset;
             _tutorialArrowGo.transform.localPosition = new Vector3(0f, startY, forwardOffset);
             _tutorialArrowGo.SetActive(true);
 
@@ -1028,15 +1030,15 @@ namespace RingFlow.Gameplay
             _tutorialCanvasGo = new GameObject("LabelCanvas",
                 typeof(RectTransform), typeof(Canvas), typeof(UnityEngine.UI.CanvasScaler), typeof(UnityEngine.UI.GraphicRaycaster));
             _tutorialCanvasGo.transform.SetParent(_tutorialArrowGo.transform, false);
-            _tutorialCanvasGo.transform.localPosition = new Vector3(0f, 0.9f, 0f);
+            _tutorialCanvasGo.transform.localPosition = new Vector3(0f, F.TutorialLabelYOffset, 0f);
 
             var canvas = _tutorialCanvasGo.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
             canvas.sortingOrder = 100;
 
             var canvasRt = _tutorialCanvasGo.GetComponent<RectTransform>();
-            canvasRt.sizeDelta = new Vector2(2.2f, 0.7f);
-            canvasRt.localScale = new Vector3(0.22f, 0.22f, 0.22f);
+            canvasRt.sizeDelta = F.TutorialLabelCanvasSize;
+            canvasRt.localScale = F.TutorialLabelCanvasScale;
 
             var labelGo = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer),
                 typeof(UnityEngine.UI.Text), typeof(UnityEngine.UI.Outline));
@@ -1049,7 +1051,7 @@ namespace RingFlow.Gameplay
 
             _tutorialLabelText = labelGo.GetComponent<UnityEngine.UI.Text>();
             _tutorialLabelText.alignment = TextAnchor.MiddleCenter;
-            _tutorialLabelText.fontSize = 36;
+            _tutorialLabelText.fontSize = F.TutorialLabelFontSize;
             _tutorialLabelText.fontStyle = FontStyle.Bold;
             _tutorialLabelText.color = Color.white;
             _tutorialLabelText.horizontalOverflow = HorizontalWrapMode.Overflow;
@@ -1057,8 +1059,8 @@ namespace RingFlow.Gameplay
             _tutorialLabelText.font = _ringMaterialManager.GetBuiltinLabelFont();
 
             var labelOutline = labelGo.GetComponent<UnityEngine.UI.Outline>();
-            labelOutline.effectColor = new Color(0f, 0f, 0f, 0.85f);
-            labelOutline.effectDistance = new Vector2(1.5f, -1.5f);
+            labelOutline.effectColor = F.TutorialLabelOutlineColor;
+            labelOutline.effectDistance = F.TutorialLabelOutlineDistance;
 
             // Subtle dark backing panel behind the label for readability on any background.
             var panelGo = new GameObject("Panel", typeof(RectTransform), typeof(CanvasRenderer),
@@ -1068,10 +1070,10 @@ namespace RingFlow.Gameplay
             var panelRt = panelGo.GetComponent<RectTransform>();
             panelRt.anchorMin = Vector2.zero;
             panelRt.anchorMax = Vector2.one;
-            panelRt.offsetMin = new Vector2(8f, 6f);
-            panelRt.offsetMax = new Vector2(-8f, -6f);
+            panelRt.offsetMin = F.TutorialPanelPaddingMin;
+            panelRt.offsetMax = F.TutorialPanelPaddingMax;
             var panelImg = panelGo.GetComponent<UnityEngine.UI.Image>();
-            panelImg.color = new Color(0f, 0f, 0f, 0.55f);
+            panelImg.color = F.TutorialPanelColor;
             panelImg.raycastTarget = false;
 
             // Pulse + bob — two local tweens, both auto-kill, no Sequence to leak.
@@ -1304,7 +1306,7 @@ namespace RingFlow.Gameplay
         private void TriggerMoveEffects(Vector3 position, RingColor color)
         {
             if (_audioService != null)
-                _audioService.PlaySfx(ProceduralAudio.GetOrCreateMoveClip(), 1.0f, 0.92f, 1.08f);
+                _audioService.PlaySfx(_proceduralAudio.GetOrCreateMoveClip(), 1.0f, 0.92f, 1.08f);
             if (_vfxRegistry != null && _objectPoolService != null)
             {
                 var prefab = _vfxRegistry.GetRingPopPrefab();

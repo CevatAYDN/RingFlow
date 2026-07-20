@@ -51,7 +51,7 @@ namespace RingFlow.Gameplay.UI
             CardGroup = cardGo.GetComponent<CanvasGroup>();
             if (CardGroup == null) CardGroup = cardGo.AddComponent<CanvasGroup>();
 
-            // Title "DURAKLATILDI"
+            // Title
             var titleGo = GameUIResources.CreateText("PAUSED", cardGo.transform, 30, TextAnchor.MiddleCenter, GameUIResources.TextColor);
             titleGo.name = "Title";
             TitleText = titleGo.GetComponent<Text>();
@@ -71,7 +71,7 @@ namespace RingFlow.Gameplay.UI
             GameUIResources.SetAnchors(progGo.GetComponent<RectTransform>(), 0.05f, 0.62f, 0.95f, 0.68f);
 
             // 2. MAIN RESUME BUTTON (Coral)
-            _resumeBtn = GameUIResources.CreateButton("DEVAM ET", cardGo.transform, 240f, 52f);
+            _resumeBtn = GameUIResources.CreateButton("RESUME", cardGo.transform, 240f, 52f);
             _resumeBtn.name = "Btn_RESUME";
             GameUIResources.ApplyPrimaryStyle(_resumeBtn);
             ResumeButton = _resumeBtn.GetComponent<Button>();
@@ -86,14 +86,14 @@ namespace RingFlow.Gameplay.UI
 
             // 3. RESTART (Teal) & QUIT (White/Outline) SIDE-BY-SIDE BUTTONS
             // Restart
-            _restartBtn = GameUIResources.CreateButton("YENİDEN", cardGo.transform, 110f, 44f);
+            _restartBtn = GameUIResources.CreateButton("RESTART", cardGo.transform, 110f, 44f);
             _restartBtn.name = "Btn_RESTART";
             GameUIResources.ApplyAccentStyle(_restartBtn); // Teal/AccentStyle
             RestartButton = _restartBtn.GetComponent<Button>();
             GameUIResources.SetAnchors(_restartBtn.GetComponent<RectTransform>(), 0.12f, 0.30f, 0.48f, 0.39f);
 
             // Quit
-            _quitBtn = GameUIResources.CreateButton("MENÜ", cardGo.transform, 110f, 44f);
+            _quitBtn = GameUIResources.CreateButton("MENU", cardGo.transform, 110f, 44f);
             _quitBtn.name = "Btn_QUIT";
             GameUIResources.ApplyOutlineStyle(_quitBtn);
             QuitButton = _quitBtn.GetComponent<Button>();
@@ -149,7 +149,7 @@ namespace RingFlow.Gameplay.UI
             _locService = loc;
             if (loc == null) return;
             if (TitleText != null) GameUIResources.LocalizeText(TitleText.gameObject, "game_paused", loc);
-            if (SubtitleText != null) GameUIResources.LocalizeText(SubtitleText.gameObject, "game_tagline", loc);
+            if (SubtitleText != null) GameUIResources.LocalizeText(SubtitleText.gameObject, "pause_subtitle", loc);
             if (_resumeBtn != null) GameUIResources.LocalizeButtonText(_resumeBtn, "game_resume", loc);
             if (_restartBtn != null) GameUIResources.LocalizeButtonText(_restartBtn, "game_restart", loc);
             if (_settingsBtn != null) GameUIResources.LocalizeButtonText(_settingsBtn, "settings_title", loc);
@@ -166,7 +166,7 @@ namespace RingFlow.Gameplay.UI
                 if (upper.Contains("RESUME")) { _resumeBtn = btn.gameObject; ResumeButton = btn; }
                 // Need to handle both button itself and container name for custom hierarchy
                 else if (upper.Contains("RESTART")) { _restartBtn = btn.gameObject; RestartButton = btn; }
-                else if (upper.Contains("QUIT") || upper.Contains("MAIN MENU") || upper.Contains("MENÜ")) { _quitBtn = btn.gameObject; QuitButton = btn; }
+                else if (upper.Contains("QUIT") || upper.Contains("MAIN MENU") || upper.Contains("MENU")) { _quitBtn = btn.gameObject; QuitButton = btn; }
                 else if (upper.Contains("SETTINGS")) { _settingsBtn = btn.gameObject; SettingsButton = btn; }
             }
 

@@ -7,16 +7,19 @@ namespace RingFlow.Tests
     [TestFixture]
     public class ProceduralAudioTests
     {
+        private ProceduralAudioService _service;
+
         [SetUp]
         public void Setup()
         {
-            ProceduralAudio.ClearCache();
+            _service = new ProceduralAudioService(CreateDefaultConfig());
         }
 
         [TearDown]
         public void Teardown()
         {
-            ProceduralAudio.ClearCache();
+            _service?.ClearCache();
+            _service = null;
         }
 
         private static AudioConfigSO CreateDefaultConfig()
@@ -27,23 +30,22 @@ namespace RingFlow.Tests
         }
 
         [Test]
-        public void Initialize_WithNullConfig_Throws()
+        public void Constructor_WithNullConfig_Throws()
         {
-            Assert.Throws<System.InvalidOperationException>(() => ProceduralAudio.Initialize(null));
+            Assert.Throws<System.ArgumentNullException>(() => new ProceduralAudioService(null));
         }
 
         [Test]
-        public void Initialize_WithValidConfig_DoesNotThrow()
+        public void Constructor_WithValidConfig_DoesNotThrow()
         {
             var cfg = CreateDefaultConfig();
-            Assert.DoesNotThrow(() => ProceduralAudio.Initialize(cfg));
+            Assert.DoesNotThrow(() => new ProceduralAudioService(cfg));
         }
 
         [Test]
         public void GetOrCreateMoveClip_WithValidConfig_ReturnsValidClip()
         {
-            ProceduralAudio.Initialize(CreateDefaultConfig());
-            var clip = ProceduralAudio.GetOrCreateMoveClip();
+            var clip = _service.GetOrCreateMoveClip();
 
             Assert.IsNotNull(clip);
             Assert.AreEqual(1, clip.channels);
@@ -55,9 +57,7 @@ namespace RingFlow.Tests
         [Test]
         public void GetOrCreateMoveClip_WithZeroedConfig_ReturnsValidClip()
         {
-            ProceduralAudio.Initialize(CreateDefaultConfig());
-            var clip = ProceduralAudio.GetOrCreateMoveClip();
-
+            var clip = _service.GetOrCreateMoveClip();
             Assert.IsNotNull(clip);
             Assert.AreEqual(1, clip.channels);
             Assert.AreEqual("MoveSFX", clip.name);
@@ -66,9 +66,7 @@ namespace RingFlow.Tests
         [Test]
         public void GetOrCreateWinClip_WithValidConfig_ReturnsValidClip()
         {
-            ProceduralAudio.Initialize(CreateDefaultConfig());
-            var clip = ProceduralAudio.GetOrCreateWinClip();
-
+            var clip = _service.GetOrCreateWinClip();
             Assert.IsNotNull(clip);
             Assert.AreEqual(1, clip.channels);
             Assert.AreEqual("WinSFX", clip.name);
@@ -77,9 +75,7 @@ namespace RingFlow.Tests
         [Test]
         public void GetOrCreateErrorClip_WithValidConfig_ReturnsValidClip()
         {
-            ProceduralAudio.Initialize(CreateDefaultConfig());
-            var clip = ProceduralAudio.GetOrCreateErrorClip();
-
+            var clip = _service.GetOrCreateErrorClip();
             Assert.IsNotNull(clip);
             Assert.AreEqual(1, clip.channels);
             Assert.AreEqual("ErrorSFX", clip.name);
@@ -88,9 +84,7 @@ namespace RingFlow.Tests
         [Test]
         public void GetOrCreateExplosionClip_WithValidConfig_ReturnsValidClip()
         {
-            ProceduralAudio.Initialize(CreateDefaultConfig());
-            var clip = ProceduralAudio.GetOrCreateExplosionClip();
-
+            var clip = _service.GetOrCreateExplosionClip();
             Assert.IsNotNull(clip);
             Assert.AreEqual(1, clip.channels);
             Assert.AreEqual("ExplosionSFX", clip.name);
@@ -99,9 +93,7 @@ namespace RingFlow.Tests
         [Test]
         public void GetOrCreatePoleCompleteClip_WithValidConfig_ReturnsValidClip()
         {
-            ProceduralAudio.Initialize(CreateDefaultConfig());
-            var clip = ProceduralAudio.GetOrCreatePoleCompleteClip();
-
+            var clip = _service.GetOrCreatePoleCompleteClip();
             Assert.IsNotNull(clip);
             Assert.AreEqual(1, clip.channels);
             Assert.AreEqual("PoleCompleteSFX", clip.name);
@@ -110,9 +102,7 @@ namespace RingFlow.Tests
         [Test]
         public void GetOrCreateFinalPoleClip_WithValidConfig_ReturnsValidClip()
         {
-            ProceduralAudio.Initialize(CreateDefaultConfig());
-            var clip = ProceduralAudio.GetOrCreateFinalPoleClip();
-
+            var clip = _service.GetOrCreateFinalPoleClip();
             Assert.IsNotNull(clip);
             Assert.AreEqual(1, clip.channels);
             Assert.AreEqual("FinalPoleCompleteSFX", clip.name);
@@ -121,9 +111,7 @@ namespace RingFlow.Tests
         [Test]
         public void GetOrCreateBgmClip_WithValidConfig_ReturnsValidClip()
         {
-            ProceduralAudio.Initialize(CreateDefaultConfig());
-            var clip = ProceduralAudio.GetOrCreateBgmClip(0);
-
+            var clip = _service.GetOrCreateBgmClip(0);
             Assert.IsNotNull(clip);
             Assert.AreEqual(1, clip.channels);
             Assert.IsTrue(clip.name.StartsWith("Bgm_World_"));
@@ -132,9 +120,7 @@ namespace RingFlow.Tests
         [Test]
         public void GetOrCreateRichPoleCompleteClip_WithValidConfig_ReturnsValidClip()
         {
-            ProceduralAudio.Initialize(CreateDefaultConfig());
-            var clip = ProceduralAudio.GetOrCreateRichPoleCompleteClip(3);
-
+            var clip = _service.GetOrCreateRichPoleCompleteClip(3);
             Assert.IsNotNull(clip);
             Assert.AreEqual(1, clip.channels);
             Assert.AreEqual("PoleCompleteRichSFX_3", clip.name);
@@ -143,21 +129,17 @@ namespace RingFlow.Tests
         [Test]
         public void Cache_ReturnsSameInstanceOnSecondCall()
         {
-            ProceduralAudio.Initialize(CreateDefaultConfig());
-            var clip1 = ProceduralAudio.GetOrCreateMoveClip();
-            var clip2 = ProceduralAudio.GetOrCreateMoveClip();
-
+            var clip1 = _service.GetOrCreateMoveClip();
+            var clip2 = _service.GetOrCreateMoveClip();
             Assert.AreSame(clip1, clip2);
         }
 
         [Test]
         public void ClearCache_RecreatesClipsOnSubsequentCall()
         {
-            ProceduralAudio.Initialize(CreateDefaultConfig());
-            var clip1 = ProceduralAudio.GetOrCreateMoveClip();
-            ProceduralAudio.ClearCache();
-            var clip2 = ProceduralAudio.GetOrCreateMoveClip();
-
+            var clip1 = _service.GetOrCreateMoveClip();
+            _service.ClearCache();
+            var clip2 = _service.GetOrCreateMoveClip();
             Assert.IsNotNull(clip2);
             Assert.AreNotSame(clip1, clip2);
         }

@@ -101,11 +101,11 @@ namespace RingFlow.Tests
             Assert.IsNotNull(_colorPalette, "RingColorPalette.asset must exist in Resources/Configs/");
 
             _audioConfig = Resources.Load<AudioConfigSO>(GameplayAssetKeys.AudioConfig);
-            // Initialize ProceduralAudio first — many BoardView methods (FlashPoleError,
-            // CelebratePoleComplete) call ProceduralAudio.GetOrCreateErrorClip() etc.
-            // which require a prior Initialize() call.
+            // Create ProceduralAudioService for BoardView — many methods (FlashPoleError,
+            // CelebratePoleComplete) call GetOrCreateErrorClip() etc.
+            Gameplay.ProceduralAudioService procAudioSvc = null;
             if (_audioConfig != null)
-                ProceduralAudio.Initialize(_audioConfig);
+                procAudioSvc = new Gameplay.ProceduralAudioService(_audioConfig);
 
             _settingsModel = new SettingsModel();
             _poolService = new MockBoardPoolService();
@@ -138,6 +138,7 @@ namespace RingFlow.Tests
             InjectField(_view, "_objectPoolService", _poolService);
             InjectField(_view, "_vfxRegistry", null); // VFX yolları null-safe — null gönder
             InjectField(_view, "_audioService", _audioService);
+            InjectField(_view, "_proceduralAudio", procAudioSvc);
             InjectField(_view, "_hapticService", _hapticService);
             InjectField(_view, "_mainCamera", _testCamera);
             InjectField(_view, "_ringMaterialManager", _ringMaterialManager);

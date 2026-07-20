@@ -423,6 +423,10 @@ namespace RingFlow.Tests
             {
                 LevelIndex = levelIndex,
                 LevelSeed = seed,
+                LevelIdentity = levelData.LevelType + ":" + levelData.LevelIndex + ":" + levelData.Seed,
+                ContentFingerprint = $"{levelData.LevelType}|{levelData.LevelIndex}|{levelData.Seed}|{levelData.PoleCount}|{levelData.PoleCapacity}|{levelData.ColorCount}|{levelData.EmptyPoleCount}|{levelData.TargetMoves}|{levelData.DifficultyScore}|{levelData.IsTutorial}|{levelData.IsChallenge}|{levelData.ProgressionFlags}|{string.Join(",", levelData.RuleReferences ?? new List<string>())}",
+                RuleSetId = _db.name,
+                RuleSetVersion = _db.GetType().Assembly.GetName().Version?.ToString() ?? string.Empty,
                 Moves = solve.Moves,
                 Version = 1
             };

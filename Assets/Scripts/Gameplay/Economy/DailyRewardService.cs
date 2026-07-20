@@ -11,7 +11,7 @@ namespace RingFlow.Gameplay
         public static CurrencyAmount RewardForDayIndex(List<DailyRewardEntry> dailyRewards, int dayIndex)
         {
             if (dailyRewards == null || dailyRewards.Count == 0)
-                return new CurrencyAmount("Coins", 0);
+                return new CurrencyAmount(CurrencyIds.Coins, 0);
             int d = ((dayIndex % dailyRewards.Count) + dailyRewards.Count) % dailyRewards.Count;
             var entry = dailyRewards[d];
             return new CurrencyAmount(entry.CurrencyId, entry.Amount);
@@ -119,7 +119,7 @@ namespace RingFlow.Gameplay
             {
                 NexusLog.Warn("DailyRewardService", nameof(Claim), _progress.DailyLastClaimUtcTicks.Value.ToString(),
                     $"Cannot claim yet ({reason}). Returning zero Coins.");
-                return new CurrencyAmount("Coins", 0);
+                return new CurrencyAmount(CurrencyIds.Coins, 0);
             }
 
             int nextIndex = _progress.DailyDayIndex.Value + 1;

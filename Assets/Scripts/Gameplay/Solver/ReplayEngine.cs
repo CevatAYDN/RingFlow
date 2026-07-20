@@ -30,6 +30,10 @@ namespace RingFlow.Gameplay
         {
             public int LevelIndex;
             public int LevelSeed;
+            public string LevelIdentity;
+            public string ContentFingerprint;
+            public string RuleSetId;
+            public string RuleSetVersion;
             public List<MoveRecord> Moves;
             public int Version;
         }
@@ -47,12 +51,16 @@ namespace RingFlow.Gameplay
 
         public bool IsCapturing => _isCapturing;
 
-        public void StartCapture(int levelIndex, int seed, BoardState initialState)
+        public void StartCapture(int levelIndex, int seed, LevelData levelData, GameConfigDatabaseSO db)
         {
             _captured = new ReplaySession
             {
                 LevelIndex = levelIndex,
                 LevelSeed = seed,
+                LevelIdentity = BuildLevelIdentity(levelData),
+                ContentFingerprint = BuildContentFingerprint(levelData),
+                RuleSetId = BuildRuleSetId(db),
+                RuleSetVersion = BuildRuleSetVersion(db),
                 Moves = new List<MoveRecord>(128),
                 Version = 1
             };
@@ -75,6 +83,9 @@ namespace RingFlow.Gameplay
 
         public ReplayResult Replay(ReplaySession session)
         {
+            if (string.IsNullOrEmpty(session.LevelIdentity) || string.IsNullOrEmpty(session.ContentFingerprint) || string.IsNullOrEmpty(session.RuleSetId) || string.IsNullOrEmpty(session.RuleSetVersion))
+                return new ReplayResult { IsValid = false };
+
             // Rebuild initial board from seed using LevelGenerator
             if (_db == null) throw new System.InvalidOperationException("[ReplayEngine] GameConfigDatabaseSO not injected/passed!");
             var db = _db;
@@ -150,6 +161,27 @@ namespace RingFlow.Gameplay
                 DeterminismFailures = failures,
                 FinalBoard = board
             };
+        }
+
+        private static string BuildLevelIdentity(LevelData levelData)
+        {
+            return levelData == null ? string.Empty : $"{levelData.LevelType}:{levelData.LevelIndex}:{levelData.Seed}";
+        }
+
+        private static string BuildContentFingerprint(LevelData levelData)
+        {
+            if (levelData == null) return string.Empty;
+            return $"{levelData.LevelType}|{levelData.LevelIndex}|{levelData.Seed}|{levelData.PoleCount}|{levelData.PoleCapacity}|{levelData.ColorCount}|{levelData.EmptyPoleCount}|{levelData.TargetMoves}|{levelData.DifficultyScore}|{levelData.IsTutorial}|{levelData.IsChallenge}|{levelData.ProgressionFlags}|{string.Join(",", levelData.RuleReferences ?? new List<string>())}";
+        }
+
+        private static string BuildRuleSetId(GameConfigDatabaseSO db)
+        {
+            return db == null ? string.Empty : db.name;
+        }
+
+        private static string BuildRuleSetVersion(GameConfigDatabaseSO db)
+        {
+            return db == null ? string.Empty : db.GetType().Assembly.GetName().Version?.ToString() ?? string.Empty;
         }
 
         private static void CopyRecord(MoveRecord from, MoveRecord to)

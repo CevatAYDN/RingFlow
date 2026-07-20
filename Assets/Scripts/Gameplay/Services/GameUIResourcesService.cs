@@ -525,8 +525,9 @@ namespace RingFlow.Gameplay.Services
             go.transform.DOScale(1f, duration).SetEase(DG.Tweening.Ease.OutBack).SetAutoKill(true).SetTarget(go.transform);
         }
 
-        public void AnimatePopupExit(GameObject go, float duration = 0.2f, System.Action onComplete = null)
+        public void AnimatePopupExit(GameObject go, float duration = -1f, System.Action onComplete = null)
         {
+            if (duration <= 0f) duration = _theme != null ? _theme.PopupExitDuration : 0.2f;
             var cg = GetOrAddCanvasGroup(go);
             DOTween.Kill(cg);
             DOTween.Kill(go.transform);
@@ -560,8 +561,9 @@ namespace RingFlow.Gameplay.Services
             DOTween.To(() => cg.alpha, v => cg.alpha = v, 1f, duration).SetEase(DG.Tweening.Ease.OutCubic).SetTarget(cg);
         }
 
-        public void AnimateScreenExit(GameObject go, float duration = 0.25f, System.Action onComplete = null)
+        public void AnimateScreenExit(GameObject go, float duration = -1f, System.Action onComplete = null)
         {
+            if (duration <= 0f) duration = _theme != null ? _theme.ScreenExitDuration : 0.25f;
             var cg = GetOrAddCanvasGroup(go);
             DOTween.Kill(cg);
 

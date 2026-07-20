@@ -122,17 +122,6 @@ namespace RingFlow.Gameplay
             int worldIndex = _dbConfig.GetWorldForLevel(currentLevel);
             ApplyChallengeState(currentLevel);
 
-            if (levelData != null)
-            {
-                int glassCount = 0;
-                foreach (var p in levelData.Poles)
-                    foreach (var r in p.Rings)
-                        if (r.Type == RingType.Glass) glassCount++;
-                if (glassCount > 0)
-                    NexusLog.Info("InitLevelCommand", "Execute", currentLevel.ToString(),
-                        $"Level has {glassCount} Glass ring(s) — treated as Standard (visual-only).");
-            }
-
             if (_analyticsService != null)
             {
                 _analyticsService.LevelStart(currentLevel, worldIndex);
@@ -174,7 +163,13 @@ namespace RingFlow.Gameplay
                 if (pData.PortalTargetId >= 0)
                     poleState.PortalPartnerId = pData.PortalTargetId;
                 for (int r = 0; r < pData.Rings.Count; r++)
-                    poleState.AddRing(pData.Rings[r].Clone());
+                {
+                    var ringData = pData.Rings[r].Clone();
+                    // Ghost is deprecated — convert to Glass at load time
+                    if (ringData.Type == RingType.Ghost)
+                        ringData.Type = RingType.Glass;
+                    poleState.AddRing(ringData);
+                }
                 _model.Poles.Add(poleState);
             }
             _model.TargetMovesCount.Value = levelData.TargetMoves;

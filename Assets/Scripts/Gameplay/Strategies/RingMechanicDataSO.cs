@@ -28,7 +28,6 @@ namespace RingFlow.Gameplay.Strategies
             new() { Type = WorldMechanicType.Chain,       IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Chain } },
             new() { Type = WorldMechanicType.Magnet,      IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Magnet } },
             new() { Type = WorldMechanicType.Paint,       IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Paint } },
-            new() { Type = WorldMechanicType.Ghost,       IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Ghost } },
             new() { Type = WorldMechanicType.Portal,      IsMovementRestricting = false, AffectedRingTypes = new() { RingType.Standard } }
         };
 

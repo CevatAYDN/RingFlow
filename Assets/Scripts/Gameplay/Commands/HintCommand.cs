@@ -87,7 +87,7 @@ namespace RingFlow.Gameplay
                 return;
             }
 
-            if (_ads != null && _ads.IsRewardedAvailable("Hint"))
+            if (_ads != null && _ads.IsRewardedAvailable(CurrencyIds.Hint))
             {
                 var callback = new HintRewardCallback
                 {
@@ -95,7 +95,7 @@ namespace RingFlow.Gameplay
                     SignalBus = _signalBus
                     // FIX-E1: Command = this removed — field deleted from struct to prevent retention cycle.
                 };
-                _ads.ShowRewarded("Hint", callback.OnRewardResult);
+                _ads.ShowRewarded(CurrencyIds.Hint, callback.OnRewardResult);
                 return;
             }
 
