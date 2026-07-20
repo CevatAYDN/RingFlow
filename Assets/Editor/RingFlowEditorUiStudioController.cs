@@ -436,10 +436,13 @@ namespace RingFlow.Editor
             {
                 if (cachedEditor == null || cachedEditor.target == null)
                 {
-                    var asset = Resources.Load<ScriptableObject>(key);
-                    if (asset != null)
+                    if (Event.current != null && Event.current.type == EventType.Layout)
                     {
-                        cachedEditor = UnityEditor.Editor.CreateEditor(asset);
+                        var asset = Resources.Load<ScriptableObject>(key);
+                        if (asset != null)
+                        {
+                            cachedEditor = UnityEditor.Editor.CreateEditor(asset);
+                        }
                     }
                 }
 

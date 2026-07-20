@@ -20,15 +20,27 @@ namespace RingFlow.Editor
 
         public bool HideHeader { get; set; } = false;
 
+        private bool? _cachedFoldedOut;
+
         protected bool IsFoldedOut
         {
-            get => HideHeader || EditorPrefs.GetBool(PrefKey, true);
-            set => EditorPrefs.SetBool(PrefKey, value);
+            get
+            {
+                if (HideHeader) return true;
+                _cachedFoldedOut ??= EditorPrefs.GetBool(PrefKey, true);
+                return _cachedFoldedOut.Value;
+            }
+            set
+            {
+                EditorPrefs.SetBool(PrefKey, value);
+            }
         }
 
         protected void DrawFoldoutHeader()
         {
             if (HideHeader) return;
+            if (Event.current.type == EventType.Layout)
+                _cachedFoldedOut = null;
             var bg = GUI.backgroundColor;
             GUI.backgroundColor = EditorPaths.EditorColors.HeaderAccent;
             IsFoldedOut = EditorGUILayout.Foldout(IsFoldedOut, DisplayName, true, EditorStyles.foldoutHeader);

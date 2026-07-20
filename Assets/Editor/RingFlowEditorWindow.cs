@@ -233,6 +233,12 @@ namespace RingFlow.Editor
             RingFlowEditorUtils.UpdateLayoutWidth();
             RefreshValidationCache();
 
+            if (_cachedWindowWidth <= 0f)
+            {
+                _cachedWindowWidth = position.width;
+                _cachedCompactLayout = _cachedWindowWidth < 980f;
+            }
+
             if (Event.current.type == EventType.Layout)
             {
                 if (_pendingSelectedTab >= 0)
@@ -248,6 +254,7 @@ namespace RingFlow.Editor
                 _cachedActiveLevel = Selection.activeObject as LevelDataSO;
                 _cachedWindowWidth = position.width;
                 _cachedCompactLayout = _cachedWindowWidth < 980f;
+                UpdateCachedEditors();
             }
 
             float windowWidth = _cachedWindowWidth;
@@ -800,14 +807,7 @@ namespace RingFlow.Editor
 
                     EditorGUILayout.Space(4f);
 
-                    if (_cachedActiveLevelEditor == null || _cachedActiveLevelEditor.target != activeLevel)
-                    {
-                        if (_cachedActiveLevelEditor != null)
-                            DestroyImmediate(_cachedActiveLevelEditor);
-                        _cachedActiveLevelEditor = UnityEditor.Editor.CreateEditor(activeLevel);
-                    }
-
-                    if (_cachedActiveLevelEditor != null)
+                    if (_cachedActiveLevelEditor != null && _cachedActiveLevelEditor.target == activeLevel)
                     {
                         _cachedActiveLevelEditor.OnInspectorGUI();
                     }
@@ -1013,32 +1013,13 @@ namespace RingFlow.Editor
             EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
             EditorGUILayout.Space(4f);
 
-            // Only load from Resources on tab switch (key change), not every frame
             if (_cachedAssetObj == null || _cachedAssetKey != key)
-            {
-                if (_cachedAssetEditor != null)
-                {
-                    DestroyImmediate(_cachedAssetEditor);
-                    _cachedAssetEditor = null;
-                }
-                _cachedAssetKey = key;
-                _cachedAssetObj = Resources.Load<ScriptableObject>(key);
-            }
-
-            if (_cachedAssetObj == null)
             {
                 EditorGUILayout.HelpBox($"{title} bulunamadı! Önce proje klasöründe oluşturulduğundan emin olun.", MessageType.Warning);
                 return;
             }
 
-            if (_cachedAssetEditor == null || _cachedAssetEditor.target != _cachedAssetObj)
-            {
-                if (_cachedAssetEditor != null)
-                    DestroyImmediate(_cachedAssetEditor);
-                _cachedAssetEditor = UnityEditor.Editor.CreateEditor(_cachedAssetObj);
-            }
-
-            if (_cachedAssetEditor != null)
+            if (_cachedAssetEditor != null && _cachedAssetEditor.target == _cachedAssetObj)
             {
                 _cachedAssetEditor.OnInspectorGUI();
             }
@@ -1051,6 +1032,81 @@ namespace RingFlow.Editor
         private void DrawDataTab()
         {
             _dataOverview.OnGUI();
+        }
+
+        private void UpdateCachedEditors()
+        {
+            // Active Level Editor
+            if (_cachedActiveLevel != null)
+            {
+                if (_cachedActiveLevelEditor == null || _cachedActiveLevelEditor.target != _cachedActiveLevel)
+                {
+                    if (_cachedActiveLevelEditor != null)
+                        DestroyImmediate(_cachedActiveLevelEditor);
+                    _cachedActiveLevelEditor = UnityEditor.Editor.CreateEditor(_cachedActiveLevel);
+                }
+            }
+            else
+            {
+                if (_cachedActiveLevelEditor != null)
+                {
+                    DestroyImmediate(_cachedActiveLevelEditor);
+                    _cachedActiveLevelEditor = null;
+                }
+            }
+
+            // Config Asset Editor
+            if (_selectedTab == 4) // Tools Tab
+            {
+                string targetKey = _selectedConfigSubTab switch
+                {
+                    4 => EditorPaths.GameFeelConfigKey,
+                    5 => EditorPaths.GameConfigDatabaseKey,
+                    6 => EditorPaths.RingMechanicDataKey,
+                    7 => EditorPaths.AudioConfigKey,
+                    8 => EditorPaths.UIThemeConfigKey,
+                    9 => EditorPaths.StoreCatalogKey,
+                    10 => EditorPaths.ThemeSkinDatabaseKey,
+                    11 => EditorPaths.LocalizationConfigKey,
+                    12 => EditorPaths.ScreenRegistryKey,
+                    _ => null
+                };
+
+                if (!string.IsNullOrEmpty(targetKey))
+                {
+                    if (_cachedAssetObj == null || _cachedAssetKey != targetKey)
+                    {
+                        if (_cachedAssetEditor != null)
+                            DestroyImmediate(_cachedAssetEditor);
+                        _cachedAssetKey = targetKey;
+                        _cachedAssetObj = Resources.Load<ScriptableObject>(targetKey);
+                        _cachedAssetEditor = _cachedAssetObj != null ? UnityEditor.Editor.CreateEditor(_cachedAssetObj) : null;
+                    }
+                    else if (_cachedAssetEditor == null && _cachedAssetObj != null)
+                    {
+                        _cachedAssetEditor = UnityEditor.Editor.CreateEditor(_cachedAssetObj);
+                    }
+                }
+                else
+                {
+                    ClearConfigAssetEditorCache();
+                }
+            }
+            else
+            {
+                ClearConfigAssetEditorCache();
+            }
+        }
+
+        private void ClearConfigAssetEditorCache()
+        {
+            if (_cachedAssetEditor != null)
+            {
+                DestroyImmediate(_cachedAssetEditor);
+                _cachedAssetEditor = null;
+            }
+            _cachedAssetObj = null;
+            _cachedAssetKey = null;
         }
     }
 }
