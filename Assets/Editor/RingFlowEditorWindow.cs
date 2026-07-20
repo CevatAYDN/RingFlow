@@ -627,7 +627,7 @@ namespace RingFlow.Editor
         {
             RingFlowEditorUtils.BeginSectionBox("Hızlı İşlemler Paneli", "Seviye üretimi, arayüz stüdyosu ve araçlar arasında hızlı geçiş yapın.");
             
-            float rightWidth = position.width - 200f;
+            float rightWidth = _cachedWindowWidth - 200f;
             int cols = 3;
             if (rightWidth < 420f) cols = 1;
             else if (rightWidth < 600f) cols = 2;

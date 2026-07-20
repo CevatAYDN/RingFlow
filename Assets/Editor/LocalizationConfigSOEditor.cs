@@ -10,6 +10,7 @@ namespace RingFlow.Editor
     public sealed class LocalizationConfigSOEditor : UnityEditor.Editor
     {
         private bool _showCsvEditor;
+        private bool _cachedShowCsvEditor;
         private string _csvFilter = "";
         private Vector2 _csvScroll;
         private int _selectedRowIndex = -1;
@@ -25,6 +26,11 @@ namespace RingFlow.Editor
 
         public override void OnInspectorGUI()
         {
+            if (Event.current.type == EventType.Layout)
+            {
+                _cachedShowCsvEditor = _showCsvEditor;
+            }
+
             var config = (LocalizationConfigSO)target;
 
             EditorGUILayout.LabelField("Yerelleştirme Yapılandırması (Localization Config)", RingFlowEditorUtils.HeaderStyle);
@@ -107,7 +113,7 @@ namespace RingFlow.Editor
 
             // ── Yerelleştirme Tablosu Düzenleyici (CSV Editor) ──
             _showCsvEditor = EditorGUILayout.Foldout(_showCsvEditor, "Yerelleştirme Tablosu Düzenleyici (CSV Editor)", true, EditorStyles.foldoutHeader);
-            if (_showCsvEditor)
+            if (_cachedShowCsvEditor)
             {
                 if (_csvRows.Count == 0)
                 {

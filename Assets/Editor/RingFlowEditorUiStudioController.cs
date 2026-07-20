@@ -411,16 +411,28 @@ namespace RingFlow.Editor
             RingFlowEditorUtils.EndSectionBox();
         }
 
+        private static readonly Dictionary<string, bool> s_uiStudioFoldStates = new();
+
         private void DrawInlineAssetFoldout(ref UnityEditor.Editor cachedEditor, string key, string title, string foldoutPrefKey)
         {
-            bool isFolded = EditorPrefs.GetBool(foldoutPrefKey, false);
-            bool newFolded = EditorGUILayout.Foldout(isFolded, title, true, EditorStyles.foldoutHeader);
-            if (newFolded != isFolded)
+            if (Event.current.type == EventType.Layout)
             {
-                EditorPrefs.SetBool(foldoutPrefKey, newFolded);
+                s_uiStudioFoldStates[foldoutPrefKey] = EditorPrefs.GetBool(foldoutPrefKey, false);
             }
 
-            if (newFolded)
+            if (!s_uiStudioFoldStates.TryGetValue(foldoutPrefKey, out bool isExpanded))
+            {
+                isExpanded = EditorPrefs.GetBool(foldoutPrefKey, false);
+                s_uiStudioFoldStates[foldoutPrefKey] = isExpanded;
+            }
+
+            bool newExpanded = EditorGUILayout.Foldout(isExpanded, title, true, EditorStyles.foldoutHeader);
+            if (newExpanded != isExpanded)
+            {
+                EditorPrefs.SetBool(foldoutPrefKey, newExpanded);
+            }
+
+            if (isExpanded)
             {
                 if (cachedEditor == null || cachedEditor.target == null)
                 {

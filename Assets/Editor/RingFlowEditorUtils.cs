@@ -76,7 +76,7 @@ namespace RingFlow.Editor
 
         public static void UpdateLayoutWidth()
         {
-            if (Event.current != null && Event.current.type == EventType.Layout)
+            if (s_cachedLayoutWidth < 0f || (Event.current != null && Event.current.type == EventType.Layout))
             {
                 s_cachedLayoutWidth = EditorGUIUtility.currentViewWidth;
             }

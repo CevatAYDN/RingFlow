@@ -10,6 +10,9 @@ namespace RingFlow.Editor
     {
         private bool _showRawData;
         private bool _showTools = true;
+        private bool _cachedShowRawData;
+        private bool _cachedShowTools = true;
+        private bool _cachedShowStepSolve;
         private int _lastValidatedHash;
         private string[] _cachedWarnings = System.Array.Empty<string>();
 
@@ -124,6 +127,9 @@ namespace RingFlow.Editor
             {
                 _cachedViewWidth = EditorGUIUtility.currentViewWidth;
                 _viewWidthCached = true;
+                _cachedShowTools = _showTools;
+                _cachedShowRawData = _showRawData;
+                _cachedShowStepSolve = _stepMoves != null && _stepMoves.Count > 0;
             }
 
             var levelSO = (LevelDataSO)target;
@@ -180,7 +186,7 @@ namespace RingFlow.Editor
             DrawDifficultyAndMechanicPreview(levelSO.Data);
 
             _showTools = EditorGUILayout.Foldout(_showTools, "Seviye Düzenleme Araçları", true, EditorStyles.foldoutHeader);
-            if (_showTools)
+            if (_cachedShowTools)
             {
                 DrawColorPalette();
                 DrawTypePalette();
@@ -210,7 +216,7 @@ namespace RingFlow.Editor
                     }
                 }
 
-                if (_stepMoves != null && _stepMoves.Count > 0)
+                if (_cachedShowStepSolve)
                 {
                     EditorGUILayout.Space(2f);
                     using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
@@ -319,7 +325,7 @@ namespace RingFlow.Editor
 
             EditorGUILayout.Space(5f);
             _showRawData = EditorGUILayout.Foldout(_showRawData, "Ham Serileştirilmiş Veri", true);
-            if (_showRawData)
+            if (_cachedShowRawData)
                 DrawPropertiesExcluding(serializedObject, "m_Script");
 
             if (serializedObject.ApplyModifiedProperties() || GUI.changed)
