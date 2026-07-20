@@ -69,6 +69,8 @@ namespace RingFlow.Gameplay.UI
                 "mechanic.magnet_desc", "Attracts matching colors. When a Magnet lands, all same-color rings on the board are pulled to its pole.", Color.magenta),
             new MechanicEntryData("P", "mechanic.paint", "Paint",
                 "mechanic.paint_desc", "Paints the ring below it to match its own color. Consumed after painting — becomes a standard ring.", Color.green),
+            new MechanicEntryData("O", "mechanic.portal", "Portal",
+                "mechanic.portal_desc", "Portal pole pair — a ring placed on one portal pole teleports instantly to its linked partner pole.", Color.cyan),
         };
 
         private void Awake()

@@ -35,18 +35,10 @@ namespace RingFlow.Gameplay.UI
 
         private static readonly OnboardingStep[] Steps =
         {
-            new OnboardingStep("onboarding_step1_title", "onboarding_step1_body",
-                "WELCOME",
-                "Sort colored rings onto matching poles. When a pole is full and all colors match, it clears."),
-            new OnboardingStep("onboarding_step2_title", "onboarding_step2_body",
-                "HOW TO MOVE",
-                "Tap a pole to pick up its top ring, then tap another pole to drop it. A ring can only land on empty or same-color tops."),
-            new OnboardingStep("onboarding_step3_title", "onboarding_step3_body",
-                "SPECIAL RINGS",
-                "Some levels introduce special rings with their own rules. Tap a special ring while holding it to see what it does."),
-            new OnboardingStep("onboarding_step4_title", "onboarding_step4_body",
-                "READY TO PLAY",
-                "Clear every pole to win. Good luck!")
+            new OnboardingStep("onboarding_step1_title", "onboarding_step1_body", "", ""),
+            new OnboardingStep("onboarding_step2_title", "onboarding_step2_body", "", ""),
+            new OnboardingStep("onboarding_step3_title", "onboarding_step3_body", "", ""),
+            new OnboardingStep("onboarding_step4_title", "onboarding_step4_body", "", "")
         };
 
         public event Action NextClicked;
