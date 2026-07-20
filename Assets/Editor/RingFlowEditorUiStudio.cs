@@ -10,8 +10,13 @@ using RingFlow.Gameplay.UI;
 namespace RingFlow.Editor
 {
     /// <summary>
-    /// Editor utility for programmatically generating or regenerating the base UI prefabs.
-    /// Unifies the UI layout by directly calling the runtime View's BuildUI() method.
+    /// Editor utility for creating base UI screen prefab roots with the correct
+    /// View component attached. UI hierarchy is now authored directly in prefabs
+    /// (Prefab-first workflow) rather than generated via BuildUI().
+    ///
+    /// Generated prefab roots will have only the root GameObject with its View
+    /// component — the internal UI hierarchy (buttons, labels, panels) must be
+    /// manually populated in the prefab view before they are usable at runtime.
     /// </summary>
     public static class RingFlowEditorUiStudio
     {
@@ -192,11 +197,11 @@ namespace RingFlow.Editor
 
             AttachScreenView(root, screen);
 
-            // Unify editor-generated prefab with runtime self-build
-            if (root.TryGetComponent<IAuthoredView>(out var view))
-            {
-                view.BuildUI();
-            }
+            // Data-driven prefab generation via UIPrefabBuilder.
+            // This creates the full UI hierarchy (panels, buttons, texts, images)
+            // matching each screen's runtime layout. The generated prefab is then
+            // ready for manual polish in the prefab view.
+            UIPrefabBuilder.Build(root, screen);
 
             return root;
         }

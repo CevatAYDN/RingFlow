@@ -22,117 +22,14 @@ namespace RingFlow.Gameplay.UI
 
         private void Awake()
         {
-            if (transform.childCount == 0 || NeedsSelfBuild())
-                BuildUI();
-            else
-                BindReferencesFromChildren();
-        }
-
-        private bool NeedsSelfBuild()
-        {
             BindReferencesFromChildren();
-            return ResumeButton == null || QuitButton == null;
         }
 
-        public void BuildUI()
-        {
-            // Dark overlay
-            var overlay = GetComponent<Image>();
-            if (overlay != null)
-            {
-                overlay.color = GameUIResources.OverlayHeavy;
-                overlay.raycastTarget = true;
-            }
-
-            // 1. MAIN CARD (White SurfaceColor with shadow)
-            var cardGo = GameUIResources.CreateCard("Card", transform);
-            cardGo.GetComponent<Image>().color = GameUIResources.SurfaceColor;
-            GameUIResources.SetAnchors(cardGo.GetComponent<RectTransform>(), 0.12f, 0.22f, 0.88f, 0.78f);
-            CardGroup = cardGo.GetComponent<CanvasGroup>();
-            if (CardGroup == null) CardGroup = cardGo.AddComponent<CanvasGroup>();
-
-            // Title
-            var titleGo = GameUIResources.CreateText("PAUSED", cardGo.transform, 30, TextAnchor.MiddleCenter, GameUIResources.TextColor);
-            titleGo.name = "Title";
-            TitleText = titleGo.GetComponent<Text>();
-            TitleText.fontStyle = FontStyle.Bold;
-            GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.05f, 0.80f, 0.95f, 0.92f);
-
-            // Subtitle
-            var subGo = GameUIResources.CreateText("Take a moment", cardGo.transform, 16, TextAnchor.MiddleCenter, GameUIResources.MutedText);
-            subGo.name = "Subtitle";
-            SubtitleText = subGo.GetComponent<Text>();
-            GameUIResources.SetAnchors(subGo.GetComponent<RectTransform>(), 0.05f, 0.70f, 0.95f, 0.78f);
-
-            // Progress info
-            var progGo = GameUIResources.CreateText("", cardGo.transform, 14, TextAnchor.MiddleCenter, GameUIResources.MutedText);
-            progGo.name = "ProgressLabel";
-            ProgressLabel = progGo.GetComponent<Text>();
-            GameUIResources.SetAnchors(progGo.GetComponent<RectTransform>(), 0.05f, 0.62f, 0.95f, 0.68f);
-
-            // 2. MAIN RESUME BUTTON (Coral)
-            _resumeBtn = GameUIResources.CreateButton("RESUME", cardGo.transform, 240f, 52f);
-            _resumeBtn.name = "Btn_RESUME";
-            GameUIResources.ApplyPrimaryStyle(_resumeBtn);
-            ResumeButton = _resumeBtn.GetComponent<Button>();
-            GameUIResources.SetAnchors(_resumeBtn.GetComponent<RectTransform>(), 0.12f, 0.44f, 0.88f, 0.54f);
-            
-            var playIconGo = new GameObject("IconImage", typeof(RectTransform), typeof(Image));
-            playIconGo.transform.SetParent(_resumeBtn.transform, false);
-            var playIcon = playIconGo.GetComponent<Image>();
-            playIcon.sprite = GameUIResources.GetSprite("play_icon");
-            playIcon.preserveAspect = true;
-            GameUIResources.SetAnchors(playIconGo.GetComponent<RectTransform>(), 0.05f, 0.15f, 0.25f, 0.85f);
-
-            // 3. RESTART (Teal) & QUIT (White/Outline) SIDE-BY-SIDE BUTTONS
-            // Restart
-            _restartBtn = GameUIResources.CreateButton("RESTART", cardGo.transform, 110f, 44f);
-            _restartBtn.name = "Btn_RESTART";
-            GameUIResources.ApplyAccentStyle(_restartBtn); // Teal/AccentStyle
-            RestartButton = _restartBtn.GetComponent<Button>();
-            GameUIResources.SetAnchors(_restartBtn.GetComponent<RectTransform>(), 0.12f, 0.30f, 0.48f, 0.39f);
-
-            // Quit
-            _quitBtn = GameUIResources.CreateButton("MENU", cardGo.transform, 110f, 44f);
-            _quitBtn.name = "Btn_QUIT";
-            GameUIResources.ApplyOutlineStyle(_quitBtn);
-            QuitButton = _quitBtn.GetComponent<Button>();
-            GameUIResources.SetAnchors(_quitBtn.GetComponent<RectTransform>(), 0.52f, 0.30f, 0.88f, 0.39f);
-
-            // 4. BOTTOM SOUND/SETTINGS PANEL (Sunny background with sound & gear icons)
-            var bottomPanel = GameUIResources.CreatePanel("SoundPanel", cardGo.transform);
-            bottomPanel.GetComponent<Image>().color = GameUIResources.AccentColor; // Yellow/Sunny
-            GameUIResources.SetAnchors(bottomPanel.GetComponent<RectTransform>(), 0.12f, 0.12f, 0.88f, 0.22f);
-
-            // Audio aesthetic icons
-            var soundIconGo = new GameObject("SoundIconImage", typeof(RectTransform), typeof(Image));
-            soundIconGo.transform.SetParent(bottomPanel.transform, false);
-            var soundIcon = soundIconGo.GetComponent<Image>();
-            soundIcon.sprite = GameUIResources.GetSprite("sound_on");
-            soundIcon.preserveAspect = true;
-            GameUIResources.SetAnchors(soundIconGo.GetComponent<RectTransform>(), 0.10f, 0.15f, 0.30f, 0.85f);
-
-            var musicIconGo = new GameObject("MusicIconImage", typeof(RectTransform), typeof(Image));
-            musicIconGo.transform.SetParent(bottomPanel.transform, false);
-            var musicIcon = musicIconGo.GetComponent<Image>();
-            musicIcon.sprite = GameUIResources.GetSprite("music_on");
-            musicIcon.preserveAspect = true;
-            GameUIResources.SetAnchors(musicIconGo.GetComponent<RectTransform>(), 0.40f, 0.15f, 0.60f, 0.85f);
-
-            // Settings button (Gear) inside yellow panel
-            _settingsBtn = GameUIResources.CreateIconButton("", bottomPanel.transform, 32f);
-            _settingsBtn.name = "Btn_SETTINGS";
-            SettingsButton = _settingsBtn.GetComponent<Button>();
-            GameUIResources.SetAnchors(_settingsBtn.GetComponent<RectTransform>(), 0.70f, 0.15f, 0.90f, 0.85f);
-            _settingsBtn.GetComponent<Image>().color = Color.clear;
-            
-            var settingsIconGo = new GameObject("IconImage", typeof(RectTransform), typeof(Image));
-            settingsIconGo.transform.SetParent(_settingsBtn.transform, false);
-            var settingsIcon = settingsIconGo.GetComponent<Image>();
-            settingsIcon.sprite = GameUIResources.GetSprite("settings");
-            settingsIcon.preserveAspect = true;
-            GameUIResources.SetAnchors(settingsIconGo.GetComponent<RectTransform>(), 0.10f, 0.10f, 0.90f, 0.90f);
-        }
+        /// <summary>
+        /// Satisfies IAuthoredView. UI hierarchy is now loaded from prefab;
+        /// this method is kept for interface compliance (Editor UI Studio tooling).
+        /// </summary>
+        public void BuildUI() { }
 
         private ILocalizationService _locService;
 

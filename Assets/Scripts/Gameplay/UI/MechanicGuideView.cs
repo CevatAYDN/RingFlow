@@ -17,7 +17,6 @@ namespace RingFlow.Gameplay.UI
     {
         public Button CloseButton { get; private set; }
         private GameObject _card;
-        private bool _uiBuilt;
 
         /// <summary>
         /// Mechanic entry data: symbol character, display name key, description key.
@@ -75,143 +74,18 @@ namespace RingFlow.Gameplay.UI
 
         private void Awake()
         {
-            if (transform.childCount == 0)
-            {
-                BuildUI();
-            }
-            else
-            {
-                BindReferencesFromChildren();
-            }
+            BindReferencesFromChildren();
         }
 
-        public void BuildUI()
-        {
-            _uiBuilt = true;
-
-            // Semi-transparent overlay
-            var overlay = GameUIResources.CreateOverlay(transform, GameUIResources.OverlayHeavy);
-            overlay.name = "Overlay";
-
-            // Scrollable card container
-            _card = GameUIResources.CreatePanel("Card", transform);
-            var cardRect = _card.GetComponent<RectTransform>();
-            GameUIResources.SetAnchors(cardRect, 0.05f, 0.08f, 0.95f, 0.88f);
-            var cardImg = _card.GetComponent<Image>();
-            cardImg.color = GameUIResources.PanelColor;
-            cardImg.raycastTarget = true;
-
-            // Title
-            var titleGo = GameUIResources.CreateText("MECHANICS GUIDE", _card.transform,
-                28, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
-            titleGo.name = "Title";
-            titleGo.GetComponent<Text>().fontStyle = FontStyle.Bold;
-            GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.08f, 0.88f, 0.92f, 0.97f);
-
-            // Scroll View for mechanic entries
-            var scrollGo = new GameObject("ScrollView", typeof(RectTransform), typeof(ScrollRect), typeof(Image));
-            scrollGo.transform.SetParent(_card.transform, false);
-            var scrollRect = scrollGo.GetComponent<RectTransform>();
-            GameUIResources.SetAnchors(scrollRect, 0.04f, 0.06f, 0.96f, 0.84f);
-            var scrollImg = scrollGo.GetComponent<Image>();
-            scrollImg.color = Color.clear;
-            scrollImg.raycastTarget = true;
-            var scroll = scrollGo.GetComponent<ScrollRect>();
-            scroll.horizontal = false;
-            scroll.scrollSensitivity = 30f;
-
-            // Viewport
-            var viewportGo = new GameObject("Viewport", typeof(RectTransform), typeof(Mask), typeof(Image));
-            viewportGo.transform.SetParent(scrollGo.transform, false);
-            var vpRect = viewportGo.GetComponent<RectTransform>();
-            vpRect.anchorMin = Vector2.zero;
-            vpRect.anchorMax = Vector2.one;
-            vpRect.offsetMin = Vector2.zero;
-            vpRect.offsetMax = Vector2.zero;
-            var vpMask = viewportGo.GetComponent<Mask>();
-            vpMask.showMaskGraphic = false;
-            var vpImg = viewportGo.GetComponent<Image>();
-            vpImg.color = Color.white;
-            vpImg.raycastTarget = false;
-
-            scroll.viewport = vpRect;
-
-            // Content container
-            var contentGo = new GameObject("Content", typeof(RectTransform));
-            contentGo.transform.SetParent(viewportGo.transform, false);
-            var contentRect = contentGo.GetComponent<RectTransform>();
-            contentRect.anchorMin = new Vector2(0f, 1f);
-            contentRect.anchorMax = new Vector2(1f, 1f);
-            contentRect.pivot = new Vector2(0.5f, 1f);
-            contentRect.sizeDelta = new Vector2(0f, AllMechanics.Length * 110f + 20f);
-
-            scroll.content = contentRect;
-
-            // Build each mechanic entry row
-            for (int i = 0; i < AllMechanics.Length; i++)
-            {
-                var entry = AllMechanics[i];
-                BuildEntryRow(contentGo.transform, entry, i, 110f);
-            }
-
-            // Close button
-            var closeBtnGo = GameUIResources.CreateButton("CLOSE", _card.transform, 200, 44);
-            CloseButton = closeBtnGo.GetComponent<Button>();
-            CloseButton.name = "Btn_Close";
-            GameUIResources.SetAnchors(closeBtnGo.GetComponent<RectTransform>(), 0.30f, 0.01f, 0.70f, 0.055f);
-            GameUIResources.ApplyPrimaryStyle(closeBtnGo);
-        }
-
-        private void BuildEntryRow(Transform parent, MechanicEntryData entry, int index, float rowHeight)
-        {
-            float yPos = -(index * rowHeight + 10f);
-
-            var row = new GameObject($"Entry_{index}", typeof(RectTransform));
-            row.transform.SetParent(parent, false);
-            var rowRect = row.GetComponent<RectTransform>();
-            rowRect.anchorMin = new Vector2(0f, 1f);
-            rowRect.anchorMax = new Vector2(1f, 1f);
-            rowRect.pivot = new Vector2(0.5f, 1f);
-            rowRect.anchoredPosition = new Vector2(0f, yPos);
-            rowRect.sizeDelta = new Vector2(0f, rowHeight - 8f);
-
-            // Symbol circle
-            var symbolGo = new GameObject("Symbol", typeof(RectTransform), typeof(Image));
-            symbolGo.transform.SetParent(row.transform, false);
-            var symRect = symbolGo.GetComponent<RectTransform>();
-            symRect.anchorMin = new Vector2(0f, 0.1f);
-            symRect.anchorMax = new Vector2(0f, 0.9f);
-            symRect.sizeDelta = new Vector2(52f, 0f);
-            symRect.anchoredPosition = new Vector2(38f, 0f);
-            var symImg = symbolGo.GetComponent<Image>();
-            symImg.color = new Color(0.15f, 0.15f, 0.20f, 1f);
-            symImg.raycastTarget = false;
-
-            // Symbol text
-            var symbolTextGo = GameUIResources.CreateText(entry.Symbol, symbolGo.transform,
-                26, TextAnchor.MiddleCenter, entry.SymbolColor);
-            symbolTextGo.name = "SymbolText";
-            symbolTextGo.GetComponent<Text>().fontStyle = FontStyle.Bold;
-            GameUIResources.SetAnchors(symbolTextGo.GetComponent<RectTransform>(), 0f, 0f, 1f, 1f);
-
-            // Name text
-            var nameGo = GameUIResources.CreateText(entry.NameFallback, row.transform,
-                18, TextAnchor.MiddleLeft, GameUIResources.TextColor);
-            nameGo.name = "Name";
-            nameGo.GetComponent<Text>().fontStyle = FontStyle.Bold;
-            GameUIResources.SetAnchors(nameGo.GetComponent<RectTransform>(), 0.14f, 0.55f, 0.96f, 0.95f);
-
-            // Description text
-            var descGo = GameUIResources.CreateText(entry.DescFallback, row.transform,
-                13, TextAnchor.UpperLeft, GameUIResources.MutedText);
-            descGo.name = "Desc";
-            descGo.GetComponent<Text>().horizontalOverflow = HorizontalWrapMode.Wrap;
-            GameUIResources.SetAnchors(descGo.GetComponent<RectTransform>(), 0.14f, 0.05f, 0.96f, 0.55f);
-        }
+        /// <summary>
+        /// Satisfies IAuthoredView. UI hierarchy is now loaded from prefab;
+        /// this method is kept for interface compliance (Editor UI Studio tooling).
+        /// </summary>
+        public void BuildUI() { }
 
         public void Localize(ILocalizationService loc)
         {
-            if (loc == null || !_uiBuilt) return;
+            if (loc == null) return;
 
             // Localize title
             var title = _card?.transform.Find("Title")?.GetComponent<Text>();

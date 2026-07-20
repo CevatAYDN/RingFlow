@@ -58,15 +58,18 @@ namespace RingFlow.Gameplay.UI
 
         private void Awake()
         {
-            if (transform.childCount == 0)
-            {
-                BuildUI();
-            }
-            else
-            {
-                BindReferencesFromChildren();
-            }
+            BindReferencesFromChildren();
         }
+
+        /// <summary>
+        /// Satisfies IAuthoredView. UI hierarchy is now loaded from prefab;
+        /// this method is kept for interface compliance (Editor UI Studio tooling).
+        /// </summary>
+        /// <summary>
+        /// Satisfies IAuthoredView. UI hierarchy is now loaded from prefab;
+        /// this method is kept for interface compliance (Editor UI Studio tooling).
+        /// </summary>
+        public void BuildUI() { }
 
         public void Configure(bool reduceMotion)
         {
@@ -146,98 +149,7 @@ namespace RingFlow.Gameplay.UI
             }
         }
 
-        public void BuildUI()
-        {
-            _root = new GameObject("OnboardingRoot", typeof(RectTransform), typeof(CanvasGroup));
-            _root.transform.SetParent(transform, false);
-            var rootRect = _root.GetComponent<RectTransform>();
-            rootRect.anchorMin = Vector2.zero;
-            rootRect.anchorMax = Vector2.one;
-            rootRect.offsetMin = Vector2.zero;
-            rootRect.offsetMax = Vector2.zero;
-            _cardFader = _root.GetComponent<CanvasGroup>();
-            _cardFader.alpha = 1f;
-            _cardFader.blocksRaycasts = true;
 
-            var overlay = GameUIResources.CreateOverlay(_root.transform, GameUIResources.OverlayHeavy);
-
-            var card = GameUIResources.CreatePanel("Card", _root.transform);
-            var cardRect = card.GetComponent<RectTransform>();
-            GameUIResources.SetAnchors(cardRect, 0.08f, 0.14f, 0.92f, 0.86f);
-            var cardImg = card.GetComponent<Image>();
-            cardImg.color = GameUIResources.PanelColor;
-            cardImg.raycastTarget = true;
-
-            var progressBar = new GameObject("ProgressBar", typeof(RectTransform), typeof(Image));
-            progressBar.transform.SetParent(card.transform, false);
-            var barRect = progressBar.GetComponent<RectTransform>();
-            GameUIResources.SetAnchors(barRect, 0.30f, 0.90f, 0.70f, 0.94f);
-            progressBar.GetComponent<Image>().color = GameUIResources.SurfaceColor;
-
-            _dots = new GameObject[Steps.Length];
-            float dotStep = 1f / Steps.Length;
-            for (int i = 0; i < Steps.Length; i++)
-            {
-                var dot = new GameObject($"Dot{i}", typeof(RectTransform), typeof(Image));
-                dot.transform.SetParent(progressBar.transform, false);
-                var dRect = dot.GetComponent<RectTransform>();
-                dRect.sizeDelta = new Vector2(18f, 18f);
-                float cx = (i + 0.5f) * dotStep;
-                dRect.anchorMin = new Vector2(cx, 0.5f);
-                dRect.anchorMax = new Vector2(cx, 0.5f);
-                dRect.offsetMin = new Vector2(-9f, -9f);
-                dRect.offsetMax = new Vector2(9f, 9f);
-                var dImg = dot.GetComponent<Image>();
-                dImg.color = i == 0 ? GameUIResources.AccentColor : GameUIResources.DisabledText;
-                dImg.raycastTarget = false;
-                _dots[i] = dot;
-            }
-
-            var titleGo = GameUIResources.CreateText(Steps[0].TitleFallback, card.transform,
-                GameUIResources.ButtonFontSize + 14, TextAnchor.MiddleCenter, GameUIResources.TextColor);
-            titleGo.name = "Title";
-            _titleText = titleGo.GetComponent<Text>();
-            _titleText.fontStyle = FontStyle.Bold;
-            GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.08f, 0.72f, 0.60f, 0.88f);
-
-            var bodyGo = GameUIResources.CreateText(Steps[0].BodyFallback, card.transform,
-                GameUIResources.ButtonFontSize, TextAnchor.MiddleCenter, GameUIResources.MutedText);
-            bodyGo.name = "Body";
-            _bodyText = bodyGo.GetComponent<Text>();
-            _bodyText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            GameUIResources.SetAnchors(bodyGo.GetComponent<RectTransform>(), 0.10f, 0.24f, 0.90f, 0.58f);
-
-            var buttonRow = new GameObject("ButtonRow", typeof(RectTransform));
-            buttonRow.transform.SetParent(card.transform, false);
-            var rowRect = buttonRow.GetComponent<RectTransform>();
-            GameUIResources.SetAnchors(rowRect, 0.10f, 0.16f, 0.90f, 0.22f);
-
-            var skipGo = GameUIResources.CreateButton("SKIP", buttonRow.transform,
-                GameUIResources.ButtonWidth * 0.55f, GameUIResources.SmallButtonHeight);
-            skipGo.name = "SkipButton";
-            GameUIResources.ApplyTextButtonStyle(skipGo);
-            var skipRect = skipGo.GetComponent<RectTransform>();
-            skipRect.anchorMin = new Vector2(0f, 0f);
-            skipRect.anchorMax = new Vector2(0.35f, 1f);
-            skipRect.offsetMin = Vector2.zero;
-            skipRect.offsetMax = Vector2.zero;
-            _skipButton = skipGo.GetComponent<Button>();
-
-            var nextGo = GameUIResources.CreateButton("NEXT", buttonRow.transform,
-                GameUIResources.ButtonWidth * 0.55f, GameUIResources.SmallButtonHeight);
-            nextGo.name = "NextButton";
-            GameUIResources.ApplyPrimaryStyle(nextGo);
-            var nextRect = nextGo.GetComponent<RectTransform>();
-            nextRect.anchorMin = new Vector2(0.42f, 0f);
-            nextRect.anchorMax = new Vector2(1f, 1f);
-            nextRect.offsetMin = Vector2.zero;
-            nextRect.offsetMax = Vector2.zero;
-            _nextButton = nextGo.GetComponent<Button>();
-            _nextLabel = _nextButton.GetComponentInChildren<Text>();
-
-            _nextButton.onClick.AddListener(OnNextPressed);
-            _skipButton.onClick.AddListener(OnSkipPressed);
-        }
 
         private void OnNextPressed()
         {

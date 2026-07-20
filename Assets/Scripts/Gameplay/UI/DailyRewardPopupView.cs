@@ -23,76 +23,15 @@ namespace RingFlow.Gameplay.UI
 
         private void Awake()
         {
-            if (NeedsSelfBuild()) { BuildUI(); ApplyBaseStyling(); }
-            else { BindReferencesFromChildren(); ApplyBaseStyling(); }
-        }
-
-        private bool NeedsSelfBuild()
-        {
-            if (transform.childCount == 0) return true;
             BindReferencesFromChildren();
-            return ClaimButton == null || CloseButton == null;
+            ApplyBaseStyling();
         }
 
-        public void BuildUI()
-        {
-            var overlay = GetComponent<Image>();
-            if (overlay != null)
-            {
-                overlay.color = GameUIResources.OverlayMedium;
-                overlay.raycastTarget = true;
-            }
-
-            var cardGo = GameUIResources.CreateCard("Card", transform, GameUIResources.SurfaceDark);
-            GameUIResources.SetAnchors(cardGo.GetComponent<RectTransform>(), 0.08f, 0.14f, 0.92f, 0.86f);
-            CardGroup = cardGo.GetComponent<CanvasGroup>();
-
-            // Accent bar
-            var accent = new GameObject("AccentBar", typeof(RectTransform), typeof(Image));
-            accent.transform.SetParent(cardGo.transform, false);
-            GameUIResources.SetAnchors(accent.GetComponent<RectTransform>(), 0.08f, 0.80f, 0.92f, 0.82f);
-            accent.GetComponent<Image>().color = GameUIResources.AccentColor;
-
-            var titleGo = GameUIResources.CreateDisplayText("DAILY REWARD", cardGo.transform, 36, GameUIResources.AccentColor);
-            titleGo.name = "Title";
-            TitleText = titleGo.GetComponent<Text>();
-            GameUIResources.SetAnchors(titleGo.GetComponent<RectTransform>(), 0.05f, 0.68f, 0.95f, 0.78f);
-
-            // Day circle
-            var dayBg = new GameObject("DayCircle", typeof(RectTransform), typeof(Image));
-            dayBg.transform.SetParent(cardGo.transform, false);
-            GameUIResources.SetAnchors(dayBg.GetComponent<RectTransform>(), 0.35f, 0.44f, 0.65f, 0.66f);
-            dayBg.GetComponent<Image>().color = new Color(0.12f, 0.14f, 0.20f);
-            dayBg.GetComponent<Image>().sprite = GameUIResources.GetRoundedSprite();
-            dayBg.GetComponent<Image>().type = Image.Type.Sliced;
-
-            var dayGo = GameUIResources.CreateDisplayText("Day 1", cardGo.transform, 52, GameUIResources.TextOnDark);
-            dayGo.name = "Day";
-            DayText = dayGo.GetComponent<Text>();
-            GameUIResources.SetAnchors(dayGo.GetComponent<RectTransform>(), 0.20f, 0.46f, 0.80f, 0.64f);
-
-            var streakGo = GameUIResources.CreateText("", cardGo.transform, 14, TextAnchor.MiddleCenter, GameUIResources.MutedTextDark);
-            streakGo.name = "Streak";
-            StreakText = streakGo.GetComponent<Text>();
-            GameUIResources.SetAnchors(streakGo.GetComponent<RectTransform>(), 0.15f, 0.38f, 0.85f, 0.42f);
-
-            var rewardGo = GameUIResources.CreateText("", cardGo.transform, 22, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
-            rewardGo.name = "Reward";
-            RewardText = rewardGo.GetComponent<Text>();
-            GameUIResources.SetAnchors(rewardGo.GetComponent<RectTransform>(), 0.12f, 0.30f, 0.88f, 0.36f);
-
-            _claimBtn = GameUIResources.CreateButton("CLAIM", cardGo.transform, 300, 60);
-            _claimBtn.name = "Btn_CLAIM";
-            GameUIResources.ApplyAccentStyle(_claimBtn);
-            ClaimButton = _claimBtn.GetComponent<Button>();
-            GameUIResources.SetAnchors(_claimBtn.GetComponent<RectTransform>(), 0.18f, 0.16f, 0.82f, 0.26f);
-
-            _closeBtn = GameUIResources.CreateButton("CLOSE", cardGo.transform, 120, 38);
-            _closeBtn.name = "Btn_CLOSE";
-            GameUIResources.ApplyTextButtonStyle(_closeBtn);
-            CloseButton = _closeBtn.GetComponent<Button>();
-            GameUIResources.SetAnchors(_closeBtn.GetComponent<RectTransform>(), 0.40f, 0.04f, 0.60f, 0.10f);
-        }
+        /// <summary>
+        /// Satisfies IAuthoredView. UI hierarchy is now loaded from prefab;
+        /// this method is kept for interface compliance (Editor UI Studio tooling).
+        /// </summary>
+        public void BuildUI() { }
 
         public void Localize(ILocalizationService loc)
         {
