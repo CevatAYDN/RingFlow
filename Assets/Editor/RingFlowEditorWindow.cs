@@ -63,6 +63,8 @@ namespace RingFlow.Editor
         private bool _cachedHasEventSystem;
         private float _cachedWindowWidth;
         private bool _cachedCompactLayout;
+        private int _cachedErrorCount;
+        private int _cachedWarningCount;
 
         [MenuItem("Ring Flow/Dashboard &G", false, 0)]
         public static void ShowWindow()
@@ -159,6 +161,11 @@ namespace RingFlow.Editor
             EditorSceneManager.sceneOpened += OnAnySceneChanged;
             EditorSceneManager.sceneClosed += OnAnySceneClosed;
             EditorSceneManager.newSceneCreated += OnNewSceneCreated;
+
+            _cachedWindowWidth = position.width;
+            _cachedCompactLayout = _cachedWindowWidth < 980f;
+            _cachedActiveLevel = Selection.activeObject as LevelDataSO;
+            UpdateCachedEditors();
         }
 
         private void OnAnySceneChanged(UnityEngine.SceneManagement.Scene scene, OpenSceneMode mode)
@@ -254,6 +261,8 @@ namespace RingFlow.Editor
                 _cachedActiveLevel = Selection.activeObject as LevelDataSO;
                 _cachedWindowWidth = position.width;
                 _cachedCompactLayout = _cachedWindowWidth < 980f;
+                _cachedErrorCount = LogMonitor.ErrorCount;
+                _cachedWarningCount = LogMonitor.WarningCount;
                 UpdateCachedEditors();
             }
 
@@ -366,12 +375,6 @@ namespace RingFlow.Editor
                 _pendingSelectedTab = tabIndex;
                 _scroll = Vector2.zero;
                 EditorPrefs.SetInt(EditorPrefsKeys.SelectedTab, tabIndex);
-                if (_cachedAssetEditor != null)
-                {
-                    DestroyImmediate(_cachedAssetEditor);
-                    _cachedAssetEditor = null;
-                    _cachedAssetObj = null;
-                }
                 GUI.FocusControl(null);
                 Event.current.Use();
                 Repaint();
@@ -414,12 +417,6 @@ namespace RingFlow.Editor
                 _pendingSelectedTab = tabIndex;
                 _scroll = Vector2.zero;
                 EditorPrefs.SetInt(EditorPrefsKeys.SelectedTab, tabIndex);
-                if (_cachedAssetEditor != null)
-                {
-                    DestroyImmediate(_cachedAssetEditor);
-                    _cachedAssetEditor = null;
-                    _cachedAssetObj = null;
-                }
                 GUI.FocusControl(null);
                 Event.current.Use();
                 Repaint();
@@ -545,8 +542,8 @@ namespace RingFlow.Editor
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    int errCount = LogMonitor.ErrorCount;
-                    int warnCount = LogMonitor.WarningCount;
+                    int errCount = _cachedErrorCount;
+                    int warnCount = _cachedWarningCount;
                     if (errCount > 0)
                     {
                         GUI.color = EditorPaths.EditorColors.Error;
@@ -942,12 +939,6 @@ namespace RingFlow.Editor
             {
                 _pendingSelectedConfigSubTab = index;
                 _scroll = Vector2.zero;
-                if (_cachedAssetEditor != null)
-                {
-                    DestroyImmediate(_cachedAssetEditor);
-                    _cachedAssetEditor = null;
-                    _cachedAssetObj = null;
-                }
                 GUI.FocusControl(null);
                 Event.current.Use();
                 Repaint();
