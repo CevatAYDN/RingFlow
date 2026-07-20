@@ -23,32 +23,31 @@ namespace RingFlow.Editor
             DrawFoldoutHeader();
             if (!IsFoldedOut) return;
 
-            RingFlowEditorUtils.BeginSectionBox("Yapılandırma Varlıkları (Config Assets)", "Tüm oyun yapılandırma varlıklarına (tek veri kaynağı) buradan ulaşın.");
-
-            using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
+            using (RingFlowEditorUtils.BeginSectionBoxScope("Yapılandırma Varlıkları (Config Assets)", "Tüm oyun yapılandırma varlıklarına (tek veri kaynağı) buradan ulaşın."))
             {
-                EditorGUILayout.LabelField("Yapılandırma Adı", EditorStyles.miniBoldLabel, GUILayout.Width(280f));
-                EditorGUILayout.LabelField("Durum", EditorStyles.miniBoldLabel, GUILayout.Width(60f));
-                EditorGUILayout.LabelField("İşlemler", EditorStyles.miniBoldLabel, GUILayout.ExpandWidth(true));
+                using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
+                {
+                    EditorGUILayout.LabelField("Yapılandırma Adı", EditorStyles.miniBoldLabel, GUILayout.Width(280f));
+                    EditorGUILayout.LabelField("Durum", EditorStyles.miniBoldLabel, GUILayout.Width(60f));
+                    EditorGUILayout.LabelField("İşlemler", EditorStyles.miniBoldLabel, GUILayout.ExpandWidth(true));
+                }
+
+                DrawRow<GameConfigDatabaseSO>("Oyun Veritabanı (GameConfigDatabase)", EditorPaths.GameConfigDatabaseKey, EditorPaths.GameConfigDbPath, 0);
+                DrawRow<GameFeelConfigSO>("Oyun Hissiyatı (Game Feel)", EditorPaths.GameFeelConfigKey, EditorPaths.GameFeelConfigPath, 1);
+                DrawRow<RingColorPaletteSO>("Halka Renk Paleti", EditorPaths.RingColorPaletteKey, EditorPaths.RingColorPalettePath, 2);
+                DrawRow<AudioConfigSO>("Ses Yapılandırması (Audio)", EditorPaths.AudioConfigKey, EditorPaths.AudioConfigPath, 3);
+                DrawRow<UIThemeConfigSO>("Arayüz Teması (UI Theme)", EditorPaths.UIThemeConfigKey, EditorPaths.UIThemeConfigPath, 4);
+
+                EditorGUILayout.Space(6f);
+                EditorGUILayout.LabelField("DATA-DRIVEN VARLIKLAR", EditorStyles.boldLabel);
+                EditorGUILayout.Space(2f);
+
+                DrawRow<StoreCatalogSO>("Mağaza Kataloğu (StoreCatalog)", EditorPaths.StoreCatalogKey, EditorPaths.StoreCatalogPath, 5);
+                DrawRow<LocalizationConfigSO>("Yerelleştirme (LocalizationConfig)", EditorPaths.LocalizationConfigKey, EditorPaths.LocalizationConfigPath, 6);
+                DrawRow<RingMechanicDataSO>("Halka Mekanik Verisi (RingMechanicData)", EditorPaths.RingMechanicDataKey, EditorPaths.RingMechanicDataPath, 7);
+                DrawRow<ThemeSkinDatabaseSO>("Tema/Skin Veritabanı (ThemeSkinDatabase)", EditorPaths.ThemeSkinDatabaseKey, EditorPaths.ThemeSkinDatabasePath, 8);
+                DrawRow<ScreenRegistrySO>("Ekran Kayıt Defteri (ScreenRegistry)", EditorPaths.ScreenRegistryKey, EditorPaths.ScreenRegistryPath, 9);
             }
-
-            DrawRow<GameConfigDatabaseSO>("Oyun Veritabanı (GameConfigDatabase)", EditorPaths.GameConfigDatabaseKey, EditorPaths.GameConfigDbPath, 0);
-            DrawRow<GameFeelConfigSO>("Oyun Hissiyatı (Game Feel)", EditorPaths.GameFeelConfigKey, EditorPaths.GameFeelConfigPath, 1);
-            DrawRow<RingColorPaletteSO>("Halka Renk Paleti", EditorPaths.RingColorPaletteKey, EditorPaths.RingColorPalettePath, 2);
-            DrawRow<AudioConfigSO>("Ses Yapılandırması (Audio)", EditorPaths.AudioConfigKey, EditorPaths.AudioConfigPath, 3);
-            DrawRow<UIThemeConfigSO>("Arayüz Teması (UI Theme)", EditorPaths.UIThemeConfigKey, EditorPaths.UIThemeConfigPath, 4);
-
-            EditorGUILayout.Space(6f);
-            EditorGUILayout.LabelField("DATA-DRIVEN VARLIKLAR", EditorStyles.boldLabel);
-            EditorGUILayout.Space(2f);
-
-            DrawRow<StoreCatalogSO>("Mağaza Kataloğu (StoreCatalog)", EditorPaths.StoreCatalogKey, EditorPaths.StoreCatalogPath, 5);
-            DrawRow<LocalizationConfigSO>("Yerelleştirme (LocalizationConfig)", EditorPaths.LocalizationConfigKey, EditorPaths.LocalizationConfigPath, 6);
-            DrawRow<RingMechanicDataSO>("Halka Mekanik Verisi (RingMechanicData)", EditorPaths.RingMechanicDataKey, EditorPaths.RingMechanicDataPath, 7);
-            DrawRow<ThemeSkinDatabaseSO>("Tema/Skin Veritabanı (ThemeSkinDatabase)", EditorPaths.ThemeSkinDatabaseKey, EditorPaths.ThemeSkinDatabasePath, 8);
-            DrawRow<ScreenRegistrySO>("Ekran Kayıt Defteri (ScreenRegistry)", EditorPaths.ScreenRegistryKey, EditorPaths.ScreenRegistryPath, 9);
-
-            RingFlowEditorUtils.EndSectionBox();
         }
 
         private void DrawRow<T>(string label, string resourceKey, string assetPath, int rowIndex) where T : ScriptableObject

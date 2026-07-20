@@ -21,18 +21,17 @@ namespace RingFlow.Editor
             DrawFoldoutHeader();
             if (!IsFoldedOut) return;
 
-            RingFlowEditorUtils.BeginSectionBox("PlayMode Çalışma Modları & Yaşam Döngüsü", "Oyun durumlarını test edin, ilerlemeyi sıfırlayın ve ekonomi servislerini izleyin.");
-
-            if (!Application.isPlaying)
+            using (RingFlowEditorUtils.BeginSectionBoxScope("PlayMode Çalışma Modları & Yaşam Döngüsü", "Oyun durumlarını test edin, ilerlemeyi sıfırlayın ve ekonomi servislerini izleyin."))
             {
-                DrawNonPlayMode();
+                if (!Application.isPlaying)
+                {
+                    DrawNonPlayMode();
+                }
+                else
+                {
+                    DrawPlayMode();
+                }
             }
-            else
-            {
-                DrawPlayMode();
-            }
-
-            RingFlowEditorUtils.EndSectionBox();
         }
 
         private void DrawNonPlayMode()

@@ -73,69 +73,71 @@ namespace RingFlow.Editor
 
             bool narrow = _cachedNarrow;
 
-            RingFlowEditorUtils.BeginSectionBox("Seviye Arama & Hızlı Atlama", "Seviye numarasına göre hızlı arama ve doğrudan düzenleme yapın.");
-
-            if (narrow)
+            using (RingFlowEditorUtils.BeginSectionBoxScope("Seviye Arama & Hızlı Atlama", "Seviye numarasına göre hızlı arama ve doğrudan düzenleme yapın."))
             {
-                _searchFilter = EditorGUILayout.TextField("Ara", _searchFilter);
-                _jumpToLevel = Mathf.Clamp(EditorGUILayout.IntField("Seviye #", _jumpToLevel), 1, _cachedTotalLevels);
-                using (new EditorGUILayout.HorizontalScope())
+                if (narrow)
                 {
-                    if (GUILayout.Button("Aç") && IsUserEvent())
-                        OpenLevel(_jumpToLevel);
-                    if (GUILayout.Button("Sonraki") && IsUserEvent())
+                    _searchFilter = EditorGUILayout.TextField("Ara", _searchFilter);
+                    _jumpToLevel = Mathf.Clamp(EditorGUILayout.IntField("Seviye #", _jumpToLevel), 1, _cachedTotalLevels);
+                    using (new EditorGUILayout.HorizontalScope())
                     {
-                        _jumpToLevel = Mathf.Clamp(_jumpToLevel + 1, 1, _cachedTotalLevels);
-                        OpenLevel(_jumpToLevel);
-                    }
-                    if (GUILayout.Button("▶ Oyna") && IsUserEvent())
-                        EditorPlayFromLevel.Play(_jumpToLevel);
-                }
-            }
-            else
-            {
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    EditorGUI.BeginChangeCheck();
-                    _searchFilter = EditorGUILayout.TextField("Ara", _searchFilter, GUILayout.Width(RingFlowEditorUtils.GetResponsiveWidth(180f, 300f, 0.28f)));
-                    if (EditorGUI.EndChangeCheck())
-                        _searchFilter = _searchFilter ?? string.Empty;
-                    GUILayout.FlexibleSpace();
-                    _jumpToLevel = Mathf.Clamp(
-                        EditorGUILayout.IntField("Seviye #", _jumpToLevel, GUILayout.Width(160f)),
-                        1, _cachedTotalLevels);
-                    if (GUILayout.Button("Aç", GUILayout.Width(80f)))
-                    {
-                        if (Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseUp || Event.current.type == EventType.Used)
+                        if (GUILayout.Button("Aç") && IsUserEvent())
                             OpenLevel(_jumpToLevel);
-                    }
-                    if (GUILayout.Button("Sonraki", GUILayout.Width(80f)))
-                    {
-                        if (Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseUp || Event.current.type == EventType.Used)
+                        if (GUILayout.Button("Sonraki") && IsUserEvent())
                         {
                             _jumpToLevel = Mathf.Clamp(_jumpToLevel + 1, 1, _cachedTotalLevels);
                             OpenLevel(_jumpToLevel);
                         }
-                    }
-                    if (GUILayout.Button("▶ Oyna", GUILayout.Width(80f)))
-                    {
-                        if (Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseUp || Event.current.type == EventType.Used)
+                        if (GUILayout.Button("▶ Oyna") && IsUserEvent())
                             EditorPlayFromLevel.Play(_jumpToLevel);
+                    }
+                }
+                else
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        EditorGUI.BeginChangeCheck();
+                        _searchFilter = EditorGUILayout.TextField("Ara", _searchFilter, GUILayout.Width(RingFlowEditorUtils.GetResponsiveWidth(180f, 300f, 0.28f)));
+                        if (EditorGUI.EndChangeCheck())
+                            _searchFilter = _searchFilter ?? string.Empty;
+                        GUILayout.FlexibleSpace();
+                        _jumpToLevel = Mathf.Clamp(
+                            EditorGUILayout.IntField("Seviye #", _jumpToLevel, GUILayout.Width(160f)),
+                            1, _cachedTotalLevels);
+                        if (GUILayout.Button("Aç", GUILayout.Width(80f)))
+                        {
+                            if (Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseUp || Event.current.type == EventType.Used)
+                                OpenLevel(_jumpToLevel);
+                        }
+                        if (GUILayout.Button("Sonraki", GUILayout.Width(80f)))
+                        {
+                            if (Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseUp || Event.current.type == EventType.Used)
+                            {
+                                _jumpToLevel = Mathf.Clamp(_jumpToLevel + 1, 1, _cachedTotalLevels);
+                                OpenLevel(_jumpToLevel);
+                            }
+                        }
+                        if (GUILayout.Button("▶ Oyna", GUILayout.Width(80f)))
+                        {
+                            if (Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseUp || Event.current.type == EventType.Used)
+                                EditorPlayFromLevel.Play(_jumpToLevel);
+                        }
                     }
                 }
             }
 
             // ── Dışa / İçe Aktarım Butonları ──
-            RingFlowEditorUtils.BeginSectionBox("Seviye Dışa / İçe Aktarım (JSON)", "Seviyeleri JSON formatında dışa aktarın veya harici bir JSON'dan içe aktarın.");
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                if (GUILayout.Button(new GUIContent("📤 JSON Dışa Aktar", "Seçilen seviyeyi veya tüm üretilmiş seviyeleri JSON dosyasına aktarır."), GUILayout.Height(26)))
-                    ExportLevelsToJson();
-                if (GUILayout.Button(new GUIContent("📥 JSON İçe Aktar", "Bir JSON dosyasından seviye verilerini yükler."), GUILayout.Height(26)))
-                    ImportLevelsFromJson();
-            }
-            EditorGUILayout.HelpBox("Dışa aktarılan JSON dosyaları, seviye düzenini harici araçlarla paylaşmanızı veya yedeklemenizi sağlar.", MessageType.Info);
-            RingFlowEditorUtils.EndSectionBox();
+                using (RingFlowEditorUtils.BeginSectionBoxScope("Seviye Dışa / İçe Aktarım (JSON)", "Seviyeleri JSON formatında dışa aktarın veya harici bir JSON'dan içe aktarın."))
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        if (GUILayout.Button(new GUIContent("📤 JSON Dışa Aktar", "Seçilen seviyeyi veya tüm üretilmiş seviyeleri JSON dosyasına aktarır."), GUILayout.Height(26)))
+                            ExportLevelsToJson();
+                        if (GUILayout.Button(new GUIContent("📥 JSON İçe Aktar", "Bir JSON dosyasından seviye verilerini yükler."), GUILayout.Height(26)))
+                            ImportLevelsFromJson();
+                    }
+                    EditorGUILayout.HelpBox("Dışa aktarılan JSON dosyaları, seviye düzenini harici araçlarla paylaşmanızı veya yedeklemenizi sağlar.", MessageType.Info);
+                }
 
             EditorGUILayout.Space(EditorPaths.EditorSizes.SectionSpacing);
 
@@ -243,44 +245,41 @@ namespace RingFlow.Editor
             int cols = Mathf.Max(1, _cachedCols);
             float gridButtonWidth = Mathf.Clamp((availableWidth - 24f) / cols, 32f, 54f);
 
-            RingFlowEditorUtils.BeginSectionBox("Seviye Grid Görünümü", "Seviye durumlarını yeşil (üretilmiş) ve gri (boş) olarak gösterir.");
-
-            _scroll = EditorGUILayout.BeginScrollView(_scroll, GUILayout.Height(visibleHeight));
-
-            bool hasFilter = !string.IsNullOrEmpty(_searchFilter);
-            int filteredCount = ComputeFilteredTill();
-            
-            // Calculate absolute layout height
-            int rows = (int)System.Math.Ceiling((double)filteredCount / cols);
-            float rowHeight = GridButtonHeight + RowSpacing;
-            float totalHeight = rows * rowHeight;
-
-            // Reserve single layout rect
-            Rect gridRect = GUILayoutUtility.GetRect(availableWidth, totalHeight);
-
-            int drawIndex = 0;
-            for (int level = 1; level <= _cachedTotalLevels; level++)
+            using (RingFlowEditorUtils.BeginSectionBoxScope("Seviye Grid Görünümü", "Seviye durumlarını yeşil (üretilmiş) ve gri (boş) olarak gösterir."))
             {
-                if (hasFilter && !level.ToString().Contains(_searchFilter))
-                    continue;
+                _scroll = EditorGUILayout.BeginScrollView(_scroll, GUILayout.Height(visibleHeight));
 
-                int r = drawIndex / cols;
-                int c = drawIndex % cols;
+                bool hasFilter = !string.IsNullOrEmpty(_searchFilter);
+                int filteredCount = ComputeFilteredTill();
+                
+                int rows = (int)System.Math.Ceiling((double)filteredCount / cols);
+                float rowHeight = GridButtonHeight + RowSpacing;
+                float totalHeight = rows * rowHeight;
 
-                Rect buttonRect = new Rect(
-                    gridRect.x + c * (gridButtonWidth + 4f),
-                    gridRect.y + r * rowHeight,
-                    gridButtonWidth,
-                    GridButtonHeight
-                );
+                Rect gridRect = GUILayoutUtility.GetRect(availableWidth, totalHeight);
 
-                DrawLevelButton(level, buttonRect);
-                drawIndex++;
+                int drawIndex = 0;
+                for (int level = 1; level <= _cachedTotalLevels; level++)
+                {
+                    if (hasFilter && !level.ToString().Contains(_searchFilter))
+                        continue;
+
+                    int r = drawIndex / cols;
+                    int c = drawIndex % cols;
+
+                    Rect buttonRect = new Rect(
+                        gridRect.x + c * (gridButtonWidth + 4f),
+                        gridRect.y + r * rowHeight,
+                        gridButtonWidth,
+                        GridButtonHeight
+                    );
+
+                    DrawLevelButton(level, buttonRect);
+                    drawIndex++;
+                }
+
+                EditorGUILayout.EndScrollView();
             }
-
-            EditorGUILayout.EndScrollView();
-
-            RingFlowEditorUtils.EndSectionBox();
 
             EditorGUILayout.HelpBox(
                 "Yeşil düğmeler üretilmiş seviyeleri gösterir. Bir seviyeye tıklayınca Inspector'da " +

@@ -215,6 +215,29 @@ namespace RingFlow.Editor
             EditorGUILayout.Space(6f);
         }
 
+        /// <summary>
+        /// Exception-safe wrapper for <see cref="BeginSectionBox"/> / <see cref="EndSectionBox"/>.
+        /// Use with <c>using</c> to guarantee <c>EndSectionBox()</c> is called even if
+        /// the content throws, preventing GUILayout state corruption.
+        /// </summary>
+        public static SectionBoxScope BeginSectionBoxScope(string title, string subtitle = null)
+        {
+            BeginSectionBox(title, subtitle);
+            return new SectionBoxScope();
+        }
+
+        /// <summary>
+        /// Calls <see cref="EndSectionBox()"/> on dispose. Designed for use with
+        /// <c>using (RingFlowEditorUtils.BeginSectionBoxScope(...))</c>.
+        /// </summary>
+        public readonly struct SectionBoxScope : System.IDisposable
+        {
+            public void Dispose()
+            {
+                EndSectionBox();
+            }
+        }
+
         // -----------------------------------------------------------------
         //  Foldout section (shared by dashboard + SO editors)
         // -----------------------------------------------------------------

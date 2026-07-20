@@ -31,25 +31,25 @@ namespace RingFlow.Editor
             DrawFoldoutHeader();
             if (!IsFoldedOut) return;
 
-            RingFlowEditorUtils.BeginSectionBox("Sahne Kurulum Kontrolleri", "Aktif veya üretilmiş seviyenin sahne tahtasını kurun ya da temizleyin.");
-
-            using (new EditorGUILayout.HorizontalScope())
+            using (RingFlowEditorUtils.BeginSectionBoxScope("Sahne Kurulum Kontrolleri", "Aktif veya üretilmiş seviyenin sahne tahtasını kurun ya da temizleyin."))
             {
-                if (GUILayout.Button("Sahneyi Kur (Build Board)", GUILayout.Height(32)))
-                    BuildInScene();
-
-                if (GUILayout.Button("Sahneyi Temizle (Clear Board)", GUILayout.Height(32)))
+                using (new EditorGUILayout.HorizontalScope())
                 {
-                    ClearScene();
-                    _previewMoves.Clear();
-                    _currentPreviewIndex = -1;
-                    _solveStatusMsg = "";
+                    if (GUILayout.Button("Sahneyi Kur (Build Board)", GUILayout.Height(32)))
+                        BuildInScene();
+
+                    if (GUILayout.Button("Sahneyi Temizle (Clear Board)", GUILayout.Height(32)))
+                    {
+                        ClearScene();
+                        _previewMoves.Clear();
+                        _currentPreviewIndex = -1;
+                        _solveStatusMsg = "";
+                    }
                 }
             }
 
-            RingFlowEditorUtils.EndSectionBox();
-
-            RingFlowEditorUtils.BeginSectionBox("Çözücü Önizleme (AI Solver Preview)", "Sahnedeki güncel tahta durumuna göre yapay zeka hamle önizlemelerini takip edin.");
+            using (RingFlowEditorUtils.BeginSectionBoxScope("Çözücü Önizleme (AI Solver Preview)", "Sahnedeki güncel tahta durumuna göre yapay zeka hamle önizlemelerini takip edin."))
+            {
 
             using (new EditorGUILayout.HorizontalScope())
             {
@@ -136,7 +136,7 @@ namespace RingFlow.Editor
                 }
             }
 
-            RingFlowEditorUtils.EndSectionBox();
+            }
         }
 
         public void BuildFromDashboard()

@@ -27,6 +27,8 @@ namespace RingFlow.Editor
         public const string FoldDataAssets     = "RingFlow.Foldout.Data.Assets";
         public const string FoldDataCrossSO    = "RingFlow.Foldout.Data.CrossSO";
         public const string FoldDataLocEditor  = "RingFlow.Foldout.Data.LocEditor";
+        public const string FoldPlayerData     = "RingFlow.Foldout.PlayerData";
+
 
         // ── New data-driven config section foldout state (Bölüm 3.3) ──
         public const string FoldStoreCatalog     = "RingFlow.Foldout.StoreCatalog";

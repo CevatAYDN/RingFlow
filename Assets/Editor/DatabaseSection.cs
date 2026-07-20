@@ -52,108 +52,103 @@ namespace RingFlow.Editor
                 return;
             }
 
-            RingFlowEditorUtils.BeginSectionBox("Veritabanı Yapılandırması", "Oyun veritabanındaki zorluk derecelerini, renk eğrilerini ve dünyaları yönetin.");
-
-            EditorGUILayout.ObjectField("Asset Dosyası", _database, typeof(GameConfigDatabaseSO), false);
-            EditorGUILayout.Space(2f);
-
-            Undo.RecordObject(_database, "Edit GameConfigDatabase");
-
-            EditorGUI.BeginChangeCheck();
-
-            // RESP-1: Responsive split — compact (narrow) vs side-by-side (wide)
-            bool narrow = RingFlowEditorUtils.IsNarrowWidth(680f);
-
-            // Hızlı ön ayar butonları — tek tıkla tüm eğriler ölçeklenir
-            EditorGUILayout.LabelField("Hızlı Kapsam Seçimi", EditorStyles.miniBoldLabel);
-            using (new EditorGUILayout.HorizontalScope())
+            using (RingFlowEditorUtils.BeginSectionBoxScope("Veritabanı Yapılandırması", "Oyun veritabanındaki zorluk derecelerini, renk eğrilerini ve dünyaları yönetin."))
             {
-                if (GUILayout.Button("100 Level\n(MVP)", GUILayout.Height(36)))
-                {
-                    if (EditorUtility.DisplayDialog("Hızlı Ön Ayar — 100 Level",
-                        "TotalLevels=100 olarak ayarlanıp tüm eğriler otomatik ölçeklenecek.\n(DifficultyBands, ColorCurve, Worlds yeniden oluşturulacak)", "Uygula", "İptal"))
-                    {
-                        Undo.RecordObject(_database, "Preset 100 Level");
-                        _database.TotalLevels = 100;
-                        _database.InitializeDefaults();
-                        EditorUtility.SetDirty(_database);
-                        AssetDatabase.SaveAssets();
-                    }
-                }
-                if (GUILayout.Button("500 Level\n(Beta)", GUILayout.Height(36)))
-                {
-                    if (EditorUtility.DisplayDialog("Hızlı Ön Ayar — 500 Level",
-                        "TotalLevels=500 olarak ayarlanıp tüm eğriler otomatik ölçeklenecek.", "Uygula", "İptal"))
-                    {
-                        Undo.RecordObject(_database, "Preset 500 Level");
-                        _database.TotalLevels = 500;
-                        _database.InitializeDefaults();
-                        EditorUtility.SetDirty(_database);
-                        AssetDatabase.SaveAssets();
-                    }
-                }
-                if (GUILayout.Button("2000 Level\n(GDD Tam)", GUILayout.Height(36)))
-                {
-                    if (EditorUtility.DisplayDialog("Hızlı Ön Ayar — 2000 Level (GDD)",
-                        "TotalLevels=2000 olarak ayarlanıp tüm eğriler GDD tam kapsamına göre ölçeklenecek.", "Uygula", "İptal"))
-                    {
-                        Undo.RecordObject(_database, "Preset 2000 Level");
-                        _database.TotalLevels = 2000;
-                        _database.InitializeDefaults();
-                        EditorUtility.SetDirty(_database);
-                        AssetDatabase.SaveAssets();
-                    }
-                }
-            }
-            EditorGUILayout.Space(6f);
+                EditorGUILayout.ObjectField("Asset Dosyası", _database, typeof(GameConfigDatabaseSO), false);
+                EditorGUILayout.Space(2f);
 
-            if (narrow)
-            {
-                _database.TotalLevels        = EditorGUILayout.IntField("Toplam Seviye Sayısı", _database.TotalLevels);
-                _database.LevelsPerThemeStep = EditorGUILayout.IntField("Tema Başına Seviye Adımı", _database.LevelsPerThemeStep);
-            }
-            else
-            {
+                Undo.RecordObject(_database, "Edit GameConfigDatabase");
+
+                EditorGUI.BeginChangeCheck();
+
+                bool narrow = RingFlowEditorUtils.IsNarrowWidth(680f);
+
+                EditorGUILayout.LabelField("Hızlı Kapsam Seçimi", EditorStyles.miniBoldLabel);
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    _database.TotalLevels        = EditorGUILayout.IntField("Toplam Seviye", _database.TotalLevels, GUILayout.Width(260f));
-                    _database.LevelsPerThemeStep = EditorGUILayout.IntField("Tema Adımı", _database.LevelsPerThemeStep, GUILayout.Width(200f));
+                    if (GUILayout.Button("100 Level\n(MVP)", GUILayout.Height(36)))
+                    {
+                        if (EditorUtility.DisplayDialog("Hızlı Ön Ayar — 100 Level",
+                            "TotalLevels=100 olarak ayarlanıp tüm eğriler otomatik ölçeklenecek.\n(DifficultyBands, ColorCurve, Worlds yeniden oluşturulacak)", "Uygula", "İptal"))
+                        {
+                            Undo.RecordObject(_database, "Preset 100 Level");
+                            _database.TotalLevels = 100;
+                            _database.InitializeDefaults();
+                            EditorUtility.SetDirty(_database);
+                            AssetDatabase.SaveAssets();
+                        }
+                    }
+                    if (GUILayout.Button("500 Level\n(Beta)", GUILayout.Height(36)))
+                    {
+                        if (EditorUtility.DisplayDialog("Hızlı Ön Ayar — 500 Level",
+                            "TotalLevels=500 olarak ayarlanıp tüm eğriler otomatik ölçeklenecek.", "Uygula", "İptal"))
+                        {
+                            Undo.RecordObject(_database, "Preset 500 Level");
+                            _database.TotalLevels = 500;
+                            _database.InitializeDefaults();
+                            EditorUtility.SetDirty(_database);
+                            AssetDatabase.SaveAssets();
+                        }
+                    }
+                    if (GUILayout.Button("2000 Level\n(GDD Tam)", GUILayout.Height(36)))
+                    {
+                        if (EditorUtility.DisplayDialog("Hızlı Ön Ayar — 2000 Level (GDD)",
+                            "TotalLevels=2000 olarak ayarlanıp tüm eğriler GDD tam kapsamına göre ölçeklenecek.", "Uygula", "İptal"))
+                        {
+                            Undo.RecordObject(_database, "Preset 2000 Level");
+                            _database.TotalLevels = 2000;
+                            _database.InitializeDefaults();
+                            EditorUtility.SetDirty(_database);
+                            AssetDatabase.SaveAssets();
+                        }
+                    }
                 }
-            }
+                EditorGUILayout.Space(6f);
 
-            // Live consistency hint (data-driven, no hardcode)
-            int computedTotal = _database.TotalWorlds * _database.LevelsPerWorld;
-            if (_database.TotalWorlds > 0 && _database.LevelsPerWorld > 0 && _database.TotalLevels != computedTotal)
-            {
-                EditorGUILayout.HelpBox(
-                    $"TotalLevels ({_database.TotalLevels}) ≠ TotalWorlds ({_database.TotalWorlds}) × LevelsPerWorld ({_database.LevelsPerWorld}) = {computedTotal}. " +
-                    "'Hızlı Ön Ayar' butonları veya InitializeDefaults ile senkronize edebilirsiniz.",
-                    MessageType.Warning);
-            }
+                if (narrow)
+                {
+                    _database.TotalLevels        = EditorGUILayout.IntField("Toplam Seviye Sayısı", _database.TotalLevels);
+                    _database.LevelsPerThemeStep = EditorGUILayout.IntField("Tema Başına Seviye Adımı", _database.LevelsPerThemeStep);
+                }
+                else
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        _database.TotalLevels        = EditorGUILayout.IntField("Toplam Seviye", _database.TotalLevels, GUILayout.Width(260f));
+                        _database.LevelsPerThemeStep = EditorGUILayout.IntField("Tema Adımı", _database.LevelsPerThemeStep, GUILayout.Width(200f));
+                    }
+                }
 
-            // DifficultyBands overlap / gap validation (FIX-DB1)
-            var bandIssues = _database.ValidateDifficultyBands();
-            if (bandIssues.Count > 0)
-            {
-                EditorGUILayout.HelpBox(
-                    "⚠ DifficultyBands tutarsızlığı:\n" + string.Join("\n", bandIssues),
-                    MessageType.Warning);
-            }
+                int computedTotal = _database.TotalWorlds * _database.LevelsPerWorld;
+                if (_database.TotalWorlds > 0 && _database.LevelsPerWorld > 0 && _database.TotalLevels != computedTotal)
+                {
+                    EditorGUILayout.HelpBox(
+                        $"TotalLevels ({_database.TotalLevels}) ≠ TotalWorlds ({_database.TotalWorlds}) × LevelsPerWorld ({_database.LevelsPerWorld}) = {computedTotal}. " +
+                        "'Hızlı Ön Ayar' butonları veya InitializeDefaults ile senkronize edebilirsiniz.",
+                        MessageType.Warning);
+                }
 
-            // ColorCurve monotonicity validation (FIX-DB2)
-            var curveIssues = _database.ValidateColorCurve();
-            if (curveIssues.Count > 0)
-            {
-                EditorGUILayout.HelpBox(
-                    "⚠ ColorCurve tutarsızlığı:\n" + string.Join("\n", curveIssues),
-                    MessageType.Warning);
-            }
+                var bandIssues = _database.ValidateDifficultyBands();
+                if (bandIssues.Count > 0)
+                {
+                    EditorGUILayout.HelpBox(
+                        "⚠ DifficultyBands tutarsızlığı:\n" + string.Join("\n", bandIssues),
+                        MessageType.Warning);
+                }
 
-            EditorGUILayout.Space(10f);
+                var curveIssues = _database.ValidateColorCurve();
+                if (curveIssues.Count > 0)
+                {
+                    EditorGUILayout.HelpBox(
+                        "⚠ ColorCurve tutarsızlığı:\n" + string.Join("\n", curveIssues),
+                        MessageType.Warning);
+                }
 
-            // --- 1. ZORLUK DERECELERİ (responsive inline editable) ---
-            RingFlowEditorUtils.BeginSectionBox("Zorluk Dereceleri Ayarları",
-                "Band sınırları TotalLevels'e göre ayarlı. Maks Seviye = TotalLevels'in yüzdesi.");
+                EditorGUILayout.Space(10f);
+
+                using (RingFlowEditorUtils.BeginSectionBoxScope("Zorluk Dereceleri Ayarları",
+                    "Band sınırları TotalLevels'e göre ayarlı. Maks Seviye = TotalLevels'in yüzdesi."))
+                {
             if (_database.DifficultyBands == null || _database.DifficultyBands.Count == 0)
             {
                 EditorGUILayout.HelpBox("DifficultyBands boş. InitializeDefaults ile varsayılanları oluşturun.", MessageType.Warning);
@@ -210,7 +205,7 @@ namespace RingFlow.Editor
                     EditorGUILayout.Space(2f);
                 }
             }
-            RingFlowEditorUtils.EndSectionBox();
+        }
 
             EditorGUILayout.Space(6f);
 
@@ -319,6 +314,7 @@ namespace RingFlow.Editor
                     }
                 }
             }
+        }
 
             // --- 4. TOPLU METADATA DÜZENLEME ---
             EditorGUILayout.Space(15f);
@@ -388,8 +384,6 @@ namespace RingFlow.Editor
                 if (GUILayout.Button("Sonuçları Temizle", GUILayout.Width(140f)))
                     _validationResults.Clear();
             }
-
-            RingFlowEditorUtils.EndSectionBox();
 
             RingFlowEditorUtils.EndSectionBox();
         }

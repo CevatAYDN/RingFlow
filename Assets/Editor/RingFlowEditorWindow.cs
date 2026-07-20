@@ -582,103 +582,101 @@ namespace RingFlow.Editor
 
         private void DrawSceneSection()
         {
-            RingFlowEditorUtils.BeginSectionBox("Aktif Sahne Yapılandırması", "Sahnede Nexus Root, UIRoot ve EventSystem durumunu izleyin.");
-            
-            var scene = EditorSceneManager.GetActiveScene();
-            string mode = RingFlowEditorUtils.GetEditorModeLabel();
-
-            using (new EditorGUILayout.HorizontalScope())
+            using (RingFlowEditorUtils.BeginSectionBoxScope("Aktif Sahne Yapılandırması", "Sahnede Nexus Root, UIRoot ve EventSystem durumunu izleyin."))
             {
-                EditorGUILayout.LabelField("Aktif Sahne", EditorStyles.boldLabel, GUILayout.Width(80f));
-                EditorGUILayout.LabelField(scene.name + (scene.isDirty ? " *" : ""), GUILayout.MinWidth(150f));
+                var scene = EditorSceneManager.GetActiveScene();
+                string mode = RingFlowEditorUtils.GetEditorModeLabel();
 
-                var prevColor = GUI.color;
-                GUI.color = RingFlowEditorUtils.GetEditorModeColor();
-                EditorGUILayout.LabelField(mode, EditorStyles.miniLabel, GUILayout.Width(40f));
-                GUI.color = prevColor;
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    EditorGUILayout.LabelField("Aktif Sahne", EditorStyles.boldLabel, GUILayout.Width(80f));
+                    EditorGUILayout.LabelField(scene.name + (scene.isDirty ? " *" : ""), GUILayout.MinWidth(150f));
 
-                GUILayout.FlexibleSpace();
-                if (GUILayout.Button(new GUIContent("Sahne Oluştur",
-                        "Yeni boş sahne oluşturur, Nexus Root + UIRoot ekler ve tüm UI prefablerini bağlar."),
-                        EditorStyles.miniButton, GUILayout.Width(110f)))
-                    CreateWorkingScene();
-                if (GUILayout.Button(new GUIContent("Kurulum Yap (Bootstrap)",
-                        "Aktif sahneye Nexus Root + UIRoot ekler (sahneyi sıfırlamaz)."),
-                        EditorStyles.miniButton, GUILayout.Width(160f)))
-                    BootstrapScene();
+                    var prevColor = GUI.color;
+                    GUI.color = RingFlowEditorUtils.GetEditorModeColor();
+                    EditorGUILayout.LabelField(mode, EditorStyles.miniLabel, GUILayout.Width(40f));
+                    GUI.color = prevColor;
+
+                    GUILayout.FlexibleSpace();
+                    if (GUILayout.Button(new GUIContent("Sahne Oluştur",
+                            "Yeni boş sahne oluşturur, Nexus Root + UIRoot ekler ve tüm UI prefablerini bağlar."),
+                            EditorStyles.miniButton, GUILayout.Width(110f)))
+                        CreateWorkingScene();
+                    if (GUILayout.Button(new GUIContent("Kurulum Yap (Bootstrap)",
+                            "Aktif sahneye Nexus Root + UIRoot ekler (sahneyi sıfırlamaz)."),
+                            EditorStyles.miniButton, GUILayout.Width(160f)))
+                        BootstrapScene();
+                }
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    EditorGUILayout.LabelField(
+                        _cachedHasRoot ? "Root: Tamam" : "Root: EKSİK",
+                        _cachedHasRoot ? EditorStyles.miniLabel : EditorStyles.miniBoldLabel,
+                        GUILayout.Width(90f));
+                    EditorGUILayout.LabelField(
+                        _cachedHasUIRoot ? "UIRoot: Tamam" : "UIRoot: EKSİK",
+                        _cachedHasUIRoot ? EditorStyles.miniLabel : EditorStyles.miniBoldLabel,
+                        GUILayout.Width(100f));
+                    EditorGUILayout.LabelField(
+                        _cachedHasEventSystem ? "EventSystem: Tamam" : "EventSystem: EKSİK",
+                        _cachedHasEventSystem ? EditorStyles.miniLabel : EditorStyles.miniBoldLabel,
+                        GUILayout.Width(140f));
+                }
             }
-
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                EditorGUILayout.LabelField(
-                    _cachedHasRoot ? "Root: Tamam" : "Root: EKSİK",
-                    _cachedHasRoot ? EditorStyles.miniLabel : EditorStyles.miniBoldLabel,
-                    GUILayout.Width(90f));
-                EditorGUILayout.LabelField(
-                    _cachedHasUIRoot ? "UIRoot: Tamam" : "UIRoot: EKSİK",
-                    _cachedHasUIRoot ? EditorStyles.miniLabel : EditorStyles.miniBoldLabel,
-                    GUILayout.Width(100f));
-                EditorGUILayout.LabelField(
-                    _cachedHasEventSystem ? "EventSystem: Tamam" : "EventSystem: EKSİK",
-                    _cachedHasEventSystem ? EditorStyles.miniLabel : EditorStyles.miniBoldLabel,
-                    GUILayout.Width(140f));
-            }
-            
-            RingFlowEditorUtils.EndSectionBox();
         }
 
         private void DrawActionCards()
         {
-            RingFlowEditorUtils.BeginSectionBox("Hızlı İşlemler Paneli", "Seviye üretimi, arayüz stüdyosu ve araçlar arasında hızlı geçiş yapın.");
-            
-            float rightWidth = _cachedWindowWidth - 200f;
-            int cols = 3;
-            if (rightWidth < 420f) cols = 1;
-            else if (rightWidth < 600f) cols = 2;
-
-            var cards = new System.Func<bool>[]
+            using (RingFlowEditorUtils.BeginSectionBoxScope("Hızlı İşlemler Paneli", "Seviye üretimi, arayüz stüdyosu ve araçlar arasında hızlı geçiş yapın."))
             {
-                () => ActionCard("Seviyeler", "Üret & Kur", EditorPaths.EditorColors.CardLevels, "Seviye üretici + veritabanı + sahne tahtası sekmesine atlar."),
-                () => ActionCard("Arayüz", "Ekran & Sinyal", EditorPaths.EditorColors.CardInterface, "UI Studio sekmesine atlar: ekranlar, sinyaller, JSON dışa aktarımı."),
-                () => ActionCard("Araçlar", "Çalışma & Ayar", EditorPaths.EditorColors.CardTools, "Runtime, reklam test, ayarlar, tanılama, game-feel sekmesine atlar."),
-                () => ActionCard("Hızlı Üret", "Seçili Seviye", EditorPaths.EditorColors.CardQuickGen, "Seviye Üretici sekmesindeki parametrelerle tek seviye üretir."),
-                () => ActionCard("Hızlı Kur", "Sahne Tahtası", EditorPaths.EditorColors.CardQuickSetup, "Üretilen seviyeyi (veya aktif oyunu) sahnede tahta olarak kurar.")
-            };
+                float rightWidth = _cachedWindowWidth - 200f;
+                int cols = 3;
+                if (rightWidth < 420f) cols = 1;
+                else if (rightWidth < 600f) cols = 2;
 
-            int index = 0;
-            while (index < cards.Length)
-            {
-                using (new EditorGUILayout.HorizontalScope())
+                var cards = new System.Func<bool>[]
                 {
-                    for (int c = 0; c < cols && index < cards.Length; c++)
-                    {
-                        if (cards[index]())
-                        {
-                            // handle click actions
-                            if (Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseUp || Event.current.type == EventType.Used)
-                            {
-                                if (index == 0) _pendingSelectedTab = 1;
-                                else if (index == 1) _pendingSelectedTab = 2;
-                                else if (index == 2) _pendingSelectedTab = 4; // Tools tab is 4
-                                else if (index == 3) _generator.GenerateFromDashboard();
-                                else if (index == 4) _visualBuilder.BuildFromDashboard();
-                            }
+                    () => ActionCard("Seviyeler", "Üret & Kur", EditorPaths.EditorColors.CardLevels, "Seviye üretici + veritabanı + sahne tahtası sekmesine atlar."),
+                    () => ActionCard("Arayüz", "Ekran & Sinyal", EditorPaths.EditorColors.CardInterface, "UI Studio sekmesine atlar: ekranlar, sinyaller, JSON dışa aktarımı."),
+                    () => ActionCard("Araçlar", "Çalışma & Ayar", EditorPaths.EditorColors.CardTools, "Runtime, reklam test, ayarlar, tanılama, game-feel sekmesine atlar."),
+                    () => ActionCard("Hızlı Üret", "Seçili Seviye", EditorPaths.EditorColors.CardQuickGen, "Seviye Üretici sekmesindeki parametrelerle tek seviye üretir."),
+                    () => ActionCard("Hızlı Kur", "Sahne Tahtası", EditorPaths.EditorColors.CardQuickSetup, "Üretilen seviyeyi (veya aktif oyunu) sahnede tahta olarak kurar.")
+                };
 
-                            if (index < 3 && _cachedAssetEditor != null)
+                int index = 0;
+                while (index < cards.Length)
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        for (int c = 0; c < cols && index < cards.Length; c++)
+                        {
+                            if (cards[index]())
                             {
-                                DestroyImmediate(_cachedAssetEditor);
-                                _cachedAssetEditor = null;
-                                _cachedAssetObj = null;
+                                // handle click actions
+                                if (Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseUp || Event.current.type == EventType.Used)
+                                {
+                                    if (index == 0) _pendingSelectedTab = 1;
+                                    else if (index == 1) _pendingSelectedTab = 2;
+                                    else if (index == 2) _pendingSelectedTab = 4; // Tools tab is 4
+                                    else if (index == 3) _generator.GenerateFromDashboard();
+                                    else if (index == 4) _visualBuilder.BuildFromDashboard();
+                                }
+
+                                if (index < 3 && _cachedAssetEditor != null)
+                                {
+                                    DestroyImmediate(_cachedAssetEditor);
+                                    _cachedAssetEditor = null;
+                                    _cachedAssetObj = null;
+                                }
                             }
+                            index++;
+                            if (c < cols - 1) EditorGUILayout.Space(4f);
                         }
-                        index++;
-                        if (c < cols - 1) EditorGUILayout.Space(4f);
                     }
+                    if (index < cards.Length) EditorGUILayout.Space(4f);
                 }
-                if (index < cards.Length) EditorGUILayout.Space(4f);
             }
-            
-            RingFlowEditorUtils.EndSectionBox();
         }
 
         private static GUIStyle s_cardSubStyle;
@@ -712,32 +710,31 @@ namespace RingFlow.Editor
 
         private void DrawLevelStatus()
         {
-            RingFlowEditorUtils.BeginSectionBox("Seviye İlerleme Durumu", "Kayıtlı bölümlerin ve GDD veritabanının genel durumunu görüntüleyin.");
-            
-            using (new EditorGUILayout.HorizontalScope())
+            using (RingFlowEditorUtils.BeginSectionBoxScope("Seviye İlerleme Durumu", "Kayıtlı bölümlerin ve GDD veritabanının genel durumunu görüntüleyin."))
             {
-                EditorGUILayout.LabelField("Seviye Varlığı", EditorStyles.boldLabel, GUILayout.Width(90f));
-                if (_generator.GeneratedLevel != null)
-                    EditorGUILayout.LabelField($"Seviye {_generator.GeneratedLevel.LevelIndex} yüklendi", GUILayout.MinWidth(120f));
-                else
-                    EditorGUILayout.LabelField("Yüklü seviye yok", GUILayout.MinWidth(120f));
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    EditorGUILayout.LabelField("Seviye Varlığı", EditorStyles.boldLabel, GUILayout.Width(90f));
+                    if (_generator.GeneratedLevel != null)
+                        EditorGUILayout.LabelField($"Seviye {_generator.GeneratedLevel.LevelIndex} yüklendi", GUILayout.MinWidth(120f));
+                    else
+                        EditorGUILayout.LabelField("Yüklü seviye yok", GUILayout.MinWidth(120f));
 
-                GUILayout.FlexibleSpace();
-                if (GUILayout.Button("Üret", EditorStyles.miniButton, GUILayout.Width(80f)))
-                {
-                    if (Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseUp || Event.current.type == EventType.Used)
-                        _generator.GenerateFromDashboard();
+                    GUILayout.FlexibleSpace();
+                    if (GUILayout.Button("Üret", EditorStyles.miniButton, GUILayout.Width(80f)))
+                    {
+                        if (Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseUp || Event.current.type == EventType.Used)
+                            _generator.GenerateFromDashboard();
+                    }
+                    if (GUILayout.Button("Toplu Üret", EditorStyles.miniButton, GUILayout.Width(110f)))
+                    {
+                        if (Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseUp || Event.current.type == EventType.Used)
+                            _generator.GenerateFromDashboardAll();
+                    }
                 }
-                if (GUILayout.Button("Toplu Üret", EditorStyles.miniButton, GUILayout.Width(110f)))
-                {
-                    if (Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseUp || Event.current.type == EventType.Used)
-                        _generator.GenerateFromDashboardAll();
-                }
+
+                EditorGUILayout.HelpBox("İpucu: Seçili seviye üzerinde çalışın, sonra toplu üretimle aynı kuralları tüm aralığa uygulayın.", MessageType.Info);
             }
-
-            EditorGUILayout.HelpBox("İpucu: Seçili seviye üzerinde çalışın, sonra toplu üretimle aynı kuralları tüm aralığa uygulayın.", MessageType.Info);
-            
-            RingFlowEditorUtils.EndSectionBox();
         }
 
         // ──────────────────────────────────────────────────────────────
@@ -826,23 +823,24 @@ namespace RingFlow.Editor
             {
                 using (new EditorGUILayout.VerticalScope())
                 {
-                    RingFlowEditorUtils.BeginSectionBox("Konfigürasyon Panelleri", "Sistem yapılandırma dosyalarını yönetmek için bir kategori seçin.");
-                    int columns = RingFlowEditorUtils.GetResponsiveColumns(150f, 2, 3);
-                    int index = 0;
-                    while (index < _configSubTabs.Length)
+                    using (RingFlowEditorUtils.BeginSectionBoxScope("Konfigürasyon Panelleri", "Sistem yapılandırma dosyalarını yönetmek için bir kategori seçin."))
                     {
-                        using (new EditorGUILayout.HorizontalScope())
+                        int columns = RingFlowEditorUtils.GetResponsiveColumns(150f, 2, 3);
+                        int index = 0;
+                        while (index < _configSubTabs.Length)
                         {
-                            for (int col = 0; col < columns && index < _configSubTabs.Length; col++)
+                            using (new EditorGUILayout.HorizontalScope())
                             {
-                                DrawConfigTabButton(index++, true);
-                                if (col < columns - 1)
-                                    EditorGUILayout.Space(4f);
+                                for (int col = 0; col < columns && index < _configSubTabs.Length; col++)
+                                {
+                                    DrawConfigTabButton(index++, true);
+                                    if (col < columns - 1)
+                                        EditorGUILayout.Space(4f);
+                                }
                             }
+                            EditorGUILayout.Space(2f);
                         }
-                        EditorGUILayout.Space(2f);
                     }
-                    RingFlowEditorUtils.EndSectionBox();
 
                     EditorGUILayout.Space(8f);
                     using (new EditorGUILayout.VerticalScope(GUILayout.ExpandWidth(true)))

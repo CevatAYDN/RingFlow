@@ -1,6 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 using System.Collections.Generic;
+using Nexus.Core.Services;
 using RingFlow.Gameplay;
 using RingFlow.Gameplay.Economy;
 using RingFlow.Gameplay.Localization;
@@ -45,6 +46,11 @@ namespace RingFlow.Editor
         private int _crossSoWarnCount;
         private int _crossSoFailCount;
         private bool _crossSoValidationRun;
+
+        // ── Player Progress Cache & State ──
+        private PlayerProgressModel _playerProgress;
+        private bool _playerProgressLoaded;
+        private Vector2 _bestMovesScroll;
 
         public override string DisplayName => "Veri & GDD Denetimi (Audit)";
         public override string PrefKey => EditorPrefsKeys.FoldDataOverview;
@@ -100,6 +106,12 @@ namespace RingFlow.Editor
             // ── Localization Editor Quick Link ──
             RingFlowEditorUtils.FoldoutSection(EditorPrefsKeys.FoldDataLocEditor,
                 "Yerelleştirme Düzenleyici (CSV Editor)", DrawLocalizationEditorLink);
+
+            EditorGUILayout.Space(EditorPaths.EditorSizes.SectionBreak);
+
+            // ── Oyuncu Verisi Görselleştirici ──
+            RingFlowEditorUtils.FoldoutSection(EditorPrefsKeys.FoldPlayerData,
+                "Oyuncu Kayıt Verisi (Player Save Data)", DrawPlayerDataSection);
         }
 
         private void EnsureCachedDatabase()
@@ -123,67 +135,66 @@ namespace RingFlow.Editor
                 RunComplianceAudit();
             }
 
-            RingFlowEditorUtils.BeginSectionBox("GDD Uyum ve Tek Kaynak Denetimi", "Tüm oyun sistemlerinin GDD (§3, §4, §5) kurallarına uyumunu denetleyin.");
-
-            using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
+            using (RingFlowEditorUtils.BeginSectionBoxScope("GDD Uyum ve Tek Kaynak Denetimi", "Tüm oyun sistemlerinin GDD (§3, §4, §5) kurallarına uyumunu denetleyin."))
             {
-                var prevColor = GUI.color;
-
-                GUI.color = EditorPaths.EditorColors.Success;
-                EditorGUILayout.LabelField($"✔ GEÇTİ: {_auditPassCount}", EditorStyles.boldLabel, GUILayout.Width(100f));
-
-                GUI.color = EditorPaths.EditorColors.Warning;
-                EditorGUILayout.LabelField($"⚠ UYARI: {_auditWarnCount}", EditorStyles.boldLabel, GUILayout.Width(100f));
-
-                GUI.color = EditorPaths.EditorColors.Error;
-                EditorGUILayout.LabelField($"✘ HATA: {_auditFailCount}", EditorStyles.boldLabel, GUILayout.Width(100f));
-
-                GUI.color = prevColor;
-
-                GUILayout.FlexibleSpace();
-                if (GUILayout.Button("Denetimi Yeniden Çalıştır", EditorStyles.miniButton, GUILayout.Width(160f)))
+                using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
                 {
-                    RunComplianceAudit();
+                    var prevColor = GUI.color;
+
+                    GUI.color = EditorPaths.EditorColors.Success;
+                    EditorGUILayout.LabelField($"✔ GEÇTİ: {_auditPassCount}", EditorStyles.boldLabel, GUILayout.Width(100f));
+
+                    GUI.color = EditorPaths.EditorColors.Warning;
+                    EditorGUILayout.LabelField($"⚠ UYARI: {_auditWarnCount}", EditorStyles.boldLabel, GUILayout.Width(100f));
+
+                    GUI.color = EditorPaths.EditorColors.Error;
+                    EditorGUILayout.LabelField($"✘ HATA: {_auditFailCount}", EditorStyles.boldLabel, GUILayout.Width(100f));
+
+                    GUI.color = prevColor;
+
+                    GUILayout.FlexibleSpace();
+                    if (GUILayout.Button("Denetimi Yeniden Çalıştır", EditorStyles.miniButton, GUILayout.Width(160f)))
+                    {
+                        RunComplianceAudit();
+                    }
+                }
+
+                EditorGUILayout.Space(4f);
+
+                for (int i = 0; i < _auditResults.Count; i++)
+                {
+                    var result = _auditResults[i];
+                    Color statusColor = result.Status switch
+                    {
+                        AuditStatus.Pass => EditorPaths.EditorColors.Success,
+                        AuditStatus.Warning => EditorPaths.EditorColors.Warning,
+                        _ => EditorPaths.EditorColors.Error
+                    };
+
+                    string prefix = result.Status switch
+                    {
+                        AuditStatus.Pass => "✔ GEÇTİ",
+                        AuditStatus.Warning => "⚠ UYARI",
+                        _ => "✘ HATA"
+                    };
+
+                    Rect rowRect = EditorGUILayout.BeginHorizontal(GUILayout.MinHeight(22f));
+                    Color rowBg = i % 2 == 0 ? new Color(0.2f, 0.22f, 0.25f, 0.3f) : new Color(0.15f, 0.17f, 0.2f, 0.3f);
+                    EditorGUI.DrawRect(rowRect, rowBg);
+
+                    var statusStyle = new GUIStyle(EditorStyles.miniLabel)
+                    {
+                        fontStyle = FontStyle.Bold,
+                        normal = { textColor = statusColor }
+                    };
+                    EditorGUILayout.LabelField(prefix, statusStyle, GUILayout.Width(70f));
+                    EditorGUILayout.LabelField(result.Title, EditorStyles.boldLabel, GUILayout.Width(180f));
+                    EditorGUILayout.LabelField(result.Message, EditorStyles.wordWrappedLabel);
+
+                    EditorGUILayout.EndHorizontal();
+                    EditorGUILayout.Space(2f);
                 }
             }
-
-            EditorGUILayout.Space(4f);
-
-            for (int i = 0; i < _auditResults.Count; i++)
-            {
-                var result = _auditResults[i];
-                Color statusColor = result.Status switch
-                {
-                    AuditStatus.Pass => EditorPaths.EditorColors.Success,
-                    AuditStatus.Warning => EditorPaths.EditorColors.Warning,
-                    _ => EditorPaths.EditorColors.Error
-                };
-
-                string prefix = result.Status switch
-                {
-                    AuditStatus.Pass => "✔ GEÇTİ",
-                    AuditStatus.Warning => "⚠ UYARI",
-                    _ => "✘ HATA"
-                };
-
-                Rect rowRect = EditorGUILayout.BeginHorizontal(GUILayout.MinHeight(22f));
-                Color rowBg = i % 2 == 0 ? new Color(0.2f, 0.22f, 0.25f, 0.3f) : new Color(0.15f, 0.17f, 0.2f, 0.3f);
-                EditorGUI.DrawRect(rowRect, rowBg);
-
-                var statusStyle = new GUIStyle(EditorStyles.miniLabel)
-                {
-                    fontStyle = FontStyle.Bold,
-                    normal = { textColor = statusColor }
-                };
-                EditorGUILayout.LabelField(prefix, statusStyle, GUILayout.Width(70f));
-                EditorGUILayout.LabelField(result.Title, EditorStyles.boldLabel, GUILayout.Width(180f));
-                EditorGUILayout.LabelField(result.Message, EditorStyles.wordWrappedLabel);
-
-                EditorGUILayout.EndHorizontal();
-                EditorGUILayout.Space(2f);
-            }
-
-            RingFlowEditorUtils.EndSectionBox();
         }
 
         private void RunComplianceAudit()
@@ -1098,5 +1109,312 @@ namespace RingFlow.Editor
             ("Halka Mekanik Verisi (RingMechanicData)", () => LoadAsset<RingMechanicDataSO>(EditorPaths.RingMechanicDataKey)),
             ("Tema/Skin Veritabanı (ThemeSkinDatabase)", () => LoadAsset<ThemeSkinDatabaseSO>(EditorPaths.ThemeSkinDatabaseKey)),
         };
+
+        // ── Oyuncu Verisi Görselleştirici Metotları ──────────────────
+
+        private void EnsurePlayerProgressLoaded(bool force = false)
+        {
+            if (_playerProgressLoaded && !force && _playerProgress != null) return;
+
+            if (_playerProgress == null)
+            {
+                _playerProgress = new PlayerProgressModel();
+            }
+
+            EnsureCachedDatabase();
+            if (_cachedDatabase != null)
+            {
+                _playerProgress.SetTotalWorldCount(_cachedDatabase.TotalWorlds);
+            }
+
+            var storage = new EncryptedStorageService();
+            PlayerProgressSaveSystem.Load(storage, _playerProgress);
+            _playerProgressLoaded = true;
+        }
+
+        private void SavePlayerData()
+        {
+            if (_playerProgress == null) return;
+            var storage = new EncryptedStorageService();
+            PlayerProgressSaveSystem.Save(storage, _playerProgress);
+            EditorUtility.DisplayDialog("Başarılı", "Oyuncu kayıt verisi başarıyla şifrelenerek kaydedildi!", "Tamam");
+        }
+
+        private void ResetPlayerData()
+        {
+            if (_playerProgress == null) return;
+            _playerProgress.Reset();
+            SavePlayerData();
+            EnsurePlayerProgressLoaded(true);
+        }
+
+        private void AddAllDatabaseThemes()
+        {
+            if (_playerProgress == null) return;
+            var skinDb = Resources.Load<ThemeSkinDatabaseSO>(EditorPaths.ThemeSkinDatabaseKey);
+            if (skinDb != null && skinDb.Entries != null)
+            {
+                foreach (var entry in skinDb.Entries)
+                {
+                    if (!string.IsNullOrEmpty(entry.ThemeNameKey) && !_playerProgress.OwnedThemes.Contains(entry.ThemeNameKey))
+                    {
+                        _playerProgress.OwnedThemes.Add(entry.ThemeNameKey);
+                    }
+                }
+            }
+            else
+            {
+                EnsureCachedDatabase();
+                if (_cachedDatabase != null)
+                {
+                    foreach (var world in _cachedDatabase.Worlds)
+                    {
+                        if (!string.IsNullOrEmpty(world.Theme) && !_playerProgress.OwnedThemes.Contains(world.Theme))
+                        {
+                            _playerProgress.OwnedThemes.Add(world.Theme);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void AddAllDefaultAchievements()
+        {
+            if (_playerProgress == null) return;
+            string[] defaultAchievements = {
+                "Level_50_Passed",
+                "Level_100_Passed",
+                "All_Themes_Unlocked",
+                "Perfect_Sort",
+                "Coin_Hoarder"
+            };
+            foreach (var ach in defaultAchievements)
+            {
+                if (!_playerProgress.Achievements.Contains(ach))
+                {
+                    _playerProgress.Achievements.Add(ach);
+                }
+            }
+        }
+
+        private void DrawPlayerDataSection()
+        {
+            EnsurePlayerProgressLoaded();
+
+            if (_playerProgress == null)
+            {
+                EditorGUILayout.HelpBox("Oyuncu verileri yüklenemedi.", MessageType.Error);
+                return;
+            }
+
+            using (RingFlowEditorUtils.BeginSectionBoxScope("Oyuncu Profil ve İlerleme Verisi", "Mevcut oyuncu kayıt dosyasındaki ilerleme durumunu görüntüleyin ve değiştirin."))
+            {
+                // Top control buttons
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("🔄 Veriyi Yenile (Yükle)", GUILayout.Height(26)))
+                    {
+                        EnsurePlayerProgressLoaded(true);
+                    }
+                    if (GUILayout.Button("💾 Değişiklikleri Kaydet", GUILayout.Height(26)))
+                    {
+                        SavePlayerData();
+                    }
+                    if (GUILayout.Button("🗑 Tüm Kaydı Sıfırla", GUILayout.Height(26)))
+                    {
+                        if (EditorUtility.DisplayDialog("Oyuncu İlerlemesini Sıfırla",
+                            "Tüm oyuncu profil verileri, paralar, açılan dünyalar ve en iyi skorlar sıfırlanacaktır. Bu işlem geri alınamaz!", "Sıfırla", "İptal"))
+                        {
+                            ResetPlayerData();
+                        }
+                    }
+                }
+
+                EditorGUILayout.Space(8f);
+
+                // Grid layout for basic info
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                {
+                    EditorGUILayout.LabelField("TEMEL PROFİL BİLGİLERİ", EditorStyles.miniBoldLabel);
+                    
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        _playerProgress.Coins.Value = EditorGUILayout.IntField("Altın (Coins)", _playerProgress.Coins.Value);
+                        _playerProgress.Diamonds.Value = EditorGUILayout.IntField("Elmas (Diamonds)", _playerProgress.Diamonds.Value);
+                    }
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        _playerProgress.Xp.Value = EditorGUILayout.IntField("Deneyim (XP)", _playerProgress.Xp.Value);
+                        _playerProgress.PlayerLevel.Value = EditorGUILayout.IntField("Oyuncu Seviyesi", _playerProgress.PlayerLevel.Value);
+                    }
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        _playerProgress.CurrentLevel.Value = EditorGUILayout.IntField("Aktif Seviye (Current)", _playerProgress.CurrentLevel.Value);
+                        _playerProgress.MaxUnlockedLevel.Value = EditorGUILayout.IntField("Maks Kilit Açık (Max Unlocked)", _playerProgress.MaxUnlockedLevel.Value);
+                    }
+                }
+
+                EditorGUILayout.Space(6f);
+
+                // Chests
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                {
+                    EditorGUILayout.LabelField("SANDIK ADETLERİ", EditorStyles.miniBoldLabel);
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        _playerProgress.ChestBronze.Value = EditorGUILayout.IntField("Bronz Sandık", _playerProgress.ChestBronze.Value);
+                        _playerProgress.ChestSilver.Value = EditorGUILayout.IntField("Gümüş Sandık", _playerProgress.ChestSilver.Value);
+                    }
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        _playerProgress.ChestGold.Value = EditorGUILayout.IntField("Altın Sandık", _playerProgress.ChestGold.Value);
+                        _playerProgress.ChestDiamond.Value = EditorGUILayout.IntField("Elmas Sandık", _playerProgress.ChestDiamond.Value);
+                    }
+                }
+
+                EditorGUILayout.Space(6f);
+
+                // Daily Reward & Ads
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                {
+                    EditorGUILayout.LabelField("GÜNLÜK ÖDÜL VE REKLAM", EditorStyles.miniBoldLabel);
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        _playerProgress.DailyDayIndex.Value = EditorGUILayout.IntField("Günlük Ödül Günü", _playerProgress.DailyDayIndex.Value);
+                        _playerProgress.DailyStreak.Value = EditorGUILayout.IntField("Claim Streak", _playerProgress.DailyStreak.Value);
+                    }
+                    _playerProgress.RemoveAds.Value = EditorGUILayout.Toggle("Reklamları Kaldır (Remove Ads)", _playerProgress.RemoveAds.Value);
+                    
+                    var lastClaimTimeStr = _playerProgress.DailyLastClaimUtcTicks.Value == 0
+                        ? "Hiç alınmadı"
+                        : new System.DateTime(_playerProgress.DailyLastClaimUtcTicks.Value, System.DateTimeKind.Utc).ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+                    EditorGUILayout.LabelField($"Son Günlük Ödül Zamanı: {lastClaimTimeStr}");
+                }
+
+                EditorGUILayout.Space(6f);
+
+                // Unlocked Worlds List
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                {
+                    EditorGUILayout.LabelField("DÜNYALARIN KİLİT DURUMU", EditorStyles.miniBoldLabel);
+                    
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        if (GUILayout.Button("Tüm Dünyaların Kilidini Aç"))
+                        {
+                            for (int i = 0; i < _playerProgress.UnlockedWorlds.Count; i++)
+                                _playerProgress.UnlockedWorlds[i] = true;
+                        }
+                        if (GUILayout.Button("Dünya Kilitlerini Sıfırla (Sadece D1 Açık)"))
+                        {
+                            for (int i = 0; i < _playerProgress.UnlockedWorlds.Count; i++)
+                                _playerProgress.UnlockedWorlds[i] = (i == 0);
+                        }
+                    }
+
+                    EditorGUILayout.Space(4f);
+                    
+                    int cols = 5;
+                    int worldIndex = 0;
+                    while (worldIndex < _playerProgress.UnlockedWorlds.Count)
+                    {
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            for (int c = 0; c < cols && worldIndex < _playerProgress.UnlockedWorlds.Count; c++)
+                            {
+                                bool isUnlocked = _playerProgress.UnlockedWorlds[worldIndex];
+                                bool newUnlocked = EditorGUILayout.ToggleLeft($"D{worldIndex + 1}", isUnlocked, GUILayout.Width(75f));
+                                if (newUnlocked != isUnlocked)
+                                {
+                                    _playerProgress.UnlockedWorlds[worldIndex] = newUnlocked;
+                                }
+                                worldIndex++;
+                            }
+                        }
+                    }
+                }
+
+                EditorGUILayout.Space(6f);
+
+                // Owned Themes List
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                {
+                    EditorGUILayout.LabelField("SAHİP OLUNAN TEMALAR", EditorStyles.miniBoldLabel);
+                    
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        if (GUILayout.Button("Tüm Temaları Ekle (SO'dakiler)"))
+                        {
+                            AddAllDatabaseThemes();
+                        }
+                        if (GUILayout.Button("Temaları Temizle"))
+                        {
+                            _playerProgress.OwnedThemes.Clear();
+                        }
+                    }
+
+                    if (_playerProgress.OwnedThemes.Count == 0)
+                    {
+                        EditorGUILayout.LabelField("Sahip olunan tema yok.");
+                    }
+                    else
+                    {
+                        var themeListStr = string.Join(", ", _playerProgress.OwnedThemes);
+                        EditorGUILayout.LabelField(themeListStr, EditorStyles.wordWrappedLabel);
+                    }
+                }
+
+                EditorGUILayout.Space(6f);
+
+                // Achievements List
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                {
+                    EditorGUILayout.LabelField("BAŞARIMLAR", EditorStyles.miniBoldLabel);
+                    
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        if (GUILayout.Button("Tüm Başarımları Ekle"))
+                        {
+                            AddAllDefaultAchievements();
+                        }
+                        if (GUILayout.Button("Başarımları Temizle"))
+                        {
+                            _playerProgress.Achievements.Clear();
+                        }
+                    }
+
+                    if (_playerProgress.Achievements.Count == 0)
+                    {
+                        EditorGUILayout.LabelField("Kazanılan başarım yok.");
+                    }
+                    else
+                    {
+                        var achievementsStr = string.Join(", ", _playerProgress.Achievements);
+                        EditorGUILayout.LabelField(achievementsStr, EditorStyles.wordWrappedLabel);
+                    }
+                }
+
+                EditorGUILayout.Space(6f);
+
+                // Best Moves
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                {
+                    EditorGUILayout.LabelField("EN İYİ SKORLAR (BEST MOVES)", EditorStyles.miniBoldLabel);
+                    if (_playerProgress.BestMovesPerLevel.Count == 0)
+                    {
+                        EditorGUILayout.LabelField("Kayıtlı en iyi skor bulunmuyor.");
+                    }
+                    else
+                    {
+                        _bestMovesScroll = EditorGUILayout.BeginScrollView(_bestMovesScroll, GUILayout.Height(100f));
+                        foreach (var kvp in _playerProgress.BestMovesPerLevel)
+                        {
+                            EditorGUILayout.LabelField($"Seviye {kvp.Key}: {kvp.Value} hamle");
+                        }
+                        EditorGUILayout.EndScrollView();
+                    }
+                }
+            }
+        }
     }
 }

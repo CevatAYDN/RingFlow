@@ -43,6 +43,20 @@ namespace RingFlow.Editor
             DrawFoldoutHeader();
             if (!IsFoldedOut) return;
 
+            // --- Data-Driven Denetimi ---
+            RingFlowEditorUtils.BeginSectionBox("Data-Driven Denetimi", "Tüm ScriptableObject konfigürasyon varlıklarının varlığını ve geçerliliğini denetler.");
+            if (GUILayout.Button("Data-Driven Varlıkları Doğrula", GUILayout.Height(24)))
+                RunDataDrivenValidation();
+            RingFlowEditorUtils.EndSectionBox();
+
+            EditorGUILayout.Space(6f);
+
+            // --- GDD §75 Performans Bütçesi ---
+            DrawProfilerBudgetPanel();
+
+            EditorGUILayout.Space(6f);
+
+            // --- Sinyal & Hata İzleme Paneli ---
             RingFlowEditorUtils.BeginSectionBox("Sinyal & Hata İzleme Paneli", "Play Mode esnasında Nexus sinyallerini ve loglarını izleyin.");
 
             var context = NexusRuntime.CurrentContext;
@@ -70,15 +84,6 @@ namespace RingFlow.Editor
                 if (GUILayout.Button("Raporu Dışa Aktar", EditorStyles.miniButton, GUILayout.Width(120f))) ExportReport(diag);
             }
             EditorGUILayout.Space(4f);
-
-            // --- Data-Driven Denetimi ---
-            RingFlowEditorUtils.BeginSectionBox("Data-Driven Denetimi", "Tüm ScriptableObject konfigürasyon varlıklarının varlığını ve geçerliliğini denetler.");
-            if (GUILayout.Button("Data-Driven Varlıkları Doğrula", GUILayout.Height(24)))
-                RunDataDrivenValidation();
-            RingFlowEditorUtils.EndSectionBox();
-
-            // --- GDD §75 Performans Bütçesi ---
-            DrawProfilerBudgetPanel();
 
             // Filter
             bool narrow = EditorGUIUtility.currentViewWidth < 480f;
