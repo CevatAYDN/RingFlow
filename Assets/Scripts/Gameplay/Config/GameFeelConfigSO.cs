@@ -322,7 +322,7 @@ namespace RingFlow.Gameplay
         public static RingTypeMaterialConfig GetDefaultMaterialConfig(RingType type) => type switch
         {
             RingType.Frozen => new RingTypeMaterialConfig { Type = type, OverrideColor = Color.clear, Metallic = 0.1f, Smoothness = 0.9f, EnableEmission = true, EmissionColor = new Color(0.3f, 0.6f, 0.8f, 1f), UseFadeMode = false, Alpha = 1f },
-            RingType.Key or RingType.Locked => new RingTypeMaterialConfig { Type = type, OverrideColor = new Color(1f, 0.84f, 0f, 1f), Metallic = 0.8f, Smoothness = 0.6f, EnableEmission = true, EmissionColor = new Color(0.5f, 0.4f, 0f, 1f), UseFadeMode = false, Alpha = 1f },
+            RingType.Locked => new RingTypeMaterialConfig { Type = type, OverrideColor = new Color(1f, 0.84f, 0f, 1f), Metallic = 0.8f, Smoothness = 0.6f, EnableEmission = true, EmissionColor = new Color(0.5f, 0.4f, 0f, 1f), UseFadeMode = false, Alpha = 1f },
             RingType.Stone => new RingTypeMaterialConfig { Type = type, OverrideColor = new Color(0.4f, 0.38f, 0.35f, 1f), Metallic = 0f, Smoothness = 0.1f, EnableEmission = false, EmissionColor = Color.black, UseFadeMode = false, Alpha = 1f },
             RingType.Glass => new RingTypeMaterialConfig { Type = type, OverrideColor = new Color(1f, 1f, 1f, 0.45f), Metallic = 0.1f, Smoothness = 0.95f, EnableEmission = true, EmissionColor = new Color(0.15f, 0.15f, 0.15f, 1f), UseFadeMode = true, Alpha = 0.45f },
             RingType.Rainbow => new RingTypeMaterialConfig { Type = type, OverrideColor = Color.clear, Metallic = 0.5f, Smoothness = 0.8f, EnableEmission = true, EmissionColor = Color.white, UseFadeMode = false, Alpha = 1f },

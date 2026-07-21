@@ -600,7 +600,7 @@ namespace RingFlow.Editor
                     case RingType.Frozen:
                         mat.color = Color.Lerp(baseColor, Color.cyan, 0.5f);
                         mat.SetFloat("_Metallic", 0.1f); mat.SetFloat("_Smoothness", 0.9f); break;
-                    case RingType.Key: case RingType.Locked:
+                    case RingType.Locked:
                         mat.color = new Color(1f, 0.84f, 0f);
                         mat.SetFloat("_Metallic", 0.8f); mat.SetFloat("_Smoothness", 0.6f); break;
                     case RingType.Stone:

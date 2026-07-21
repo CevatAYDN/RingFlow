@@ -10,14 +10,22 @@ namespace RingFlow.Gameplay.UI
     [Mediator(typeof(PauseMediator))]
     public class PauseView : View, IAuthoredView
     {
-        public Button ResumeButton { get; private set; }
-        public Button RestartButton { get; private set; }
-        public Button QuitButton { get; private set; }
-        public Button SettingsButton { get; private set; }
-        public TextMeshProUGUI TitleText { get; private set; }
-        public TextMeshProUGUI SubtitleText { get; private set; }
-        public TextMeshProUGUI ProgressLabel { get; private set; }
-        public CanvasGroup CardGroup { get; private set; }
+        [SerializeField] private Button _resumeButton;
+        [SerializeField] private Button _restartButton;
+        [SerializeField] private Button _quitButton;
+        [SerializeField] private Button _settingsButton;
+        [SerializeField] private TextMeshProUGUI _titleText;
+        [SerializeField] private TextMeshProUGUI _subtitleText;
+        [SerializeField] private TextMeshProUGUI _progressLabel;
+        [SerializeField] private CanvasGroup _cardGroup;
+        public Button ResumeButton => _resumeButton;
+        public Button RestartButton => _restartButton;
+        public Button QuitButton => _quitButton;
+        public Button SettingsButton => _settingsButton;
+        public TextMeshProUGUI TitleText => _titleText;
+        public TextMeshProUGUI SubtitleText => _subtitleText;
+        public TextMeshProUGUI ProgressLabel => _progressLabel;
+        public CanvasGroup CardGroup => _cardGroup;
 
         private GameObject _resumeBtn, _restartBtn, _quitBtn, _settingsBtn;
 
@@ -61,19 +69,25 @@ namespace RingFlow.Gameplay.UI
             {
                 GameUIResources.AddButtonEffects(btn);
                 var upper = btn.name.ToUpperInvariant();
-                if (upper.Contains("RESUME")) { _resumeBtn = btn.gameObject; ResumeButton = btn; }
-                // Need to handle both button itself and container name for custom hierarchy
-                else if (upper.Contains("RESTART")) { _restartBtn = btn.gameObject; RestartButton = btn; }
-                else if (upper.Contains("QUIT") || upper.Contains("MAIN MENU") || upper.Contains("MENU")) { _quitBtn = btn.gameObject; QuitButton = btn; }
-                else if (upper.Contains("SETTINGS")) { _settingsBtn = btn.gameObject; SettingsButton = btn; }
+                if (upper.Contains("RESUME")) { _resumeBtn = btn.gameObject; _resumeButton = btn; }
+                else if (upper.Contains("RESTART")) { _restartBtn = btn.gameObject; _restartButton = btn; }
+                else if (upper.Contains("QUIT") || upper.Contains("MAIN MENU") || upper.Contains("MENU")) { _quitBtn = btn.gameObject; _quitButton = btn; }
+                else if (upper.Contains("SETTINGS")) { _settingsBtn = btn.gameObject; _settingsButton = btn; }
             }
 
             var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
             foreach (var txt in texts)
             {
-                if (txt.fontSize >= 30 || txt.name.ToUpperInvariant().Contains("TITLE")) TitleText = txt;
-                else if (txt.name.ToUpperInvariant().Contains("SUB")) SubtitleText = txt;
-                else if (txt.name.ToUpperInvariant().Contains("PROGRESS")) ProgressLabel = txt;
+                if (txt.fontSize >= 30 || txt.name.ToUpperInvariant().Contains("TITLE")) _titleText = txt;
+                else if (txt.name.ToUpperInvariant().Contains("SUB")) _subtitleText = txt;
+                else if (txt.name.ToUpperInvariant().Contains("PROGRESS")) _progressLabel = txt;
+            }
+
+            if (_cardGroup == null)
+            {
+                var group = GetComponent<CanvasGroup>();
+                if (group == null) group = GetComponentInChildren<CanvasGroup>(true);
+                _cardGroup = group;
             }
         }
     }

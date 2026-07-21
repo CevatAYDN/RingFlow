@@ -14,14 +14,22 @@ namespace RingFlow.Gameplay.UI
     [Mediator(typeof(ChestPopupMediator))]
     public class ChestPopupView : View, IAuthoredView
     {
-        public Button ClaimButton { get; private set; }
-        public Button CloseButton { get; private set; }
-        public TextMeshProUGUI TitleText { get; private set; }
-        public TextMeshProUGUI BronzeText { get; private set; }
-        public TextMeshProUGUI SilverText { get; private set; }
-        public TextMeshProUGUI GoldText { get; private set; }
-        public TextMeshProUGUI DiamondText { get; private set; }
-        public TextMeshProUGUI TotalXpText { get; private set; }
+        [SerializeField] private Button _claimButton;
+        [SerializeField] private Button _closeButton;
+        [SerializeField] private TextMeshProUGUI _titleText;
+        [SerializeField] private TextMeshProUGUI _bronzeText;
+        [SerializeField] private TextMeshProUGUI _silverText;
+        [SerializeField] private TextMeshProUGUI _goldText;
+        [SerializeField] private TextMeshProUGUI _diamondText;
+        [SerializeField] private TextMeshProUGUI _totalXpText;
+        public Button ClaimButton => _claimButton;
+        public Button CloseButton => _closeButton;
+        public TextMeshProUGUI TitleText => _titleText;
+        public TextMeshProUGUI BronzeText => _bronzeText;
+        public TextMeshProUGUI SilverText => _silverText;
+        public TextMeshProUGUI GoldText => _goldText;
+        public TextMeshProUGUI DiamondText => _diamondText;
+        public TextMeshProUGUI TotalXpText => _totalXpText;
         private GameObject _claimBtn, _closeBtn;
         private ILocalizationService _locService;
 
@@ -53,20 +61,20 @@ namespace RingFlow.Gameplay.UI
             {
                 GameUIResources.AddButtonEffects(btn);
                 var upper = btn.name.ToUpperInvariant();
-                if (upper.Contains("CLAIM ALL") || upper.Contains("CLAIM")) { _claimBtn = btn.gameObject; ClaimButton = btn; }
-                else if (upper.Contains("CLOSE")) { _closeBtn = btn.gameObject; CloseButton = btn; }
+                if (upper.Contains("CLAIM ALL") || upper.Contains("CLAIM")) { _claimBtn = btn.gameObject; _claimButton = btn; }
+                else if (upper.Contains("CLOSE")) { _closeBtn = btn.gameObject; _closeButton = btn; }
             }
 
             var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
             foreach (var txt in texts)
             {
                 var upper = txt.name.ToUpperInvariant();
-                if (upper.Contains("TITLE") || upper.Contains("CHEST")) TitleText = txt;
-                else if (upper.Contains("BRONZE")) BronzeText = txt;
-                else if (upper.Contains("SILVER")) SilverText = txt;
-                else if (upper.Contains("GOLD")) GoldText = txt;
-                else if (upper.Contains("DIAMOND")) DiamondText = txt;
-                else if (upper.Contains("TOTAL")) TotalXpText = txt;
+                if (upper.Contains("TITLE") || upper.Contains("CHEST")) _titleText = txt;
+                else if (upper.Contains("BRONZE")) _bronzeText = txt;
+                else if (upper.Contains("SILVER")) _silverText = txt;
+                else if (upper.Contains("GOLD")) _goldText = txt;
+                else if (upper.Contains("DIAMOND")) _diamondText = txt;
+                else if (upper.Contains("TOTAL")) _totalXpText = txt;
             }
         }
 

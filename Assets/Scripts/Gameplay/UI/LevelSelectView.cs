@@ -12,15 +12,23 @@ namespace RingFlow.Gameplay.UI
     public class LevelSelectView : View, IAuthoredView
     {
         public List<Button> LevelButtons { get; } = new();
-        public Button BackButton { get; private set; }
-        public TextMeshProUGUI TitleText { get; private set; }
-        public TextMeshProUGUI WorldLabel { get; private set; }
-        public TextMeshProUGUI ProgressLabel { get; private set; }
-        public Image ProgressBar { get; private set; }
-        public CanvasGroup CardGroup { get; private set; }
+        [SerializeField] private Button _backButton;
+        [SerializeField] private TextMeshProUGUI _titleText;
+        [SerializeField] private TextMeshProUGUI _worldLabel;
+        [SerializeField] private TextMeshProUGUI _progressLabel;
+        [SerializeField] private Image _progressBar;
+        [SerializeField] private CanvasGroup _cardGroup;
+        public Button BackButton => _backButton;
+        public TextMeshProUGUI TitleText => _titleText;
+        public TextMeshProUGUI WorldLabel => _worldLabel;
+        public TextMeshProUGUI ProgressLabel => _progressLabel;
+        public Image ProgressBar => _progressBar;
+        public CanvasGroup CardGroup => _cardGroup;
 
         private void Awake()
         {
+            // FIX: Always bind references — ensures LevelButtons list is populated
+            // even if _backButton is already serialized on the prefab.
             BindReferencesFromChildren();
         }
 
@@ -42,7 +50,7 @@ namespace RingFlow.Gameplay.UI
 
             if (unlocked)
             {
-                img.color = GameUIResources.PrimaryColor;
+                img.color = stars > 0 ? GameUIResources.AccentColor : GameUIResources.PrimaryColor;
                 if (label != null)
                 {
                     label.text = $"{(index + 1)}";
@@ -54,9 +62,23 @@ namespace RingFlow.Gameplay.UI
                 img.color = new Color(0.15f, 0.17f, 0.22f);
                 if (label != null)
                 {
-                    label.text = "🔒";
+                    label.text = "\u25A0";
                     label.fontSize = 20;
                     label.color = GameUIResources.MutedTextDark;
+                }
+            }
+
+            // Show star indicators if stars were earned
+            if (stars > 0 && unlocked)
+            {
+                var starTexts = btn.GetComponentsInChildren<TextMeshProUGUI>();
+                foreach (var st in starTexts)
+                {
+                    if (st != label && st.name.ToUpperInvariant().Contains("STAR"))
+                    {
+                        st.text = new string('\u2605', stars);
+                        st.color = GameUIResources.WarningColor;
+                    }
                 }
             }
         }
@@ -91,7 +113,7 @@ namespace RingFlow.Gameplay.UI
                 GameUIResources.AddButtonEffects(button);
                 if (button.name.ToUpperInvariant().Contains("BACK"))
                 {
-                    BackButton = button;
+                    _backButton = button;
                 }
                 else if (button.name.ToUpperInvariant().Contains("LEVEL"))
                 {
@@ -103,9 +125,23 @@ namespace RingFlow.Gameplay.UI
             foreach (var txt in texts)
             {
                 var upper = txt.name.ToUpperInvariant();
-                if (upper.Contains("TITLE")) TitleText = txt;
-                else if (upper.Contains("WORLD")) WorldLabel = txt;
-                else if (upper.Contains("PROGRESS")) ProgressLabel = txt;
+                if (upper.Contains("TITLE")) _titleText = txt;
+                else if (upper.Contains("WORLD")) _worldLabel = txt;
+                else if (upper.Contains("PROGRESS")) _progressLabel = txt;
+            }
+
+            if (_progressBar == null)
+            {
+                var bars = GetComponentsInChildren<Image>(true);
+                foreach (var img in bars)
+                    if (img.name.Contains("ProgressBarFill")) _progressBar = img;
+            }
+
+            if (_cardGroup == null)
+            {
+                var group = GetComponent<CanvasGroup>();
+                if (group == null) group = GetComponentInChildren<CanvasGroup>(true);
+                _cardGroup = group;
             }
         }
     }

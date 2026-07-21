@@ -9,18 +9,30 @@ namespace RingFlow.Gameplay.UI
     [Mediator(typeof(SettingsMediator))]
     public class SettingsView : View, IAuthoredView
     {
-        public Button CloseButton { get; private set; }
-        public Toggle MusicToggle { get; private set; }
-        public Toggle SfxToggle { get; private set; }
-        public Toggle HapticToggle { get; private set; }
-        public Toggle ReduceMotionToggle { get; private set; }
-        public Toggle BigButtonsToggle { get; private set; }
-        public Slider ColorBlindSlider { get; private set; }
-        public Dropdown LanguageDropdown { get; private set; }
-        public TextMeshProUGUI TitleText { get; private set; }
-        public Button RemoveAdsButton { get; private set; }
-        public Button RestoreButton { get; private set; }
-        public CanvasGroup CardGroup { get; private set; }
+        [SerializeField] private Button _closeButton;
+        [SerializeField] private Toggle _musicToggle;
+        [SerializeField] private Toggle _sfxToggle;
+        [SerializeField] private Toggle _hapticToggle;
+        [SerializeField] private Toggle _reduceMotionToggle;
+        [SerializeField] private Toggle _bigButtonsToggle;
+        [SerializeField] private Slider _colorBlindSlider;
+        [SerializeField] private TMP_Dropdown _languageDropdown;
+        [SerializeField] private TextMeshProUGUI _titleText;
+        [SerializeField] private Button _removeAdsButton;
+        [SerializeField] private Button _restoreButton;
+        [SerializeField] private CanvasGroup _cardGroup;
+        public Button CloseButton => _closeButton;
+        public Toggle MusicToggle => _musicToggle;
+        public Toggle SfxToggle => _sfxToggle;
+        public Toggle HapticToggle => _hapticToggle;
+        public Toggle ReduceMotionToggle => _reduceMotionToggle;
+        public Toggle BigButtonsToggle => _bigButtonsToggle;
+        public Slider ColorBlindSlider => _colorBlindSlider;
+        public TMP_Dropdown LanguageDropdown => _languageDropdown;
+        public TextMeshProUGUI TitleText => _titleText;
+        public Button RemoveAdsButton => _removeAdsButton;
+        public Button RestoreButton => _restoreButton;
+        public CanvasGroup CardGroup => _cardGroup;
 
         private GameObject _closeBtn, _removeAdsBtn, _restoreBtn;
         private TextMeshProUGUI _musicLabel, _sfxLabel, _hapticLabel, _motionLabel, _bigLabel, _cbLabel, _langLabel;
@@ -59,30 +71,30 @@ namespace RingFlow.Gameplay.UI
             {
                 GameUIResources.AddButtonEffects(btn);
                 var upper = btn.name.ToUpperInvariant();
-                if (upper.Contains("CLOSE") || upper.Contains("BACK")) { _closeBtn = btn.gameObject; CloseButton = btn; }
-                else if (upper.Contains("REMOVE ADS") || upper.Contains("REMOVEADS")) { _removeAdsBtn = btn.gameObject; RemoveAdsButton = btn; }
-                else if (upper.Contains("RESTORE")) { _restoreBtn = btn.gameObject; RestoreButton = btn; }
+                if (upper.Contains("CLOSE") || upper.Contains("BACK")) { _closeBtn = btn.gameObject; _closeButton = btn; }
+                else if (upper.Contains("REMOVE ADS") || upper.Contains("REMOVEADS")) { _removeAdsBtn = btn.gameObject; _removeAdsButton = btn; }
+                else if (upper.Contains("RESTORE")) { _restoreBtn = btn.gameObject; _restoreButton = btn; }
             }
 
             var toggles = GetComponentsInChildren<Toggle>(true);
             foreach (var toggle in toggles)
             {
                 var upper = toggle.name.ToUpperInvariant();
-                if (upper.Contains("MUSIC")) MusicToggle = toggle;
-                else if (upper.Contains("SFX")) SfxToggle = toggle;
-                else if (upper.Contains("HAPTIC")) HapticToggle = toggle;
-                else if (upper.Contains("MOTION")) ReduceMotionToggle = toggle;
-                else if (upper.Contains("BIG")) BigButtonsToggle = toggle;
+                if (upper.Contains("MUSIC")) _musicToggle = toggle;
+                else if (upper.Contains("SFX")) _sfxToggle = toggle;
+                else if (upper.Contains("HAPTIC")) _hapticToggle = toggle;
+                else if (upper.Contains("MOTION")) _reduceMotionToggle = toggle;
+                else if (upper.Contains("BIG")) _bigButtonsToggle = toggle;
             }
 
-            ColorBlindSlider = GetComponentInChildren<Slider>(true);
-            LanguageDropdown = GetComponentInChildren<Dropdown>(true);
+            _colorBlindSlider = GetComponentInChildren<Slider>(true);
+            _languageDropdown = GetComponentInChildren<TMP_Dropdown>(true);
 
             var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
             foreach (var txt in texts)
             {
                 var upper = txt.name.ToUpperInvariant();
-                if (upper.Contains("TITLE")) TitleText = txt;
+                if (upper.Contains("TITLE")) _titleText = txt;
                 else if (upper.Contains("MUSIC")) _musicLabel = txt;
                 else if (upper.Contains("SFX")) _sfxLabel = txt;
                 else if (upper.Contains("HAPTIC")) _hapticLabel = txt;
@@ -90,6 +102,13 @@ namespace RingFlow.Gameplay.UI
                 else if (upper.Contains("BIG")) _bigLabel = txt;
                 else if (upper.Contains("COLOR") || upper.Contains("CB")) _cbLabel = txt;
                 else if (upper.Contains("LANG")) _langLabel = txt;
+            }
+
+            if (_cardGroup == null)
+            {
+                var group = GetComponent<CanvasGroup>();
+                if (group == null) group = GetComponentInChildren<CanvasGroup>(true);
+                _cardGroup = group;
             }
         }
     }

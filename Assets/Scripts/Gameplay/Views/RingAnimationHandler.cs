@@ -139,33 +139,22 @@ namespace RingFlow.Gameplay.Views
                 float worldJumpPower = F.MoveJumpPower + (dist * 0.35f);
                 float localJumpPower = worldJumpPower / toPoleScale.y;
 
-                movedRingTransform.DOLocalJump(targetLocal, localJumpPower, 1, duration)
-                    .SetEase(Ease.InOutQuad)
-                    .SetAutoKill(true)
-                    .OnComplete(() =>
-                    {
-                        if (movedRingGameObject == null || movedRingTransform == null) return;
-                        AnimatingTargetPoleId = -1;
-                        TriggerMoveEffects(movedRingTransform.position, movedColor);
-                        _hapticService?.Vibrate(HapticType.Light);
-                        DOTween.Kill(movedRingTransform);
-                        movedRingTransform.DOScale(new Vector3(localX * 1.25f, localY * 0.6f, localZ * 1.25f), 0.08f)
-                            .SetEase(Ease.OutQuad)
-                            .OnComplete(() =>
-                            {
-                                if (movedRingGameObject == null || movedRingTransform == null) return;
-                                movedRingTransform.DOScale(normalScale, 0.18f).SetEase(Ease.OutBack);
-                            });
-                        applySelection();
-                    });
-
-                movedRingTransform.DOScale(new Vector3(localX * 0.85f, localY * 1.35f, localZ * 0.85f), duration * 0.4f)
-                    .SetEase(Ease.OutQuad)
-                    .OnComplete(() =>
-                    {
-                        if (movedRingGameObject == null || movedRingTransform == null) return;
-                        movedRingTransform.DOScale(normalScale, duration * 0.4f).SetEase(Ease.InQuad);
-                    });
+                var moveSequence = DOTween.Sequence().SetTarget(movedRingTransform).SetAutoKill(true);
+                moveSequence.Append(movedRingTransform.DOLocalJump(targetLocal, localJumpPower, 1, duration).SetEase(Ease.InOutQuad));
+                moveSequence.AppendCallback(() =>
+                {
+                    if (movedRingGameObject == null || movedRingTransform == null) return;
+                    AnimatingTargetPoleId = -1;
+                    TriggerMoveEffects(movedRingTransform.position, movedColor);
+                    _hapticService?.Vibrate(HapticType.Light);
+                });
+                moveSequence.Append(movedRingTransform.DOScale(new Vector3(localX * 1.25f, localY * 0.6f, localZ * 1.25f), 0.08f).SetEase(Ease.OutQuad));
+                moveSequence.Append(movedRingTransform.DOScale(normalScale, 0.18f).SetEase(Ease.OutBack));
+                moveSequence.OnComplete(() =>
+                {
+                    if (movedRingGameObject == null || movedRingTransform == null) return;
+                    applySelection();
+                });
             }
             else
             {

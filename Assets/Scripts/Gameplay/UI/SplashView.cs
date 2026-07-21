@@ -9,11 +9,16 @@ namespace RingFlow.Gameplay.UI
     [Mediator(typeof(SplashMediator))]
     public class SplashView : View, IAuthoredView
     {
-        public TextMeshProUGUI LogoText { get; private set; }
-        public TextMeshProUGUI TaglineText { get; private set; }
-        public TextMeshProUGUI ProgressText { get; private set; }
-        public Image ProgressBar { get; private set; }
-        public CanvasGroup CardGroup { get; private set; }
+        [SerializeField] private TextMeshProUGUI _logoText;
+        public TextMeshProUGUI LogoText => _logoText;
+        [SerializeField] private TextMeshProUGUI _taglineText;
+        public TextMeshProUGUI TaglineText => _taglineText;
+        [SerializeField] private TextMeshProUGUI _progressText;
+        public TextMeshProUGUI ProgressText => _progressText;
+        [SerializeField] private Image _progressBar;
+        public Image ProgressBar => _progressBar;
+        [SerializeField] private CanvasGroup _cardGroup;
+        public CanvasGroup CardGroup => _cardGroup;
 
         private void Awake()
         {
@@ -48,17 +53,30 @@ namespace RingFlow.Gameplay.UI
 
         private void BindReferencesFromChildren()
         {
-            var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
-            foreach (var txt in texts)
+            if (_logoText == null || _taglineText == null || _progressText == null)
             {
-                if (txt.name.Contains("Logo")) LogoText = txt;
-                else if (txt.name.Contains("Tag")) TaglineText = txt;
-                else if (txt.name.Contains("Progress")) ProgressText = txt;
+                var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
+                foreach (var txt in texts)
+                {
+                    if (txt.name.Contains("Logo")) _logoText = txt;
+                    else if (txt.name.Contains("Tag")) _taglineText = txt;
+                    else if (txt.name.Contains("Progress")) _progressText = txt;
+                }
             }
-            var bars = GetComponentsInChildren<Image>(true);
-            foreach (var img in bars)
+            if (_progressBar == null)
             {
-                if (img.name.Contains("ProgressBarFill")) ProgressBar = img;
+                var bars = GetComponentsInChildren<Image>(true);
+                foreach (var img in bars)
+                {
+                    if (img.name.Contains("ProgressBarFill")) _progressBar = img;
+                }
+            }
+
+            if (_cardGroup == null)
+            {
+                var group = GetComponent<CanvasGroup>();
+                if (group == null) group = GetComponentInChildren<CanvasGroup>(true);
+                _cardGroup = group;
             }
         }
     }

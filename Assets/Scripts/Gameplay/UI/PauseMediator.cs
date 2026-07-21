@@ -24,7 +24,7 @@ namespace RingFlow.Gameplay.UI
             {
                 SignalBus.Fire(new HideScreenSignal(ScreenType.Pause));
                 int currentLevel = _progression?.CurrentLevel.Value ?? 1;
-                SignalBus.FireAsyncAndForget(new InitLevelSignal(currentLevel));
+                SignalBus.FireAsyncAndForget(new InitLevelSignal(currentLevel, forceRestart: true));
             });
             View.SettingsButton?.onClick.AddListener(() => SignalBus.Fire(new OpenSettingsSignal()));
             View.QuitButton?.onClick.AddListener(() => SignalBus.Fire(new QuitToMenuRequestedSignal()));

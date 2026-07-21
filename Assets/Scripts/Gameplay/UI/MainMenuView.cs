@@ -10,21 +10,36 @@ namespace RingFlow.Gameplay.UI
     [Mediator(typeof(MainMenuMediator))]
     public class MainMenuView : View, IAuthoredView
     {
-        public Button ContinueButton { get; private set; }
-        public Button PlayButton { get; private set; }
-        public Button LevelSelectButton { get; private set; }
-        public Button SettingsButton { get; private set; }
-        public Button DailyRewardButton { get; private set; }
-        public Button ChestButton { get; private set; }
-        public Button WorldMapButton { get; private set; }
-        public TextMeshProUGUI VersionLabel { get; private set; }
-        public TextMeshProUGUI CoinsText { get; private set; }
-        public TextMeshProUGUI DiamondsText { get; private set; }
-        public TextMeshProUGUI TitleText { get; private set; }
-        public TextMeshProUGUI SubtitleText { get; private set; }
-        public TextMeshProUGUI PlayerLevelText { get; private set; }
-        public Image PlayerLevelProgress { get; private set; }
-        public CanvasGroup CardGroup { get; private set; }
+        [SerializeField] private Button _continueButton;
+        [SerializeField] private Button _playButton;
+        [SerializeField] private Button _levelSelectButton;
+        [SerializeField] private Button _settingsButton;
+        [SerializeField] private Button _dailyRewardButton;
+        [SerializeField] private Button _chestButton;
+        [SerializeField] private Button _worldMapButton;
+        [SerializeField] private TextMeshProUGUI _versionLabel;
+        [SerializeField] private TextMeshProUGUI _coinsText;
+        [SerializeField] private TextMeshProUGUI _diamondsText;
+        [SerializeField] private TextMeshProUGUI _titleText;
+        [SerializeField] private TextMeshProUGUI _subtitleText;
+        [SerializeField] private TextMeshProUGUI _playerLevelText;
+        [SerializeField] private Image _playerLevelProgress;
+        [SerializeField] private CanvasGroup _cardGroup;
+        public Button ContinueButton => _continueButton;
+        public Button PlayButton => _playButton;
+        public Button LevelSelectButton => _levelSelectButton;
+        public Button SettingsButton => _settingsButton;
+        public Button DailyRewardButton => _dailyRewardButton;
+        public Button ChestButton => _chestButton;
+        public Button WorldMapButton => _worldMapButton;
+        public TextMeshProUGUI VersionLabel => _versionLabel;
+        public TextMeshProUGUI CoinsText => _coinsText;
+        public TextMeshProUGUI DiamondsText => _diamondsText;
+        public TextMeshProUGUI TitleText => _titleText;
+        public TextMeshProUGUI SubtitleText => _subtitleText;
+        public TextMeshProUGUI PlayerLevelText => _playerLevelText;
+        public Image PlayerLevelProgress => _playerLevelProgress;
+        public CanvasGroup CardGroup => _cardGroup;
 
         private GameObject _continueBtn, _playBtn, _lvlBtn, _dailyBtn, _settingsBtn, _chestBtn, _mapBtn;
         private ILocalizationService _locService;
@@ -105,13 +120,13 @@ namespace RingFlow.Gameplay.UI
             {
                 GameUIResources.AddButtonEffects(btn);
                 var upper = btn.name.ToUpperInvariant();
-                if (upper.Contains("CONTINUE")) { _continueBtn = btn.gameObject; ContinueButton = btn; }
-                else if (upper.Contains("QUICK PLAY") || upper.Contains("PLAY")) { _playBtn = btn.gameObject; PlayButton = btn; }
-                else if (upper.Contains("LEVELS") || upper.Contains("LEVEL SELECT")) { _lvlBtn = btn.gameObject; LevelSelectButton = btn; }
-                else if (upper.Contains("DAILY") || upper.Contains("REWARD")) { _dailyBtn = btn.gameObject; DailyRewardButton = btn; }
-                else if (upper.Contains("SETTINGS") || upper.Contains("⚙")) { _settingsBtn = btn.gameObject; SettingsButton = btn; }
-                else if (upper.Contains("CHEST")) { _chestBtn = btn.gameObject; ChestButton = btn; }
-                else if (upper.Contains("WORLD") || upper.Contains("MAP")) { _mapBtn = btn.gameObject; WorldMapButton = btn; }
+                if (upper.Contains("CONTINUE")) { _continueBtn = btn.gameObject; _continueButton = btn; }
+                else if (upper.Contains("QUICK PLAY") || upper.Contains("PLAY")) { _playBtn = btn.gameObject; _playButton = btn; }
+                else if (upper.Contains("LEVELS") || upper.Contains("LEVEL SELECT")) { _lvlBtn = btn.gameObject; _levelSelectButton = btn; }
+                else if (upper.Contains("DAILY") || upper.Contains("REWARD")) { _dailyBtn = btn.gameObject; _dailyRewardButton = btn; }
+                else if (upper.Contains("SETTINGS") || upper.Contains("⚙")) { _settingsBtn = btn.gameObject; _settingsButton = btn; }
+                else if (upper.Contains("CHEST")) { _chestBtn = btn.gameObject; _chestButton = btn; }
+                else if (upper.Contains("WORLD") || upper.Contains("MAP")) { _mapBtn = btn.gameObject; _worldMapButton = btn; }
             }
 
             var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
@@ -119,17 +134,24 @@ namespace RingFlow.Gameplay.UI
             {
                 if (txt.transform.parent != transform && txt.transform.parent?.parent?.parent != transform) continue;
                 var upper = txt.name.ToUpperInvariant();
-                if (txt.fontSize >= 50 || upper.Contains("TITLE")) TitleText = txt;
-                else if (txt.fontSize >= 18 && (upper.Contains("SUBTITLE") || upper.Contains("TAG"))) SubtitleText = txt;
-                else if (upper.Contains("COIN")) CoinsText = txt;
-                else if (upper.Contains("DIAMOND") || upper.Contains("GEM")) DiamondsText = txt;
-                else if (upper.Contains("VERSION") || upper.Contains("VER")) VersionLabel = txt;
-                else if (upper.Contains("PLAYER LEVEL") || upper.Contains("LVL")) PlayerLevelText = txt;
+                if (txt.fontSize >= 50 || upper.Contains("TITLE")) _titleText = txt;
+                else if (txt.fontSize >= 18 && (upper.Contains("SUBTITLE") || upper.Contains("TAG"))) _subtitleText = txt;
+                else if (upper.Contains("COIN")) _coinsText = txt;
+                else if (upper.Contains("DIAMOND") || upper.Contains("GEM")) _diamondsText = txt;
+                else if (upper.Contains("VERSION") || upper.Contains("VER")) _versionLabel = txt;
+                else if (upper.Contains("PLAYER LEVEL") || upper.Contains("LVL")) _playerLevelText = txt;
             }
 
             var progressBars = GetComponentsInChildren<Image>(true);
             foreach (var img in progressBars)
-                if (img.name.Contains("LevelBarFill")) PlayerLevelProgress = img;
+                if (img.name.Contains("LevelBarFill")) _playerLevelProgress = img;
+
+            if (_cardGroup == null)
+            {
+                var group = GetComponent<CanvasGroup>();
+                if (group == null) group = GetComponentInChildren<CanvasGroup>(true);
+                _cardGroup = group;
+            }
         }
     }
 }

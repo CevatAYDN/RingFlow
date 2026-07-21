@@ -116,10 +116,9 @@ namespace RingFlow.Editor
             return type switch
             {
                 RingType.Standard => "STD",
-                RingType.Key => "KEY",
+                RingType.Locked => "KEY",
                 RingType.Mystery => "MYS",
                 RingType.Frozen => "FRZ",
-                RingType.Locked => "LCK",
                 RingType.Stone => "STN",
                 RingType.Glass => "GLS",
                 RingType.Rainbow => "RNB",

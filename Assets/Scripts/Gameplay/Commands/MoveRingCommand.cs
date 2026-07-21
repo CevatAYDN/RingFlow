@@ -16,6 +16,7 @@ namespace RingFlow.Gameplay
             // BUG-7 FIX: Inject GameConfigDatabaseSO so ShouldTickBomb reads BombTickMode
             // from the same SSOT as LevelGenerator and LevelSolver (AGENTS.md Golden Rule #3).
             [Inject] private GameConfigDatabaseSO _dbConfig;
+            [Inject] private IPlayerPrefsService _prefs;
 
         // IResettable: called by CommandPool before returning this instance to the pool.
         // Clears the bomb-count cache so the next Execute() starts with a fresh scan.
@@ -95,7 +96,7 @@ namespace RingFlow.Gameplay
 
             fromPole.PopRing();
 
-            if (toPole.IsLocked && (ring.Type == RingType.Locked || ring.Type == RingType.Key))
+            if (toPole.IsLocked && ring.Type.IsLockedKey())
             {
                 toPole.IsLocked = false;
                 context.WasPoleUnlocked = true;
@@ -212,16 +213,18 @@ namespace RingFlow.Gameplay
 
             _model.MovesCount.Value++;
 
-#if DEVELOPMENT_BUILD
             NexusLog.Info("MoveRingCommand", "CompleteMove", $"{context.FromPoleId}->{context.ToPoleId}",
-                $"Move {context.FromPoleId}->{context.ToPoleId} OK. Total moves={_model.MovesCount.Value}. Subs={mainRecord.SubMoves?.Count ?? 0}.");
-#endif
+                $"Move EXECUTED. Total moves={_model.MovesCount.Value}. Subs={mainRecord.SubMoves?.Count ?? 0}. Firing RingMovedSignal.");
 
             _signalBus.Fire(new RingMovedSignal(context.FromPoleId, context.ToPoleId));
 
             TickAllBombsAndCapture(mainRecord);
             bool bombExploded = mainRecord.BombExplodedRings.Count > 0;
             _model.MoveHistory.Push(mainRecord);
+            
+            // Autosave board state after each move for crash recovery
+            int currentLevel = _progression?.CurrentLevel.Value ?? 1;
+            BoardStateSaveSystem.Save(_prefs, _model, currentLevel);
 
             if (bombExploded)
             {

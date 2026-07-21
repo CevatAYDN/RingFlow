@@ -39,7 +39,7 @@ namespace RingFlow.Gameplay.Rules
         public static bool CanAddRing(RingData movingRing, RingData topRing, bool isPoleFull, bool isPoleLocked)
         {
             if (isPoleLocked)
-                return movingRing.Type == RingType.Locked || movingRing.Type == RingType.Key;
+                return movingRing.Type.IsLockedKey();
 
             if (isPoleFull)
                 return false;
@@ -101,7 +101,7 @@ namespace RingFlow.Gameplay.Rules
         /// </summary>
         public static string DescribeCannotAddReason(RingData movingRing, RingData topRing, bool isPoleFull, bool isPoleLocked)
         {
-            if (isPoleLocked && movingRing.Type != RingType.Locked && movingRing.Type != RingType.Key)
+            if (isPoleLocked && !movingRing.Type.IsLockedKey())
                 return "Pole locked and ring is not a Key/Locked type";
             if (isPoleFull)
                 return "Pole full";

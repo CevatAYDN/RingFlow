@@ -16,14 +16,21 @@ namespace RingFlow.Gameplay.UI
     [Mediator(typeof(ParentalGatePopupMediator))]
     public class ParentalGatePopupView : View, IAuthoredView
     {
-        public Button AcceptButton;
-        public Button TermsButton;
-        public Button PrivacyButton;
+        [SerializeField] private Button _acceptButton;
+        public Button AcceptButton => _acceptButton;
+        [SerializeField] private Button _termsButton;
+        public Button TermsButton => _termsButton;
+        [SerializeField] private Button _privacyButton;
+        public Button PrivacyButton => _privacyButton;
 
-        public TextMeshProUGUI TitleText;
-        public InputField AgeInputField; // Deprecated: old math gate input. Hidden in consent-only mode.
-        public TextMeshProUGUI QuestionText; // Used as consent/body text in the current flow.
-        public TextMeshProUGUI ErrorText;
+        [SerializeField] private TextMeshProUGUI _titleText;
+        public TextMeshProUGUI TitleText => _titleText;
+        [SerializeField] private InputField _ageInputField; // Deprecated: old math gate input. Hidden in consent-only mode.
+        public InputField AgeInputField => _ageInputField;
+        [SerializeField] private TextMeshProUGUI _questionText; // Used as consent/body text in the current flow.
+        public TextMeshProUGUI QuestionText => _questionText;
+        [SerializeField] private TextMeshProUGUI _errorText;
+        public TextMeshProUGUI ErrorText => _errorText;
 
         private ILocalizationService _loc;
         private bool _initialized;
@@ -95,41 +102,41 @@ namespace RingFlow.Gameplay.UI
             card.GetComponent<Image>().raycastTarget = true;
 
             var titleGo = GameUIResources.CreateText("Parental Verification", card.transform, 34, TextAnchor.MiddleCenter, GameUIResources.TextColor);
-            TitleText = titleGo.GetComponent<TextMeshProUGUI>();
+            _titleText = titleGo.GetComponent<TextMeshProUGUI>();
             var titleRt = titleGo.GetComponent<RectTransform>();
             GameUIResources.SetAnchors(titleRt, 0.05f, 0.72f, 0.95f, 0.88f);
-            if (TitleText != null) TitleText.fontStyle = FontStyles.Bold;
+            if (_titleText != null) _titleText.fontStyle = FontStyles.Bold;
             titleGo.name = "Title";
 
             var questionGo = GameUIResources.CreateText("", card.transform, 22, TextAnchor.MiddleCenter, GameUIResources.AccentColor);
-            QuestionText = questionGo.GetComponent<TextMeshProUGUI>();
-            if (QuestionText != null) QuestionText.fontStyle = FontStyles.Bold;
+            _questionText = questionGo.GetComponent<TextMeshProUGUI>();
+            if (_questionText != null) _questionText.fontStyle = FontStyles.Bold;
             questionGo.name = "Question";
             var questionRt = questionGo.GetComponent<RectTransform>();
             GameUIResources.SetAnchors(questionRt, 0.08f, 0.44f, 0.92f, 0.64f);
 
             var errorGo = GameUIResources.CreateText("", card.transform, 18, TextAnchor.MiddleCenter, GameUIResources.DangerColor);
-            ErrorText = errorGo.GetComponent<TextMeshProUGUI>();
+            _errorText = errorGo.GetComponent<TextMeshProUGUI>();
             errorGo.name = "Error";
             var errorRt = errorGo.GetComponent<RectTransform>();
             GameUIResources.SetAnchors(errorRt, 0.15f, 0.36f, 0.85f, 0.41f);
 
             var acceptBtnGo = GameUIResources.CreateButton("ACCEPT & CONTINUE", card.transform, 320, 64);
-            AcceptButton = acceptBtnGo.GetComponent<Button>();
-            AcceptButton.name = "Accept";
+            _acceptButton = acceptBtnGo.GetComponent<Button>();
+            _acceptButton.name = "Accept";
             GameUIResources.SetAnchors(acceptBtnGo.GetComponent<RectTransform>(), 0.20f, 0.22f, 0.80f, 0.34f);
 
             var termsBtnGo = GameUIResources.CreateButton("Terms of Service", card.transform, 180, 40);
-            TermsButton = termsBtnGo.GetComponent<Button>();
-            TermsButton.name = "Terms";
+            _termsButton = termsBtnGo.GetComponent<Button>();
+            _termsButton.name = "Terms";
             GameUIResources.ApplySecondaryStyle(termsBtnGo);
             var termsText = termsBtnGo.GetComponentInChildren<TextMeshProUGUI>();
             if (termsText != null) termsText.fontSize = 14;
             GameUIResources.SetAnchors(termsBtnGo.GetComponent<RectTransform>(), 0.08f, 0.10f, 0.48f, 0.18f);
 
             var privacyBtnGo = GameUIResources.CreateButton("Privacy Policy", card.transform, 180, 40);
-            PrivacyButton = privacyBtnGo.GetComponent<Button>();
-            PrivacyButton.name = "Privacy";
+            _privacyButton = privacyBtnGo.GetComponent<Button>();
+            _privacyButton.name = "Privacy";
             GameUIResources.ApplySecondaryStyle(privacyBtnGo);
             var privacyText = privacyBtnGo.GetComponentInChildren<TextMeshProUGUI>();
             if (privacyText != null) privacyText.fontSize = 14;
@@ -196,23 +203,30 @@ namespace RingFlow.Gameplay.UI
 
         private void BindReferencesFromChildren()
         {
-            var buttons = GetComponentsInChildren<Button>(true);
-            foreach (var btn in buttons)
+            if (_acceptButton == null || _termsButton == null || _privacyButton == null)
             {
-                GameUIResources.AddButtonEffects(btn);
-                if (btn.name.ToUpper().Contains("ACCEPT")) AcceptButton = btn;
-                else if (btn.name.ToUpper().Contains("TERMS")) TermsButton = btn;
-                else if (btn.name.ToUpper().Contains("PRIVACY")) PrivacyButton = btn;
+                var buttons = GetComponentsInChildren<Button>(true);
+                foreach (var btn in buttons)
+                {
+                    GameUIResources.AddButtonEffects(btn);
+                    if (btn.name.ToUpper().Contains("ACCEPT")) _acceptButton = btn;
+                    else if (btn.name.ToUpper().Contains("TERMS")) _termsButton = btn;
+                    else if (btn.name.ToUpper().Contains("PRIVACY")) _privacyButton = btn;
+                }
             }
 
-            AgeInputField = GetComponentInChildren<InputField>(true);
+            if (_ageInputField == null)
+                _ageInputField = GetComponentInChildren<InputField>(true);
 
-            var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
-            foreach (var txt in texts)
+            if (_titleText == null || _questionText == null || _errorText == null)
             {
-                if (txt.name.ToUpper().Contains("TITLE")) TitleText = txt;
-                else if (txt.name.ToUpper().Contains("QUESTION")) QuestionText = txt;
-                else if (txt.name.ToUpper().Contains("ERROR")) ErrorText = txt;
+                var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
+                foreach (var txt in texts)
+                {
+                    if (txt.name.ToUpper().Contains("TITLE")) _titleText = txt;
+                    else if (txt.name.ToUpper().Contains("QUESTION")) _questionText = txt;
+                    else if (txt.name.ToUpper().Contains("ERROR")) _errorText = txt;
+                }
             }
         }
     }

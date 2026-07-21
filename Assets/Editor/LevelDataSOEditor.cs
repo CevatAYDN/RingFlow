@@ -861,7 +861,7 @@ namespace RingFlow.Editor
                     {
                         for (int r = 0; r < pole.Rings.Count; r++)
                         {
-                            if (pole.Rings[r].Type == RingType.Locked || pole.Rings[r].Type == RingType.Key)
+                            if (pole.Rings[r].Type.IsLockedKey())
                             { hasKey = true; break; }
                         }
                     }

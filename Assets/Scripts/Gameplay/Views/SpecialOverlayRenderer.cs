@@ -96,7 +96,6 @@ namespace RingFlow.Gameplay
                 RingType.Mystery => ("?", Color.yellow),
                 RingType.Frozen => ("*", Color.cyan),
                 RingType.Locked => ("L", new Color(1f, 0.84f, 0f)),
-                RingType.Key => ("K", new Color(1f, 0.84f, 0f)),
                 RingType.Stone => ("S", Color.gray),
                 RingType.Glass => ("G", new Color(1f, 1f, 1f, 0.5f)),
                 RingType.Bomb => (ringData.AdditionalData.ToString(), Color.red),

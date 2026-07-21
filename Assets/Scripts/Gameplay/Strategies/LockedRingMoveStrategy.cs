@@ -7,7 +7,7 @@ namespace RingFlow.Gameplay.Strategies
     /// </summary>
     public sealed class LockedRingMoveStrategy : IRingMoveStrategy
     {
-        public bool CanHandle(RingType ringType) => ringType == RingType.Locked || ringType == RingType.Key;
+        public bool CanHandle(RingType ringType) => ringType.IsLockedKey();
 
         public bool PreMoveValidation(ref MoveContext context) => true;
 

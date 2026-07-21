@@ -21,6 +21,7 @@ namespace RingFlow.Gameplay
         [Inject] private IGameStateMachine _fsm;
         [Inject] private GameConfigDatabaseSO _dbConfig;
         [Inject] private IAnalyticsService _analyticsService;
+        [Inject] private IPlayerPrefsService _prefs;
         // _ads removed: TryShowInterstitial moved to WinState.OnEnterAsync (ad SDK race fix).
         // _feelConfig removed: WinStateDelayMs moved to WinState.OnEnterAsync (timing is State concern).
 
@@ -57,9 +58,12 @@ namespace RingFlow.Gameplay
 
             int stars = ComputeStars(prevMoves, prevTarget);
 
-            // Record best (fewest) moves per level for the save model.
+            // Record best (fewest) moves and stars per level for the save model.
             if (_progress != null)
+            {
                 _progress.RecordBestMoves(prevLevel, prevMoves);
+                _progress.RecordStars(prevLevel, stars);
+            }
 
             _progressionService?.CompleteCurrentLevel();
             int newLevel = _progressionService != null ? _progressionService.CurrentLevel.Value : prevLevel;
@@ -73,6 +77,9 @@ namespace RingFlow.Gameplay
 #endif
 
             _analyticsService?.LevelComplete(prevLevel, prevMoves, stars);
+
+            // Clear board state autosave since level is completed
+            BoardStateSaveSystem.Clear(_prefs);
 
             UnlockWorldIfNeeded(newLevel);
             // TryShowInterstitial moved to WinState.OnEnterAsync — ad is shown inside the
@@ -144,7 +151,11 @@ namespace RingFlow.Gameplay
         {
             if (_progress == null) return;
 
-            var rng = new System.Random(prevLevel * 1000 + prevMoves);
+            // Use deterministic seed based on level and moves for reproducible rewards
+            // This ensures the same gameplay performance yields the same rewards
+            int seed = prevLevel * 7919 + prevMoves * 37 + stars;
+            var rng = new System.Random(seed);
+            
             _progress.ChestBronze.Value++;
             if (rng.NextDouble() < Cfg.SilverChestChance)                  _progress.ChestSilver.Value++;
             if (stars >= 3 && rng.NextDouble() < Cfg.GoldChestChance)     _progress.ChestGold.Value++;
@@ -152,7 +163,7 @@ namespace RingFlow.Gameplay
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             NexusLog.Info("LevelWonCommand", "MaybeDropChests", "",
-                $"Chests: Bronze+1={_progress.ChestBronze.Value}, Silver={_progress.ChestSilver.Value}, Gold={_progress.ChestGold.Value}, Diamond={_progress.ChestDiamond.Value}.");
+                $"Chests: Bronze+1={_progress.ChestBronze.Value}, Silver={_progress.ChestSilver.Value}, Gold={_progress.ChestGold.Value}, Diamond={_progress.ChestDiamond.Value}. Seed={seed}");
 #endif
         }
 

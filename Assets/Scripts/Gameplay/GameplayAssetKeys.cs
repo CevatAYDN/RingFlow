@@ -56,6 +56,7 @@ namespace RingFlow.Gameplay
             public const string DailyLastClaimUtc = "RF_DailyLastClaimUtc";
             public const string DailyStreak = "RF_DailyStreak";
             public const string BestMoves = "RF_BestMoves";
+            public const string Stars = "RF_StarsPerLevel";
             public const string UndoUsedFree = "RF_UndoUsedFree";
             public const string Achievements = "RF_Achievements";
             public const string RemoveAds = "RF_RemoveAds";

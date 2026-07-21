@@ -57,6 +57,8 @@ namespace RingFlow.Gameplay
             _diag?.Checkpoint("BoardMediator.OnBind");
 
             _logger?.Log("[BoardMediator] Binding BoardView to signals...");
+            NexusLog.Info("BoardMediator", nameof(OnBind), "",
+                $"BoardMediator BOUND. View={View.GetType().Name}, Model={_model != null}, Poles={_model?.Poles.Count ?? -1}, SignalBus={SignalBus != null}");
 
             // Initialize and cache delegate handlers to avoid closure allocation garbage
             _levelLoadedHandler ??= OnLevelLoaded;
@@ -107,6 +109,8 @@ namespace RingFlow.Gameplay
 
         private void OnRingMoved(RingMovedSignal signal)
         {
+            NexusLog.Info("BoardMediator", nameof(OnRingMoved), $"{signal.FromPoleId}->{signal.ToPoleId}",
+                $"RingMovedSignal RECEIVED. View={View != null}, Model={_model != null}, Poles={_model?.Poles.Count ?? -1}");
             _logger?.Log($"[BoardMediator] Move {signal.FromPoleId} -> {signal.ToPoleId} completed. Animating.");
 
             // FIX-A5: Only push the PRIMARY move (player-initiated from→to) to _recentMoves.
@@ -298,6 +302,9 @@ namespace RingFlow.Gameplay
 
         protected override void OnUnbind()
         {
+            NexusLog.Info("BoardMediator", nameof(OnUnbind), "",
+                $"BoardMediator UNBOUND. View={View?.GetType().Name ?? "null"}");
+
             _tutorialSolveCts?.Cancel();
             _tutorialSolveCts?.Dispose();
             _tutorialSolveCts = null;

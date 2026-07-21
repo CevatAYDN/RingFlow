@@ -46,6 +46,7 @@ namespace RingFlow.Gameplay.UI
         private UIThemeConfigSO _themeConfig;
         private bool _subscribed;
         private bool _screensLoaded;
+        private bool _isLoading;
         private ScreenType _activeExclusiveScreen = ScreenType.Splash;
         private readonly Stack<ScreenType> _popupStack = new();
         private readonly List<ISignalSubscription> _subscriptions = new();
@@ -78,18 +79,20 @@ namespace RingFlow.Gameplay.UI
             _themeConfig = _root?.Context?.TryResolve<UIThemeConfigSO>();
         }
 
-        private void OnEnable()
+        private async void OnEnable()
         {
             EnsureScreenLoaderInitialized();
             _screenLoader.BindExistingScreens();
-            if (_screenLoader.Screens.Count == 0)
+            if (_screenLoader.Screens.Count == 0 && !_isLoading)
             {
-                _screenLoader.LoadAllFromResources();
+                _isLoading = true;
+                await _screenLoader.LoadAllAsync(CancellationToken.None);
                 _screensLoaded = _screenLoader.Screens.Count > 0;
+                _isLoading = false;
             }
             else
             {
-                _screensLoaded = true;
+                _screensLoaded = _screenLoader.Screens.Count > 0;
             }
             ApplyGameplayOverlayStyle();
         }
@@ -102,7 +105,7 @@ namespace RingFlow.Gameplay.UI
             NexusLog.Info("UIRoot", nameof(Start), "Lifecycle",
                 $"_root={(_root != null ? "set" : "null")}, _root.Context={(_root?.Context != null ? "set" : "null")}, _screensLoaded={_screensLoaded}");
             TrySubscribeNow();
-            if (_screenLoader.Screens.Count == 0 && !_screensLoaded)
+            if (_screenLoader.Screens.Count == 0 && !_screensLoaded && !_isLoading)
             {
                 _lifecycleCts?.Cancel();
                 _lifecycleCts?.Dispose();
@@ -322,8 +325,9 @@ namespace RingFlow.Gameplay.UI
 
         public bool TryShowScreen(ScreenType screen)
         {
-            _screenLoader.EnsureScreenLoaded(screen);
-            if (!_screenLoader.HasScreen(screen)) return false;
+            _screenLoader.EnsureScreenLoadedAsync(screen, CancellationToken.None).GetAwaiter().GetResult();
+            if (!_screenLoader.HasScreen(screen))
+                return false;
             OnShowScreen(new ShowScreenSignal(screen));
             return true;
         }
@@ -359,7 +363,7 @@ namespace RingFlow.Gameplay.UI
                 return;
             }
 
-            _screenLoader.EnsureScreenLoaded(signal.Screen);
+            _screenLoader.EnsureScreenLoadedAsync(signal.Screen, CancellationToken.None).GetAwaiter().GetResult();
             if (!_screenLoader.HasScreen(signal.Screen))
             {
                 NexusLog.Error("UIRoot", nameof(OnShowScreen), "Screen",
@@ -404,7 +408,7 @@ namespace RingFlow.Gameplay.UI
         private void OpenPopup(ScreenType popup)
         {
             EnsureScreenLoaderInitialized();
-            var go = _screenLoader.EnsureScreenLoaded(popup);
+            var go = _screenLoader.EnsureScreenLoadedAsync(popup, CancellationToken.None).GetAwaiter().GetResult();
             if (go == null) return;
 
             if (_popupStack.Count == 0 || _popupStack.Peek() != popup)

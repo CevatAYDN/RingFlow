@@ -393,7 +393,7 @@ namespace RingFlow.Tests
         public void RingRuleEvaluator_LockedPole_OnlyKeyAllowed()
         {
             // GDD §32: Locked pole accepts only Key ring
-            var key      = new RingData(RingColor.Yellow, RingType.Key);
+            var key      = new RingData(RingColor.Yellow, RingType.Locked);
             var locked   = new RingData(RingColor.Yellow, RingType.Locked);
             var standard = new RingData(RingColor.Yellow, RingType.Standard);
             var emptyTop = new RingData(RingColor.None, RingType.Standard);

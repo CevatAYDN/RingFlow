@@ -16,12 +16,9 @@ namespace RingFlow.Gameplay.UI
     [Mediator(typeof(MechanicGuideMediator))]
     public class MechanicGuideView : View, IAuthoredView
     {
-        public Button CloseButton { get; private set; }
+        [SerializeField] private Button _closeButton;
+        public Button CloseButton => _closeButton;
         private GameObject _card;
-
-        /// <summary>
-        /// Mechanic entry data: symbol character, display name key, description key.
-        /// </summary>
         public struct MechanicEntryData
         {
             public readonly string Symbol;
@@ -113,12 +110,15 @@ namespace RingFlow.Gameplay.UI
 
         private void BindReferencesFromChildren()
         {
-            var buttons = GetComponentsInChildren<Button>(true);
-            foreach (var btn in buttons)
+            if (_closeButton == null)
             {
-                GameUIResources.AddButtonEffects(btn);
-                var upper = btn.name.ToUpperInvariant();
-                if (upper.Contains("CLOSE")) CloseButton = btn;
+                var buttons = GetComponentsInChildren<Button>(true);
+                foreach (var btn in buttons)
+                {
+                    GameUIResources.AddButtonEffects(btn);
+                    var upper = btn.name.ToUpperInvariant();
+                    if (upper.Contains("CLOSE")) _closeButton = btn;
+                }
             }
             _card = transform.Find("Card")?.gameObject;
         }

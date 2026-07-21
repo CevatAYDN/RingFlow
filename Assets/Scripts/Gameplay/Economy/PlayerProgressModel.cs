@@ -25,8 +25,8 @@ namespace RingFlow.Gameplay
         public const string KeyPlayerLvl     = GameplayAssetKeys.PlayerPrefs.PlayerLevel;
         public const string KeyDailyDay      = GameplayAssetKeys.PlayerPrefs.DailyDayIndex;
         public const string KeyDailyStamp    = GameplayAssetKeys.PlayerPrefs.DailyLastClaimUtc;
-	public const string KeyDailyStreak   = GameplayAssetKeys.PlayerPrefs.DailyStreak;
-	public const string KeyBestMoves      = GameplayAssetKeys.PlayerPrefs.BestMoves;
+	public const string KeyDailyStreak   = GameplayAssetKeys.PlayerPrefs.DailyStreak;        public const string KeyBestMoves      = GameplayAssetKeys.PlayerPrefs.BestMoves;
+        public const string KeyStars           = GameplayAssetKeys.PlayerPrefs.Stars;
         public const string KeyUndoUsed      = GameplayAssetKeys.PlayerPrefs.UndoUsedFree;
         public const string KeyAchieves      = GameplayAssetKeys.PlayerPrefs.Achievements;
         public const string KeyRemoveAds     = GameplayAssetKeys.PlayerPrefs.RemoveAds;
@@ -84,6 +84,9 @@ namespace RingFlow.Gameplay
 
         /// <summary>Best (fewest) moves recorded per level index. Level 0 = unscoped. Supports save/load.</summary>
         public Dictionary<int, int> BestMovesPerLevel { get; } = new();
+
+        /// <summary>Stars earned per level index (0-3). Supports save/load.</summary>
+        public Dictionary<int, int> StarsPerLevel { get; } = new();
 
         public ObservableProperty<int> FreeUndosUsedThisSession { get; } = new(0);
 
@@ -156,6 +159,20 @@ namespace RingFlow.Gameplay
                 BestMovesPerLevel[level] = moves;
         }
 
+        /// <summary>Returns stars earned for a level, or 0 if none yet.</summary>
+        public int GetStarsForLevel(int level)
+        {
+            return StarsPerLevel.TryGetValue(level, out int stars) ? stars : 0;
+        }
+
+        /// <summary>Records stars for a level if the new value is higher.</summary>
+        public void RecordStars(int level, int stars)
+        {
+            if (level <= 0 || stars <= 0) return;
+            if (!StarsPerLevel.TryGetValue(level, out int existing) || stars > existing)
+                StarsPerLevel[level] = stars;
+        }
+
         public void Reset()
         {
             Coins.Value = 0;
@@ -172,6 +189,7 @@ namespace RingFlow.Gameplay
             DailyLastClaimUtcTicks.Value = 0;
             DailyStreak.Value = 0;
             BestMovesPerLevel.Clear();
+            StarsPerLevel.Clear();
             FreeUndosUsedThisSession.Value = 0;
             HintCount.Value = 0;
             ThemeCount.Value = 0;
@@ -213,6 +231,7 @@ namespace RingFlow.Gameplay
             prefs.SetString(PlayerProgressModel.KeyDailyStamp, m.DailyLastClaimUtcTicks.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
             prefs.SetInt(PlayerProgressModel.KeyDailyStreak, m.DailyStreak.Value);
             SaveBestMoves(prefs, PlayerProgressModel.KeyBestMoves, m.BestMovesPerLevel);
+            SaveBestMoves(prefs, PlayerProgressModel.KeyStars, m.StarsPerLevel);
             prefs.SetInt(PlayerProgressModel.KeyUndoUsed, m.FreeUndosUsedThisSession.Value);
             prefs.SetInt(PlayerProgressModel.KeyHintCount, m.HintCount.Value);
             prefs.SetInt(PlayerProgressModel.KeyThemeCount, m.ThemeCount.Value);
@@ -287,6 +306,7 @@ namespace RingFlow.Gameplay
 
             m.DailyStreak.Value = prefs.GetInt(PlayerProgressModel.KeyDailyStreak, 0);
             LoadBestMoves(prefs, PlayerProgressModel.KeyBestMoves, m.BestMovesPerLevel);
+            LoadBestMoves(prefs, PlayerProgressModel.KeyStars, m.StarsPerLevel);
 
             m.FreeUndosUsedThisSession.Value = prefs.GetInt(PlayerProgressModel.KeyUndoUsed, 0);
             m.HintCount.Value = prefs.GetInt(PlayerProgressModel.KeyHintCount, 0);
@@ -435,6 +455,7 @@ namespace RingFlow.Gameplay
                 hash = hash * 31 + Djb2Hash(prefs.GetString(PlayerProgressModel.KeyDailyStamp, ""));
                 hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyDailyStreak, 0);
                 hash = hash * 31 + Djb2Hash(prefs.GetString(PlayerProgressModel.KeyBestMoves, ""));
+                hash = hash * 31 + Djb2Hash(prefs.GetString(PlayerProgressModel.KeyStars, ""));
                 hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyUndoUsed, 0);
                 hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyHintCount, 0);
                 hash = hash * 31 + prefs.GetInt(PlayerProgressModel.KeyThemeCount, 0);
@@ -463,6 +484,7 @@ namespace RingFlow.Gameplay
             public int DailyDayIndex;
             public int DailyStreak;
             public string BestMoves;
+            public string Stars;
             public int UndoUsed;
             public int HintCount;
             public int ThemeCount;
@@ -494,6 +516,7 @@ namespace RingFlow.Gameplay
                 DailyDayIndex = prefs.GetInt(PlayerProgressModel.KeyDailyDay, 0),
                 DailyStreak = prefs.GetInt(PlayerProgressModel.KeyDailyStreak, 0),
                 BestMoves = prefs.GetString(PlayerProgressModel.KeyBestMoves, ""),
+                Stars = prefs.GetString(PlayerProgressModel.KeyStars, ""),
                 UndoUsed = prefs.GetInt(PlayerProgressModel.KeyUndoUsed, 0),
                 HintCount = prefs.GetInt(PlayerProgressModel.KeyHintCount, 0),
                 ThemeCount = prefs.GetInt(PlayerProgressModel.KeyThemeCount, 0),
@@ -547,6 +570,7 @@ namespace RingFlow.Gameplay
             prefs.SetInt(PlayerProgressModel.KeyDailyDay, snapshot.DailyDayIndex);
             prefs.SetInt(PlayerProgressModel.KeyDailyStreak, snapshot.DailyStreak);
             prefs.SetString(PlayerProgressModel.KeyBestMoves, snapshot.BestMoves ?? "");
+            prefs.SetString(PlayerProgressModel.KeyStars, snapshot.Stars ?? "");
             prefs.SetInt(PlayerProgressModel.KeyUndoUsed, snapshot.UndoUsed);
             prefs.SetInt(PlayerProgressModel.KeyHintCount, snapshot.HintCount);
             prefs.SetInt(PlayerProgressModel.KeyThemeCount, snapshot.ThemeCount);
@@ -598,6 +622,7 @@ namespace RingFlow.Gameplay
                 hash = hash * 31 + s.DailyDayIndex;
                 hash = hash * 31 + s.DailyStreak;
                 hash = hash * 31 + Djb2Hash(s.BestMoves ?? "");
+                hash = hash * 31 + Djb2Hash(s.Stars ?? "");
                 hash = hash * 31 + s.UndoUsed;
                 hash = hash * 31 + s.HintCount;
                 hash = hash * 31 + s.ThemeCount;

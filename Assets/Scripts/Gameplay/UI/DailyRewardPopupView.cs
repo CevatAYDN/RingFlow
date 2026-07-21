@@ -10,14 +10,22 @@ namespace RingFlow.Gameplay.UI
     [Mediator(typeof(DailyRewardPopupMediator))]
     public class DailyRewardPopupView : View, IAuthoredView
     {
-        public Button ClaimButton { get; private set; }
-        public Button CloseButton { get; private set; }
-        public TextMeshProUGUI TitleText { get; private set; }
-        public TextMeshProUGUI DayText { get; private set; }
-        public TextMeshProUGUI RewardText { get; private set; }
-        public TextMeshProUGUI StreakText { get; private set; }
-        public CanvasGroup CardGroup { get; private set; }
-        public Image RewardIcon { get; private set; }
+        [SerializeField] private Button _claimButton;
+        [SerializeField] private Button _closeButton;
+        [SerializeField] private TextMeshProUGUI _titleText;
+        [SerializeField] private TextMeshProUGUI _dayText;
+        [SerializeField] private TextMeshProUGUI _rewardText;
+        [SerializeField] private TextMeshProUGUI _streakText;
+        [SerializeField] private CanvasGroup _cardGroup;
+        [SerializeField] private Image _rewardIcon;
+        public Button ClaimButton => _claimButton;
+        public Button CloseButton => _closeButton;
+        public TextMeshProUGUI TitleText => _titleText;
+        public TextMeshProUGUI DayText => _dayText;
+        public TextMeshProUGUI RewardText => _rewardText;
+        public TextMeshProUGUI StreakText => _streakText;
+        public CanvasGroup CardGroup => _cardGroup;
+        public Image RewardIcon => _rewardIcon;
 
         private GameObject _claimBtn, _closeBtn;
         private ILocalizationService _locService;
@@ -72,17 +80,35 @@ namespace RingFlow.Gameplay.UI
             foreach (var btn in buttons)
             {
                 GameUIResources.AddButtonEffects(btn);
-                if (btn.name.ToUpperInvariant().Contains("CLAIM")) { _claimBtn = btn.gameObject; ClaimButton = btn; }
-                else if (btn.name.ToUpperInvariant().Contains("CLOSE")) { _closeBtn = btn.gameObject; CloseButton = btn; }
+                if (btn.name.ToUpperInvariant().Contains("CLAIM")) { _claimBtn = btn.gameObject; _claimButton = btn; }
+                else if (btn.name.ToUpperInvariant().Contains("CLOSE")) { _closeBtn = btn.gameObject; _closeButton = btn; }
             }
             var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
             foreach (var txt in texts)
             {
                 var upper = txt.name.ToUpperInvariant();
-                if (upper.Contains("TITLE")) TitleText = txt;
-                else if (upper.Contains("DAY")) DayText = txt;
-                else if (upper.Contains("REWARD")) RewardText = txt;
-                else if (upper.Contains("STREAK")) StreakText = txt;
+                if (upper.Contains("TITLE")) _titleText = txt;
+                else if (upper.Contains("DAY")) _dayText = txt;
+                else if (upper.Contains("REWARD")) _rewardText = txt;
+                else if (upper.Contains("STREAK")) _streakText = txt;
+            }
+
+            var images = GetComponentsInChildren<Image>(true);
+            foreach (var img in images)
+            {
+                if (img.name.ToUpperInvariant().Contains("REWARD") ||
+                    img.name.ToUpperInvariant().Contains("ICON"))
+                {
+                    _rewardIcon = img;
+                    break;
+                }
+            }
+
+            if (_cardGroup == null)
+            {
+                var group = GetComponent<CanvasGroup>();
+                if (group == null) group = GetComponentInChildren<CanvasGroup>(true);
+                _cardGroup = group;
             }
         }
 

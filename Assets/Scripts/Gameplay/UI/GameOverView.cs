@@ -10,13 +10,20 @@ namespace RingFlow.Gameplay.UI
     [Mediator(typeof(GameOverMediator))]
     public class GameOverView : View, IAuthoredView
     {
-        public Button RestartButton { get; private set; }
-        public Button QuitButton { get; private set; }
-        public TextMeshProUGUI TitleText { get; private set; }
-        public TextMeshProUGUI MessageText { get; private set; }
-        public TextMeshProUGUI LevelText { get; private set; }
-        public TextMeshProUGUI ProgressText { get; private set; }
-        public CanvasGroup CardGroup { get; private set; }
+        [SerializeField] private Button _restartButton;
+        [SerializeField] private Button _quitButton;
+        [SerializeField] private TextMeshProUGUI _titleText;
+        [SerializeField] private TextMeshProUGUI _messageText;
+        [SerializeField] private TextMeshProUGUI _levelText;
+        [SerializeField] private TextMeshProUGUI _progressText;
+        [SerializeField] private CanvasGroup _cardGroup;
+        public Button RestartButton => _restartButton;
+        public Button QuitButton => _quitButton;
+        public TextMeshProUGUI TitleText => _titleText;
+        public TextMeshProUGUI MessageText => _messageText;
+        public TextMeshProUGUI LevelText => _levelText;
+        public TextMeshProUGUI ProgressText => _progressText;
+        public CanvasGroup CardGroup => _cardGroup;
 
         private GameObject _restartBtn, _quitBtn;
 
@@ -65,18 +72,25 @@ namespace RingFlow.Gameplay.UI
             {
                 GameUIResources.AddButtonEffects(btn);
                 var upper = btn.name.ToUpperInvariant();
-                if (upper.Contains("RESTART") || upper.Contains("TRY")) { _restartBtn = btn.gameObject; RestartButton = btn; }
-                else if (upper.Contains("MAIN MENU") || upper.Contains("QUIT")) { _quitBtn = btn.gameObject; QuitButton = btn; }
+                if (upper.Contains("RESTART") || upper.Contains("TRY")) { _restartBtn = btn.gameObject; _restartButton = btn; }
+                else if (upper.Contains("MAIN MENU") || upper.Contains("QUIT")) { _quitBtn = btn.gameObject; _quitButton = btn; }
             }
 
             var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
             foreach (var txt in texts)
             {
                 var upper = txt.name.ToUpperInvariant();
-                if (upper.Contains("TITLE") || upper.Contains("GAME OVER")) TitleText = txt;
-                else if (upper.Contains("MESSAGE") || upper.Contains("FAILED")) MessageText = txt;
-                else if (upper.Contains("LEVEL")) LevelText = txt;
-                else if (upper.Contains("PROGRESS")) ProgressText = txt;
+                if (upper.Contains("TITLE") || upper.Contains("GAME OVER")) _titleText = txt;
+                else if (upper.Contains("MESSAGE") || upper.Contains("FAILED")) _messageText = txt;
+                else if (upper.Contains("LEVEL")) _levelText = txt;
+                else if (upper.Contains("PROGRESS")) _progressText = txt;
+            }
+
+            if (_cardGroup == null)
+            {
+                var group = GetComponent<CanvasGroup>();
+                if (group == null) group = GetComponentInChildren<CanvasGroup>(true);
+                _cardGroup = group;
             }
         }
     }

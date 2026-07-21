@@ -382,7 +382,7 @@ namespace RingFlow.Gameplay
         {
             if (IsPoleLocked(poleIndex))
             {
-                return type == RingType.Locked || type == RingType.Key;
+                return type.IsLockedKey();
             }
             if (GetRingCount(poleIndex) >= maxCapacity) return false;
 
@@ -420,7 +420,7 @@ namespace RingFlow.Gameplay
             int count = GetRingCount(poleIndex);
             if (count >= capacityLimit) return;
 
-            if (IsPoleLocked(poleIndex) && (ring.Type == RingType.Locked || ring.Type == RingType.Key))
+            if (IsPoleLocked(poleIndex) && ring.Type.IsLockedKey())
             {
                 SetPoleLocked(poleIndex, false);
                 ring.Type = RingType.Standard;

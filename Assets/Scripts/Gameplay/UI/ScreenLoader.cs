@@ -55,22 +55,22 @@ namespace RingFlow.Gameplay.UI
 
         // ── Registry Loading ────────────────────────────────────────────────
 
-        private ScreenRegistrySO ResolveScreenRegistry()
+        private async Task<ScreenRegistrySO> ResolveScreenRegistryAsync(CancellationToken ct)
         {
             var assets = ResolveAssetService();
             if (assets != null)
             {
                 try
                 {
-                    var task = assets.LoadAsync<ScreenRegistrySO>(GameplayAssetKeys.ScreenRegistry);
-                    return task.GetAwaiter().GetResult();
+                    return await assets.LoadAsync<ScreenRegistrySO>(GameplayAssetKeys.ScreenRegistry).ConfigureAwait(true);
                 }
                 catch (Exception ex)
                 {
-                    NexusLog.Warn("ScreenLoader", nameof(ResolveScreenRegistry), "",
+                    NexusLog.Warn("ScreenLoader", nameof(ResolveScreenRegistryAsync), "",
                         $"AssetService failed: {ex.Message}. Falling back to Resources.Load.");
                 }
             }
+            ct.ThrowIfCancellationRequested();
             return Resources.Load<ScreenRegistrySO>(GameplayAssetKeys.ScreenRegistry);
         }
 
@@ -82,16 +82,15 @@ namespace RingFlow.Gameplay.UI
             return ctx?.TryResolve<IAssetService>();
         }
 
-        private ScreenRegistrySO GetOrLoadRegistry()
+        private async Task<ScreenRegistrySO> GetOrLoadRegistryAsync(CancellationToken ct)
         {
             if (_cachedRegistry != null) return _cachedRegistry;
-            _cachedRegistry = ResolveScreenRegistry();
+            _cachedRegistry = await ResolveScreenRegistryAsync(ct).ConfigureAwait(true);
             return _cachedRegistry;
         }
 
-        private string GetScreenPrefabKey(ScreenType screen)
+        private static string GetScreenPrefabKey(ScreenType screen, ScreenRegistrySO registry)
         {
-            var registry = GetOrLoadRegistry();
             if (registry != null && registry.TryGetMapping(screen, out var mapping))
             {
                 if (!string.IsNullOrEmpty(mapping.PrefabPath)) return mapping.PrefabPath;
@@ -101,30 +100,30 @@ namespace RingFlow.Gameplay.UI
 
         // ── Prefab Loading ──────────────────────────────────────────────────
 
-        private GameObject LoadScreenPrefab(ScreenType screen)
+        private async Task<GameObject> LoadScreenPrefabAsync(ScreenType screen, ScreenRegistrySO registry, CancellationToken ct)
         {
-            string prefabKey = GetScreenPrefabKey(screen);
+            string prefabKey = GetScreenPrefabKey(screen, registry);
             var assets = ResolveAssetService();
             if (assets != null)
             {
                 try
                 {
-                    var task = assets.LoadAsync<GameObject>(prefabKey);
-                    return task.GetAwaiter().GetResult();
+                    return await assets.LoadAsync<GameObject>(prefabKey).ConfigureAwait(true);
                 }
                 catch (Exception ex)
                 {
-                    NexusLog.Warn("ScreenLoader", nameof(LoadScreenPrefab), screen.ToString(),
+                    NexusLog.Warn("ScreenLoader", nameof(LoadScreenPrefabAsync), screen.ToString(),
                         $"AssetService failed for '{prefabKey}': {ex.Message}. Falling back to Resources.Load.");
                 }
             }
-                        return Resources.Load<GameObject>(prefabKey);
+            ct.ThrowIfCancellationRequested();
+            return Resources.Load<GameObject>(prefabKey);
         }
 
-        public List<ScreenType> GetScreensToLoad()
+        public async Task<List<ScreenType>> GetScreensToLoadAsync(CancellationToken ct)
         {
             var list = new List<ScreenType>();
-            var registry = GetOrLoadRegistry();
+            var registry = await GetOrLoadRegistryAsync(ct).ConfigureAwait(true);
             if (registry != null && registry.Mappings.Count > 0)
             {
                 for (int i = 0; i < registry.Mappings.Count; i++)
@@ -136,6 +135,54 @@ namespace RingFlow.Gameplay.UI
             }
             return list;
         }
+
+        public async Task LoadAllAsync(CancellationToken ct = default)
+        {
+            var missingScreens = new List<ScreenType>();
+            var registry = await GetOrLoadRegistryAsync(ct).ConfigureAwait(true);
+            var screensToLoad = new List<ScreenType>();
+            if (registry != null && registry.Mappings.Count > 0)
+            {
+                for (int i = 0; i < registry.Mappings.Count; i++)
+                    screensToLoad.Add(registry.Mappings[i].Screen);
+            }
+            else
+            {
+                screensToLoad.AddRange(s_allScreens);
+            }
+
+            for (int i = 0; i < screensToLoad.Count; i++)
+            {
+                if (ct.IsCancellationRequested) return;
+                var screen = screensToLoad[i];
+                if (_screens.TryGetValue(screen, out var existing) && existing != null)
+                    DestroyScreenInstance(existing);
+
+                var loaded = await LoadScreenPrefabAsync(screen, registry, ct).ConfigureAwait(true);
+                if (loaded == null)
+                {
+                    missingScreens.Add(screen);
+                    continue;
+                }
+
+                var instance = UnityEngine.Object.Instantiate(loaded, _canvasTransform);
+                instance.name = screen.ToString();
+                instance.SetActive(false);
+                _screens[screen] = instance;
+                await Task.Yield();
+            }
+
+            if (missingScreens.Count > 0)
+                NexusLog.Warn("ScreenLoader", nameof(LoadAllAsync), "",
+                    $"Missing {missingScreens.Count} prefab(s): {string.Join(", ", missingScreens)}");
+        }
+
+        public void LoadAllFromResources()
+        {
+            LoadAllAsync(CancellationToken.None).GetAwaiter().GetResult();
+        }
+
+        public bool HasScreen(ScreenType screen) => _screens.TryGetValue(screen, out var go) && go != null;
 
         // ── Screen Instance Management ──────────────────────────────────────
 
@@ -153,91 +200,15 @@ namespace RingFlow.Gameplay.UI
         }
 
         /// <summary>
-        /// Loads all screen prefabs from Resources synchronously.
-        /// Used as fallback when async loading fails or during editor workflows.
-        /// </summary>
-        public void LoadAllFromResources()
-        {
-            var missingScreens = new List<ScreenType>();
-            var screensToLoad = GetScreensToLoad();
-
-            foreach (var screen in screensToLoad)
-            {
-                if (_screens.TryGetValue(screen, out var existing) && existing != null)
-                    DestroyScreenInstance(existing);
-
-                var loaded = LoadScreenPrefab(screen);
-                if (loaded == null)
-                {
-                    missingScreens.Add(screen);
-                    continue;
-                }
-
-                var instance = UnityEngine.Object.Instantiate(loaded, _canvasTransform);
-                instance.name = screen.ToString();
-                instance.SetActive(false);
-                _screens[screen] = instance;
-            }
-
-            if (missingScreens.Count > 0)
-                NexusLog.Warn("ScreenLoader", nameof(LoadAllFromResources), "",
-                    $"Missing {missingScreens.Count} prefab(s): {string.Join(", ", missingScreens)}");
-        }
-
-        /// <summary>
-        /// Loads all screen prefabs asynchronously via IAssetService.
-        /// Falls back to Resources.Load for any asset the service cannot resolve.
-        /// </summary>
-        public async Task LoadAllAsync(CancellationToken ct = default)
-        {
-            var assets = ResolveAssetService();
-            var missingScreens = new List<ScreenType>();
-            var screensToLoad = GetScreensToLoad();
-
-            foreach (var screen in screensToLoad)
-            {
-                if (ct.IsCancellationRequested) return;
-                if (_screens.TryGetValue(screen, out var existing) && existing != null)
-                    DestroyScreenInstance(existing);
-
-                GameObject loaded = null;
-                string prefabKey = GetScreenPrefabKey(screen);
-                if (assets != null)
-                {
-                    try
-                    {
-                        loaded = await assets.LoadAssetAsync<GameObject>(prefabKey).ConfigureAwait(true);
-                    }
-                    catch (Exception ex)
-                    {
-                        NexusLog.Warn("ScreenLoader", nameof(LoadAllAsync), screen.ToString(),
-                            $"AssetService: {ex.Message}");
-                    }
-                }
-                if (loaded == null) loaded = LoadScreenPrefab(screen);
-                if (loaded == null)
-                {
-                    missingScreens.Add(screen);
-                    continue;
-                }
-
-                var instance = UnityEngine.Object.Instantiate(loaded, _canvasTransform);
-                instance.name = screen.ToString();
-                instance.SetActive(false);
-                _screens[screen] = instance;
-                await Task.Yield();
-            }
-        }
-
-        /// <summary>
         /// Ensures a specific screen prefab is loaded and cached.
         /// </summary>
-        public GameObject EnsureScreenLoaded(ScreenType screen)
+        public async Task<GameObject> EnsureScreenLoadedAsync(ScreenType screen, CancellationToken ct = default)
         {
             if (_screens.TryGetValue(screen, out var go) && go != null)
                 return go;
 
-            var prefab = LoadScreenPrefab(screen);
+            var registry = await GetOrLoadRegistryAsync(ct).ConfigureAwait(true);
+            var prefab = await LoadScreenPrefabAsync(screen, registry, ct).ConfigureAwait(true);
             if (prefab == null) return null;
 
             go = UnityEngine.Object.Instantiate(prefab, _canvasTransform);
@@ -256,11 +227,6 @@ namespace RingFlow.Gameplay.UI
         }
 
         /// <summary>
-        /// Returns whether a screen is currently loaded and cached.
-        /// </summary>
-        public bool HasScreen(ScreenType screen) => _screens.ContainsKey(screen);
-
-        /// <summary>
         /// Sets or adds a screen instance in the cache.
         /// Used by editor workflows to restore screens after a clear.
         /// </summary>
@@ -269,9 +235,6 @@ namespace RingFlow.Gameplay.UI
             _screens[screen] = instance;
         }
 
-        /// <summary>
-        /// Destroys all loaded screen instances and clears the cache.
-        /// </summary>
         public void Clear()
         {
             foreach (var go in _screens.Values)

@@ -62,8 +62,12 @@ namespace RingFlow.Gameplay
         private void OnDisable()
         {
             // FIX-V2: Clear rainbow color when returned to pool / disabled.
-            if (_renderer != null && _propBlock != null)
+            // Must handle case where _propBlock is null (Update never ran) but
+            // renderer still has stale property block from a previous lifecycle.
+            if (_renderer != null)
             {
+                if (_propBlock == null)
+                    _propBlock = new MaterialPropertyBlock();
                 _propBlock.Clear();
                 _renderer.SetPropertyBlock(_propBlock);
             }

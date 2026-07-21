@@ -49,38 +49,4 @@ namespace RingFlow.Gameplay
     /// Error state shown when an unrecoverable failure occurs (e.g. level generation exhausted
     /// all seeds, critical service unavailable). Shows a user-friendly message and a retry button.
     /// </summary>
-    public class ErrorState : IGameState
-    {
-        [Inject] private IGameStateMachine _fsm;
-        [Inject] private ISignalBus _signalBus;
-        [Inject] private Diagnostics.IGameDiagnostics _diag;
-
-        public ValueTask OnEnterAsync(object args, CancellationToken ct)
-        {
-            _diag?.Checkpoint("ErrorState");
-
-            if (args is ErrorStateArgs errorArgs)
-            {
-                NexusLog.Error("ErrorState", nameof(OnEnterAsync), "",
-                    $"ErrorState entered: {errorArgs.Message}");
-            }
-            else
-            {
-                NexusLog.Error("ErrorState", nameof(OnEnterAsync), "",
-                    "ErrorState entered with no details.");
-            }
-
-            return default;
-        }
-
-        public ValueTask OnExitAsync(CancellationToken ct) => default;
-        public void OnTick(float deltaTime) {}
-    }
-
-    public class ErrorStateArgs
-    {
-        public string Message;
-        public System.Type RecoveryState;
-        public object RecoveryArgs;
-    }
 }

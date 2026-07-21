@@ -13,9 +13,10 @@ namespace RingFlow.Gameplay.UI
     [Mediator(typeof(WorldMapMediator))]
     public class WorldMapView : View, IAuthoredView
     {
-        public Button BackButton { get; private set; }
-        private TextMeshProUGUI _titleText;
-        private TextMeshProUGUI _bodyText;
+        [SerializeField] private Button _backButton;
+        public Button BackButton => _backButton;
+        [SerializeField] private TextMeshProUGUI _titleText;
+        [SerializeField] private TextMeshProUGUI _bodyText;
 
         private void Awake()
         {
@@ -37,19 +38,25 @@ namespace RingFlow.Gameplay.UI
 
         private void BindReferencesFromChildren()
         {
-            var buttons = GetComponentsInChildren<Button>(true);
-            foreach (var btn in buttons)
+            if (_backButton == null)
             {
-                GameUIResources.AddButtonEffects(btn);
-                var upperName = btn.name.ToUpperInvariant();
-                if (upperName.Contains("BACK")) BackButton = btn;
+                var buttons = GetComponentsInChildren<Button>(true);
+                foreach (var btn in buttons)
+                {
+                    GameUIResources.AddButtonEffects(btn);
+                    var upperName = btn.name.ToUpperInvariant();
+                    if (upperName.Contains("BACK")) _backButton = btn;
+                }
             }
-            var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
-            foreach (var txt in texts)
+            if (_titleText == null || _bodyText == null)
             {
-                var upper = txt.name.ToUpperInvariant();
-                if (upper.Contains("TITLE")) _titleText = txt;
-                else if (upper.Contains("BODY")) _bodyText = txt;
+                var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
+                foreach (var txt in texts)
+                {
+                    var upper = txt.name.ToUpperInvariant();
+                    if (upper.Contains("TITLE")) _titleText = txt;
+                    else if (upper.Contains("BODY")) _bodyText = txt;
+                }
             }
         }
     }

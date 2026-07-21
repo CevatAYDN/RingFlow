@@ -186,6 +186,7 @@ MonoBehaviour:
     PoleCapacity: 4
     ColorCount: 8
     EmptyPoleCount: 1
+    PortalCount: 0
     DifficultyScore: 83.9
     IsTutorial: 0
     RuleReferences:

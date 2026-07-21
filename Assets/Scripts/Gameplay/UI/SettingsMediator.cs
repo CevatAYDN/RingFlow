@@ -1,6 +1,7 @@
 using Nexus.Core;
 using Nexus.Core.Services;
 using RingFlow.Gameplay.Localization;
+using TMPro;
 using UnityEngine.UI;
 using System.Collections.Generic;
 
@@ -21,7 +22,10 @@ namespace RingFlow.Gameplay.UI
             if (View == null) return;
             View.Localize(_loc);
 
-            View.CloseButton?.onClick.AddListener(() => SignalBus.Fire(new CloseSettingsSignal()));
+            if (View.CloseButton != null)
+            {
+                View.CloseButton.onClick.AddListener(OnCloseClicked);
+            }
 
             if (_settings != null)
             {
@@ -32,23 +36,23 @@ namespace RingFlow.Gameplay.UI
                 View.BigButtonsToggle.isOn = _settings.BigButtons.Value;
                 View.ColorBlindSlider.value = _settings.ColorBlindMode.Value;
 
-                View.MusicToggle.onValueChanged.AddListener(v => _settings.MusicEnabled.Value = v);
-                View.SfxToggle.onValueChanged.AddListener(v => _settings.SfxEnabled.Value = v);
-                View.HapticToggle.onValueChanged.AddListener(v => _settings.HapticEnabled.Value = v);
-                View.ReduceMotionToggle.onValueChanged.AddListener(v => _settings.ReduceMotion.Value = v);
-                View.BigButtonsToggle.onValueChanged.AddListener(v => _settings.BigButtons.Value = v);
-                View.ColorBlindSlider.onValueChanged.AddListener(v => _settings.ColorBlindMode.Value = (int)v);
+                View.MusicToggle.onValueChanged.AddListener(OnMusicChanged);
+                View.SfxToggle.onValueChanged.AddListener(OnSfxChanged);
+                View.HapticToggle.onValueChanged.AddListener(OnHapticChanged);
+                View.ReduceMotionToggle.onValueChanged.AddListener(OnReduceMotionChanged);
+                View.BigButtonsToggle.onValueChanged.AddListener(OnBigButtonsChanged);
+                View.ColorBlindSlider.onValueChanged.AddListener(OnColorBlindChanged);
             }
 
             // Populate language dropdown
             if (View.LanguageDropdown != null && _locConfig != null && _locConfig.Languages != null)
             {
-                var options = new List<Dropdown.OptionData>();
+                var options = new List<TMP_Dropdown.OptionData>();
                 int selectedIndex = 0;
                 for (int i = 0; i < _locConfig.Languages.Count; i++)
                 {
                     var lang = _locConfig.Languages[i];
-                    options.Add(new Dropdown.OptionData(lang.DisplayName));
+                    options.Add(new TMP_Dropdown.OptionData(lang.DisplayName));
                     if (lang.Code == _settings?.LanguageCode.Value)
                         selectedIndex = i;
                 }
@@ -56,11 +60,7 @@ namespace RingFlow.Gameplay.UI
                 View.LanguageDropdown.AddOptions(options);
                 View.LanguageDropdown.value = selectedIndex;
 
-                View.LanguageDropdown.onValueChanged.AddListener(idx =>
-                {
-                    if (idx >= 0 && idx < _locConfig.Languages.Count)
-                        _settings.LanguageCode.Value = _locConfig.Languages[idx].Code;
-                });
+                View.LanguageDropdown.onValueChanged.AddListener(OnLanguageChanged);
             }
 
             BindPurchaseButtons();
@@ -71,43 +71,62 @@ namespace RingFlow.Gameplay.UI
             if (_progress != null && View.RemoveAdsButton != null)
             {
                 View.RemoveAdsButton.gameObject.SetActive(!_progress.RemoveAds.Value);
-                View.RemoveAdsButton.onClick.AddListener(() =>
-                {
-                    _iapService?.PurchaseProduct("remove_ads", (success, productId) =>
-                    {
-                        if (success)
-                        {
-                            _progress.RemoveAds.Value = true;
-                            View.RemoveAdsButton.gameObject.SetActive(false);
-                            _adService?.HideBanner();
-                        }
-                        else
-                        {
-                            bool storeUnavailable = string.Equals(productId, "store_unavailable", System.StringComparison.Ordinal);
-                            _signalBus?.Fire(new PurchaseFailedSignal(productId ?? "remove_ads", storeUnavailable));
-                        }
-                    });
-                });
+                View.RemoveAdsButton.onClick.AddListener(OnRemoveAdsClicked);
             }
 
             if (_progress != null && View.RestoreButton != null)
             {
-                View.RestoreButton.onClick.AddListener(() =>
-                {
-                    _iapService?.RestorePurchases(success =>
-                    {
-                        if (success)
-                        {
-                            bool owned = _iapService != null && _iapService.IsProductOwned("remove_ads");
-                            _progress.RemoveAds.Value = owned;
-                            if (owned)
-                            {
-                                View.RemoveAdsButton.gameObject.SetActive(false);
-                                _adService?.HideBanner();
-                            }
-                        }
-                    });
-                });
+                View.RestoreButton.onClick.AddListener(OnRestoreClicked);
+            }
+        }
+
+        private void OnCloseClicked() => SignalBus.Fire(new CloseSettingsSignal());
+        private void OnMusicChanged(bool value) => _settings.MusicEnabled.Value = value;
+        private void OnSfxChanged(bool value) => _settings.SfxEnabled.Value = value;
+        private void OnHapticChanged(bool value) => _settings.HapticEnabled.Value = value;
+        private void OnReduceMotionChanged(bool value) => _settings.ReduceMotion.Value = value;
+        private void OnBigButtonsChanged(bool value) => _settings.BigButtons.Value = value;
+        private void OnColorBlindChanged(float value) => _settings.ColorBlindMode.Value = (int)value;
+        private void OnLanguageChanged(int idx)
+        {
+            if (idx >= 0 && _locConfig != null && _locConfig.Languages != null && idx < _locConfig.Languages.Count)
+                _settings.LanguageCode.Value = _locConfig.Languages[idx].Code;
+        }
+
+        private void OnRemoveAdsClicked()
+        {
+            _iapService?.PurchaseProduct("remove_ads", OnRemoveAdsPurchaseResult);
+        }
+
+        private void OnRemoveAdsPurchaseResult(bool success, string productId)
+        {
+            if (success)
+            {
+                _progress.RemoveAds.Value = true;
+                View.RemoveAdsButton.gameObject.SetActive(false);
+                _adService?.HideBanner();
+                return;
+            }
+
+            bool storeUnavailable = string.Equals(productId, "store_unavailable", System.StringComparison.Ordinal);
+            _signalBus?.Fire(new PurchaseFailedSignal(productId ?? "remove_ads", storeUnavailable));
+        }
+
+        private void OnRestoreClicked()
+        {
+            _iapService?.RestorePurchases(OnRestoreResult);
+        }
+
+        private void OnRestoreResult(bool success)
+        {
+            if (!success) return;
+
+            bool owned = _iapService != null && _iapService.IsProductOwned("remove_ads");
+            _progress.RemoveAds.Value = owned;
+            if (owned)
+            {
+                View.RemoveAdsButton.gameObject.SetActive(false);
+                _adService?.HideBanner();
             }
         }
 

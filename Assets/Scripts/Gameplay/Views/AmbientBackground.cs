@@ -170,12 +170,15 @@ namespace RingFlow.Gameplay
                 if (pos.y > 12f) pos.y = -12f;
                 go.transform.localPosition = pos;
 
+                var renderer = _renderers[i];
+                if (renderer == null || _propBlock == null) continue;
+
                 float alpha = (Mathf.Sin(Time.time * _twinkleSpeeds[i] + _twinklePhases[i]) + 0.5f) * 0.5f;
-                _renderers[i].GetPropertyBlock(_propBlock);
+                renderer.GetPropertyBlock(_propBlock);
                 var c = new Color(pColor.r, pColor.g, pColor.b, alpha * pColor.a);
                 _propBlock.SetColor("_Color", c);
                 _propBlock.SetColor("_BaseColor", c);
-                _renderers[i].SetPropertyBlock(_propBlock);
+                renderer.SetPropertyBlock(_propBlock);
             }
         }
     }

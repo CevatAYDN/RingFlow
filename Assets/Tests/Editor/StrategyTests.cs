@@ -443,7 +443,7 @@ namespace RingFlow.Tests
         {
             var strategy = new LockedRingMoveStrategy();
             Assert.IsTrue(strategy.CanHandle(RingType.Locked));
-            Assert.IsTrue(strategy.CanHandle(RingType.Key));
+            Assert.IsTrue(strategy.CanHandle(RingType.Locked));
         }
 
         // ── All move strategies implement CanHandle for at least one type ──
@@ -493,7 +493,7 @@ namespace RingFlow.Tests
             Assert.IsNotNull(manager.GetStrategy(RingType.Stone));
             Assert.IsNotNull(manager.GetStrategy(RingType.Glass));
             Assert.IsNotNull(manager.GetStrategy(RingType.Locked));
-            Assert.IsNotNull(manager.GetStrategy(RingType.Key));
+            Assert.IsNotNull(manager.GetStrategy(RingType.Locked));
         }
     }
 }

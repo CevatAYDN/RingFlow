@@ -21,7 +21,12 @@ namespace RingFlow.Gameplay
     public readonly struct InitLevelSignal
     {
         public readonly int LevelIndex;
-        public InitLevelSignal(int levelIndex) => LevelIndex = levelIndex;
+        public readonly bool ForceRestart;
+        public InitLevelSignal(int levelIndex, bool forceRestart = false) 
+        {
+            LevelIndex = levelIndex;
+            ForceRestart = forceRestart;
+        }
     }
 
     public readonly struct LevelLoadedSignal

@@ -1112,8 +1112,39 @@ namespace RingFlow.Editor
 
         // ── Oyuncu Verisi Görselleştirici Metotları ──────────────────
 
+        private IPlayerPrefsService GetStorageService()
+        {
+            var context = Nexus.Core.NexusRuntime.CurrentContext;
+            if (context != null)
+            {
+                var runtimeStorage = context.TryResolve<IPlayerPrefsService>();
+                if (runtimeStorage != null)
+                {
+                    return runtimeStorage;
+                }
+            }
+            return new EncryptedStorageService();
+        }
+
         private void EnsurePlayerProgressLoaded(bool force = false)
         {
+            var context = Nexus.Core.NexusRuntime.CurrentContext;
+            if (context != null)
+            {
+                var runtimeProgress = context.TryResolve<PlayerProgressModel>();
+                if (runtimeProgress != null)
+                {
+                    _playerProgress = runtimeProgress;
+                    if (force)
+                    {
+                        var storage = GetStorageService();
+                        PlayerProgressSaveSystem.Load(storage, _playerProgress);
+                    }
+                    _playerProgressLoaded = true;
+                    return;
+                }
+            }
+
             if (_playerProgressLoaded && !force && _playerProgress != null) return;
 
             if (_playerProgress == null)
@@ -1127,25 +1158,63 @@ namespace RingFlow.Editor
                 _playerProgress.SetTotalWorldCount(_cachedDatabase.TotalWorlds);
             }
 
-            var storage = new EncryptedStorageService();
-            PlayerProgressSaveSystem.Load(storage, _playerProgress);
+            var storage2 = GetStorageService();
+            PlayerProgressSaveSystem.Load(storage2, _playerProgress);
             _playerProgressLoaded = true;
         }
 
         private void SavePlayerData()
         {
             if (_playerProgress == null) return;
-            var storage = new EncryptedStorageService();
+            var storage = GetStorageService();
             PlayerProgressSaveSystem.Save(storage, _playerProgress);
             EditorUtility.DisplayDialog("Başarılı", "Oyuncu kayıt verisi başarıyla şifrelenerek kaydedildi!", "Tamam");
         }
 
         private void ResetPlayerData()
         {
-            if (_playerProgress == null) return;
-            _playerProgress.Reset();
-            SavePlayerData();
+            var context = Nexus.Core.NexusRuntime.CurrentContext;
+            if (context != null)
+            {
+                // In Play Mode, just clear the values in memory and save them using the active storage.
+                // Do NOT delete the PlayerPrefs seed, as the running game cannot reload its encryption keys.
+                if (_playerProgress != null)
+                {
+                    _playerProgress.Reset();
+                }
+                SavePlayerData();
+                EnsurePlayerProgressLoaded(true);
+                return;
+            }
+
+            // In Edit Mode, we can safely wipe the PlayerPrefs seed and files to resolve any corruption.
+            PlayerPrefs.DeleteKey("NT_StorageSeed");
+            PlayerPrefs.Save();
+
+            string folderPath = System.IO.Path.Combine(Application.persistentDataPath, "SecureData");
+            if (System.IO.Directory.Exists(folderPath))
+            {
+                try
+                {
+                    var files = System.IO.Directory.GetFiles(folderPath);
+                    foreach (var file in files)
+                    {
+                        System.IO.File.Delete(file);
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning($"[Editor] SecureData folder clear failed: {ex.Message}");
+                }
+            }
+
+            if (_playerProgress != null)
+            {
+                _playerProgress.Reset();
+            }
+
             EnsurePlayerProgressLoaded(true);
+            SavePlayerData();
         }
 
         private void AddAllDatabaseThemes()
@@ -1214,6 +1283,7 @@ namespace RingFlow.Editor
                 {
                     if (GUILayout.Button("🔄 Veriyi Yenile (Yükle)", GUILayout.Height(26)))
                     {
+                        SavePlayerData();
                         EnsurePlayerProgressLoaded(true);
                     }
                     if (GUILayout.Button("💾 Değişiklikleri Kaydet", GUILayout.Height(26)))

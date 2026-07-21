@@ -14,7 +14,7 @@ namespace RingFlow.Gameplay.Strategies
         public bool CanAddRing(RingData ring, RingData topRing, bool isPoleFull, bool isPoleLocked)
         {
             // Only a Golden Key (Locked) or an editor-authored Key ring may unlock a locked pole (GDD §32).
-            if (isPoleLocked) return ring.Type == RingType.Locked || ring.Type == RingType.Key;
+            if (isPoleLocked) return ring.Type.IsLockedKey();
             if (isPoleFull) return false;
             if (topRing.Color == RingColor.None) return true;
             if (topRing.Type == RingType.Stone) return topRing.Color == ring.Color;

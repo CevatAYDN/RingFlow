@@ -15,6 +15,7 @@ namespace RingFlow.Gameplay
         [Inject] private GameConfigDatabaseSO _dbConfig;
         [Inject] private IAnalyticsService _analyticsService;
         [Inject] private Services.IGameTimeService _time;
+        [Inject] private IPlayerPrefsService _prefs;
 
         public async ValueTask ExecuteAsync(InitLevelSignal signal, CancellationToken ct)
         {
@@ -33,6 +34,38 @@ namespace RingFlow.Gameplay
             int currentLevel = signal.LevelIndex > 0
                 ? signal.LevelIndex
                 : _progressionService?.CurrentLevel.Value ?? 1;
+
+            // Check for saved board state (crash recovery)
+            if (!signal.ForceRestart && BoardStateSaveSystem.HasSavedState(_prefs))
+            {
+                if (BoardStateSaveSystem.Load(_prefs, _model, out int savedLevelIndex))
+                {
+                    if (savedLevelIndex == currentLevel)
+                    {
+                        NexusLog.Info("InitLevelCommand", nameof(ExecuteAsync), currentLevel.ToString(),
+                            $"Restored saved board state for level {currentLevel}");
+                        
+                        // Apply challenge state for restored level
+                        ApplyChallengeState(currentLevel);
+                        
+                        // Fire level loaded signal
+                        _signalBus?.Fire(new LevelLoadedSignal(currentLevel));
+                        
+                        // Restore analytics
+                        int savedWorldIndex = _dbConfig.GetWorldForLevel(currentLevel);
+                        _analyticsService?.LevelStart(currentLevel, savedWorldIndex);
+                        
+                        return; // Skip level generation, use restored state
+                    }
+                    else
+                    {
+                        // Saved state is for a different level, clear it
+                        BoardStateSaveSystem.Clear(_prefs);
+                        NexusLog.Info("InitLevelCommand", nameof(ExecuteAsync), currentLevel.ToString(),
+                            $"Saved state for level {savedLevelIndex} doesn't match current level {currentLevel}, cleared");
+                    }
+                }
+            }
 
             LevelData levelData = null;
 
@@ -119,12 +152,12 @@ namespace RingFlow.Gameplay
             NexusLog.Info("InitLevelCommand", "Execute", currentLevel.ToString(),
                 $"Initialized level {currentLevel} with {_model.Poles.Count} poles. Target moves: {_model.TargetMovesCount.Value}.");
 
-            int worldIndex = _dbConfig.GetWorldForLevel(currentLevel);
+            int restoredWorldIndex = _dbConfig.GetWorldForLevel(currentLevel);
             ApplyChallengeState(currentLevel);
 
             if (_analyticsService != null)
             {
-                _analyticsService.LevelStart(currentLevel, worldIndex);
+                _analyticsService.LevelStart(currentLevel, restoredWorldIndex);
             }
 
             if (_signalBus == null)

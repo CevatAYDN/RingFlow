@@ -11,17 +11,24 @@ namespace RingFlow.Gameplay.UI
     [Mediator(typeof(WinMediator))]
     public class WinView : View, IAuthoredView
     {
-        public Button NextLevelButton { get; private set; }
-        public Button QuitButton { get; private set; }
-        public TextMeshProUGUI MovesText { get; private set; }
-        public TextMeshProUGUI RewardText { get; private set; }
-        // Stars are now Image components for proper sprite rendering
-        public Image[] StarImages { get; private set; } = new Image[3];
-        public TextMeshProUGUI TitleText { get; private set; }
-        public TextMeshProUGUI LevelText { get; private set; }
-        public TextMeshProUGUI BestScoreText { get; private set; }
-        public GameObject[] Stars { get; private set; } = new GameObject[3];
-        public CanvasGroup CardGroup { get; private set; }
+        [SerializeField] private Button _nextLevelButton;
+        [SerializeField] private Button _quitButton;
+        [SerializeField] private TextMeshProUGUI _movesText;
+        [SerializeField] private TextMeshProUGUI _rewardText;
+        [SerializeField] private Image[] _starImages = new Image[3];
+        [SerializeField] private TextMeshProUGUI _titleText;
+        [SerializeField] private TextMeshProUGUI _levelText;
+        [SerializeField] private TextMeshProUGUI _bestScoreText;
+        [SerializeField] private CanvasGroup _cardGroup;
+        public Button NextLevelButton => _nextLevelButton;
+        public Button QuitButton => _quitButton;
+        public TextMeshProUGUI MovesText => _movesText;
+        public TextMeshProUGUI RewardText => _rewardText;
+        public Image[] StarImages => _starImages;
+        public TextMeshProUGUI TitleText => _titleText;
+        public TextMeshProUGUI LevelText => _levelText;
+        public TextMeshProUGUI BestScoreText => _bestScoreText;
+        public CanvasGroup CardGroup => _cardGroup;
         private TextMeshProUGUI _coinsValueText;
         private TextMeshProUGUI _xpValueText;
 
@@ -77,20 +84,20 @@ namespace RingFlow.Gameplay.UI
             if (_xpValueText != null) _xpValueText.text = $"+{xp}";
 
             // Animate stars
-            for (int i = 0; i < Stars.Length; i++)
+            for (int i = 0; i < StarImages.Length; i++)
             {
-                if (Stars[i] == null) continue;
-                DOTween.Kill(Stars[i].transform);
-                Stars[i].transform.localScale = Vector3.zero;
+                if (StarImages[i] == null) continue;
+                DOTween.Kill(StarImages[i].transform);
+                StarImages[i].transform.localScale = Vector3.zero;
             }
 
-            for (int i = 0; i < Stars.Length; i++)
+            for (int i = 0; i < StarImages.Length; i++)
             {
-                if (Stars[i] == null) continue;
+                if (StarImages[i] == null) continue;
                 int index = i;
                 bool isEarned = index < stars;
 
-                Stars[index].transform.DOScale(1f, 0.35f)
+                StarImages[index].transform.DOScale(1f, 0.35f)
                     .SetDelay(index * 0.22f)
                     .SetEase(DG.Tweening.Ease.OutBack)
                     .SetAutoKill(true)
@@ -100,7 +107,7 @@ namespace RingFlow.Gameplay.UI
                         if (isEarned && StarImages[index] != null)
                         {
                             StarImages[index].sprite = GameUIResources.GetSprite("star_filled");
-                            Stars[index].transform.DOPunchScale(Vector3.one * 0.3f, 0.25f, 3, 0.5f).SetAutoKill(true);
+                            StarImages[index].transform.DOPunchScale(Vector3.one * 0.3f, 0.25f, 3, 0.5f).SetAutoKill(true);
                         }
                         if (_audio != null)
                         {
@@ -132,30 +139,28 @@ namespace RingFlow.Gameplay.UI
             {
                 GameUIResources.AddButtonEffects(btn);
                 var upper = btn.name.ToUpperInvariant();
-                if (upper.Contains("NEXT") || upper.Contains("NEXT LEVEL")) { _nextBtn = btn.gameObject; NextLevelButton = btn; }
-                else if (upper.Contains("MAIN MENU") || upper.Contains("QUIT")) { _quitBtn = btn.gameObject; QuitButton = btn; }
+                if (upper.Contains("NEXT") || upper.Contains("NEXT LEVEL")) { _nextBtn = btn.gameObject; _nextLevelButton = btn; }
+                else if (upper.Contains("MAIN MENU") || upper.Contains("QUIT")) { _quitBtn = btn.gameObject; _quitButton = btn; }
             }
 
             var texts = GetComponentsInChildren<TextMeshProUGUI>(true);
             foreach (var txt in texts)
             {
                 var upper = txt.name.ToUpperInvariant();
-                if (upper.Contains("TITLE") || upper.Contains("WIN")) TitleText = txt;
-                else if (upper.Contains("LEVEL") && txt.fontSize >= 60) LevelText = txt;
-                else if (upper.Contains("MOVE")) MovesText = txt;
-                else if (upper.Contains("REWARD")) RewardText = txt;
-                else if (upper.Contains("BEST") || upper.Contains("SCORE")) BestScoreText = txt;
+                if (upper.Contains("TITLE") || upper.Contains("WIN")) _titleText = txt;
+                else if (upper.Contains("LEVEL") && txt.fontSize >= 60) _levelText = txt;
+                else if (upper.Contains("MOVE")) _movesText = txt;
+                else if (upper.Contains("REWARD")) _rewardText = txt;
+                else if (upper.Contains("BEST") || upper.Contains("SCORE")) _bestScoreText = txt;
             }
 
-            // Stars are now Image components
             var allImages = GetComponentsInChildren<Image>(true);
             int starIdx = 0;
             foreach (var img in allImages)
             {
-                if ((img.name == "Star1" || img.name == "Star2" || img.name == "Star3") && starIdx < StarImages.Length)
+                if ((img.name == "Star1" || img.name == "Star2" || img.name == "Star3") && starIdx < _starImages.Length)
                 {
-                    StarImages[starIdx] = img;
-                    Stars[starIdx] = img.gameObject;
+                    _starImages[starIdx] = img;
                     starIdx++;
                 }
             }
@@ -164,6 +169,13 @@ namespace RingFlow.Gameplay.UI
             {
                 if (txt.name == "CoinsValue") _coinsValueText = txt;
                 else if (txt.name == "XPValue") _xpValueText = txt;
+            }
+
+            if (_cardGroup == null)
+            {
+                var group = GetComponent<CanvasGroup>();
+                if (group == null) group = GetComponentInChildren<CanvasGroup>(true);
+                _cardGroup = group;
             }
         }
     }

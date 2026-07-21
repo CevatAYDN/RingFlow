@@ -4,20 +4,21 @@ using System.Collections.Generic;
 namespace RingFlow.Gameplay
 {
     /// <summary>
-    /// Ring type enum. Values are serialized — add new values at the end.
-    /// Removing is allowed only for deprecated/unused entries (Ghost was removed in refactor).
+    /// Ring type enum. Values are serialized by ordinal — only append new values.
+    /// Do not reorder or remove entries; mark deprecated values with [Obsolete].
     /// </summary>
     public enum RingType
     {
         Standard = 0,
-        /// <summary>Key ring (alias for Locked). Use <see cref="Locked"/> for new code.</summary>
+        /// <summary>Deprecated alias for <see cref="Locked"/>. Only kept for save compatibility.</summary>
+        [Obsolete("Use RingType.Locked instead. Kept for serialization backward compat.")]
         Key,
         Mystery,
         Frozen,
         /// <summary>
         /// Key ring that unlocks a locked pole when placed on it.
-        /// Named "Locked" for historical serialization compatibility — represents
-        /// the KEY that unlocks, not the pole state.
+        /// Despite the name, this is the KEY (not the locked state of a pole).
+        /// Named "Locked" for historical serialization compatibility.
         /// </summary>
         Locked,
         Stone,
@@ -88,5 +89,19 @@ namespace RingFlow.Gameplay
         public bool IsChallenge;
         public string ProgressionFlags;
     }
-}
 
+    public static class RingTypeExtensions
+    {
+        private const int LegacyKeyValue = 1;
+
+        public static bool IsLegacyKey(this RingType type)
+        {
+            return (int)type == LegacyKeyValue;
+        }
+
+        public static bool IsLockedKey(this RingType type)
+        {
+            return type == RingType.Locked || type.IsLegacyKey();
+        }
+    }
+}

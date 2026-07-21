@@ -27,6 +27,8 @@ namespace RingFlow.Gameplay.UI
                 return;
             }
             View.Localize(_loc);
+            NexusLog.Info("HUDMediator", nameof(OnBind), "",
+                $"HUDMediator BOUND. View={View.GetType().Name}, Model={_model != null}, Progress={_progress != null}, SignalBus={SignalBus != null}");
 
             BindButtons();
             BindModel();
@@ -36,18 +38,23 @@ namespace RingFlow.Gameplay.UI
 
         private void BindButtons()
         {
-            View.UndoButton?.onClick.AddListener(() => SignalBus.Fire(new UndoRequestedSignal()));
-            View.RestartButton?.onClick.AddListener(OnRestart);
-            View.PauseButton?.onClick.AddListener(() => SignalBus.Fire(new PauseRequestedSignal()));
-            View.HintButton?.onClick.AddListener(() => SignalBus.FireAsyncAndForget(new HintRequestedSignal()));
-            View.GuideButton?.onClick.AddListener(() => SignalBus.Fire(new OpenMechanicGuideSignal()));
+            if (View.UndoButton != null) View.UndoButton.onClick.AddListener(OnUndoClicked);
+            if (View.RestartButton != null) View.RestartButton.onClick.AddListener(OnRestart);
+            if (View.PauseButton != null) View.PauseButton.onClick.AddListener(OnPauseClicked);
+            if (View.HintButton != null) View.HintButton.onClick.AddListener(OnHintClicked);
+            if (View.GuideButton != null) View.GuideButton.onClick.AddListener(OnGuideClicked);
         }
+
+        private void OnUndoClicked() => SignalBus.Fire(new UndoRequestedSignal());
+        private void OnPauseClicked() => SignalBus.Fire(new PauseRequestedSignal());
+        private void OnHintClicked() => SignalBus.FireAsyncAndForget(new HintRequestedSignal());
+        private void OnGuideClicked() => SignalBus.Fire(new OpenMechanicGuideSignal());
 
         private void OnRestart()
         {
             int level = _progression?.CurrentLevel.Value ?? 1;
             _analytics?.RestartUse(level);
-            SignalBus.FireAsyncAndForget(new InitLevelSignal(level));
+            SignalBus.FireAsyncAndForget(new InitLevelSignal(level, forceRestart: true));
         }
 
         private void BindModel()
@@ -56,6 +63,8 @@ namespace RingFlow.Gameplay.UI
 
             _movesHandler = (_, n) =>
             {
+                NexusLog.Info("HUDMediator", "_movesHandler", n.ToString(),
+                    $"MovesCount CHANGED to {n}. View={View != null}, UndoBtn={View?.UndoButton != null}");
                 View?.UpdateMoves(n, _loc);
                 if (View?.UndoButton != null)
                     View.UndoButton.interactable = n > 0 && !_model.IsGameWon.Value;
